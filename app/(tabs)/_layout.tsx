@@ -1,7 +1,7 @@
 import React from "react";
 import { useColorScheme } from "react-native";
 import { Tabs } from "expo-router";
-import { Gauge, Layers, BarChart3 } from "lucide-react-native";
+import { Gauge, Layers, BarChart3, Search } from "lucide-react-native";
 import { palette } from "@/theme/tokens";
 import { useSettings } from "@/store/settingsStore";
 
@@ -50,6 +50,13 @@ export default function TabsLayout() {
         options={{
           title: "Vault",
           tabBarIcon: ({ color }) => <Layers size={20} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="search"
+        options={{
+          title: "Search",
+          tabBarIcon: ({ color }) => <Search size={20} color={color} />,
         }}
       />
       <Tabs.Screen
