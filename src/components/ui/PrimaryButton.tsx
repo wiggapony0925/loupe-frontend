@@ -5,7 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import type { LucideIcon } from "lucide-react-native";
 import { Pressable } from "@/components/ui/pressable";
 import { HStack } from "@/components/ui/hstack";
-import { palette } from "@/theme/tokens";
+import { useThemedPalette } from "@/theme/tokens";
 
 interface PrimaryButtonProps {
   label: string;
@@ -17,11 +17,6 @@ interface PrimaryButtonProps {
   /** Optional accessibility label. Falls back to `label`. */
   accessibilityLabel?: string;
 }
-
-const GRADIENTS: Record<"mint" | "blue", [string, string]> = {
-  mint: [palette.accent.mint, "#00C97E"],
-  blue: [palette.accent.blue, "#0058D6"],
-};
 
 /**
  * High-contrast call-to-action with haptic feedback.
@@ -39,6 +34,7 @@ export function PrimaryButton({
   variant = "mint",
   accessibilityLabel,
 }: PrimaryButtonProps) {
+  const p = useThemedPalette();
   const handlePress = () => {
     if (disabled || loading) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -46,7 +42,11 @@ export function PrimaryButton({
   };
 
   const isGhost = variant === "ghost";
-  const fg = isGhost ? palette.ink.default : variant === "mint" ? "#0B0B0D" : "#FFFFFF";
+  const gradient: [string, string] =
+    variant === "mint"
+      ? [p.accent.mint, "#00C97E"]
+      : [p.accent.blue, "#0058D6"];
+  const fg = isGhost ? p.ink.default : variant === "mint" ? "#0B0B0D" : "#FFFFFF";
 
   return (
     <Pressable
@@ -70,7 +70,7 @@ export function PrimaryButton({
         </HStack>
       ) : (
         <LinearGradient
-          colors={GRADIENTS[variant]}
+          colors={gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{

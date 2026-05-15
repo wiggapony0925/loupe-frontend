@@ -2,7 +2,7 @@ import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import type { CardSet } from "@/types/domain";
 import { useVaultFilters } from "@/store/vaultStore";
-import { palette } from "@/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/theme/tokens";
 
 const SETS: (CardSet | "All")[] = [
   "All",
@@ -52,18 +52,22 @@ function FilterRow({ label, children }: { label: string; children: React.ReactNo
 }
 
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const p = useThemedPalette();
   return (
     <Pressable
       onPress={onPress}
-      className="rounded-full border px-3 py-1.5"
-      style={{
-        borderColor: active ? palette.accent.blue : palette.line.default,
-        backgroundColor: active ? "rgba(10,132,255,0.12)" : palette.bg.elevated,
-      }}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      className="rounded-full border px-3.5 py-1.5"
+      style={({ pressed }) => ({
+        borderColor: active ? withAlpha(p.accent.blue, 0.4) : p.line.default,
+        backgroundColor: active ? withAlpha(p.accent.blue, 0.12) : p.bg.elevated,
+        opacity: pressed ? 0.7 : 1,
+      })}
     >
       <Text
-        className="text-xs font-medium"
-        style={{ color: active ? palette.accent.blue : palette.ink.muted }}
+        className="text-xs font-semibold"
+        style={{ color: active ? p.accent.blue : p.ink.muted }}
       >
         {label}
       </Text>

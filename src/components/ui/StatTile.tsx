@@ -1,7 +1,7 @@
 import React from "react";
 import { Text, View } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
-import { palette } from "@/theme/tokens";
+import { useThemedPalette } from "@/theme/tokens";
 
 interface StatTileProps {
   label: string;
@@ -11,17 +11,19 @@ interface StatTileProps {
   accent?: "mint" | "blue" | "amber" | "rose" | "neutral";
 }
 
-const ACCENT_HEX: Record<NonNullable<StatTileProps["accent"]>, string> = {
-  mint: palette.accent.mint,
-  blue: palette.accent.blue,
-  amber: palette.accent.amber,
-  rose: palette.accent.rose,
-  neutral: palette.ink.muted,
-};
-
 /** Compact metric tile used across the Command Center. */
 export function StatTile({ label, value, delta, icon: Icon, accent = "neutral" }: StatTileProps) {
-  const tint = ACCENT_HEX[accent];
+  const p = useThemedPalette();
+  const tint =
+    accent === "neutral"
+      ? p.ink.muted
+      : accent === "mint"
+        ? p.accent.mint
+        : accent === "blue"
+          ? p.accent.blue
+          : accent === "amber"
+            ? p.accent.amber
+            : p.accent.rose;
   return (
     <View className="flex-1 rounded-2xl border border-line bg-bg-elevated p-4">
       <View className="flex-row items-center justify-between">

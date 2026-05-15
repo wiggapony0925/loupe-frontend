@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, View } from "react-native";
-import { palette } from "@/theme/tokens";
+import { useThemedPalette } from "@/theme/tokens";
 
 interface StatusDotProps {
   color: string;
@@ -10,6 +10,7 @@ interface StatusDotProps {
 
 /** Pulsing connection indicator (BLE/Wi-Fi). */
 export function StatusDot({ color, pulse = true, size = 10 }: StatusDotProps) {
+  const p = useThemedPalette();
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export function StatusDot({ color, pulse = true, size = 10 }: StatusDotProps) {
           shadowRadius: 6,
           shadowOffset: { width: 0, height: 0 },
           borderWidth: 1,
-          borderColor: palette.bg.base,
+          borderColor: p.bg.base,
         }}
       />
     </View>

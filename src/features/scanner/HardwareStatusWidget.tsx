@@ -6,15 +6,9 @@ import { Badge } from "@/components/ui/Badge";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { StatusDot } from "@/components/ui/StatusDot";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { palette } from "@/theme/tokens";
+import { useThemedPalette } from "@/theme/tokens";
 import { useScanner } from "./useScanner";
 import { useScannerConnection } from "./useScannerConnection";
-
-const TRANSPORT = {
-  ble: { Icon: Bluetooth, label: "BLE", color: palette.accent.blue },
-  wifi: { Icon: Wifi, label: "Wi-Fi", color: palette.accent.mint },
-  offline: { Icon: WifiOff, label: "Offline", color: palette.accent.rose },
-} as const;
 
 /**
  * Live hardware panel. Combines two data sources:
@@ -25,8 +19,15 @@ const TRANSPORT = {
  * realistic data while the dev build isn't generated yet.
  */
 export function HardwareStatusWidget() {
+  const p = useThemedPalette();
   const { data, isLoading } = useScannerConnection();
   const scanner = useScanner();
+
+  const TRANSPORT = {
+    ble: { Icon: Bluetooth, label: "BLE", color: p.accent.blue },
+    wifi: { Icon: Wifi, label: "Wi-Fi", color: p.accent.mint },
+    offline: { Icon: WifiOff, label: "Offline", color: p.accent.rose },
+  } as const;
 
   if (isLoading || !data) {
     return (
@@ -112,9 +113,10 @@ export function HardwareStatusWidget() {
 }
 
 function Metric({ Icon, label, value }: { Icon: typeof Cpu; label: string; value: string }) {
+  const p = useThemedPalette();
   return (
     <View className="flex-1 flex-row items-center gap-2">
-      <Icon size={14} color={palette.ink.dim} />
+      <Icon size={14} color={p.ink.dim} />
       <View>
         <Text className="text-[10px] uppercase tracking-[2px] text-ink-dim">{label}</Text>
         <Text className="text-sm font-medium text-ink">{value}</Text>

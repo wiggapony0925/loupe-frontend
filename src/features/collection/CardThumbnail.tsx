@@ -3,13 +3,14 @@ import { Image, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import type { CollectionCard } from "@/types/domain";
 import { Badge } from "@/components/ui/Badge";
-import { gradeColor } from "@/theme/tokens";
+import { gradeColor, useThemedPalette, withAlpha } from "@/theme/tokens";
 
 interface CardThumbnailProps {
   card: CollectionCard;
 }
 
 export function CardThumbnail({ card }: CardThumbnailProps) {
+  const p = useThemedPalette();
   const tint = gradeColor(card.grade);
   return (
     <Pressable
@@ -27,9 +28,9 @@ export function CardThumbnail({ card }: CardThumbnailProps) {
           <View
             className="rounded-md px-2 py-1"
             style={{
-              backgroundColor: "rgba(11,11,13,0.75)",
+              backgroundColor: withAlpha(p.bg.elevated, 0.92),
               borderWidth: 1,
-              borderColor: tint,
+              borderColor: withAlpha(tint, 0.55),
             }}
           >
             <Text className="text-xs font-bold" style={{ color: tint }}>

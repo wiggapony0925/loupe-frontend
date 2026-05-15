@@ -1,15 +1,18 @@
 /**
  * The "Precision" palette — design tokens for the Loupe Forensic Suite.
  *
- * Two color schemes ship: the original dark "Precision" palette and a
- * warm "Cream" light palette inspired by Apple Music's tinted album view.
+ * Two color schemes ship: an OLED-grade dark palette and a clean,
+ * Notion/Linear-inspired white palette.
  *
  * The exported `palette` object is **mutated in place** by `applyTheme()`
- * when the user toggles the theme in Settings. Consumers (SVG fills,
- * inline styles, `Animated.Value` interpolations) re-read on every render
- * so they pick up the swap automatically. Tailwind class shorthands
+ * when the user toggles the theme in Settings. Tailwind class shorthands
  * (`bg-bg`, `text-ink-muted`, …) flip via CSS variables in `global.css`.
+ * Components that read `palette.x.y` inline must subscribe to a render
+ * trigger (e.g. `useSettings(s => s.themeMode)`) or use the
+ * `useThemedPalette()` hook which does it for them.
  */
+
+import { useSettings } from "@/store/settingsStore";
 
 export type Scheme = "dark" | "light";
 
@@ -111,3 +114,33 @@ export const gradeColor = (grade: number): string => {
 };
 
 export type Palette = typeof palette;
+
+/**
+ * Convert a hex color to an `rgba()` string with the requested alpha.
+ * Handles `#RGB`, `#RRGGBB`, and `#RRGGBBAA`. Returns the input untouched
+ * if it doesn't look like a hex color (so `withAlpha("transparent", 1)`
+ * is safe).
+ */
+export function withAlpha(hex: string, alpha: number): string {
+  if (!hex || hex[0] !== "#") return hex;
+  let h = hex.slice(1);
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length === 8) h = h.slice(0, 6);
+  if (h.length !== 6) return hex;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/**
+ * Subscribes the calling component to theme changes and returns the live
+ * palette. Use this in any component that reads `palette.*` in its render
+ * (inline styles, SVG fills, etc.) so it re-renders when the user toggles
+ * Light/Dark/Auto.
+ */
+export function useThemedPalette(): Palette {
+  // The selector return value changes on toggle, triggering a re-render.
+  useSettings((s) => s.themeMode);
+  return palette;
+}

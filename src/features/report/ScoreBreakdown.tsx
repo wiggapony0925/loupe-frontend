@@ -1,7 +1,7 @@
 import React from "react";
 import { Text, View } from "react-native";
 import type { ForensicScore } from "@/types/domain";
-import { palette } from "@/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/theme/tokens";
 
 interface ScoreBreakdownProps {
   score: ForensicScore;
@@ -15,11 +15,12 @@ interface Row {
 
 /** 1000-point granular score breakdown with horizontal bar visualization. */
 export function ScoreBreakdown({ score }: ScoreBreakdownProps) {
+  const p = useThemedPalette();
   const rows: Row[] = [
-    { label: "Surface", value: score.surface, color: palette.accent.amber },
-    { label: "Edges", value: score.edges, color: palette.accent.blue },
-    { label: "Corners", value: score.corners, color: palette.accent.rose },
-    { label: "Centering", value: score.centering, color: palette.accent.mint },
+    { label: "Surface", value: score.surface, color: p.accent.amber },
+    { label: "Edges", value: score.edges, color: p.accent.blue },
+    { label: "Corners", value: score.corners, color: p.accent.rose },
+    { label: "Centering", value: score.centering, color: p.accent.mint },
   ];
 
   return (
@@ -37,13 +38,13 @@ export function ScoreBreakdown({ score }: ScoreBreakdownProps) {
         <View
           className="rounded-xl px-3 py-2"
           style={{
-            backgroundColor: "rgba(0,245,155,0.10)",
+            backgroundColor: withAlpha(p.accent.mint, 0.1),
             borderWidth: 1,
-            borderColor: "rgba(0,245,155,0.35)",
+            borderColor: withAlpha(p.accent.mint, 0.35),
           }}
         >
           <Text className="text-[10px] uppercase tracking-[2px] text-ink-dim">Grade</Text>
-          <Text className="text-2xl font-semibold" style={{ color: palette.accent.mint }}>
+          <Text className="text-2xl font-semibold" style={{ color: p.accent.mint }}>
             {score.grade.toFixed(1)}
           </Text>
         </View>
