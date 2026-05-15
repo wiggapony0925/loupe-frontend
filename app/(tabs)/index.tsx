@@ -15,6 +15,7 @@ import {
 } from "lucide-react-native";
 import { fetchCollection, fetchCollectionSummary } from "@/api/forensicApi";
 import { HardwareStatusWidget, InitiateScanButton, useScannerConnection } from "@/features/scanner";
+import { PortfolioChart } from "@/features/analytics";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { StatTile } from "@/components/ui/StatTile";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -64,6 +65,10 @@ export default function CommandCenterScreen() {
         />
 
         <HardwareStatusWidget />
+
+        <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated p-5">
+          <PortfolioChart fallbackTotal={summary.data?.totalValueUsd ?? 0} />
+        </View>
 
         <View>
           <SectionHeader eyebrow="Vault" title="Today's metrics" />

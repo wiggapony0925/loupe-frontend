@@ -174,3 +174,115 @@ function mockPriceHistory(currentUsd: number): PricePoint[] {
   };
   return points;
 }
+
+/* ─── Portfolio history ──────────────────────────────────────────────── */
+
+export type PortfolioRange = "1D" | "1W" | "1M" | "3M" | "1Y" | "ALL";
+
+export interface PortfolioHistory {
+  range: PortfolioRange;
+  /** Sorted oldest → newest. Synthetic price walk anchored to current value. */
+  points: PricePoint[];
+  /** USD change from first → last point. */
+  deltaUsd: number;
+  /** Percentage change from first → last point. */
+  deltaPct: number;
+}
+
+/**
+ * Returns a seeded synthetic value-over-time walk for the user's whole
+ * collection at the requested range. Anchors the final point to the live
+ * total so the hero value matches the chart's right edge.
+ *
+ * Real backend will compute this from per-card sold-comp price history.
+ */
+export async function fetchPortfolioHistory(
+  range: PortfolioRange,
+): Promise<PortfolioHistory> {
+  if (!config.useMocks)
+    return api.get<PortfolioHistory>(`/collection/history?range=${range}`);
+  await wait(180);
+
+  const total = SAMPLE_CARDS.reduce((s, c) => s + c.estimatedValueUsd, 0);
+  const cfg: Record<PortfolioRange, { count: number; vol: number; trend: number }> = {
+    "1D": { count: 78, vol: 0.004, trend: 0.012 },
+    "1W": { count: 56, vol: 0.008, trend: 0.022 },
+    "1M": { count: 48, vol: 0.012, trend: 0.035 },
+    "3M": { count: 64, vol: 0.018, trend: 0.06 },
+    "1Y": { count: 96, vol: 0.025, trend: 0.18 },
+    "ALL": { count: 120, vol: 0.04, trend: 0.42 },
+  };
+  const { count, vol, trend } = cfg[range];
+
+  // Tiny seeded PRNG so the chart is deterministic per range.
+  let seed = (total + range.length * 9973) | 0;
+  const rand = () => {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  };
+
+  // Walk backwards from `total` so the rightmost point equals the live value.
+  const start = total / (1 + trend);
+  const points: PricePoint[] = [];
+  let price = start;
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1);
+    const driftToTarget = start + (total - start) * t;
+    const noise = (rand() - 0.5) * 2 * vol * total;
+    price = driftToTarget + noise;
+    const date = new Date();
+    if (range === "1D") {
+      date.setMinutes(date.getMinutes() - (count - 1 - i) * 5);
+    } else if (range === "1W") {
+      date.setHours(date.getHours() - (count - 1 - i) * 3);
+    } else if (range === "1M") {
+      date.setHours(date.getHours() - (count - 1 - i) * 16);
+    } else if (range === "3M") {
+      date.setDate(date.getDate() - (count - 1 - i) * 1.4);
+    } else if (range === "1Y") {
+      date.setDate(date.getDate() - (count - 1 - i) * 4);
+    } else {
+      date.setDate(date.getDate() - (count - 1 - i) * 12);
+    }
+    points.push({
+      date: date.toISOString(),
+      priceUsd: Math.max(1, Math.round(price)),
+    });
+  }
+  // Anchor right edge.
+  points[points.length - 1] = { ...points[points.length - 1]!, priceUsd: total };
+  const first = points[0]!.priceUsd;
+  const deltaUsd = total - first;
+  const deltaPct = first > 0 ? (deltaUsd / first) * 100 : 0;
+  return { range, points, deltaUsd, deltaPct };
+}
+
+/* ─── Per-card sparklines ────────────────────────────────────────────── */
+
+export interface CardSparkline {
+  cardId: string;
+  points: number[]; // last 14 normalized closes
+  deltaPct: number; // pct change vs first point
+}
+
+export async function fetchCardSparklines(): Promise<CardSparkline[]> {
+  if (!config.useMocks) return api.get<CardSparkline[]>("/collection/sparklines");
+  await wait(140);
+  return SAMPLE_CARDS.map((c) => {
+    let seed = (c.estimatedValueUsd + c.id.length * 7919) | 0;
+    const rand = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+    const points: number[] = [];
+    let v = c.estimatedValueUsd * (0.85 + rand() * 0.2);
+    for (let i = 0; i < 14; i++) {
+      v = v * (1 + (rand() - 0.45) * 0.05);
+      points.push(Math.round(v));
+    }
+    points[points.length - 1] = c.estimatedValueUsd;
+    const deltaPct = ((points[points.length - 1]! - points[0]!) / points[0]!) * 100;
+    return { cardId: c.id, points, deltaPct };
+  });
+}
+
