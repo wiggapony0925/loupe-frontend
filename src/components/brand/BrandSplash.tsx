@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, Easing, View, Text, StyleSheet } from "react-native";
 import Svg, { Circle, Path, Defs, LinearGradient, Stop } from "react-native-svg";
-import { palette } from "@/theme/tokens";
+import { palette, useThemedPalette, withAlpha } from "@/theme/tokens";
 
 interface BrandSplashProps {
   /** Called once the splash finishes its hero animation. */
@@ -20,6 +20,10 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
  * an extra animated reticle ring that breathes as the app boots.
  */
 export function BrandSplash({ onFinish, holdMs = 1300 }: BrandSplashProps) {
+  // Pull live theme tokens so the splash matches whatever scheme the user
+  // (or system) currently has active. Dark mode = near-black canvas with
+  // bright text; light mode = paper-white canvas with deep ink text.
+  const p = useThemedPalette();
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.92)).current;
   const ringScale = useRef(new Animated.Value(1)).current;
@@ -120,7 +124,7 @@ export function BrandSplash({ onFinish, holdMs = 1300 }: BrandSplashProps) {
       style={[
         StyleSheet.absoluteFillObject,
         styles.container,
-        { opacity: fadeOut },
+        { backgroundColor: p.bg.base, opacity: fadeOut },
       ]}
     >
       <View style={styles.logoWrap}>
@@ -154,8 +158,8 @@ export function BrandSplash({ onFinish, holdMs = 1300 }: BrandSplashProps) {
           <Svg width={140} height={140} viewBox="0 0 32 32" fill="none">
             <Defs>
               <LinearGradient id="splash-rim" x1="0" y1="0" x2="1" y2="1">
-                <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.95} />
-                <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0.55} />
+                <Stop offset="0" stopColor={p.ink.default} stopOpacity={0.95} />
+                <Stop offset="1" stopColor={p.ink.default} stopOpacity={0.55} />
               </LinearGradient>
             </Defs>
             <Circle cx={13} cy={13} r={9} stroke="url(#splash-rim)" strokeWidth={2} />
@@ -174,7 +178,7 @@ export function BrandSplash({ onFinish, holdMs = 1300 }: BrandSplashProps) {
             />
             <Path
               d="M19.6 19.6 L27 27"
-              stroke="#FFFFFF"
+              stroke={p.ink.default}
               strokeWidth={2.6}
               strokeLinecap="round"
             />
@@ -191,8 +195,10 @@ export function BrandSplash({ onFinish, holdMs = 1300 }: BrandSplashProps) {
           transform: [{ translateY: wordmarkY }],
         }}
       >
-        <Text style={styles.wordmark}>Loupe</Text>
-        <Text style={styles.tagline}>FORENSIC GRADING · MARKETS</Text>
+        <Text style={[styles.wordmark, { color: p.ink.default }]}>Loupe</Text>
+        <Text style={[styles.tagline, { color: withAlpha(p.ink.default, 0.5) }]}>
+          FORENSIC GRADING · MARKETS
+        </Text>
       </Animated.View>
     </Animated.View>
   );
@@ -200,7 +206,6 @@ export function BrandSplash({ onFinish, holdMs = 1300 }: BrandSplashProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#000000",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 9999,
@@ -212,13 +217,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   wordmark: {
-    color: "#FFFFFF",
     fontSize: 26,
     fontWeight: "800",
     letterSpacing: -0.6,
   },
   tagline: {
-    color: "rgba(255,255,255,0.5)",
     marginTop: 6,
     fontSize: 10,
     fontWeight: "700",
