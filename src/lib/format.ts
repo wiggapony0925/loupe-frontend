@@ -1,3 +1,6 @@
+import { useSettings } from "@/store/settingsStore";
+import { formatMoney } from "@/lib/currency";
+
 /** Time-of-day greeting in the operator's locale. */
 export function greeting(now = new Date()): string {
   const h = now.getHours();
@@ -19,9 +22,20 @@ export function relativeTime(iso: string, now = new Date()): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-/** USD compact format: $1.2k, $28.5k, $1.4M. */
+/**
+ * Compact money formatter. Always called with a USD-denominated `value`
+ * (the canonical unit across Loupe's data model) and renders in whatever
+ * currency the operator has selected in Settings.
+ *
+ *   compactUsd(28_540) // USD selected → "$28.5k"
+ *   compactUsd(28_540) //  EUR selected → "€26.3k"
+ *   compactUsd(28_540) //  BTC selected → "₿0.4234"
+ *
+ * Reads currency from the global settings store at call-time, so any
+ * component that re-renders after a currency change automatically picks
+ * up the new formatting.
+ */
 export function compactUsd(value: number): string {
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}k`;
-  return `$${value.toFixed(0)}`;
+  const code = useSettings.getState().currency;
+  return formatMoney(value, code, { compact: true });
 }

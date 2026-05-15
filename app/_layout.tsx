@@ -38,6 +38,11 @@ export default function RootLayout() {
   const scheme = useResolvedScheme();
   const { setColorScheme } = useColorScheme();
   const [splashDone, setSplashDone] = useState(false);
+  // Subscribing here makes the root re-render when the user changes their
+  // currency in the bottom-sheet picker. We pipe it into the inner View as
+  // a `key` so the entire app tree remounts and every formatter (every $
+  // sign, every chart label) is re-evaluated against the new currency.
+  const currency = useSettings((s) => s.currency);
 
   // Mutate the JS palette + flip the NativeWind class on every change.
   // Synchronous so the first render after a toggle already sees new values.
@@ -55,7 +60,7 @@ export default function RootLayout() {
           <QueryClientProvider client={queryClient}>
             <ThemeProvider>
               <StatusBar style={scheme === "light" ? "dark" : "light"} />
-              <View style={{ flex: 1 }}>
+              <View key={`ccy-${currency}`} style={{ flex: 1 }}>
                 <Stack
                   screenOptions={{
                     headerShown: false,

@@ -6,7 +6,6 @@ import { router } from "expo-router";
 import {
   ArrowUpRight,
   Camera,
-  ChevronDown,
   Settings2,
   Smartphone,
   Zap,
@@ -19,12 +18,9 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { LiveSyncChip } from "@/components/ui/LiveSyncChip";
-import { CurrencyPickerSheet } from "@/components/ui/CurrencyPickerSheet";
 import { LoupeMark } from "@/components/brand/LoupeMark";
 import { compactUsd, greeting, relativeTime } from "@/lib/format";
-import { getCurrency } from "@/lib/currency";
-import { useSettings } from "@/store/settingsStore";
-import { gradeColor, palette, useThemedPalette, withAlpha } from "@/theme/tokens";
+import { gradeColor, palette, useThemedPalette } from "@/theme/tokens";
 import type { CollectionCard } from "@/types/domain";
 
 export default function CommandCenterScreen() {
@@ -168,12 +164,6 @@ export default function CommandCenterScreen() {
 
 function Header({ online, lastSyncIso }: { online: boolean; lastSyncIso?: string }) {
   const p = useThemedPalette();
-  const currency = useSettings((s) => s.currency);
-  const setCurrency = useSettings((s) => s.setCurrency);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const meta = getCurrency(currency);
-  const tint = meta.kind === "crypto" ? palette.accent.amber : palette.accent.mint;
-
   return (
     <View>
       <View className="flex-row items-center justify-between">
@@ -182,32 +172,6 @@ function Header({ online, lastSyncIso }: { online: boolean; lastSyncIso?: string
           <Text className="text-base font-semibold tracking-tight text-ink">Loupe</Text>
         </View>
         <View className="flex-row items-center gap-2">
-          {/* Currency bubble — opens native bottom sheet */}
-          <Pressable
-            onPress={() => setPickerOpen(true)}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel={`Currency ${meta.code}. Tap to change.`}
-            className="h-9 flex-row items-center gap-1.5 rounded-full border px-2.5"
-            style={({ pressed }) => ({
-              opacity: pressed ? 0.75 : 1,
-              borderColor: withAlpha(tint, 0.45),
-              backgroundColor: withAlpha(tint, 0.12),
-            })}
-          >
-            <Text style={{ fontSize: 13 }}>{meta.flag}</Text>
-            <Text
-              style={{
-                color: tint,
-                fontSize: 11,
-                fontWeight: "800",
-                letterSpacing: 0.6,
-              }}
-            >
-              {meta.code}
-            </Text>
-            <ChevronDown size={12} color={tint} strokeWidth={2.6} />
-          </Pressable>
           <LiveSyncChip online={online} lastSyncIso={lastSyncIso} />
           <Pressable
             onPress={() => router.push("/settings")}
@@ -225,13 +189,6 @@ function Header({ online, lastSyncIso }: { online: boolean; lastSyncIso?: string
         {greeting()}, operator
       </Text>
       <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">Command Center</Text>
-
-      <CurrencyPickerSheet
-        visible={pickerOpen}
-        selected={currency}
-        onSelect={setCurrency}
-        onClose={() => setPickerOpen(false)}
-      />
     </View>
   );
 }

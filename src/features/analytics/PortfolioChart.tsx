@@ -30,10 +30,14 @@ import Svg, {
   Path,
   Stop,
 } from "react-native-svg";
+import { ChevronDown } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPortfolioHistory, type PortfolioRange } from "@/api/forensicApi";
 import { useThemedPalette, withAlpha } from "@/theme/tokens";
 import { compactUsd } from "@/lib/format";
+import { getCurrency } from "@/lib/currency";
+import { useSettings } from "@/store/settingsStore";
+import { CurrencyPickerSheet } from "@/components/ui/CurrencyPickerSheet";
 import { clampLabelX, monotoneCubic, nearestIndex } from "@/lib/chart";
 
 const RANGES: PortfolioRange[] = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
@@ -48,6 +52,11 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
   const p = useThemedPalette();
   const [range, setRange] = useState<PortfolioRange>("1Y");
   const [width, setWidth] = useState(0);
+  const currency = useSettings((s) => s.currency);
+  const setCurrency = useSettings((s) => s.setCurrency);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const ccyMeta = getCurrency(currency);
+  const ccyTint = ccyMeta.kind === "crypto" ? p.accent.amber : p.accent.mint;
   const [scrub, setScrub] = useState<number | null>(null);
 
   const history = useQuery({
@@ -136,12 +145,42 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
     <View>
       {/* Hero value */}
       <View>
-        <Text
-          className="font-semibold text-ink"
-          style={{ fontSize: 36, lineHeight: 40, letterSpacing: -0.6 }}
-        >
-          {compactUsd(displayVal)}
-        </Text>
+        <View className="flex-row items-end justify-between">
+          <Text
+            className="font-semibold text-ink"
+            style={{ fontSize: 36, lineHeight: 40, letterSpacing: -0.6 }}
+          >
+            {compactUsd(displayVal)}
+          </Text>
+          {/* Currency bubble — Robinhood-style: lives next to the headline value
+              it denominates, opens a native bottom-sheet picker. */}
+          <Pressable
+            onPress={() => setPickerOpen(true)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Currency ${ccyMeta.code}. Tap to change.`}
+            className="flex-row items-center gap-1.5 rounded-full border px-2.5 py-1.5"
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.75 : 1,
+              borderColor: withAlpha(ccyTint, 0.45),
+              backgroundColor: withAlpha(ccyTint, 0.12),
+              marginBottom: 4,
+            })}
+          >
+            <Text style={{ fontSize: 12 }}>{ccyMeta.flag}</Text>
+            <Text
+              style={{
+                color: ccyTint,
+                fontSize: 11,
+                fontWeight: "800",
+                letterSpacing: 0.6,
+              }}
+            >
+              {ccyMeta.code}
+            </Text>
+            <ChevronDown size={11} color={ccyTint} strokeWidth={2.6} />
+          </Pressable>
+        </View>
 
         <View className="mt-1 flex-row items-center gap-2">
           <Text style={{ color: tint, fontSize: 12 }}>{up ? "▲" : "▼"}</Text>
@@ -305,6 +344,13 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
           />
         ))}
       </View>
+
+      <CurrencyPickerSheet
+        visible={pickerOpen}
+        selected={currency}
+        onSelect={setCurrency}
+        onClose={() => setPickerOpen(false)}
+      />
     </View>
   );
 }
