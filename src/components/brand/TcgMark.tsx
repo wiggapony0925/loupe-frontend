@@ -1,6 +1,8 @@
 import React from "react";
+import { Image, View } from "react-native";
 import Svg, { Circle, Path, Polygon, G } from "react-native-svg";
 import type { CardSet } from "@/types/domain";
+import { getBrandLogo, type BrandKey } from "@/lib/brandAssets";
 
 interface TcgMarkProps {
   set: CardSet | "All";
@@ -11,12 +13,50 @@ interface TcgMarkProps {
   background?: string;
 }
 
+/** Map vault `CardSet` enum → brand-registry key (shared with Search). */
+function brandKeyForSet(set: CardSet | "All"): BrandKey {
+  switch (set) {
+    case "Pokemon Base Set":
+      return "pokemon";
+    case "2026 World Cup Goals":
+      return "soccer";
+    case "Topps Chrome 2025":
+      return "topps";
+    case "Magic Alpha":
+      return "magic";
+    case "All":
+    default:
+      return "all";
+  }
+}
+
 /**
  * Original, iconographic marks evoking each franchise category — NOT
- * the trademarked logos themselves. Designed to read at chip size
- * (16–20px) and scale cleanly via react-native-svg.
+ * the trademarked logos themselves. If a real licensed asset is
+ * registered in `src/lib/brandAssets.ts`, that takes precedence and
+ * the SVG glyph is used as fallback only.
  */
 export function TcgMark({ set, size = 16, color = "#0B0F14", background = "#FFFFFF" }: TcgMarkProps) {
+  const logo = getBrandLogo(brandKeyForSet(set));
+  if (logo) {
+    return (
+      <View
+        style={{
+          width: size,
+          height: size,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Image
+          source={logo}
+          style={{ width: size, height: size }}
+          resizeMode="contain"
+        />
+      </View>
+    );
+  }
+
   switch (set) {
     case "Pokemon Base Set":
       return <PokeballMark size={size} color={color} background={background} />;

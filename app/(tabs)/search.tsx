@@ -26,6 +26,7 @@ import { fetchCardSparklines, fetchCollection } from "@/api/forensicApi";
 import { fetchMarketCatalog } from "@/api/marketApi";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { compactUsd } from "@/lib/format";
+import { getBrandLogo } from "@/lib/brandAssets";
 import { gradeColor, palette, useThemedPalette, withAlpha } from "@/theme/tokens";
 
 interface SearchableCard {
@@ -289,6 +290,7 @@ export default function SearchScreen() {
               <View className="mt-4 flex-row flex-wrap" style={{ gap: 12 }}>
                 {CATEGORIES.map((cat) => {
                   const count = cards.filter(cat.match).length;
+                  const logo = getBrandLogo(cat.key);
                   return (
                     <Pressable
                       key={cat.key}
@@ -301,26 +303,47 @@ export default function SearchScreen() {
                       })}
                       className="overflow-hidden rounded-2xl border border-line bg-bg-elevated p-4"
                     >
-                      <View
-                        style={{
-                          alignSelf: "flex-start",
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
-                          borderRadius: 6,
-                          backgroundColor: withAlpha(cat.tint, 0.18),
-                        }}
-                      >
-                        <Text
+                      {logo ? (
+                        <View
                           style={{
-                            color: cat.tint,
-                            fontSize: 10,
-                            fontWeight: "800",
-                            letterSpacing: 1,
+                            alignSelf: "flex-start",
+                            width: 36,
+                            height: 36,
+                            borderRadius: 8,
+                            backgroundColor: withAlpha(cat.tint, 0.14),
+                            alignItems: "center",
+                            justifyContent: "center",
+                            overflow: "hidden",
                           }}
                         >
-                          {cat.mono}
-                        </Text>
-                      </View>
+                          <Image
+                            source={logo}
+                            style={{ width: 28, height: 28 }}
+                            resizeMode="contain"
+                          />
+                        </View>
+                      ) : (
+                        <View
+                          style={{
+                            alignSelf: "flex-start",
+                            paddingHorizontal: 8,
+                            paddingVertical: 4,
+                            borderRadius: 6,
+                            backgroundColor: withAlpha(cat.tint, 0.18),
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: cat.tint,
+                              fontSize: 10,
+                              fontWeight: "800",
+                              letterSpacing: 1,
+                            }}
+                          >
+                            {cat.mono}
+                          </Text>
+                        </View>
+                      )}
                       <Text className="mt-2 text-base font-bold text-ink">{cat.label}</Text>
                       <Text className="mt-0.5 text-[11px] text-ink-muted">
                         {count} {count === 1 ? "card" : "cards"} in vault
