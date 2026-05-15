@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Text, View } from "react-native";
 import Svg, { Path, Circle, Defs, LinearGradient as SvgGradient, Stop } from "react-native-svg";
 import { TrendingDown, TrendingUp } from "lucide-react-native";
-import { palette } from "@/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/theme/tokens";
 import { compactUsd } from "@/lib/format";
 import type { PricePoint } from "@/types/domain";
 
@@ -16,6 +16,7 @@ interface PriceHistoryChartProps {
  * area fill, end-point dot, and a delta chip vs the first observation.
  */
 export function PriceHistoryChart({ points, height = 120 }: PriceHistoryChartProps) {
+  const p = useThemedPalette();
   const { pathLine, pathArea, last, first, latest, lo, hi } = useMemo(() => {
     if (points.length < 2) {
       return {
@@ -63,7 +64,7 @@ export function PriceHistoryChart({ points, height = 120 }: PriceHistoryChartPro
   const delta = latest - first;
   const deltaPct = first > 0 ? (delta / first) * 100 : 0;
   const up = delta >= 0;
-  const tint = up ? palette.accent.mint : palette.accent.rose;
+  const tint = up ? p.accent.mint : p.accent.rose;
   const Trend = up ? TrendingUp : TrendingDown;
 
   return (
@@ -77,7 +78,7 @@ export function PriceHistoryChart({ points, height = 120 }: PriceHistoryChartPro
         </View>
         <View
           className="flex-row items-center gap-1 rounded-full px-2.5 py-1"
-          style={{ backgroundColor: `${tint}22` }}
+          style={{ backgroundColor: withAlpha(tint, 0.13) }}
         >
           <Trend size={12} color={tint} />
           <Text className="text-xs font-semibold" style={{ color: tint }}>

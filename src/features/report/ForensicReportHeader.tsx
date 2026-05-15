@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 import { Calendar, Hash } from "lucide-react-native";
 import { Badge } from "@/components/ui/Badge";
 import type { ForensicReport } from "@/types/domain";
-import { palette } from "@/theme/tokens";
+import { useThemedPalette } from "@/theme/tokens";
 
 interface ForensicReportHeaderProps {
   report: ForensicReport;
@@ -24,9 +24,10 @@ export function ForensicReportHeader({ report }: ForensicReportHeaderProps) {
 }
 
 function Meta({ Icon, text }: { Icon: typeof Calendar; text: string }) {
+  const p = useThemedPalette();
   return (
     <View className="flex-row items-center gap-1.5">
-      <Icon size={12} color={palette.ink.dim} />
+      <Icon size={12} color={p.ink.dim} />
       <Text className="text-xs text-ink-muted">{text}</Text>
     </View>
   );

@@ -5,7 +5,7 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useScannerStore } from "@/store/scannerStore";
 import { useScanJob } from "@/features/scanner/useScanJob";
 import { SCANNER_STAGE_LABEL, useScanner } from "@/features/scanner/useScanner";
-import { palette } from "@/theme/tokens";
+import { useThemedPalette } from "@/theme/tokens";
 import type { ScanStatus } from "@/types/domain";
 
 /**
@@ -26,6 +26,7 @@ const STATUS_LABEL: Record<ScanStatus, string> = {
 };
 
 export function InitiateScanButton() {
+  const p = useThemedPalette();
   const isScanning = useScannerStore((s) => s.isScanning);
   const { job, start, isUploading } = useScanJob();
   const scanner = useScanner();
@@ -92,7 +93,7 @@ export function InitiateScanButton() {
             top: 0,
             bottom: 0,
             width: 120,
-            backgroundColor: palette.accent.mint,
+            backgroundColor: p.accent.mint,
             transform: [{ translateX: sweepTranslate }],
             opacity: sweepOpacity,
           }}
@@ -115,7 +116,7 @@ export function InitiateScanButton() {
               style={{
                 width: `${Math.round(progressValue * 100)}%`,
                 height: "100%",
-                backgroundColor: palette.accent.mint,
+                backgroundColor: p.accent.mint,
               }}
             />
           </View>

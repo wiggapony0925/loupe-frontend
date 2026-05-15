@@ -1,16 +1,24 @@
 import React from "react";
+import { useColorScheme } from "react-native";
 import { Tabs } from "expo-router";
 import { Gauge, Layers, BarChart3 } from "lucide-react-native";
 import { palette } from "@/theme/tokens";
 import { useSettings } from "@/store/settingsStore";
 
 export default function TabsLayout() {
-  // Re-render this layout when the user toggles theme so `palette.*`
-  // reads below pick up the new (already-mutated) values.
-  useSettings((s) => s.themeMode);
+  // Subscribe to theme so the screenOptions object below is rebuilt with
+  // the freshly-mutated palette values when the user toggles Light/Dark.
+  const themeMode = useSettings((s) => s.themeMode);
+  const systemScheme = useColorScheme();
+  // Resolve to the actual visible scheme so "Auto" mode also remounts the
+  // navigator when the device theme flips.
+  const resolved = themeMode === "system" ? (systemScheme ?? "dark") : themeMode;
 
   return (
     <Tabs
+      // Force the tab navigator to remount on theme change so React Navigation
+      // re-applies tabBarStyle / colors cleanly (it caches some style props).
+      key={resolved}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: palette.accent.mint,

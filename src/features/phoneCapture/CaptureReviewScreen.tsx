@@ -20,7 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Check, RotateCcw, Sparkles } from "lucide-react-native";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { palette } from "@/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/theme/tokens";
 import type { OcrSuggestion, PhotometricCapture } from "@/types/domain";
 import { recognizeCardText } from "./imageOps";
 
@@ -31,6 +31,7 @@ interface CaptureReviewScreenProps {
 }
 
 export function CaptureReviewScreen({ captures, onConfirm, onRetake }: CaptureReviewScreenProps) {
+  const p = useThemedPalette();
   const [ocr, setOcr] = useState<OcrSuggestion | null>(null);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
@@ -91,18 +92,18 @@ export function CaptureReviewScreen({ captures, onConfirm, onRetake }: CaptureRe
 
         <View className="gap-2 rounded-2xl border border-line bg-bg-elevated p-4">
           <View className="flex-row items-center gap-2">
-            <Sparkles size={14} color={palette.accent.mint} />
+            <Sparkles size={14} color={p.accent.mint} />
             <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
               Auto-detected
             </Text>
             {ocr ? (
               <View
                 className="ml-auto rounded-full px-2 py-0.5"
-                style={{ backgroundColor: `${palette.accent.mint}22` }}
+                style={{ backgroundColor: withAlpha(p.accent.mint, 0.13) }}
               >
                 <Text
                   className="text-[9px] font-semibold uppercase tracking-[2px]"
-                  style={{ color: palette.accent.mint }}
+                  style={{ color: p.accent.mint }}
                 >
                   {(ocr.confidence * 100).toFixed(0)}% confidence
                 </Text>
@@ -111,7 +112,7 @@ export function CaptureReviewScreen({ captures, onConfirm, onRetake }: CaptureRe
           </View>
           {loading ? (
             <View className="flex-row items-center gap-2 py-2">
-              <ActivityIndicator color={palette.accent.mint} />
+              <ActivityIndicator color={p.accent.mint} />
               <Text className="text-sm text-ink-muted">Reading card text…</Text>
             </View>
           ) : (
@@ -120,9 +121,9 @@ export function CaptureReviewScreen({ captures, onConfirm, onRetake }: CaptureRe
                 value={title}
                 onChangeText={setTitle}
                 placeholder="Card title"
-                placeholderTextColor={palette.ink.dim}
+                placeholderTextColor={p.ink.dim}
                 className="rounded-xl border border-line bg-bg px-3 py-3 text-base text-ink"
-                style={{ color: palette.ink.default }}
+                style={{ color: p.ink.default }}
               />
               {ocr?.set || ocr?.year ? (
                 <Text className="text-xs text-ink-muted">

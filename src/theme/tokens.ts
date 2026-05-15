@@ -12,6 +12,7 @@
  * `useThemedPalette()` hook which does it for them.
  */
 
+import { useColorScheme } from "react-native";
 import { useSettings } from "@/store/settingsStore";
 
 export type Scheme = "dark" | "light";
@@ -140,7 +141,9 @@ export function withAlpha(hex: string, alpha: number): string {
  * Light/Dark/Auto.
  */
 export function useThemedPalette(): Palette {
-  // The selector return value changes on toggle, triggering a re-render.
+  // Both selectors trigger re-renders so components stay in sync whether
+  // the user picks an explicit theme or the device theme flips in "Auto".
   useSettings((s) => s.themeMode);
+  useColorScheme();
   return palette;
 }

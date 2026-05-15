@@ -1,24 +1,24 @@
 import React from "react";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 import type { HeatmapDing } from "@/types/domain";
-import { palette } from "@/theme/tokens";
+import { useThemedPalette } from "@/theme/tokens";
 
 interface HeatmapOverlayProps {
   dings: HeatmapDing[];
 }
-
-const CATEGORY_COLOR: Record<HeatmapDing["category"], string> = {
-  surface: palette.accent.amber,
-  edges: palette.accent.blue,
-  corners: palette.accent.rose,
-  centering: palette.accent.mint,
-};
 
 /**
  * Semi-transparent SVG layer that highlights "DINGS" detected by the AI grader.
  * Coordinates are normalized 0..1 against the parent capture frame.
  */
 export function HeatmapOverlay({ dings }: HeatmapOverlayProps) {
+  const p = useThemedPalette();
+  const CATEGORY_COLOR: Record<HeatmapDing["category"], string> = {
+    surface: p.accent.amber,
+    edges: p.accent.blue,
+    corners: p.accent.rose,
+    centering: p.accent.mint,
+  };
   return (
     <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
       <Defs>
