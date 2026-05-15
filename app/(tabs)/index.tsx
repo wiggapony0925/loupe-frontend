@@ -66,9 +66,7 @@ export default function CommandCenterScreen() {
 
         <HardwareStatusWidget />
 
-        <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated p-5">
-          <PortfolioChart fallbackTotal={summary.data?.totalValueUsd ?? 0} />
-        </View>
+        <PortfolioChart fallbackTotal={summary.data?.totalValueUsd ?? 0} />
 
         <View>
           <SectionHeader eyebrow="Vault" title="Today's metrics" />

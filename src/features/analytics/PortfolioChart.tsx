@@ -58,9 +58,9 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
   const data = history.data;
   const points = data?.points;
 
-  const { pathLine, pathArea, baselineY, coords, lo, hi } = useMemo(() => {
+  const { pathLine, pathArea, baselineY, coords } = useMemo(() => {
     if (!points || points.length < 2 || width === 0) {
-      return { pathLine: "", pathArea: "", baselineY: 0, coords: [], lo: 0, hi: 0 };
+      return { pathLine: "", pathArea: "", baselineY: 0, coords: [] };
     }
     const ys = points.map((pt) => pt.priceUsd);
     const lo = Math.min(...ys);
@@ -77,7 +77,7 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
       pathLine +
       ` L ${coords[coords.length - 1]![0].toFixed(2)} ${CHART_HEIGHT}` +
       ` L ${coords[0]![0].toFixed(2)} ${CHART_HEIGHT} Z`;
-    return { pathLine, pathArea, baselineY: yScale(points[0]!.priceUsd), coords, lo, hi };
+    return { pathLine, pathArea, baselineY: yScale(points[0]!.priceUsd), coords };
   }, [points, width]);
 
   const latestVal = points?.[points.length - 1]?.priceUsd ?? fallbackTotal;
@@ -135,46 +135,21 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
     <View>
       {/* Hero value */}
       <View>
-        <View className="flex-row items-center gap-2">
-          <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-            Portfolio Value
-          </Text>
-          {range === "1D" ? (
-            <View className="flex-row items-center gap-1">
-              <Animated.View
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: tint,
-                  opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }),
-                }}
-              />
-              <Text
-                className="text-[10px] font-bold uppercase tracking-[2px]"
-                style={{ color: tint }}
-              >
-                Live
-              </Text>
-            </View>
-          ) : null}
-        </View>
-
         <Text
-          className="mt-1 font-semibold text-ink"
-          style={{ fontSize: 40, lineHeight: 44, letterSpacing: -0.6 }}
+          className="font-semibold text-ink"
+          style={{ fontSize: 36, lineHeight: 40, letterSpacing: -0.6 }}
         >
           {compactUsd(displayVal)}
         </Text>
 
         <View className="mt-1 flex-row items-center gap-2">
-          <Text style={{ color: tint, fontSize: 11 }}>{up ? "▲" : "▼"}</Text>
+          <Text style={{ color: tint, fontSize: 12 }}>{up ? "▲" : "▼"}</Text>
           <Text style={{ color: tint, fontSize: 14, fontWeight: "600" }}>
             {up ? "+" : ""}
             {compactUsd(displayDeltaUsd)} ({up ? "+" : ""}
             {displayDeltaPct.toFixed(2)}%)
           </Text>
-          <Text className="text-xs text-ink-dim">
+          <Text className="text-sm text-ink-muted">
             {scrubLabel ? formatScrubDate(scrubLabel, range) : labelForRange(range)}
           </Text>
         </View>
@@ -294,8 +269,31 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
         )}
       </View>
 
-      {/* Range pill row */}
-      <View className="mt-3 flex-row items-center justify-between">
+      {/* Range pill row — Robinhood-style: bare label row with one chip-highlighted active range, hairline below */}
+      <View className="mt-4 flex-row items-center justify-between border-b border-line/60 pb-3">
+        {range === "1D" ? (
+          <View className="flex-row items-center gap-1.5">
+            <Animated.View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: tint,
+                opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }),
+              }}
+            />
+            <Text
+              style={{
+                color: tint,
+                fontSize: 11,
+                fontWeight: "700",
+                letterSpacing: 0.6,
+              }}
+            >
+              LIVE
+            </Text>
+          </View>
+        ) : null}
         {RANGES.map((r) => (
           <RangePill
             key={r}
@@ -306,17 +304,6 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
           />
         ))}
       </View>
-
-      {points && points.length >= 2 ? (
-        <View className="mt-3 flex-row justify-between border-t border-line/60 pt-2">
-          <Text className="text-[10px] uppercase tracking-[2px] text-ink-dim">
-            Low {compactUsd(lo)}
-          </Text>
-          <Text className="text-[10px] uppercase tracking-[2px] text-ink-dim">
-            High {compactUsd(hi)}
-          </Text>
-        </View>
-      ) : null}
     </View>
   );
 }
