@@ -18,8 +18,9 @@ import { useScanJob } from "@/features/scanner/useScanJob";
 import type { OcrSuggestion, PhotometricCapture } from "@/types/domain";
 
 export default function PhoneScanScreen() {
-  const params = useLocalSearchParams<{ mode?: string }>();
+  const params = useLocalSearchParams<{ mode?: string; marketCardId?: string }>();
   const mode: PhoneCaptureMode = params.mode === "quick" ? "quick" : "studio";
+  const marketCardId = params.marketCardId ?? null;
   const { start } = useScanJob();
   const [pending, setPending] = useState<PhotometricCapture[] | null>(null);
 
@@ -30,12 +31,13 @@ export default function PhoneScanScreen() {
   const handleConfirm = useCallback(
     (captures: PhotometricCapture[], _ocr: OcrSuggestion | null) => {
       // OCR metadata isn't part of PhotometricCapture[]; the backend will
-      // re-derive title from the upload. We keep the OCR suggestion in the
-      // local scanner store on a follow-up pass — for now it's UX-only.
-      start(captures);
+      // re-derive title from the upload. The marketCardId is forwarded so
+      // the resulting forensic report can be cross-linked to the market
+      // entry the user just viewed (price-vs-grade comparison).
+      start({ captures, marketCardId });
       if (router.canGoBack()) router.back();
     },
-    [start],
+    [start, marketCardId],
   );
 
   const handleRetake = useCallback(() => setPending(null), []);

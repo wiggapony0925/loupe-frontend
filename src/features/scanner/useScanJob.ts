@@ -26,8 +26,10 @@ export function useScanJob() {
   useEffect(() => () => cleanupRef.current?.(), []);
 
   const mutation = useMutation({
-    mutationFn: async (captures: PhotometricCapture[]) => {
-      startScan();
+    mutationFn: async (input: PhotometricCapture[] | { captures: PhotometricCapture[]; marketCardId?: string | null }) => {
+      const captures = Array.isArray(input) ? input : input.captures;
+      const marketCardId = Array.isArray(input) ? null : input.marketCardId ?? null;
+      startScan({ marketCardId });
       if (config.useMocks) return mockLifecycle(setJob);
 
       const initial = await uploadScan(captures);

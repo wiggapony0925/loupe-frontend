@@ -34,6 +34,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchPortfolioHistory, type PortfolioRange } from "@/api/forensicApi";
 import { useThemedPalette, withAlpha } from "@/theme/tokens";
 import { compactUsd } from "@/lib/format";
+import { clampLabelX, monotoneCubic, nearestIndex } from "@/lib/chart";
 
 const RANGES: PortfolioRange[] = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
 const CHART_HEIGHT = 200;
@@ -83,7 +84,7 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
   const latestVal = points?.[points.length - 1]?.priceUsd ?? fallbackTotal;
   const firstVal = points?.[0]?.priceUsd ?? latestVal;
 
-  const scrubIdx = scrub !== null && coords.length > 0 ? clampIndex(scrub, coords) : null;
+  const scrubIdx = scrub !== null && coords.length > 0 ? nearestIndex(scrub, coords) : null;
   const displayVal = scrubIdx !== null ? points![scrubIdx]!.priceUsd : latestVal;
   const displayDeltaUsd = displayVal - firstVal;
   const displayDeltaPct = firstVal > 0 ? (displayDeltaUsd / firstVal) * 100 : 0;
@@ -349,77 +350,6 @@ function RangePill({
 
 function getX(e: GestureResponderEvent): number {
   return e.nativeEvent.locationX;
-}
-
-function clampIndex(x: number, coords: readonly (readonly [number, number])[]): number {
-  if (coords.length === 0) return 0;
-  let best = 0;
-  let bestDist = Infinity;
-  for (let i = 0; i < coords.length; i++) {
-    const d = Math.abs(coords[i]![0] - x);
-    if (d < bestDist) {
-      bestDist = d;
-      best = i;
-    }
-  }
-  return best;
-}
-
-/** Keep the floating tooltip from running off the chart edges. */
-function clampLabelX(x: number, width: number, labelW: number): number {
-  return Math.max(0, Math.min(width - labelW, x - labelW / 2));
-}
-
-/**
- * Monotone-cubic interpolation through the points (Fritsch–Carlson).
- * Produces the smooth, never-overshooting curve Robinhood uses without
- * the wobble of a naive cardinal spline.
- */
-function monotoneCubic(coords: readonly (readonly [number, number])[]): string {
-  const n = coords.length;
-  if (n < 2) return "";
-  if (n === 2) {
-    return `M ${coords[0]![0]} ${coords[0]![1]} L ${coords[1]![0]} ${coords[1]![1]}`;
-  }
-
-  const dx: number[] = new Array(n - 1);
-  const dy: number[] = new Array(n - 1);
-  const m: number[] = new Array(n - 1); // slopes between segments
-
-  for (let i = 0; i < n - 1; i++) {
-    dx[i] = coords[i + 1]![0] - coords[i]![0];
-    dy[i] = coords[i + 1]![1] - coords[i]![1];
-    m[i] = dx[i] === 0 ? 0 : dy[i]! / dx[i]!;
-  }
-
-  // Tangents at each vertex.
-  const t: number[] = new Array(n);
-  t[0] = m[0]!;
-  t[n - 1] = m[n - 2]!;
-  for (let i = 1; i < n - 1; i++) {
-    if (m[i - 1]! * m[i]! <= 0) {
-      t[i] = 0;
-    } else {
-      t[i] = (m[i - 1]! + m[i]!) / 2;
-    }
-  }
-
-  // Build cubic Bezier segments.
-  let d = `M ${coords[0]![0].toFixed(2)} ${coords[0]![1].toFixed(2)}`;
-  for (let i = 0; i < n - 1; i++) {
-    const [x0, y0] = coords[i]!;
-    const [x1, y1] = coords[i + 1]!;
-    const h = dx[i]!;
-    const c1x = x0 + h / 3;
-    const c1y = y0 + (t[i]! * h) / 3;
-    const c2x = x1 - h / 3;
-    const c2y = y1 - (t[i + 1]! * h) / 3;
-    d +=
-      ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)},` +
-      ` ${c2x.toFixed(2)} ${c2y.toFixed(2)},` +
-      ` ${x1.toFixed(2)} ${y1.toFixed(2)}`;
-  }
-  return d;
 }
 
 function labelForRange(r: PortfolioRange): string {

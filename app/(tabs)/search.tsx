@@ -23,10 +23,22 @@ import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { Camera, Clock, Search as SearchIcon, X } from "lucide-react-native";
 import { fetchCardSparklines, fetchCollection } from "@/api/forensicApi";
+import { fetchMarketCatalog } from "@/api/marketApi";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { compactUsd } from "@/lib/format";
 import { gradeColor, palette, useThemedPalette, withAlpha } from "@/theme/tokens";
-import type { CollectionCard } from "@/types/domain";
+
+interface SearchableCard {
+  id: string;
+  title: string;
+  set: string;
+  year: number;
+  estimatedValueUsd: number;
+  thumbnailUri: string;
+  /** undefined for catalog-only cards (not in user's vault). */
+  grade: number | null;
+  owned: boolean;
+}
 
 type Quickfilter = "all" | "graded" | "vintage" | "modern";
 
@@ -36,8 +48,8 @@ interface Category {
   /** Display monogram if no image. */
   mono: string;
   tint: string;
-  /** Match predicate against a card to decide membership. */
-  match: (c: CollectionCard) => boolean;
+  /** Match predicate against any searchable card. */
+  match: (c: SearchableCard) => boolean;
 }
 
 const CATEGORIES: Category[] = [
@@ -105,8 +117,42 @@ export default function SearchScreen() {
     queryFn: fetchCardSparklines,
     staleTime: 60_000,
   });
+  const catalog = useQuery({
+    queryKey: ["market-catalog"],
+    queryFn: fetchMarketCatalog,
+    staleTime: 5 * 60_000,
+  });
 
-  const cards = useMemo(() => collection.data ?? [], [collection.data]);
+  const owned = useMemo(() => collection.data ?? [], [collection.data]);
+  const ownedIds = useMemo(() => new Set(owned.map((c) => c.id)), [owned]);
+
+  // Merge catalog with vault → unified searchable universe.
+  const cards: SearchableCard[] = useMemo(() => {
+    const fromOwned: SearchableCard[] = owned.map((c) => ({
+      id: c.id,
+      title: c.title,
+      set: c.set,
+      year: c.year,
+      estimatedValueUsd: c.estimatedValueUsd,
+      thumbnailUri: c.thumbnailUri,
+      grade: c.grade,
+      owned: true,
+    }));
+    const fromCatalog: SearchableCard[] = (catalog.data ?? [])
+      .filter((e) => !ownedIds.has(e.id))
+      .map((e) => ({
+        id: e.id,
+        title: e.title,
+        set: e.set,
+        year: e.year,
+        estimatedValueUsd: e.spot,
+        thumbnailUri: e.imageUri,
+        grade: null,
+        owned: false,
+      }));
+    return [...fromOwned, ...fromCatalog];
+  }, [owned, catalog.data, ownedIds]);
+
   const sparkMap = useMemo(
     () => new Map((sparks.data ?? []).map((s) => [s.cardId, s])),
     [sparks.data],
@@ -118,7 +164,7 @@ export default function SearchScreen() {
       const cat = CATEGORIES.find((c) => c.key === activeCategory);
       if (cat) out = out.filter(cat.match);
     }
-    if (quickfilter === "graded") out = out.filter((c) => c.grade >= 9);
+    if (quickfilter === "graded") out = out.filter((c) => c.grade !== null && c.grade >= 9);
     if (quickfilter === "vintage") out = out.filter((c) => c.year < 2010);
     if (quickfilter === "modern") out = out.filter((c) => c.year >= 2020);
     if (query.trim()) {
@@ -399,7 +445,7 @@ function ResultRow({
   deltaPct,
   bordered,
 }: {
-  card: CollectionCard;
+  card: SearchableCard;
   spark?: number[];
   deltaPct: number;
   bordered: boolean;
@@ -407,11 +453,11 @@ function ResultRow({
   const p = useThemedPalette();
   const up = deltaPct >= 0;
   const tint = up ? p.accent.mint : p.accent.rose;
-  const gradeTint = gradeColor(card.grade);
+  const gradeTint = card.grade !== null ? gradeColor(card.grade) : p.ink.muted;
 
   return (
     <Pressable
-      onPress={() => router.push(`/scan/${card.id}`)}
+      onPress={() => router.push(`/market/${card.id}`)}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
     >
@@ -426,18 +472,31 @@ function ResultRow({
           {card.title}
         </Text>
         <View className="mt-0.5 flex-row items-center gap-1.5">
-          <View
-            style={{
-              paddingHorizontal: 5,
-              paddingVertical: 1,
-              borderRadius: 4,
-              backgroundColor: withAlpha(gradeTint, 0.18),
-            }}
-          >
-            <Text style={{ color: gradeTint, fontSize: 9, fontWeight: "800" }}>
-              {card.grade.toFixed(card.grade % 1 === 0 ? 0 : 1)}
-            </Text>
-          </View>
+          {card.grade !== null ? (
+            <View
+              style={{
+                paddingHorizontal: 5,
+                paddingVertical: 1,
+                borderRadius: 4,
+                backgroundColor: withAlpha(gradeTint, 0.18),
+              }}
+            >
+              <Text style={{ color: gradeTint, fontSize: 9, fontWeight: "800" }}>
+                {card.grade.toFixed(card.grade % 1 === 0 ? 0 : 1)}
+              </Text>
+            </View>
+          ) : (
+            <View
+              style={{
+                paddingHorizontal: 5,
+                paddingVertical: 1,
+                borderRadius: 4,
+                backgroundColor: withAlpha(p.ink.muted, 0.12),
+              }}
+            >
+              <Text style={{ color: p.ink.muted, fontSize: 9, fontWeight: "800" }}>RAW</Text>
+            </View>
+          )}
           <Text numberOfLines={1} className="text-[11px] text-ink-muted">
             {card.set} · {card.year}
           </Text>
