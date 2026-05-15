@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,10 +12,10 @@ import {
   Smartphone,
   Target,
   Zap,
-  type LucideIcon,
 } from "lucide-react-native";
 import { fetchCollection, fetchCollectionSummary } from "@/api/forensicApi";
 import { HardwareStatusWidget, InitiateScanButton, useScannerConnection } from "@/features/scanner";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { StatTile } from "@/components/ui/StatTile";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -230,71 +230,88 @@ function SkeletonTile({ full = false }: { full?: boolean }) {
 
 /**
  * Secondary capture path — grade a card with just the phone camera.
- * Two presets: Studio (4-shot, near-scanner accuracy) and Quick (2-shot triage).
+ * Mirrors the InitiateScanButton card shell, with a segmented mode toggle
+ * (Studio = 4-shot, Quick = 2-shot) and a single hero CTA.
  */
 function PhoneCaptureCard() {
+  const [mode, setMode] = useState<"studio" | "quick">("studio");
+  const isStudio = mode === "studio";
+
   return (
     <View className="mt-3 overflow-hidden rounded-2xl border border-line bg-bg-elevated">
-      <View className="flex-row items-center gap-2 px-5 pt-4">
-        <Smartphone size={14} color={palette.ink.muted} />
-        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-          No scanner? Use your phone
+      <View className="px-5 pt-4">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center gap-1.5">
+            <Smartphone size={11} color={palette.ink.dim} />
+            <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+              Phone Camera
+            </Text>
+          </View>
+          <View className="flex-row items-center gap-1 rounded-full border border-line bg-bg p-0.5">
+            <ModeSegment
+              label="Studio"
+              active={isStudio}
+              tint={palette.accent.mint}
+              onPress={() => setMode("studio")}
+            />
+            <ModeSegment
+              label="Quick"
+              active={!isStudio}
+              tint={palette.accent.blue}
+              onPress={() => setMode("quick")}
+            />
+          </View>
+        </View>
+        <Text className="mt-1 text-base font-medium text-ink">
+          {isStudio ? "Guided 4-shot capture" : "Fast 2-shot triage"}
+        </Text>
+        <Text className="mt-0.5 text-xs text-ink-muted">
+          {isStudio
+            ? "Photometric tilt grades within ±0.5 of certified."
+            : "Front + back snap, ±1.0 estimate in seconds."}
         </Text>
       </View>
-      <Text className="px-5 pt-1 text-sm text-ink-muted">
-        Guided capture flow grades within ±0.5 of certified.
-      </Text>
-      <View className="flex-row gap-2 p-4 pt-3">
-        <PhoneModeChip
-          icon={Camera}
-          label="Studio"
-          subtitle="4 shots · best accuracy"
-          tint={palette.accent.mint}
-          onPress={() => router.push("/scan/phone?mode=studio")}
-        />
-        <PhoneModeChip
-          icon={Zap}
-          label="Quick"
-          subtitle="2 shots · fast triage"
-          tint={palette.accent.blue}
-          onPress={() => router.push("/scan/phone?mode=quick")}
+
+      <View className="p-4 pt-3">
+        <PrimaryButton
+          label={isStudio ? "Open Studio Capture" : "Open Quick Capture"}
+          icon={isStudio ? Camera : Zap}
+          onPress={() => router.push(`/scan/phone?mode=${mode}`)}
+          variant={isStudio ? "mint" : "blue"}
+          accessibilityLabel={`Start ${mode} phone capture`}
         />
       </View>
     </View>
   );
 }
 
-function PhoneModeChip({
-  icon: Icon,
+function ModeSegment({
   label,
-  subtitle,
+  active,
   tint,
   onPress,
 }: {
-  icon: LucideIcon;
   label: string;
-  subtitle: string;
+  active: boolean;
   tint: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
       onPress={onPress}
-      className="flex-1 rounded-xl border border-line bg-bg p-3"
-      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+      hitSlop={6}
       accessibilityRole="button"
-      accessibilityLabel={`${label} phone capture`}
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`${label} mode`}
+      className="rounded-full px-2.5 py-1"
+      style={{ backgroundColor: active ? `${tint}22` : "transparent" }}
     >
-      <View className="flex-row items-center gap-2">
-        <View
-          className="h-7 w-7 items-center justify-center rounded-full"
-          style={{ backgroundColor: `${tint}22` }}
-        >
-          <Icon size={14} color={tint} />
-        </View>
-        <Text className="text-sm font-semibold text-ink">{label}</Text>
-      </View>
-      <Text className="mt-1.5 text-[11px] text-ink-dim">{subtitle}</Text>
+      <Text
+        className="text-[10px] font-semibold uppercase tracking-[2px]"
+        style={{ color: active ? tint : palette.ink.dim }}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
