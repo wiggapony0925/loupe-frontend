@@ -64,8 +64,6 @@ export default function CommandCenterScreen() {
           }
         />
 
-        <HardwareStatusWidget />
-
         <PortfolioChart fallbackTotal={summary.data?.totalValueUsd ?? 0} />
 
         <View>
@@ -108,6 +106,11 @@ export default function CommandCenterScreen() {
               />
             )}
           </View>
+        </View>
+
+        <View>
+          <SectionHeader eyebrow="Device" title="Scanner connection" />
+          <HardwareStatusWidget />
         </View>
 
         <View>
