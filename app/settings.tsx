@@ -344,13 +344,13 @@ function AppearanceTab() {
 
 function ThemePicker({ value, onChange }: { value: ThemeMode; onChange: (m: ThemeMode) => void }) {
   const opts: { m: ThemeMode; label: string; icon: LucideIcon }[] = [
-    { m: "dark", label: "Dark", icon: Moon },
     { m: "light", label: "Light", icon: Sun },
-    { m: "system", label: "System", icon: Monitor },
+    { m: "dark", label: "Dark", icon: Moon },
+    { m: "system", label: "Auto", icon: Monitor },
   ];
   return (
-    <View>
-      {opts.map((o, i) => {
+    <View className="flex-row items-center gap-1 p-1.5">
+      {opts.map((o) => {
         const active = o.m === value;
         return (
           <Pressable
@@ -358,28 +358,17 @@ function ThemePicker({ value, onChange }: { value: ThemeMode; onChange: (m: Them
             onPress={() => onChange(o.m)}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
-            className={`flex-row items-center gap-3 px-4 py-3.5 ${i < opts.length - 1 ? "border-b border-line" : ""}`}
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+            accessibilityLabel={`${o.label} theme`}
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3"
+            style={{ backgroundColor: active ? `${palette.accent.mint}22` : "transparent" }}
           >
-            <View
-              className="h-8 w-8 items-center justify-center rounded-lg"
-              style={{
-                backgroundColor: active ? `${palette.accent.mint}22` : `${palette.ink.muted}1A`,
-              }}
+            <o.icon size={14} color={active ? palette.accent.mint : palette.ink.muted} />
+            <Text
+              className="text-[12px] font-semibold tracking-wider"
+              style={{ color: active ? palette.accent.mint : palette.ink.muted }}
             >
-              <o.icon size={15} color={active ? palette.accent.mint : palette.ink.muted} />
-            </View>
-            <Text className="flex-1 text-[14px] font-medium text-ink">{o.label}</Text>
-            {active ? (
-              <View
-                className="h-5 w-5 items-center justify-center rounded-full"
-                style={{ backgroundColor: palette.accent.mint }}
-              >
-                <Text className="text-[10px] font-bold text-bg">✓</Text>
-              </View>
-            ) : (
-              <ChevronRight size={16} color={palette.ink.dim} />
-            )}
+              {o.label}
+            </Text>
           </Pressable>
         );
       })}

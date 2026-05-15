@@ -2,8 +2,13 @@ import React from "react";
 import { Tabs } from "expo-router";
 import { Gauge, Layers, BarChart3 } from "lucide-react-native";
 import { palette } from "@/theme/tokens";
+import { useSettings } from "@/store/settingsStore";
 
 export default function TabsLayout() {
+  // Re-render this layout when the user toggles theme so `palette.*`
+  // reads below pick up the new (already-mutated) values.
+  useSettings((s) => s.themeMode);
+
   return (
     <Tabs
       screenOptions={{

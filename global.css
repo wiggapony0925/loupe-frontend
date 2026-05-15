@@ -15,22 +15,22 @@
    ────────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Light — warm cream */
-  --loupe-bg-base: 233 222 199;
-  --loupe-bg-elevated: 244 235 217;
-  --loupe-bg-sunken: 220 207 184;
+  /* Light — clean white */
+  --loupe-bg-base: 247 247 248;
+  --loupe-bg-elevated: 255 255 255;
+  --loupe-bg-sunken: 239 239 242;
 
-  --loupe-line: 201 187 161;
-  --loupe-line-strong: 169 155 130;
+  --loupe-line: 229 229 234;
+  --loupe-line-strong: 209 209 214;
 
-  --loupe-ink: 28 24 21;
-  --loupe-ink-muted: 92 80 67;
-  --loupe-ink-dim: 143 130 115;
+  --loupe-ink: 11 11 13;
+  --loupe-ink-muted: 72 72 74;
+  --loupe-ink-dim: 142 142 147;
 
   --loupe-accent-mint: 0 168 110;
-  --loupe-accent-blue: 26 111 224;
-  --loupe-accent-amber: 196 124 0;
-  --loupe-accent-rose: 198 53 43;
+  --loupe-accent-blue: 10 132 255;
+  --loupe-accent-amber: 184 134 11;
+  --loupe-accent-rose: 214 59 48;
 }
 
 .dark {

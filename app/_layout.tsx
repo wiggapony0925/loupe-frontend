@@ -38,15 +38,16 @@ export default function RootLayout() {
   const { setColorScheme } = useColorScheme();
 
   // Mutate the JS palette + flip the NativeWind class on every change.
-  useEffect(() => {
+  // Synchronous so the first render after a toggle already sees new values.
+  if (typeof scheme === "string") {
     applyTheme(scheme);
+  }
+  useEffect(() => {
     setColorScheme(scheme);
   }, [scheme, setColorScheme]);
 
-  // Force a fresh tree on theme change so module-time captured colors
-  // (Animated values, gradient colors, etc.) re-evaluate cleanly.
   return (
-    <GestureHandlerRootView key={scheme} style={{ flex: 1, backgroundColor: palette.bg.base }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: palette.bg.base }}>
       <SafeAreaProvider>
         <GluestackUIProvider mode={scheme}>
           <QueryClientProvider client={queryClient}>

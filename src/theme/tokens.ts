@@ -38,24 +38,24 @@ export const darkPalette = {
 
 export const lightPalette: typeof darkPalette = {
   bg: {
-    base: "#E9DEC7",
-    elevated: "#F4EBD9",
-    sunken: "#DCCFB8",
+    base: "#F7F7F8",
+    elevated: "#FFFFFF",
+    sunken: "#EFEFF2",
   },
   line: {
-    default: "#C9BBA1",
-    strong: "#A99B82",
+    default: "#E5E5EA",
+    strong: "#D1D1D6",
   },
   ink: {
-    default: "#1C1815",
-    muted: "#5C5043",
-    dim: "#8F8273",
+    default: "#0B0B0D",
+    muted: "#48484A",
+    dim: "#8E8E93",
   },
   accent: {
     mint: "#00A86E",
-    blue: "#1A6FE0",
-    amber: "#C47C00",
-    rose: "#C6352B",
+    blue: "#0A84FF",
+    amber: "#B8860B",
+    rose: "#D63B30",
   },
 };
 
