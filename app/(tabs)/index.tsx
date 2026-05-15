@@ -157,8 +157,12 @@ function Header({ online, lastSyncIso }: { online: boolean; lastSyncIso?: string
         <View className="flex-row items-center gap-2">
           <LiveSyncChip online={online} lastSyncIso={lastSyncIso} />
           <Pressable
+            onPress={() => router.push("/settings")}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Open settings"
             className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
           >
             <Settings2 size={16} color={palette.ink.muted} />
           </Pressable>
