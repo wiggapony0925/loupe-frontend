@@ -17,9 +17,10 @@ import {
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Badge } from "@/components/ui/Badge";
-import { palette } from "@/theme/tokens";
+import { palette, useThemedPalette } from "@/theme/tokens";
 
 export default function ScanDetailScreen() {
+  useThemedPalette();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: report, isLoading } = useQuery({
     queryKey: ["report", id],

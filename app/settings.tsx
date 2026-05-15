@@ -25,7 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import { useSettings, type Currency, type ThemeMode } from "@/store/settingsStore";
-import { palette } from "@/theme/tokens";
+import { palette, useThemedPalette } from "@/theme/tokens";
 
 type TabKey = "general" | "appearance" | "about";
 const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
@@ -35,6 +35,7 @@ const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
 ];
 
 export default function SettingsScreen() {
+  useThemedPalette();
   const [tab, setTab] = useState<TabKey>("general");
 
   return (

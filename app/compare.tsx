@@ -14,11 +14,12 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react-native";
 import { fetchReport } from "@/api/forensicApi";
-import { gradeColor, palette } from "@/theme/tokens";
+import { gradeColor, palette, useThemedPalette } from "@/theme/tokens";
 import { compactUsd } from "@/lib/format";
 import type { ForensicReport, ForensicScore } from "@/types/domain";
 
 export default function CompareScreen() {
+  useThemedPalette();
   const { a, b } = useLocalSearchParams<{ a?: string; b?: string }>();
   const ra = useQuery({ queryKey: ["report", a], queryFn: () => fetchReport(a!), enabled: !!a });
   const rb = useQuery({ queryKey: ["report", b], queryFn: () => fetchReport(b!), enabled: !!b });

@@ -22,10 +22,11 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { LiveSyncChip } from "@/components/ui/LiveSyncChip";
 import { LoupeMark } from "@/components/brand/LoupeMark";
 import { compactUsd, greeting, relativeTime } from "@/lib/format";
-import { gradeColor, palette } from "@/theme/tokens";
+import { gradeColor, palette, useThemedPalette } from "@/theme/tokens";
 import type { CollectionCard } from "@/types/domain";
 
 export default function CommandCenterScreen() {
+  useThemedPalette();
   const qc = useQueryClient();
   const summary = useQuery({ queryKey: ["collection-summary"], queryFn: fetchCollectionSummary });
   const collection = useQuery({ queryKey: ["collection"], queryFn: fetchCollection });

@@ -8,9 +8,10 @@ import { useFilteredCollection } from "@/features/collection/useFilteredCollecti
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { compactUsd } from "@/lib/format";
-import { palette } from "@/theme/tokens";
+import { palette, useThemedPalette } from "@/theme/tokens";
 
 export default function VaultScreen() {
+  useThemedPalette();
   const qc = useQueryClient();
   const { cards, isLoading, isFetching } = useFilteredCollection();
 
