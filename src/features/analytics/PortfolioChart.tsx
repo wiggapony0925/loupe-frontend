@@ -1,16 +1,20 @@
 /**
  * Robinhood-style portfolio chart.
  *
- * Hero value + delta (arrow + $ + %), interactive SVG line with a
- * gradient fill and a touch-driven crosshair scrubber. A horizontal
- * dashed reference line marks the period start price (Robinhood's
- * signature flat baseline). Time-range pill row at the bottom.
+ * Hero value + delta (arrow + $ + %), an interactive SVG line with a
+ * gradient fill and a touch-driven crosshair scrubber, a floating value
+ * tooltip pinned above the scrubber, a horizontal dashed reference line
+ * marking the period start (Robinhood's signature flat baseline), and a
+ * range pill row at the bottom (1D · 1W · 1M · 3M · YTD · 1Y · ALL).
  *
  * The hero value and delta update live as the user drags across the
- * chart. Lifting the finger restores the latest values.
+ * chart. Lifting the finger restores the latest values. The 1D range
+ * gets a pulsing "LIVE" dot next to the headline.
  */
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   GestureResponderEvent,
   LayoutChangeEvent,
   PanResponder,
@@ -31,8 +35,8 @@ import { fetchPortfolioHistory, type PortfolioRange } from "@/api/forensicApi";
 import { useThemedPalette, withAlpha } from "@/theme/tokens";
 import { compactUsd } from "@/lib/format";
 
-const RANGES: PortfolioRange[] = ["1D", "1W", "1M", "3M", "1Y", "ALL"];
-const CHART_HEIGHT = 180;
+const RANGES: PortfolioRange[] = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
+const CHART_HEIGHT = 200;
 
 interface PortfolioChartProps {
   /** Live total to anchor the right-edge value when the API is loading. */
@@ -41,7 +45,7 @@ interface PortfolioChartProps {
 
 export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
   const p = useThemedPalette();
-  const [range, setRange] = useState<PortfolioRange>("1M");
+  const [range, setRange] = useState<PortfolioRange>("1Y");
   const [width, setWidth] = useState(0);
   const [scrub, setScrub] = useState<number | null>(null);
 
@@ -61,19 +65,18 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
     const ys = points.map((pt) => pt.priceUsd);
     const lo = Math.min(...ys);
     const hi = Math.max(...ys);
-    const PAD_Y = 14;
+    const PAD_Y = 18;
     const xScale = (i: number) => (i / (points.length - 1)) * width;
     const yScale = (v: number) => {
       if (hi === lo) return CHART_HEIGHT / 2;
       return PAD_Y + (1 - (v - lo) / (hi - lo)) * (CHART_HEIGHT - PAD_Y * 2);
     };
     const coords = points.map((pt, i) => [xScale(i), yScale(pt.priceUsd)] as const);
-    const pathLine = coords
-      .map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`)
-      .join(" ");
+    const pathLine = monotoneCubic(coords);
     const pathArea =
       pathLine +
-      ` L ${coords[coords.length - 1]![0].toFixed(2)} ${CHART_HEIGHT} L ${coords[0]![0].toFixed(2)} ${CHART_HEIGHT} Z`;
+      ` L ${coords[coords.length - 1]![0].toFixed(2)} ${CHART_HEIGHT}` +
+      ` L ${coords[0]![0].toFixed(2)} ${CHART_HEIGHT} Z`;
     return { pathLine, pathArea, baselineY: yScale(points[0]!.priceUsd), coords, lo, hi };
   }, [points, width]);
 
@@ -81,14 +84,12 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
   const firstVal = points?.[0]?.priceUsd ?? latestVal;
 
   const scrubIdx = scrub !== null && coords.length > 0 ? clampIndex(scrub, coords) : null;
-  const displayVal =
-    scrubIdx !== null ? points![scrubIdx]!.priceUsd : latestVal;
+  const displayVal = scrubIdx !== null ? points![scrubIdx]!.priceUsd : latestVal;
   const displayDeltaUsd = displayVal - firstVal;
   const displayDeltaPct = firstVal > 0 ? (displayDeltaUsd / firstVal) * 100 : 0;
   const up = displayDeltaUsd >= 0;
   const tint = up ? p.accent.mint : p.accent.rose;
 
-  // Hide-on-release pan responder. Tracks finger X across the SVG surface.
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -106,20 +107,68 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
   const scrubY = scrubIdx !== null ? coords[scrubIdx]![1] : null;
   const scrubLabel = scrubIdx !== null ? points![scrubIdx]!.date : null;
 
+  // Pulsing LIVE indicator for the 1D range.
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (range !== "1D") return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [range, pulse]);
+
   return (
     <View>
       {/* Hero value */}
       <View>
-        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-          Portfolio Value
-        </Text>
+        <View className="flex-row items-center gap-2">
+          <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+            Portfolio Value
+          </Text>
+          {range === "1D" ? (
+            <View className="flex-row items-center gap-1">
+              <Animated.View
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: tint,
+                  opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }),
+                }}
+              />
+              <Text
+                className="text-[10px] font-bold uppercase tracking-[2px]"
+                style={{ color: tint }}
+              >
+                Live
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
         <Text
           className="mt-1 font-semibold text-ink"
-          style={{ fontSize: 38, lineHeight: 42, letterSpacing: -0.5 }}
+          style={{ fontSize: 40, lineHeight: 44, letterSpacing: -0.6 }}
         >
           {compactUsd(displayVal)}
         </Text>
+
         <View className="mt-1 flex-row items-center gap-2">
+          <Text style={{ color: tint, fontSize: 11 }}>{up ? "▲" : "▼"}</Text>
           <Text style={{ color: tint, fontSize: 14, fontWeight: "600" }}>
             {up ? "+" : ""}
             {compactUsd(displayDeltaUsd)} ({up ? "+" : ""}
@@ -134,53 +183,106 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
       {/* Chart */}
       <View
         onLayout={onLayout}
-        style={{ height: CHART_HEIGHT, marginTop: 12 }}
+        style={{ height: CHART_HEIGHT, marginTop: 14 }}
         {...panResponder.panHandlers}
       >
         {width > 0 && pathLine ? (
-          <Svg width={width} height={CHART_HEIGHT}>
-            <Defs>
-              <SvgGradient id="portfolioFill" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0%" stopColor={tint} stopOpacity="0.22" />
-                <Stop offset="100%" stopColor={tint} stopOpacity="0" />
-              </SvgGradient>
-            </Defs>
-            <Path d={pathArea} fill="url(#portfolioFill)" />
-            {/* Period-start baseline (Robinhood's signature dashed flat line) */}
-            <Line
-              x1={0}
-              x2={width}
-              y1={baselineY}
-              y2={baselineY}
-              stroke={p.ink.dim}
-              strokeWidth={0.5}
-              strokeDasharray="3,3"
-              opacity={0.6}
-            />
-            <Path d={pathLine} stroke={tint} strokeWidth={2} fill="none" />
-            {scrubX !== null && scrubY !== null ? (
-              <>
-                <Line
-                  x1={scrubX}
-                  x2={scrubX}
-                  y1={0}
-                  y2={CHART_HEIGHT}
-                  stroke={p.ink.muted}
-                  strokeWidth={0.5}
-                  opacity={0.7}
-                />
-                <Circle cx={scrubX} cy={scrubY} r={6} fill={p.bg.elevated} />
-                <Circle cx={scrubX} cy={scrubY} r={4} fill={tint} />
-              </>
-            ) : (
-              <Circle
-                cx={coords[coords.length - 1]![0]}
-                cy={coords[coords.length - 1]![1]}
-                r={3.5}
-                fill={tint}
+          <>
+            <Svg width={width} height={CHART_HEIGHT}>
+              <Defs>
+                <SvgGradient id="portfolioFill" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor={tint} stopOpacity="0.25" />
+                  <Stop offset="100%" stopColor={tint} stopOpacity="0" />
+                </SvgGradient>
+              </Defs>
+              <Path d={pathArea} fill="url(#portfolioFill)" />
+              {/* Period-start baseline (Robinhood's signature dashed flat line) */}
+              <Line
+                x1={0}
+                x2={width}
+                y1={baselineY}
+                y2={baselineY}
+                stroke={p.ink.dim}
+                strokeWidth={0.75}
+                strokeDasharray="2,4"
+                opacity={0.55}
               />
-            )}
-          </Svg>
+              <Path
+                d={pathLine}
+                stroke={tint}
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                fill="none"
+              />
+              {scrubX !== null && scrubY !== null ? (
+                <>
+                  <Line
+                    x1={scrubX}
+                    x2={scrubX}
+                    y1={0}
+                    y2={CHART_HEIGHT}
+                    stroke={p.ink.muted}
+                    strokeWidth={0.5}
+                    strokeDasharray="2,3"
+                    opacity={0.7}
+                  />
+                  <Circle cx={scrubX} cy={scrubY} r={9} fill={withAlpha(tint, 0.18)} />
+                  <Circle cx={scrubX} cy={scrubY} r={5} fill={p.bg.elevated} />
+                  <Circle cx={scrubX} cy={scrubY} r={3.5} fill={tint} />
+                </>
+              ) : (
+                <>
+                  <Circle
+                    cx={coords[coords.length - 1]![0]}
+                    cy={coords[coords.length - 1]![1]}
+                    r={6}
+                    fill={withAlpha(tint, 0.22)}
+                  />
+                  <Circle
+                    cx={coords[coords.length - 1]![0]}
+                    cy={coords[coords.length - 1]![1]}
+                    r={3}
+                    fill={tint}
+                  />
+                </>
+              )}
+            </Svg>
+
+            {/* Floating crosshair tooltip — positioned absolutely above the scrubber */}
+            {scrubX !== null ? (
+              <View
+                pointerEvents="none"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: clampLabelX(scrubX, width, 96),
+                  width: 96,
+                  alignItems: "center",
+                }}
+              >
+                <View
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: 6,
+                    backgroundColor: p.ink.default,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: p.bg.base,
+                      fontSize: 10,
+                      fontWeight: "700",
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    {compactUsd(displayVal)}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+          </>
         ) : (
           <View
             style={{
@@ -193,10 +295,7 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
       </View>
 
       {/* Range pill row */}
-      <View
-        className="mt-3 flex-row items-center justify-between rounded-full p-1"
-        style={{ backgroundColor: withAlpha(p.ink.dim, 0.08) }}
-      >
+      <View className="mt-3 flex-row items-center justify-between">
         {RANGES.map((r) => (
           <RangePill
             key={r}
@@ -209,7 +308,7 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
       </View>
 
       {points && points.length >= 2 ? (
-        <View className="mt-2 flex-row justify-between">
+        <View className="mt-3 flex-row justify-between border-t border-line/60 pt-2">
           <Text className="text-[10px] uppercase tracking-[2px] text-ink-dim">
             Low {compactUsd(lo)}
           </Text>
@@ -237,15 +336,23 @@ function RangePill({
   return (
     <Pressable
       onPress={onPress}
-      hitSlop={6}
+      hitSlop={8}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      className="flex-1 items-center rounded-full py-1.5"
-      style={{ backgroundColor: active ? withAlpha(tint, 0.18) : "transparent" }}
+      style={{
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        backgroundColor: active ? withAlpha(tint, 0.15) : "transparent",
+      }}
     >
       <Text
-        className="text-[11px] font-bold tracking-wider"
-        style={{ color: active ? tint : p.ink.muted }}
+        style={{
+          color: active ? tint : p.ink.muted,
+          fontSize: 11,
+          fontWeight: "700",
+          letterSpacing: 0.6,
+        }}
       >
         {label}
       </Text>
@@ -259,7 +366,6 @@ function getX(e: GestureResponderEvent): number {
 
 function clampIndex(x: number, coords: readonly (readonly [number, number])[]): number {
   if (coords.length === 0) return 0;
-  // Find nearest index by x coordinate. Linear scan is fine for ≤ 200 pts.
   let best = 0;
   let bestDist = Infinity;
   for (let i = 0; i < coords.length; i++) {
@@ -272,12 +378,70 @@ function clampIndex(x: number, coords: readonly (readonly [number, number])[]): 
   return best;
 }
 
+/** Keep the floating tooltip from running off the chart edges. */
+function clampLabelX(x: number, width: number, labelW: number): number {
+  return Math.max(0, Math.min(width - labelW, x - labelW / 2));
+}
+
+/**
+ * Monotone-cubic interpolation through the points (Fritsch–Carlson).
+ * Produces the smooth, never-overshooting curve Robinhood uses without
+ * the wobble of a naive cardinal spline.
+ */
+function monotoneCubic(coords: readonly (readonly [number, number])[]): string {
+  const n = coords.length;
+  if (n < 2) return "";
+  if (n === 2) {
+    return `M ${coords[0]![0]} ${coords[0]![1]} L ${coords[1]![0]} ${coords[1]![1]}`;
+  }
+
+  const dx: number[] = new Array(n - 1);
+  const dy: number[] = new Array(n - 1);
+  const m: number[] = new Array(n - 1); // slopes between segments
+
+  for (let i = 0; i < n - 1; i++) {
+    dx[i] = coords[i + 1]![0] - coords[i]![0];
+    dy[i] = coords[i + 1]![1] - coords[i]![1];
+    m[i] = dx[i] === 0 ? 0 : dy[i]! / dx[i]!;
+  }
+
+  // Tangents at each vertex.
+  const t: number[] = new Array(n);
+  t[0] = m[0]!;
+  t[n - 1] = m[n - 2]!;
+  for (let i = 1; i < n - 1; i++) {
+    if (m[i - 1]! * m[i]! <= 0) {
+      t[i] = 0;
+    } else {
+      t[i] = (m[i - 1]! + m[i]!) / 2;
+    }
+  }
+
+  // Build cubic Bezier segments.
+  let d = `M ${coords[0]![0].toFixed(2)} ${coords[0]![1].toFixed(2)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const [x0, y0] = coords[i]!;
+    const [x1, y1] = coords[i + 1]!;
+    const h = dx[i]!;
+    const c1x = x0 + h / 3;
+    const c1y = y0 + (t[i]! * h) / 3;
+    const c2x = x1 - h / 3;
+    const c2y = y1 - (t[i + 1]! * h) / 3;
+    d +=
+      ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)},` +
+      ` ${c2x.toFixed(2)} ${c2y.toFixed(2)},` +
+      ` ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+  }
+  return d;
+}
+
 function labelForRange(r: PortfolioRange): string {
   switch (r) {
     case "1D": return "Today";
     case "1W": return "Past Week";
     case "1M": return "Past Month";
     case "3M": return "Past 3 Months";
+    case "YTD": return "Year to Date";
     case "1Y": return "Past Year";
     case "ALL": return "All Time";
   }

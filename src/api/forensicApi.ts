@@ -177,7 +177,7 @@ function mockPriceHistory(currentUsd: number): PricePoint[] {
 
 /* ─── Portfolio history ──────────────────────────────────────────────── */
 
-export type PortfolioRange = "1D" | "1W" | "1M" | "3M" | "1Y" | "ALL";
+export type PortfolioRange = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
 
 export interface PortfolioHistory {
   range: PortfolioRange;
@@ -209,6 +209,7 @@ export async function fetchPortfolioHistory(
     "1W": { count: 56, vol: 0.008, trend: 0.022 },
     "1M": { count: 48, vol: 0.012, trend: 0.035 },
     "3M": { count: 64, vol: 0.018, trend: 0.06 },
+    "YTD": { count: 80, vol: 0.022, trend: 0.11 },
     "1Y": { count: 96, vol: 0.025, trend: 0.18 },
     "ALL": { count: 120, vol: 0.04, trend: 0.42 },
   };
@@ -239,6 +240,11 @@ export async function fetchPortfolioHistory(
       date.setHours(date.getHours() - (count - 1 - i) * 16);
     } else if (range === "3M") {
       date.setDate(date.getDate() - (count - 1 - i) * 1.4);
+    } else if (range === "YTD") {
+      const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime();
+      const elapsedDays = (Date.now() - startOfYear) / 86_400_000;
+      const stepDays = elapsedDays / (count - 1);
+      date.setTime(startOfYear + stepDays * i * 86_400_000);
     } else if (range === "1Y") {
       date.setDate(date.getDate() - (count - 1 - i) * 4);
     } else {

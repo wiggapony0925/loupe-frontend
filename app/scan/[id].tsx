@@ -9,9 +9,11 @@ import {
   CaptureSourceBadge,
   ForensicReportHeader,
   HeatmapOverlay,
+  HouseEquivalence,
   PriceHistoryChart,
   ScoreBreakdown,
   SplitCaptureView,
+  SubgradeRadar,
   exportReportPdf,
 } from "@/features/report";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -125,6 +127,10 @@ export default function ScanDetailScreen() {
             </View>
 
             <ScoreBreakdown score={report.score} />
+
+            <SubgradeRadar score={report.score} />
+
+            <HouseEquivalence score={report.score} />
 
             {report.priceHistory && report.priceHistory.length > 1 ? (
               <View>
