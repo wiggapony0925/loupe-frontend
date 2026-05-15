@@ -6,18 +6,15 @@ import { router } from "expo-router";
 import {
   ArrowUpRight,
   Camera,
-  DollarSign,
-  Database,
   Settings2,
   Smartphone,
-  Target,
   Zap,
 } from "lucide-react-native";
 import { fetchCollection, fetchCollectionSummary } from "@/api/forensicApi";
 import { HardwareStatusWidget, InitiateScanButton, useScannerConnection } from "@/features/scanner";
 import { PortfolioChart } from "@/features/analytics";
+import { TopMovers } from "@/features/markets/TopMovers";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { StatTile } from "@/components/ui/StatTile";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { LiveSyncChip } from "@/components/ui/LiveSyncChip";
@@ -67,45 +64,57 @@ export default function CommandCenterScreen() {
         <PortfolioChart fallbackTotal={summary.data?.totalValueUsd ?? 0} />
 
         <View>
-          <SectionHeader eyebrow="Vault" title="Today's metrics" />
-          <View className="flex-row gap-3">
+          <SectionHeader
+            eyebrow="Markets"
+            title="Top movers"
+            trailing={
+              <Pressable
+                onPress={() => router.push("/vault")}
+                hitSlop={10}
+                className="flex-row items-center gap-1"
+              >
+                <Text className="text-xs font-medium text-ink-muted">All</Text>
+                <ArrowUpRight size={14} color={palette.ink.muted} />
+              </Pressable>
+            }
+          />
+
+          {/* Compact KPI strip — 3-up summary above the watchlist */}
+          <View className="mb-3 flex-row gap-3">
             {summary.isLoading || !summary.data ? (
               <>
-                <SkeletonTile />
-                <SkeletonTile />
+                <KpiPill />
+                <KpiPill />
+                <KpiPill />
               </>
             ) : (
               <>
-                <StatTile
-                  label="Collection Value"
+                <KpiPill
+                  label="Value"
                   value={compactUsd(summary.data.totalValueUsd)}
-                  delta={`${summary.data.cardCount} graded assets`}
-                  icon={DollarSign}
-                  accent="mint"
+                  accent={palette.accent.mint}
                 />
-                <StatTile
-                  label="Grade Accuracy"
+                <KpiPill
+                  label="Accuracy"
                   value={`${(summary.data.avgAccuracy * 100).toFixed(1)}%`}
-                  delta="vs PSA reference"
-                  icon={Target}
-                  accent="blue"
+                  accent={palette.accent.blue}
+                />
+                <KpiPill
+                  label="Scans"
+                  value={
+                    hardware.data ? hardware.data.scansRemaining.toLocaleString() : "—"
+                  }
+                  accent={palette.accent.amber}
                 />
               </>
             )}
           </View>
-          <View className="mt-3">
-            {hardware.isLoading || !hardware.data ? (
-              <SkeletonTile full />
-            ) : (
-              <StatTile
-                label="Scans Remaining"
-                value={hardware.data.scansRemaining.toLocaleString()}
-                delta={`Sensor ${hardware.data.temperatureC.toFixed(1)}°C · nominal`}
-                icon={Database}
-                accent="amber"
-              />
-            )}
-          </View>
+
+          {collection.isLoading || !collection.data ? (
+            <SkeletonTile full />
+          ) : (
+            <TopMovers cards={collection.data} limit={5} />
+          )}
         </View>
 
         <View>
@@ -235,6 +244,51 @@ function SkeletonTile({ full = false }: { full?: boolean }) {
       <Skeleton width={120} height={22} />
       <View className="h-2" />
       <Skeleton width="60%" height={10} />
+    </View>
+  );
+}
+
+/**
+ * Compact 3-up KPI pill used above the Top Movers list. Mirrors the
+ * Robinhood "category chip strip" pattern — a tiny accent dot, a label
+ * eyebrow, and a single bold value.
+ */
+function KpiPill({
+  label,
+  value,
+  accent,
+}: {
+  label?: string;
+  value?: string;
+  accent?: string;
+}) {
+  if (!label || !value) {
+    return (
+      <View className="flex-1 rounded-xl border border-line bg-bg-elevated px-3 py-2.5">
+        <Skeleton width={40} height={8} />
+        <View className="h-2" />
+        <Skeleton width={56} height={14} />
+      </View>
+    );
+  }
+  return (
+    <View className="flex-1 rounded-xl border border-line bg-bg-elevated px-3 py-2.5">
+      <View className="flex-row items-center gap-1.5">
+        {accent ? (
+          <View
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: accent,
+            }}
+          />
+        ) : null}
+        <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-ink-dim">
+          {label}
+        </Text>
+      </View>
+      <Text className="mt-1 text-sm font-bold text-ink">{value}</Text>
     </View>
   );
 }
