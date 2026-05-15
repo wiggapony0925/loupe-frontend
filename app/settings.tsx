@@ -25,6 +25,8 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import { useSettings, type Currency, type ThemeMode } from "@/store/settingsStore";
+import { CurrencyPickerSheet } from "@/components/ui/CurrencyPickerSheet";
+import { getCurrency } from "@/lib/currency";
 import { palette, useThemedPalette } from "@/theme/tokens";
 
 type TabKey = "general" | "appearance" | "about";
@@ -278,33 +280,54 @@ function GeneralTab() {
 }
 
 function CurrencyPicker({ value, onChange }: { value: Currency; onChange: (c: Currency) => void }) {
-  const opts: { c: Currency; label: string }[] = [
-    { c: "USD", label: "USD · $" },
-    { c: "EUR", label: "EUR · €" },
-    { c: "GBP", label: "GBP · £" },
-  ];
+  const [open, setOpen] = useState(false);
+  const meta = getCurrency(value);
+  const tint = meta.kind === "crypto" ? palette.accent.amber : palette.accent.mint;
   return (
-    <View className="flex-row items-center gap-1 p-1.5">
-      {opts.map((o) => {
-        const active = o.c === value;
-        return (
-          <Pressable
-            key={o.c}
-            onPress={() => onChange(o.c)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            className="flex-1 items-center rounded-xl px-3 py-3"
-            style={{ backgroundColor: active ? `${palette.accent.mint}22` : "transparent" }}
-          >
-            <Text
-              className="text-[12px] font-semibold tracking-wider"
-              style={{ color: active ? palette.accent.mint : palette.ink.muted }}
-            >
-              {o.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+    <View className="px-2 py-2">
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`Display currency ${meta.code}. Tap to change.`}
+        className="flex-row items-center gap-3 rounded-xl px-3 py-3"
+        style={({ pressed }) => ({
+          opacity: pressed ? 0.85 : 1,
+          backgroundColor: pressed ? `${palette.ink.muted}11` : "transparent",
+        })}
+      >
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: `${tint}22`,
+          }}
+        >
+          <Text style={{ fontSize: 18 }}>{meta.flag}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text className="text-[15px] font-semibold text-ink">
+            {meta.code} · {meta.name}
+          </Text>
+          <Text className="mt-0.5 text-[11px] text-ink-muted">
+            Tap to choose from 20+ fiat & crypto currencies
+          </Text>
+        </View>
+        <Text
+          className="text-[11px] font-bold uppercase tracking-wider"
+          style={{ color: tint }}
+        >
+          Change
+        </Text>
+      </Pressable>
+      <CurrencyPickerSheet
+        visible={open}
+        selected={value}
+        onSelect={onChange}
+        onClose={() => setOpen(false)}
+      />
     </View>
   );
 }

@@ -3,7 +3,11 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type ThemeMode = "dark" | "light" | "system";
-export type Currency = "USD" | "EUR" | "GBP";
+/**
+ * ISO-4217 fiat code or crypto symbol. See `src/lib/currency.ts` for the
+ * authoritative catalog (USD/EUR/GBP/JPY/… plus BTC/ETH/SOL/USDC/…).
+ */
+export type Currency = string;
 
 interface SettingsState {
   // Appearance
