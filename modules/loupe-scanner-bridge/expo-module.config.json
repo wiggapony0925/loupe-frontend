@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["LoupeScannerBridgeModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.loupescannerbridge.LoupeScannerBridgeModule"]
+  }
+}

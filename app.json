@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Loupe",
+    "slug": "loupe",
+    "scheme": "loupe",
+    "description": "See every grain. Forensic card grading from the JFM Scanner.",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.loupe.client"
+    },
+    "android": {
+      "package": "app.loupe.client",
+      "adaptiveIcon": {
+        "backgroundColor": "#121214"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset",
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Loupe needs camera access to capture cards for forensic grading.",
+          "recordAudioAndroid": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

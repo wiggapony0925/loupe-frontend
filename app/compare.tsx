@@ -1,0 +1,132 @@
+/**
+ * Side-by-side comparison of two Forensic Reports.
+ *
+ * Route: /compare?a=card_001&b=card_002
+ *
+ * Pulls each report through the existing `fetchReport` query (cached by id)
+ * and renders a parallel column layout: thumbnail, grade, sub-scores,
+ * deltas. Designed to help collectors decide which copy to keep / sell.
+ */
+import React from "react";
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router, useLocalSearchParams } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft } from "lucide-react-native";
+import { fetchReport } from "@/api/forensicApi";
+import { gradeColor, palette } from "@/theme/tokens";
+import { compactUsd } from "@/lib/format";
+import type { ForensicReport, ForensicScore } from "@/types/domain";
+
+export default function CompareScreen() {
+  const { a, b } = useLocalSearchParams<{ a?: string; b?: string }>();
+  const ra = useQuery({ queryKey: ["report", a], queryFn: () => fetchReport(a!), enabled: !!a });
+  const rb = useQuery({ queryKey: ["report", b], queryFn: () => fetchReport(b!), enabled: !!b });
+
+  return (
+    <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
+      <View className="flex-row items-center justify-between px-4 pb-2 pt-2">
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
+        >
+          <ChevronLeft size={18} color={palette.ink.default} />
+        </Pressable>
+        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+          Compare grades
+        </Text>
+        <View className="w-9" />
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}>
+        {ra.isLoading || rb.isLoading || !ra.data || !rb.data ? (
+          <View className="items-center py-20">
+            <ActivityIndicator color={palette.accent.mint} />
+          </View>
+        ) : (
+          <>
+            <View className="flex-row gap-3">
+              <ReportColumn report={ra.data} />
+              <ReportColumn report={rb.data} />
+            </View>
+            <DeltaRow left={ra.data.score} right={rb.data.score} />
+          </>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function ReportColumn({ report }: { report: ForensicReport }) {
+  const tint = gradeColor(report.score.grade);
+  return (
+    <View className="flex-1 gap-3 rounded-2xl border border-line bg-bg-elevated p-3">
+      <Image
+        source={{ uri: report.frontCaptureUri }}
+        style={{ width: "100%", aspectRatio: 2.5 / 3.5, borderRadius: 12 }}
+        resizeMode="cover"
+      />
+      <View>
+        <Text numberOfLines={2} className="text-sm font-semibold text-ink">
+          {report.card.title}
+        </Text>
+        <Text className="mt-0.5 text-[11px] text-ink-muted">{report.card.set}</Text>
+      </View>
+      <View className="flex-row items-baseline gap-2">
+        <Text className="text-3xl font-semibold" style={{ color: tint }}>
+          {report.score.grade.toFixed(1)}
+        </Text>
+        <Text className="text-xs text-ink-dim">{compactUsd(report.card.estimatedValueUsd)}</Text>
+      </View>
+      <View className="gap-1">
+        <ScoreRow label="Surface" value={report.score.surface} />
+        <ScoreRow label="Edges" value={report.score.edges} />
+        <ScoreRow label="Corners" value={report.score.corners} />
+        <ScoreRow label="Centering" value={report.score.centering} />
+      </View>
+    </View>
+  );
+}
+
+function ScoreRow({ label, value }: { label: string; value: number }) {
+  return (
+    <View className="flex-row justify-between">
+      <Text className="text-[11px] text-ink-dim">{label}</Text>
+      <Text className="text-[11px] font-semibold text-ink">{value}</Text>
+    </View>
+  );
+}
+
+function DeltaRow({ left, right }: { left: ForensicScore; right: ForensicScore }) {
+  const rows: { label: string; key: keyof ForensicScore }[] = [
+    { label: "Composite", key: "composite" },
+    { label: "Surface", key: "surface" },
+    { label: "Edges", key: "edges" },
+    { label: "Corners", key: "corners" },
+    { label: "Centering", key: "centering" },
+  ];
+  return (
+    <View className="rounded-2xl border border-line bg-bg-elevated p-4">
+      <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+        Δ Right vs Left
+      </Text>
+      <View className="mt-3 gap-2">
+        {rows.map(({ label, key }) => {
+          const delta = right[key] - left[key];
+          const tint =
+            delta === 0 ? palette.ink.muted : delta > 0 ? palette.accent.mint : palette.accent.rose;
+          return (
+            <View key={key} className="flex-row items-center justify-between">
+              <Text className="text-sm text-ink">{label}</Text>
+              <Text className="text-sm font-semibold" style={{ color: tint }}>
+                {delta > 0 ? "+" : ""}
+                {delta.toFixed(key === "composite" ? 0 : 0)}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
