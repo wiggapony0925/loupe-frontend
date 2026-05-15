@@ -44,6 +44,8 @@ import {
 } from "lucide-react-native";
 import {
   fetchMarketCard,
+  type GradedTier,
+  type GradingHouse,
   type MarketCondition,
   type MarketRange,
   type MarketSource,
@@ -254,6 +256,9 @@ export default function MarketDetailScreen() {
           </View>
         ) : null}
 
+        {/* Multi-house grading ladder — full PSA / CGC / BGS / SGC / TAG breakdown */}
+        {data ? <GradingLadder tiers={data.gradedTiers} /> : null}
+
         {/* Market stats grid */}
         {data ? (
           <View className="mt-6 px-5">
@@ -387,6 +392,168 @@ function Stat({ label, value }: { label: string; value: string }) {
       <Text className="mt-1 text-base font-bold text-ink">{value}</Text>
     </View>
   );
+}
+
+/**
+ * Multi-house graded-price ladder.
+ *
+ * Mirrors how Collectr / PriceCharting break out every recognized grading
+ * house × grade tier (BGS 10 · PSA 10 · CGC 10 · CGC 9.5 · PSA 9 · …) so
+ * the user can see at a glance what their card is worth across each
+ * house's standards. Tap a row to filter the chart to that tier (future).
+ */
+function GradingLadder({ tiers }: { tiers: GradedTier[] }) {
+  const p = useThemedPalette();
+  const [house, setHouse] = useState<GradingHouse | "ALL">("ALL");
+  const houses: (GradingHouse | "ALL")[] = ["ALL", "PSA", "CGC", "BGS", "SGC", "TAG"];
+  const filtered = house === "ALL" ? tiers : tiers.filter((t) => t.house === house);
+
+  return (
+    <View className="mt-6 px-5">
+      <View className="flex-row items-center justify-between">
+        <View>
+          <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+            Graded prices
+          </Text>
+          <Text className="mt-1 text-base font-semibold text-ink">
+            By grading house
+          </Text>
+        </View>
+        <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-ink-dim">
+          {filtered.length} tiers
+        </Text>
+      </View>
+
+      {/* House filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8, paddingTop: 12, paddingRight: 8 }}
+      >
+        {houses.map((h) => {
+          const active = house === h;
+          const tint = h === "ALL" ? p.accent.mint : houseColor(h, p);
+          return (
+            <Pressable
+              key={h}
+              onPress={() => setHouse(h)}
+              hitSlop={6}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 999,
+                backgroundColor: active ? withAlpha(tint, 0.16) : "transparent",
+                borderWidth: 1,
+                borderColor: active ? tint : p.line.default,
+              }}
+            >
+              <Text
+                style={{
+                  color: active ? tint : p.ink.muted,
+                  fontSize: 11,
+                  fontWeight: "800",
+                  letterSpacing: 0.6,
+                }}
+              >
+                {h}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      {/* Tier table */}
+      <View className="mt-3 overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+        {filtered.map((t, i) => {
+          const tint = houseColor(t.house, p);
+          const up = t.deltaPct >= 0;
+          const deltaTint = up ? p.accent.mint : p.accent.rose;
+          return (
+            <View
+              key={`${t.house}-${t.grade}`}
+              className={`flex-row items-center gap-3 px-4 py-3 ${
+                i > 0 ? "border-t border-line/60" : ""
+              }`}
+            >
+              {/* House chip */}
+              <View
+                style={{
+                  width: 56,
+                  paddingVertical: 4,
+                  borderRadius: 6,
+                  alignItems: "center",
+                  backgroundColor: withAlpha(tint, 0.18),
+                }}
+              >
+                <Text
+                  style={{
+                    color: tint,
+                    fontSize: 10,
+                    fontWeight: "800",
+                    letterSpacing: 0.6,
+                  }}
+                >
+                  {t.house}
+                </Text>
+              </View>
+              {/* Grade */}
+              <View style={{ minWidth: 36 }}>
+                <Text
+                  style={{
+                    color: p.ink.default,
+                    fontSize: 18,
+                    fontWeight: "800",
+                    letterSpacing: -0.2,
+                  }}
+                >
+                  {t.grade % 1 === 0 ? t.grade.toFixed(0) : t.grade.toFixed(1)}
+                </Text>
+              </View>
+              {/* Pop */}
+              <View style={{ flex: 1 }}>
+                <Text className="text-[10px] uppercase tracking-[2px] text-ink-dim">
+                  Population
+                </Text>
+                <Text className="text-sm font-semibold text-ink">
+                  {t.pop.toLocaleString()}
+                </Text>
+              </View>
+              {/* Price + delta */}
+              <View style={{ alignItems: "flex-end" }}>
+                <Text className="text-sm font-bold text-ink">
+                  {compactUsd(t.priceUsd)}
+                </Text>
+                <Text
+                  style={{
+                    color: deltaTint,
+                    fontSize: 10,
+                    fontWeight: "700",
+                  }}
+                >
+                  {up ? "▲" : "▼"} {Math.abs(t.deltaPct).toFixed(2)}%
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function houseColor(house: GradingHouse, p: ReturnType<typeof useThemedPalette>): string {
+  switch (house) {
+    case "PSA":
+      return "#A347D6";
+    case "CGC":
+      return "#4FB3D9";
+    case "BGS":
+      return "#C8A24A";
+    case "SGC":
+      return "#34C759";
+    case "TAG":
+      return p.accent.mint;
+  }
 }
 
 interface MarketChartProps {

@@ -19,6 +19,21 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export type MarketRange = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
 export type MarketCondition = "raw" | "graded" | "pop";
 
+/** Recognized third-party grading houses we surface prices for. */
+export type GradingHouse = "PSA" | "CGC" | "BGS" | "SGC" | "TAG";
+
+/** A single graded-tier price tile (e.g. PSA 10 = $4,200). */
+export interface GradedTier {
+  house: GradingHouse;
+  /** Numeric grade — 10, 9.5, 9, 8 (½-grade allowed for CGC/BGS). */
+  grade: number;
+  priceUsd: number;
+  /** Population at this grade-house tier. */
+  pop: number;
+  /** Pct change vs 30 days ago. */
+  deltaPct: number;
+}
+
 /** Canonical list of sources we surface in the comps rail. */
 export type MarketSource =
   | "TCGplayer"
@@ -83,6 +98,12 @@ export interface MarketCard {
   /** Per-condition headline — RAW (ungraded), GRADED (PSA 9 avg), POP (PSA 10). */
   conditionPrices: Record<MarketCondition, number>;
   stats: MarketStats;
+  /**
+   * Full multi-house grade ladder — PSA 10/9/8, CGC 10/9.5/9, BGS 10/9.5/9,
+   * SGC 10/9.5, TAG 10/9. Sorted by priceUsd desc so the highest-end
+   * (BGS Black Label → PSA 10 → …) appears first.
+   */
+  gradedTiers: GradedTier[];
   /** Range → seeded PricePoint[] walk anchored to spotUsd. */
   history: Record<MarketRange, PricePoint[]>;
   /** Recent sold comps + outstanding listings, newest first. */
@@ -254,6 +275,7 @@ export async function fetchMarketCard(
 
   const comps = generateComps(base.id, spotUsd);
   const stats = computeStats(history["1M"], history["3M"], spotUsd, base.id);
+  const gradedTiers = generateGradedTiers(base.id, base.spot);
 
   return {
     id: base.id,
@@ -266,6 +288,7 @@ export async function fetchMarketCard(
     spotUsd,
     conditionPrices,
     stats,
+    gradedTiers,
     history,
     comps,
   };
@@ -342,6 +365,59 @@ function generateComps(idSeed: string, spot: number): MarketComp[] {
     });
   }
   return comps;
+}
+
+/**
+ * Recognized house-grade ladder. Multipliers are vs the card's "spot" PSA 9
+ * baseline — rough industry averages, fine to tune as data partners come on.
+ */
+const GRADED_LADDER: { house: GradingHouse; grade: number; mult: number }[] = [
+  { house: "BGS", grade: 10, mult: 5.6 }, // BGS 10 / Black Label / Pristine
+  { house: "PSA", grade: 10, mult: 4.0 },
+  { house: "CGC", grade: 10, mult: 3.2 }, // CGC Pristine 10
+  { house: "SGC", grade: 10, mult: 2.6 },
+  { house: "TAG", grade: 10, mult: 2.4 },
+  { house: "BGS", grade: 9.5, mult: 2.0 },
+  { house: "CGC", grade: 9.5, mult: 1.55 },
+  { house: "SGC", grade: 9.5, mult: 1.4 },
+  { house: "PSA", grade: 9, mult: 1.0 },
+  { house: "CGC", grade: 9, mult: 0.85 },
+  { house: "BGS", grade: 9, mult: 0.9 },
+  { house: "TAG", grade: 9, mult: 0.7 },
+  { house: "PSA", grade: 8, mult: 0.55 },
+  { house: "CGC", grade: 8, mult: 0.5 },
+];
+
+function generateGradedTiers(idSeed: string, spot: number): GradedTier[] {
+  const rand = seededRand(hashId(idSeed) + 1607);
+  const tiers = GRADED_LADDER.map((tier) => {
+    const noise = 0.9 + rand() * 0.22;
+    const priceUsd = Math.max(1, Math.round(spot * tier.mult * noise));
+    const baseTotal = 80 + rand() * 1800;
+    const gradeMult =
+      tier.grade === 10
+        ? 0.18 + rand() * 0.25
+        : tier.grade === 9.5
+          ? 0.45 + rand() * 0.35
+          : tier.grade === 9
+            ? 0.75 + rand() * 0.5
+            : 1.2 + rand() * 0.6;
+    const houseMult =
+      tier.house === "PSA"
+        ? 1
+        : tier.house === "CGC"
+          ? 0.32
+          : tier.house === "BGS"
+            ? 0.18
+            : tier.house === "SGC"
+              ? 0.14
+              : 0.05;
+    const pop = Math.max(1, Math.floor(baseTotal * gradeMult * houseMult));
+    const deltaPct = (rand() - 0.45) * 14;
+    return { house: tier.house, grade: tier.grade, priceUsd, pop, deltaPct };
+  });
+  tiers.sort((a, b) => b.priceUsd - a.priceUsd);
+  return tiers;
 }
 
 function computeStats(

@@ -192,18 +192,10 @@ export default function SearchScreen() {
       {/* Sticky search bar */}
       <View className="px-5 pb-3 pt-2">
         <View
-          className="flex-row items-center gap-2 rounded-2xl border border-line bg-bg-elevated px-3"
+          className="flex-row items-center gap-2.5 rounded-2xl border border-line bg-bg-elevated pl-4 pr-2"
           style={{ height: 48 }}
         >
-          <Pressable
-            onPress={() => router.push("/scan/phone?mode=quick")}
-            hitSlop={8}
-            className="h-9 w-9 items-center justify-center rounded-full"
-            style={{ backgroundColor: withAlpha(p.accent.mint, 0.12) }}
-          >
-            <Camera size={16} color={p.accent.mint} />
-          </Pressable>
-          <SearchIcon size={16} color={p.ink.muted} />
+          <SearchIcon size={18} color={p.ink.muted} strokeWidth={2.4} />
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -225,10 +217,19 @@ export default function SearchScreen() {
                 Keyboard.dismiss();
               }}
               hitSlop={8}
+              className="h-8 w-8 items-center justify-center rounded-full"
             >
               <X size={16} color={p.ink.muted} />
             </Pressable>
           ) : null}
+          <Pressable
+            onPress={() => router.push("/scan/phone?mode=quick")}
+            hitSlop={8}
+            className="h-8 w-8 items-center justify-center rounded-full"
+            style={{ backgroundColor: withAlpha(p.accent.mint, 0.14) }}
+          >
+            <Camera size={15} color={p.accent.mint} />
+          </Pressable>
         </View>
 
         {/* Quickfilter chips */}
