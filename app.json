@@ -28,7 +28,8 @@
           "cameraPermission": "Loupe needs camera access to capture cards for forensic grading.",
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

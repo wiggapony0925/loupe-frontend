@@ -5,4 +5,4 @@ import { registerWebModule, NativeModule } from "expo";
 
 class LoupeScannerBridgeModule extends NativeModule {}
 
-export default registerWebModule(LoupeScannerBridgeModule);
+export default registerWebModule(LoupeScannerBridgeModule, "LoupeScannerBridge");
