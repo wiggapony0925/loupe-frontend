@@ -1,5 +1,6 @@
 import "../global.css";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { Appearance } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -10,26 +11,47 @@ import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { queryClient } from "@/lib/queryClient";
 import { useSettings } from "@/store/settingsStore";
-import { palette } from "@/theme/tokens";
+import { applyTheme, palette } from "@/theme/tokens";
 
-function ThemeSync() {
+/**
+ * Resolves the user's preference (`themeMode`) to a concrete scheme,
+ * mutates the JS palette so inline-style consumers re-read the new values,
+ * tells NativeWind to flip the `.dark` class (CSS vars do the rest), and
+ * bumps a key so the entire tree remounts to pick up new module-time reads.
+ */
+function useResolvedScheme(): "dark" | "light" {
   const themeMode = useSettings((s) => s.themeMode);
-  const { setColorScheme } = useColorScheme();
+  const [system, setSystem] = useState<"dark" | "light">(
+    Appearance.getColorScheme() === "light" ? "light" : "dark",
+  );
   useEffect(() => {
-    setColorScheme(themeMode);
-  }, [themeMode, setColorScheme]);
-  return null;
+    const sub = Appearance.addChangeListener(({ colorScheme }) => {
+      setSystem(colorScheme === "light" ? "light" : "dark");
+    });
+    return () => sub.remove();
+  }, []);
+  return themeMode === "system" ? system : themeMode;
 }
 
 export default function RootLayout() {
+  const scheme = useResolvedScheme();
+  const { setColorScheme } = useColorScheme();
+
+  // Mutate the JS palette + flip the NativeWind class on every change.
+  useEffect(() => {
+    applyTheme(scheme);
+    setColorScheme(scheme);
+  }, [scheme, setColorScheme]);
+
+  // Force a fresh tree on theme change so module-time captured colors
+  // (Animated values, gradient colors, etc.) re-evaluate cleanly.
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: palette.bg.base }}>
+    <GestureHandlerRootView key={scheme} style={{ flex: 1, backgroundColor: palette.bg.base }}>
       <SafeAreaProvider>
-        <GluestackUIProvider mode="dark">
+        <GluestackUIProvider mode={scheme}>
           <QueryClientProvider client={queryClient}>
             <ThemeProvider>
-              <ThemeSync />
-              <StatusBar style="light" />
+              <StatusBar style={scheme === "light" ? "dark" : "light"} />
               <Stack
                 screenOptions={{
                   headerShown: false,

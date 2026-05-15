@@ -1,9 +1,19 @@
 /**
- * The "Precision" Palette — design tokens for the JFM Forensic Suite.
- * Mirrors tailwind.config.js so non-Tailwind code (SVG fills, animated values,
- * StatusBar, etc.) can reference the exact same values.
+ * The "Precision" palette — design tokens for the Loupe Forensic Suite.
+ *
+ * Two color schemes ship: the original dark "Precision" palette and a
+ * warm "Cream" light palette inspired by Apple Music's tinted album view.
+ *
+ * The exported `palette` object is **mutated in place** by `applyTheme()`
+ * when the user toggles the theme in Settings. Consumers (SVG fills,
+ * inline styles, `Animated.Value` interpolations) re-read on every render
+ * so they pick up the swap automatically. Tailwind class shorthands
+ * (`bg-bg`, `text-ink-muted`, …) flip via CSS variables in `global.css`.
  */
-export const palette = {
+
+export type Scheme = "dark" | "light";
+
+export const darkPalette = {
   bg: {
     base: "#121214",
     elevated: "#1C1C1E",
@@ -24,7 +34,53 @@ export const palette = {
     amber: "#FFB020",
     rose: "#FF453A",
   },
-} as const;
+};
+
+export const lightPalette: typeof darkPalette = {
+  bg: {
+    base: "#E9DEC7",
+    elevated: "#F4EBD9",
+    sunken: "#DCCFB8",
+  },
+  line: {
+    default: "#C9BBA1",
+    strong: "#A99B82",
+  },
+  ink: {
+    default: "#1C1815",
+    muted: "#5C5043",
+    dim: "#8F8273",
+  },
+  accent: {
+    mint: "#00A86E",
+    blue: "#1A6FE0",
+    amber: "#C47C00",
+    rose: "#C6352B",
+  },
+};
+
+/** Live palette — mutated by `applyTheme`. Initial value: dark. */
+export const palette: typeof darkPalette = {
+  bg: { ...darkPalette.bg },
+  line: { ...darkPalette.line },
+  ink: { ...darkPalette.ink },
+  accent: { ...darkPalette.accent },
+};
+
+let activeScheme: Scheme = "dark";
+
+export function applyTheme(scheme: Scheme): void {
+  const next = scheme === "light" ? lightPalette : darkPalette;
+  Object.assign(palette.bg, next.bg);
+  Object.assign(palette.line, next.line);
+  Object.assign(palette.ink, next.ink);
+  Object.assign(palette.accent, next.accent);
+  activeScheme = scheme;
+}
+
+export function getActiveScheme(): Scheme {
+  return activeScheme;
+}
 
 export const radius = {
   xs: 2,

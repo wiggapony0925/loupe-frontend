@@ -328,8 +328,8 @@ function AppearanceTab() {
           </Text>
         </View>
         <Text className="mt-2 text-sm text-ink">
-          Loupe is built dark-first to preserve calibration accuracy in low-light grading
-          environments. Light mode is rolling out screen-by-screen.
+          Dark uses the original Precision palette for calibration accuracy in low-light grading.
+          Light is a warm cream palette inspired by tinted album artwork.
         </Text>
         <View className="mt-3 flex-row items-center gap-2">
           <Swatch tint={palette.accent.mint} label="Mint" />

@@ -1,3 +1,54 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ──────────────────────────────────────────────────────────────────────
+   Loupe Precision palette — CSS variables
+   `R G B` triplets so Tailwind's `rgb(var(--loupe-bg)/<alpha>)`
+   shorthand can apply opacity correctly.
+
+   Default (no class)  → Light  (Cream — Apple Music inspired)
+   .dark on root       → Dark   (original Precision dark)
+
+   NativeWind toggles the `.dark` class on root when
+   `setColorScheme("dark"|"light"|"system")` is called.
+   ────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Light — warm cream */
+  --loupe-bg-base: 233 222 199;
+  --loupe-bg-elevated: 244 235 217;
+  --loupe-bg-sunken: 220 207 184;
+
+  --loupe-line: 201 187 161;
+  --loupe-line-strong: 169 155 130;
+
+  --loupe-ink: 28 24 21;
+  --loupe-ink-muted: 92 80 67;
+  --loupe-ink-dim: 143 130 115;
+
+  --loupe-accent-mint: 0 168 110;
+  --loupe-accent-blue: 26 111 224;
+  --loupe-accent-amber: 196 124 0;
+  --loupe-accent-rose: 198 53 43;
+}
+
+.dark {
+  /* Dark — original Precision palette */
+  --loupe-bg-base: 18 18 20;
+  --loupe-bg-elevated: 28 28 30;
+  --loupe-bg-sunken: 11 11 13;
+
+  --loupe-line: 42 42 46;
+  --loupe-line-strong: 58 58 64;
+
+  --loupe-ink: 245 245 247;
+  --loupe-ink-muted: 161 161 166;
+  --loupe-ink-dim: 110 110 115;
+
+  --loupe-accent-mint: 0 245 155;
+  --loupe-accent-blue: 10 132 255;
+  --loupe-accent-amber: 255 176 32;
+  --loupe-accent-rose: 255 69 58;
+}
+

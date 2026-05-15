@@ -180,29 +180,30 @@ module.exports = {
         },
 
         // ── Loupe "Precision" palette ────────────────────────────────────────
-        // These keys back the existing className shorthands used across the
-        // app (bg-bg, border-line, text-ink-muted, bg-accent-mint, …) and
-        // mirror src/theme/tokens.ts. Keep both files in sync.
+        // Backed by CSS variables in global.css so the palette flips between
+        // dark (`.dark` class) and light (`:root`) when NativeWind toggles
+        // the color scheme. Mirrors src/theme/tokens.ts (which is mutated
+        // at runtime by the same theme switch for inline-style consumers).
         bg: {
-          DEFAULT: "#121214",
-          base: "#121214",
-          elevated: "#1C1C1E",
-          sunken: "#0B0B0D",
+          DEFAULT: "rgb(var(--loupe-bg-base)/<alpha-value>)",
+          base: "rgb(var(--loupe-bg-base)/<alpha-value>)",
+          elevated: "rgb(var(--loupe-bg-elevated)/<alpha-value>)",
+          sunken: "rgb(var(--loupe-bg-sunken)/<alpha-value>)",
         },
         line: {
-          DEFAULT: "#2A2A2E",
-          strong: "#3A3A40",
+          DEFAULT: "rgb(var(--loupe-line)/<alpha-value>)",
+          strong: "rgb(var(--loupe-line-strong)/<alpha-value>)",
         },
         ink: {
-          DEFAULT: "#F5F5F7",
-          muted: "#A1A1A6",
-          dim: "#6E6E73",
+          DEFAULT: "rgb(var(--loupe-ink)/<alpha-value>)",
+          muted: "rgb(var(--loupe-ink-muted)/<alpha-value>)",
+          dim: "rgb(var(--loupe-ink-dim)/<alpha-value>)",
         },
         accent: {
-          mint: "#00F59B",
-          blue: "#0A84FF",
-          amber: "#FFB020",
-          rose: "#FF453A",
+          mint: "rgb(var(--loupe-accent-mint)/<alpha-value>)",
+          blue: "rgb(var(--loupe-accent-blue)/<alpha-value>)",
+          amber: "rgb(var(--loupe-accent-amber)/<alpha-value>)",
+          rose: "rgb(var(--loupe-accent-rose)/<alpha-value>)",
         },
       },
       fontFamily: {
