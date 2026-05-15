@@ -3,6 +3,7 @@ import { Image, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import type { CollectionCard } from "@/types/domain";
 import { Badge } from "@/components/ui/Badge";
+import { Price } from "@/components/ui/Price";
 import { gradeColor, useThemedPalette, withAlpha } from "@/theme/tokens";
 
 interface CardThumbnailProps {
@@ -67,13 +68,12 @@ export function CardThumbnail({ card }: CardThumbnailProps) {
           className="mt-1 flex-row items-baseline justify-between"
           style={{ minHeight: META_LINE_HEIGHT }}
         >
-          <Text
+          <Price
+            usd={card.estimatedValueUsd}
             numberOfLines={1}
             className="text-sm font-semibold text-ink"
             style={{ lineHeight: META_LINE_HEIGHT }}
-          >
-            ${card.estimatedValueUsd.toLocaleString()}
-          </Text>
+          />
           <Text
             numberOfLines={1}
             className="text-[11px] text-ink-dim"
