@@ -54,11 +54,7 @@ export default function VaultScreen() {
             <FilterBar />
           </View>
         }
-        renderItem={({ item }) => (
-          <View className="flex-1">
-            <CardThumbnail card={item} />
-          </View>
-        )}
+        renderItem={({ item }) => <CardThumbnail card={item} />}
         ListEmptyComponent={
           isLoading ? (
             <View className="flex-row gap-3">

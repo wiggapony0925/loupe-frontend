@@ -9,13 +9,19 @@ interface CardThumbnailProps {
   card: CollectionCard;
 }
 
+// Reserved heights so every tile in the grid is identical regardless of
+// title length. Tuned for the 13/14px font sizes used below.
+const TITLE_LINE_HEIGHT = 18;
+const TITLE_LINES = 2;
+const META_LINE_HEIGHT = 16;
+
 export function CardThumbnail({ card }: CardThumbnailProps) {
   const p = useThemedPalette();
   const tint = gradeColor(card.grade);
   return (
     <Pressable
       onPress={() => router.push(`/scan/${card.id}`)}
-      className="overflow-hidden rounded-2xl border border-line bg-bg-elevated"
+      className="flex-1 overflow-hidden rounded-2xl border border-line bg-bg-elevated"
       style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
     >
       <View className="aspect-[5/7] w-full bg-bg-sunken">
@@ -39,15 +45,45 @@ export function CardThumbnail({ card }: CardThumbnailProps) {
           </View>
         </View>
       </View>
-      <View className="gap-1.5 p-3">
-        <Badge label={card.set} tone="neutral" />
-        <Text numberOfLines={1} className="text-sm font-semibold text-ink">
+
+      {/* Fixed-height meta block — every tile matches in size. */}
+      <View className="p-3">
+        <View className="self-start">
+          <Badge label={card.set} tone="neutral" />
+        </View>
+
+        <Text
+          numberOfLines={TITLE_LINES}
+          className="mt-2 text-sm font-semibold text-ink"
+          style={{
+            lineHeight: TITLE_LINE_HEIGHT,
+            minHeight: TITLE_LINE_HEIGHT * TITLE_LINES,
+          }}
+        >
           {card.title}
         </Text>
-        <Text className="text-xs text-ink-muted">
-          ${card.estimatedValueUsd.toLocaleString()} · {card.year}
-        </Text>
+
+        <View
+          className="mt-1 flex-row items-baseline justify-between"
+          style={{ minHeight: META_LINE_HEIGHT }}
+        >
+          <Text
+            numberOfLines={1}
+            className="text-sm font-semibold text-ink"
+            style={{ lineHeight: META_LINE_HEIGHT }}
+          >
+            ${card.estimatedValueUsd.toLocaleString()}
+          </Text>
+          <Text
+            numberOfLines={1}
+            className="text-[11px] text-ink-dim"
+            style={{ lineHeight: META_LINE_HEIGHT }}
+          >
+            {card.year}
+          </Text>
+        </View>
       </View>
     </Pressable>
   );
 }
+
