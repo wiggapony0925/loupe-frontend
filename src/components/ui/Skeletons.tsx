@@ -351,3 +351,60 @@ export function SkeletonScannersList({ rows = 3 }: { rows?: number }) {
     </View>
   );
 }
+
+export function SkeletonListingsRail({ rows = 4 }: { rows?: number }) {
+  const p = useThemedPalette();
+  return (
+    <View style={{ flexDirection: "row", gap: 12 }}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            width: 168,
+            padding: 10,
+            borderRadius: 14,
+            backgroundColor: p.bg.elevated,
+            borderWidth: 1,
+            borderColor: p.line.default,
+            gap: 8,
+          }}
+        >
+          <SkeletonImage width="100%" height={120} radius={10} />
+          <SkeletonText width="80%" height={12} />
+          <SkeletonText width="55%" height={13} />
+          <SkeletonPill width={64} height={18} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function SkeletonCompsList({ rows = 5 }: { rows?: number }) {
+  const p = useThemedPalette();
+  return (
+    <View style={{ gap: 8 }}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: p.bg.elevated,
+            borderWidth: 1,
+            borderColor: p.line.default,
+          }}
+        >
+          <View style={{ flex: 1, gap: 6 }}>
+            <SkeletonText width="75%" height={12} />
+            <SkeletonText width="40%" height={10} />
+          </View>
+          <SkeletonPill width={48} height={18} />
+          <SkeletonText width={60} height={13} />
+        </View>
+      ))}
+    </View>
+  );
+}

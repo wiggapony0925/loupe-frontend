@@ -20,6 +20,7 @@
  */
 import React, { useMemo, useState } from "react";
 import {
+  Linking,
   Pressable,
   ScrollView,
   Text,
@@ -38,16 +39,25 @@ import {
 } from "lucide-react-native";
 import { useCard } from "@/hooks/api/useCard";
 import { useCardMarket } from "@/hooks/api/useCardMarket";
+import { useCardListings } from "@/hooks/api/useCardListings";
+import { useCardComps } from "@/hooks/api/useCardComps";
 import { Price } from "@/components/ui/Price";
 import { QueryState } from "@/components/ui/QueryState";
-import { SkeletonCardDetailPage } from "@/components/ui/Skeletons";
+import {
+  SkeletonCardDetailPage,
+  SkeletonCompsList,
+  SkeletonListingsRail,
+} from "@/components/ui/Skeletons";
+import { DataSourcesFooter } from "@/components/ui/DataSourcesFooter";
 import { palette, useThemedPalette, withAlpha } from "@/theme/tokens";
 import type {
   HouseBlockWire,
   HouseGradeRowWire,
   HouseId,
+  ListingWire,
   MarketSnapshotWire,
   PriceHistoryWire,
+  SoldCompWire,
 } from "@/api/types";
 
 const BLURHASH = "L6Pj0^jE.AyE_3t7t7R**0o#DgR4";
@@ -356,6 +366,10 @@ export default function CardDetailScreen() {
                 )}
               </View>
 
+              {/* Live listings + recent comps (real data, gracefully empty) */}
+              <LiveListingsSection cardId={cardId} />
+              <RecentCompsSection cardId={cardId} />
+
               {/* 10. Collapsible card details */}
               <Pressable
                 onPress={() => setDetailsOpen((v) => !v)}
@@ -381,6 +395,7 @@ export default function CardDetailScreen() {
                 )}
               </Pressable>
               {detailsOpen ? <CardDetailsBlock card={card} /> : null}
+              <DataSourcesFooter />
             </>
           ) : null}
         </QueryState>
@@ -662,6 +677,22 @@ function GradeRow({
         {row.population.toLocaleString()} pop
       </Text>
       <View style={{ flex: 1 }} />
+      {row.source === "synthesized" ? (
+        <View
+          style={{
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 999,
+            backgroundColor: p.bg.base,
+            borderWidth: 1,
+            borderColor: p.line.default,
+          }}
+        >
+          <Text style={{ color: p.ink.dim, fontSize: 9, fontWeight: "700" }}>
+            est
+          </Text>
+        </View>
+      ) : null}
       <Text style={{ color: changeColor, fontSize: 11, fontWeight: "700" }}>
         {positive ? "+" : ""}
         {row.change_pct.toFixed(1)}%
@@ -769,3 +800,256 @@ function flattenHouses(
   return out.slice(0, filter === "all" ? 24 : 16);
 }
 
+
+// ─── Live listings & sold comps ────────────────────────────────────────
+
+function SectionHeader({ label, badge }: { label: string; badge?: string | null }) {
+  const p = useThemedPalette();
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 8,
+      }}
+    >
+      <Text
+        style={{
+          color: p.ink.dim,
+          fontSize: 10,
+          fontWeight: "700",
+          letterSpacing: 3,
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </Text>
+      {badge ? (
+        <Text style={{ color: p.ink.muted, fontSize: 11 }}>· {badge}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+function LiveListingsSection({ cardId }: { cardId: string }) {
+  const p = useThemedPalette();
+  const q = useCardListings(cardId, { limit: 12 });
+  const listings = q.data?.listings ?? [];
+
+  return (
+    <View style={{ gap: 4 }}>
+      <SectionHeader label="Live Listings" badge={`${listings.length}`} />
+      {q.isLoading ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <SkeletonListingsRail rows={4} />
+        </ScrollView>
+      ) : listings.length === 0 ? (
+        <View
+          style={{
+            padding: 16,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: p.line.default,
+            backgroundColor: p.bg.elevated,
+            alignItems: "center",
+          }}
+        >
+          <Text className="text-[12px] text-ink-muted">
+            No live listings right now
+          </Text>
+        </View>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={{ flexDirection: "row", gap: 10, paddingRight: 12 }}>
+            {listings.map((l) => (
+              <ListingCard key={`${l.source}:${l.id}`} listing={l} />
+            ))}
+          </View>
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+function ListingCard({ listing }: { listing: ListingWire }) {
+  const p = useThemedPalette();
+  const onPress = () => {
+    if (listing.url) Linking.openURL(listing.url).catch(() => undefined);
+  };
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        width: 168,
+        padding: 10,
+        borderRadius: 14,
+        backgroundColor: p.bg.elevated,
+        borderWidth: 1,
+        borderColor: p.line.default,
+        gap: 8,
+      }}
+    >
+      {listing.image_url ? (
+        <Image
+          source={{ uri: listing.image_url }}
+          style={{ width: "100%", height: 120, borderRadius: 10 }}
+          contentFit="cover"
+          placeholder={BLURHASH}
+          transition={120}
+        />
+      ) : (
+        <View
+          style={{
+            width: "100%",
+            height: 120,
+            borderRadius: 10,
+            backgroundColor: p.bg.sunken,
+          }}
+        />
+      )}
+      <Text
+        numberOfLines={2}
+        style={{ color: p.ink.default, fontSize: 11, fontWeight: "600" }}
+      >
+        {listing.title}
+      </Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Price
+          usd={listing.price.amount}
+          className="text-[13px] font-semibold text-ink"
+        />
+        {listing.is_auction ? (
+          <Text style={{ color: p.accent.amber, fontSize: 10, fontWeight: "700" }}>
+            AUCTION
+          </Text>
+        ) : null}
+      </View>
+      {listing.grade ? (
+        <View
+          style={{
+            alignSelf: "flex-start",
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 999,
+            backgroundColor: withAlpha(p.accent.mint, 0.15),
+          }}
+        >
+          <Text style={{ color: p.accent.mint, fontSize: 10, fontWeight: "700" }}>
+            {listing.grade.company} {listing.grade.value}
+          </Text>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
+function RecentCompsSection({ cardId }: { cardId: string }) {
+  const p = useThemedPalette();
+  const q = useCardComps(cardId, { days: 90, limit: 12 });
+  const comps = q.data?.comps ?? [];
+
+  return (
+    <View style={{ gap: 4 }}>
+      <SectionHeader label="Recent Sold Comps" badge="90d" />
+      {q.isLoading ? (
+        <SkeletonCompsList rows={4} />
+      ) : comps.length === 0 ? (
+        <View
+          style={{
+            padding: 16,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: p.line.default,
+            backgroundColor: p.bg.elevated,
+            alignItems: "center",
+          }}
+        >
+          <Text className="text-[12px] text-ink-muted">
+            No recent comps in window
+          </Text>
+        </View>
+      ) : (
+        <View
+          style={{
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: p.line.default,
+            backgroundColor: p.bg.elevated,
+            overflow: "hidden",
+          }}
+        >
+          {comps.map((c, i) => (
+            <CompRow
+              key={`${c.source}:${c.id}`}
+              comp={c}
+              isLast={i === comps.length - 1}
+            />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function CompRow({ comp, isLast }: { comp: SoldCompWire; isLast: boolean }) {
+  const p = useThemedPalette();
+  const onPress = () => {
+    if (comp.url) Linking.openURL(comp.url).catch(() => undefined);
+  };
+  const date = comp.sold_at ? new Date(comp.sold_at) : null;
+  const dateLabel =
+    date && !Number.isNaN(date.getTime())
+      ? date.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        })
+      : "—";
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderBottomWidth: isLast ? 0 : 1,
+        borderBottomColor: p.line.default,
+      }}
+    >
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text
+          numberOfLines={1}
+          style={{ color: p.ink.default, fontSize: 12, fontWeight: "600" }}
+        >
+          {comp.title}
+        </Text>
+        <Text style={{ color: p.ink.muted, fontSize: 10 }}>
+          {comp.source.toUpperCase()} · {dateLabel}
+        </Text>
+      </View>
+      {comp.grade ? (
+        <View
+          style={{
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 999,
+            backgroundColor: withAlpha(p.accent.mint, 0.15),
+          }}
+        >
+          <Text style={{ color: p.accent.mint, fontSize: 10, fontWeight: "700" }}>
+            {comp.grade.company} {comp.grade.value}
+          </Text>
+        </View>
+      ) : null}
+      <Price usd={comp.price.amount} className="text-[13px] font-semibold text-ink" />
+    </Pressable>
+  );
+}

@@ -39,6 +39,8 @@ export const ENDPOINTS = {
     item: (id: string) => `${V1}/cards/${id}`,
     prices: (id: string) => `${V1}/cards/${id}/prices`,
     market: (id: string) => `${V1}/cards/${id}/market`,
+    listings: (id: string) => `${V1}/cards/${id}/listings`,
+    comps: (id: string) => `${V1}/cards/${id}/comps`,
   },
   sets: {
     list: `${V1}/sets`,
@@ -50,6 +52,9 @@ export const ENDPOINTS = {
   collections: {
     list: `${V1}/collections`,
     item: (id: string) => `${V1}/collections/${id}`,
+  },
+  providers: {
+    status: `${V1}/providers/status`,
   },
   ws: {
     scans: "/ws/scans",

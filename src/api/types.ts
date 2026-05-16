@@ -421,6 +421,7 @@ export interface HouseGradeRowWire {
   change_pct: number;
   last_sale_at: string | null;
   listing_url: string | null;
+  source?: "real" | "synthesized";
 }
 
 export interface HouseBlockWire {
@@ -439,4 +440,76 @@ export interface MarketSnapshotWire {
 export interface MarketResponseWire {
   card_id: string;
   snapshot: MarketSnapshotWire;
+}
+
+// ---------------------------------------------------------------------------
+// Live listings (`GET /v1/cards/{id}/listings`)
+// ---------------------------------------------------------------------------
+
+export interface GradeWire {
+  company: string;
+  value: number;
+}
+
+export interface ListingWire {
+  source: string;
+  id: string;
+  title: string;
+  url: string | null;
+  image_url: string | null;
+  price: Money;
+  is_auction: boolean;
+  time_left_seconds: number | null;
+  grade: GradeWire | null;
+  seller: string | null;
+  location: string | null;
+  extras: Record<string, unknown>;
+}
+
+export interface ListingsResponseWire {
+  card_id: string;
+  query: string;
+  listings: ListingWire[];
+}
+
+// ---------------------------------------------------------------------------
+// Sold comps (`GET /v1/cards/{id}/comps`)
+// ---------------------------------------------------------------------------
+
+export interface SoldCompWire {
+  source: string;
+  id: string;
+  title: string;
+  url: string | null;
+  price: Money;
+  sold_at: string;
+  grade: GradeWire | null;
+  extras: Record<string, unknown>;
+}
+
+export interface CompsFiltersWire {
+  grade: number | null;
+  house: string | null;
+}
+
+export interface CompsResponseWire {
+  card_id: string;
+  query: string;
+  days: number;
+  filters: CompsFiltersWire;
+  comps: SoldCompWire[];
+}
+
+// ---------------------------------------------------------------------------
+// Provider status (`GET /v1/providers/status`)
+// ---------------------------------------------------------------------------
+
+export interface ProviderStatusWire {
+  id: string;
+  configured: boolean;
+  capabilities: Record<string, boolean>;
+}
+
+export interface ProvidersStatusResponseWire {
+  providers: ProviderStatusWire[];
 }
