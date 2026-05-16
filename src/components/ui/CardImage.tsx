@@ -4,7 +4,10 @@
  * Wraps `expo-image` with:
  *   • themed shimmer skeleton while loading (suppressed when a blurhash
  *     placeholder is provided; the blurhash IS the skeleton)
- *   • one-shot fallback to a secondary URL on first error
+ *   • one-shot fallback to a secondary URL on first error OR on timeout
+ *     (expo-image on iOS can hang indefinitely on slow third-party CDNs;
+ *     a hard client-side timeout converts the hang into a real onError
+ *     so the fallback URL / broken-state branch actually runs)
  *   • themed `ImageOff` broken-card fallback when both fail
  *   • memory + disk cache, 250ms cross-fade, normal contentFit
  *   • `priority` pass-through for FlatList virtualization
@@ -23,6 +26,17 @@ import { useThemedPalette, withAlpha } from "@/theme/tokens";
 const TINY_TRANSPARENT_PIXEL =
   "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
 
+// Hard ceiling on how long we'll wait for a single URL to first-paint
+// before treating it as failed and trying the fallback. Tuned to be
+// generous enough for cold-cache 3G but tight enough that a hung
+// NSURLSession request doesn't sit on screen as a skeleton forever.
+const DEFAULT_LOAD_TIMEOUT_MS = 12_000;
+
+// Dev-only: dedupe slow-load warnings so a single hot URL (e.g. the
+// trending Charizard rendered in 6 different rails) only emits once
+// per session per URL. Keeps the Metro console readable.
+const __slowWarnedUrls = new Set<string>();
+
 export interface CardImageProps {
   uri?: string | null;
   fallbackUri?: string | null;
@@ -38,6 +52,8 @@ export interface CardImageProps {
   showSkeleton?: boolean;
   alt?: string;
   style?: ViewStyle;
+  /** Hard timeout (ms) before treating a hung load as an error. */
+  loadTimeoutMs?: number;
 }
 
 export function CardImage({
@@ -54,6 +70,7 @@ export function CardImage({
   showSkeleton = true,
   alt,
   style,
+  loadTimeoutMs = DEFAULT_LOAD_TIMEOUT_MS,
 }: CardImageProps) {
   const p = useThemedPalette();
   const [activeUri, setActiveUri] = useState<string | null>(uri ?? null);
@@ -71,22 +88,6 @@ export function CardImage({
     loadedRef.current = false;
   }, [uri]);
 
-  // Dev-only: surface URLs that take >8s to first-paint so we can see
-  // which CDN/variant combos are the genuinely-slow offenders. Skips
-  // the warn if the image loaded in the meantime (cuts queue noise).
-  React.useEffect(() => {
-    if (!__DEV__ || !activeUri || !loading) return;
-    const started = Date.now();
-    const t = setTimeout(() => {
-      if (loadedRef.current) return;
-      // eslint-disable-next-line no-console
-      console.warn(
-        `[CardImage] slow load (${Date.now() - started}ms still pending): ${activeUri}`,
-      );
-    }, 8000);
-    return () => clearTimeout(t);
-  }, [activeUri, loading]);
-
   const onLoad = useCallback(() => {
     loadedRef.current = true;
     setLoading(false);
@@ -98,6 +99,7 @@ export function CardImage({
       setTriedFallback(true);
       setActiveUri(fallbackUri);
       setLoading(true);
+      loadedRef.current = false;
       return;
     }
     setLoading(false);
@@ -107,6 +109,27 @@ export function CardImage({
       captureMessage(`card_image_failed: ${uri ?? "(none)"}`, "warning");
     }
   }, [activeUri, fallbackUri, triedFallback, uri]);
+
+  // Hard timeout: expo-image on iOS does not enforce a per-request
+  // ceiling — slow third-party CDNs (pokemontcg.io, ygoprodeck.com)
+  // can leave a request "pending" indefinitely with no onError ever
+  // firing. We surface that as a real error so the fallback URL /
+  // broken-state UI actually renders instead of an eternal skeleton.
+  React.useEffect(() => {
+    if (!activeUri || !loading || loadTimeoutMs <= 0) return;
+    const t = setTimeout(() => {
+      if (loadedRef.current) return;
+      if (__DEV__ && !__slowWarnedUrls.has(activeUri)) {
+        __slowWarnedUrls.add(activeUri);
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[CardImage] load exceeded ${loadTimeoutMs}ms, treating as error: ${activeUri}`,
+        );
+      }
+      onError();
+    }, loadTimeoutMs);
+    return () => clearTimeout(t);
+  }, [activeUri, loading, loadTimeoutMs, onError]);
 
   const containerStyle: ViewStyle = {
     width,

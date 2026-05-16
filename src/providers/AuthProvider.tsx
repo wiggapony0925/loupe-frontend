@@ -89,13 +89,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [persistToken]);
 
   const signInWithApple = useCallback(async () => {
-    // eslint-disable-next-line no-console
-    console.log("[auth] signInWithApple: not yet wired");
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.log("[auth] signInWithApple: not yet wired");
+    }
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    // eslint-disable-next-line no-console
-    console.log("[auth] signInWithGoogle: not yet wired");
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.log("[auth] signInWithGoogle: not yet wired");
+    }
   }, []);
 
   const setToken = useCallback(

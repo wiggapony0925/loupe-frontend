@@ -47,6 +47,7 @@ export function CardHorizontalRail({
         <CardTile
           card={item}
           size={tileSize}
+          width={TILE_WIDTH[tileSize]}
           showPrice={showPrice}
           trend={trend}
           priority={priority}

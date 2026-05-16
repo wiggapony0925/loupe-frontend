@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/api/client";
 import { ENDPOINTS } from "@/api/endpoints";
 import type { CardSearchResult } from "@/api/types";
+import { queryKeys } from "./queryKeys";
 
 export function useCard(id: string | null | undefined) {
   return useQuery<CardSearchResult>({
-    queryKey: ["cards", "item", id],
+    queryKey: queryKeys.cards.item(id ?? ""),
     queryFn: () =>
       apiFetch<CardSearchResult>(ENDPOINTS.cards.item(id as string), {
         skipAuth: true,

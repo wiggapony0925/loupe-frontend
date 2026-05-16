@@ -5,6 +5,7 @@
 import React, { memo, useCallback, type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
+import { routes } from "@/lib/routes";
 import { CardImage } from "@/components/ui/CardImage";
 import { pickCardBlurhash, pickCardImageUrl } from "@/lib/cardImage";
 import { compactUsd } from "@/lib/format";
@@ -33,7 +34,7 @@ function CardRowImpl({
 
   const handlePress = useCallback(() => {
     if (onPress) return onPress();
-    router.push(`/card/${encodeURIComponent(card.id)}`);
+    router.push(routes.card(card.id));
   }, [onPress, card.id]);
 
   const resolvedSubtitle =

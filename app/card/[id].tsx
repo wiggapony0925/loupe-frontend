@@ -149,10 +149,10 @@ export default function CardDetailScreen() {
           Market
         </Text>
         <View className="flex-row gap-2">
-          <IconBtn>
+          <IconBtn label="Save to watchlist">
             <Heart size={16} color={p.ink.muted} />
           </IconBtn>
-          <IconBtn>
+          <IconBtn label="Set price alert">
             <Bell size={16} color={p.ink.muted} />
           </IconBtn>
         </View>
@@ -393,9 +393,19 @@ export default function CardDetailScreen() {
 
 // ─── Sub-components ────────────────────────────────────────────────────
 
-function IconBtn({ children }: { children: React.ReactNode }) {
+function IconBtn({
+  children,
+  label,
+}: {
+  children: React.ReactNode;
+  label?: string;
+}) {
   return (
-    <View className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated">
+    <View
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
+    >
       {children}
     </View>
   );

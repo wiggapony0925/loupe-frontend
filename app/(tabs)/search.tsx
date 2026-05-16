@@ -8,7 +8,7 @@
  *   • Live search rail — filtered card list with mini sparklines.
  *   • Recent searches (in-memory, last 6).
  */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -21,7 +21,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/api/queryKeys";
 import { router } from "expo-router";
+import { routes } from "@/lib/routes";
 import { Camera, Clock, Search as SearchIcon, X } from "lucide-react-native";
 import { fetchCardSparklines, fetchCollection } from "@/api/forensicApi";
 import { fetchMarketCatalog } from "@/api/marketApi";
@@ -30,6 +32,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { COPY } from "@/lib/copy";
 import { useCardSearch, useTrendingCards } from "@/hooks/api";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/features/search/SearchResultRow";
 import { CardImage } from "@/components/ui/CardImage";
 import { SkeletonTrendingGrid } from "@/components/ui/Skeletons";
@@ -137,7 +140,7 @@ export default function SearchScreen() {
   const [selectedTcg, setSelectedTcg] = useState<TcgChip>("all");
   const [recent, setRecent] = useState<string[]>([]);
 
-  const collection = useQuery({ queryKey: ["collection"], queryFn: fetchCollection });
+  const collection = useQuery({ queryKey: queryKeys.collection.list(), queryFn: fetchCollection });
   const sparks = useQuery({
     queryKey: ["card-sparklines"],
     queryFn: fetchCardSparklines,
@@ -211,11 +214,7 @@ export default function SearchScreen() {
   // Debounce the input by 300ms; map the active category to a backend `tcg`
   // facet (unsupported facets fall through as "all"). The hook itself enforces
   // the ≥2-character floor.
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
-    return () => clearTimeout(t);
-  }, [query]);
+  const debouncedQuery = useDebouncedValue(query.trim(), 300);
   // Explicit chip beats category fallback; chips for unsupported facets
   // collapse to "all" so we still hit the wire and don't 400.
   const chipTcg: TcgChip = SUPPORTED_TCGS.has(selectedTcg) ? selectedTcg : "all";
@@ -270,7 +269,7 @@ export default function SearchScreen() {
             </Pressable>
           ) : null}
           <Pressable
-            onPress={() => router.push("/scan/phone?mode=quick")}
+            onPress={() => router.push(routes.scanPhone("quick"))}
             hitSlop={8}
             className="h-8 w-8 items-center justify-center rounded-full"
             style={{ backgroundColor: withAlpha(p.accent.mint, 0.14) }}
@@ -596,7 +595,8 @@ function ResultRow({
 
   return (
     <Pressable
-      onPress={() => router.push(`/market/${card.id}`)}
+      onPress={() => router.push(routes.market(card.id))}
+      accessibilityRole="button"
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
     >
@@ -745,7 +745,8 @@ function LiveResultRow({ card, bordered }: { card: CardSearchResult; bordered: b
   const p = useThemedPalette();
   return (
     <Pressable
-      onPress={() => router.push(`/market/${encodeURIComponent(card.id)}`)}
+      onPress={() => router.push(routes.market(card.id))}
+      accessibilityRole="button"
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
     >
@@ -829,15 +830,21 @@ function TrendingSection({ tcg = "all" }: { tcg?: TcgChip }) {
             }}
           >
             {cards.map((card, idx) => (
-              <View key={card.id} style={{ width: "48%" }}>
+              // Cell geometry mirrors SkeletonTrendingGrid exactly
+              // (flexBasis 47% + flexGrow 1) so the loading state and
+              // the loaded state are visually identical and the grid
+              // doesn't shift when data arrives.
+              <View
+                key={card.id}
+                style={{ flexBasis: "47%", flexGrow: 1 }}
+              >
                 <CardTile
                   card={card}
                   size="md"
                   showName
                   showSet
-                  showPrice
+                  showPrice={false}
                   priority={idx < 4 ? "normal" : "low"}
-                  style={{ width: "100%" }}
                 />
               </View>
             ))}

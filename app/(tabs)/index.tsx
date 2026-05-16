@@ -2,7 +2,9 @@ import React, { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/api/queryKeys";
 import { router } from "expo-router";
+import { routes } from "@/lib/routes";
 import {
   ArrowUpRight,
   Camera,
@@ -33,7 +35,7 @@ export default function CommandCenterScreen() {
   const qc = useQueryClient();
   const { isAuthenticated } = useAuth();
   const summary = useQuery({ queryKey: ["collection-summary"], queryFn: fetchCollectionSummary });
-  const collection = useQuery({ queryKey: ["collection"], queryFn: fetchCollection });
+  const collection = useQuery({ queryKey: queryKeys.collection.list(), queryFn: fetchCollection });
   const hardware = useScannerConnection();
   const movers = useTopMovers({ enrichLimit: 12, limit: 5 });
 
@@ -84,7 +86,7 @@ export default function CommandCenterScreen() {
             title="Top movers"
             trailing={
               <Pressable
-                onPress={() => router.push("/vault")}
+                onPress={() => router.push(routes.vault())}
                 hitSlop={10}
                 className="flex-row items-center gap-1"
               >
@@ -154,7 +156,7 @@ export default function CommandCenterScreen() {
             title="Last graded"
             trailing={
               <Pressable
-                onPress={() => router.push("/vault")}
+                onPress={() => router.push(routes.vault())}
                 hitSlop={10}
                 className="flex-row items-center gap-1"
               >
@@ -228,7 +230,7 @@ function Header({ online, lastSyncIso }: { online: boolean; lastSyncIso?: string
           </View>
           <LiveSyncChip online={online} lastSyncIso={lastSyncIso} />
           <Pressable
-            onPress={() => router.push("/settings")}
+            onPress={() => router.push(routes.settings())}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Open settings"
@@ -251,7 +253,7 @@ function RecentChip({ card }: { card: CollectionCard }) {
   const tint = gradeColor(card.grade);
   return (
     <Pressable
-      onPress={() => router.push(`/scan/${card.id}`)}
+      onPress={() => router.push(routes.scan(card.id))}
       className="w-44 rounded-2xl border border-line bg-bg-elevated p-3"
       style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
     >
@@ -396,7 +398,7 @@ function PhoneCaptureCard() {
         <PrimaryButton
           label={isStudio ? "Open Studio Capture" : "Open Quick Capture"}
           icon={isStudio ? Camera : Zap}
-          onPress={() => router.push(`/scan/phone?mode=${mode}`)}
+          onPress={() => router.push(routes.scanPhone(mode))}
           variant={isStudio ? "mint" : "blue"}
           accessibilityLabel={`Start ${mode} phone capture`}
         />
@@ -455,7 +457,7 @@ function TopMoversSection({
           title="Sign in to see your movers"
           message="Connect your vault to track the biggest 1-year price swings on cards you actually own."
           secondaryActionLabel="Open settings"
-          onSecondaryAction={() => router.push("/settings")}
+          onSecondaryAction={() => router.push(routes.settings())}
           compact
         />
       </View>
@@ -483,7 +485,7 @@ function TopMoversSection({
           title="Your vault is empty"
           message="Scan a card to start tracking real movers on the cards you grade."
           secondaryActionLabel="Scan a card"
-          onSecondaryAction={() => router.push("/scan/phone")}
+          onSecondaryAction={() => router.push(routes.scanPhone())}
           compact
         />
       </View>

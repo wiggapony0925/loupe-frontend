@@ -10,6 +10,7 @@
 import React, { useMemo } from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
+import { routes } from "@/lib/routes";
 import { Sparkline, seededWalk } from "@/components/ui/Sparkline";
 import { useThemedPalette, withAlpha } from "@/theme/tokens";
 import { compactUsd } from "@/lib/format";
@@ -47,7 +48,7 @@ export function TopMovers({ cards, limit = 5 }: TopMoversProps) {
         return (
           <Pressable
             key={row.card.id}
-            onPress={() => router.push(`/scan/${row.card.id}`)}
+            onPress={() => router.push(routes.scan(row.card.id))}
             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
             className={`flex-row items-center gap-3 px-4 py-3 ${
               i > 0 ? "border-t border-line/60" : ""

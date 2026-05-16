@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/api/client";
 import { ENDPOINTS } from "@/api/endpoints";
 import type { CardSetListResponse, TcgKey } from "@/api/types";
+import { queryKeys } from "./queryKeys";
 
 export function useSets(tcg: TcgKey | "all" = "magic") {
   return useQuery<CardSetListResponse>({
-    queryKey: ["sets", tcg],
+    queryKey: queryKeys.sets.list(tcg),
     queryFn: () =>
       apiFetch<CardSetListResponse>(ENDPOINTS.sets.list, {
         query: { tcg },

@@ -25,6 +25,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { routes } from "@/lib/routes";
 import { useQuery } from "@tanstack/react-query";
 import Svg, {
   Circle,
@@ -77,7 +78,7 @@ export default function MarketDetailScreen() {
 
   const handleGradeIt = () => {
     if (owned && data?.ownedCard) {
-      router.push(`/scan/${data.ownedCard.id}`);
+      router.push(routes.scan(data.ownedCard.id));
       return;
     }
     router.push({

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { getScanJob, streamScanJob, uploadScan } from "@/api/scanJobs";
+import { queryKeys } from "@/hooks/api/queryKeys";
 import { config } from "@/lib/config";
 import { useScannerStore } from "@/store/scannerStore";
 import type { PhotometricCapture, ScanJob } from "@/types/domain";
@@ -53,7 +54,7 @@ export function useScanJob() {
       cleanupRef.current?.();
       cleanupRef.current = null;
       finishScan(job.reportId);
-      qc.invalidateQueries({ queryKey: ["collection"] });
+      qc.invalidateQueries({ queryKey: queryKeys.collection.all });
       qc.invalidateQueries({ queryKey: ["collection-summary"] });
       router.push(`/scan/${job.reportId}`);
     } else if (job.status === "failed") {

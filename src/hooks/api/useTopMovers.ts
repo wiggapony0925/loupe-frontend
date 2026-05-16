@@ -21,6 +21,7 @@ import type {
 import type { CardWire, TrendInfo } from "@/components/cards";
 import { useMyGrades } from "@/hooks/api/useMyGrades";
 import { useAuth } from "@/providers/AuthProvider";
+import { queryKeys } from "./queryKeys";
 
 export interface TopMoverRow {
   card: CardWire;
@@ -56,7 +57,7 @@ export function useTopMovers({
   // Parallel-fetch card metadata + market snapshot for each target.
   const cardQueries = useQueries({
     queries: enrichmentTargets.map((g) => ({
-      queryKey: ["cards", "item", g.card_id],
+      queryKey: queryKeys.cards.item(g.card_id),
       queryFn: () =>
         apiFetch<CardSearchResult>(ENDPOINTS.cards.item(g.card_id), {
           skipAuth: true,
@@ -67,7 +68,7 @@ export function useTopMovers({
   });
   const marketQueries = useQueries({
     queries: enrichmentTargets.map((g) => ({
-      queryKey: ["cards", "market", g.card_id],
+      queryKey: queryKeys.cards.market(g.card_id),
       queryFn: () =>
         apiFetch<MarketResponseWire>(ENDPOINTS.cards.market(g.card_id), {
           skipAuth: true,

@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/api/client";
 import { ENDPOINTS } from "@/api/endpoints";
 import type { ListingsResponseWire } from "@/api/types";
+import { queryKeys } from "./queryKeys";
 
 export interface UseCardListingsOptions {
   limit?: number;
@@ -17,7 +18,7 @@ export function useCardListings(
 ) {
   const limit = opts.limit ?? 20;
   return useQuery<ListingsResponseWire>({
-    queryKey: ["cards", "listings", id, limit],
+    queryKey: queryKeys.cards.listings(id ?? "", limit),
     queryFn: () => {
       const qs = new URLSearchParams({ limit: String(limit) });
       return apiFetch<ListingsResponseWire>(

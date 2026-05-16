@@ -1,7 +1,10 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/api/client";
 import { ENDPOINTS } from "@/api/endpoints";
+import { prefetchCardImages } from "@/lib/cardImage";
 import type { CardSearchResponse, TcgKey } from "@/api/types";
+import { queryKeys } from "./queryKeys";
 
 type SearchTcg = TcgKey | "all";
 
@@ -15,8 +18,8 @@ interface Options {
 export function useCardSearch({ q, tcg = "all", limit = 20, enabled = true }: Options) {
   const trimmed = q.trim();
   const isEnabled = enabled && trimmed.length >= 2;
-  return useQuery<CardSearchResponse>({
-    queryKey: ["cards", "search", tcg, trimmed, limit],
+  const query = useQuery<CardSearchResponse>({
+    queryKey: queryKeys.cards.search(tcg, trimmed, limit),
     queryFn: () =>
       apiFetch<CardSearchResponse>(ENDPOINTS.cards.search, {
         query: { q: trimmed, tcg, limit },
@@ -25,4 +28,13 @@ export function useCardSearch({ q, tcg = "all", limit = 20, enabled = true }: Op
     enabled: isEnabled,
     staleTime: 60_000,
   });
+
+  // Warm the disk cache for thumbnails as soon as results land so
+  // tiles paint immediately on render instead of waiting on slow
+  // third-party CDNs (pokemontcg.io, ygoprodeck.com).
+  useEffect(() => {
+    if (query.data?.results) prefetchCardImages(query.data.results);
+  }, [query.data]);
+
+  return query;
 }

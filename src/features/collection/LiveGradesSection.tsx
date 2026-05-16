@@ -10,6 +10,7 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
+import { routes } from "@/lib/routes";
 import type { GradedCard } from "@/api/types";
 import { useMyGrades } from "@/hooks/api/useMyGrades";
 import { useAuth } from "@/providers/AuthProvider";
@@ -105,7 +106,7 @@ function GradeRow({ grade, bordered }: { grade: GradedCard; bordered: boolean })
   const color = gradeColor(grade.grade);
   return (
     <Pressable
-      onPress={() => router.push(`/card/${encodeURIComponent(grade.card_id)}`)}
+      onPress={() => router.push(routes.card(grade.card_id))}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
     >

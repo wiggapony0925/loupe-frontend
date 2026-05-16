@@ -1,7 +1,8 @@
 import React, { useCallback, useMemo } from "react";
-import { FlatList, RefreshControl, View } from "react-native";
+import { FlatList, RefreshControl, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { routes } from "@/lib/routes";
 import { useQueryClient } from "@tanstack/react-query";
 import { Layers } from "lucide-react-native";
 import { CardThumbnail } from "@/features/collection/CardThumbnail";
@@ -13,6 +14,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { COPY } from "@/lib/copy";
 import { compactUsd } from "@/lib/format";
+import { queryKeys } from "@/hooks/api/queryKeys";
 import { palette, useThemedPalette } from "@/theme/tokens";
 import { Text } from "react-native";
 
@@ -21,6 +23,11 @@ export default function VaultScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const { cards, isLoading, isFetching } = useFilteredCollection();
+  // Adaptive column count: phones get 2 columns, tablets/landscape get 3-4.
+  // 180dp tile target keeps card art legible without going single-column on
+  // narrow phones.
+  const { width: screenWidth } = useWindowDimensions();
+  const numColumns = Math.max(2, Math.min(4, Math.floor(screenWidth / 180)));
 
   const stats = useMemo(() => {
     const value = cards.reduce((s, c) => s + c.estimatedValueUsd, 0);
@@ -29,7 +36,7 @@ export default function VaultScreen() {
   }, [cards]);
 
   const onRefresh = useCallback(() => {
-    qc.invalidateQueries({ queryKey: ["collection"] });
+    qc.invalidateQueries({ queryKey: queryKeys.collection.all });
   }, [qc]);
 
   return (
@@ -37,7 +44,8 @@ export default function VaultScreen() {
       <FlatList
         data={isLoading ? [] : cards}
         keyExtractor={(c) => c.id}
-        numColumns={2}
+        numColumns={numColumns}
+        key={numColumns}
         columnWrapperStyle={{ gap: 12 }}
         contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 12 }}
         refreshControl={
@@ -87,7 +95,7 @@ export default function VaultScreen() {
                 message={COPY.vaultFiltersEmpty.message}
                 icon={Layers}
                 secondaryActionLabel="Scan a card"
-                onSecondaryAction={() => router.push("/scan/phone")}
+                onSecondaryAction={() => router.push(routes.scanPhone())}
               />
             </View>
           )

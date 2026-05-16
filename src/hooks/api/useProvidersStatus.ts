@@ -7,10 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/api/client";
 import { ENDPOINTS } from "@/api/endpoints";
 import type { ProvidersStatusResponseWire } from "@/api/types";
+import { queryKeys } from "./queryKeys";
 
 export function useProvidersStatus() {
   return useQuery<ProvidersStatusResponseWire>({
-    queryKey: ["providers", "status"],
+    queryKey: queryKeys.system.providersStatus(),
     queryFn: () =>
       apiFetch<ProvidersStatusResponseWire>(ENDPOINTS.providers.status, {
         skipAuth: true,

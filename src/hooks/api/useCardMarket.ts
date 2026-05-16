@@ -10,10 +10,11 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/api/client";
 import { ENDPOINTS } from "@/api/endpoints";
 import type { MarketResponseWire } from "@/api/types";
+import { queryKeys } from "./queryKeys";
 
 export function useCardMarket(id: string | null | undefined) {
   return useQuery<MarketResponseWire>({
-    queryKey: ["cards", "market", id],
+    queryKey: queryKeys.cards.market(id ?? ""),
     queryFn: () =>
       apiFetch<MarketResponseWire>(ENDPOINTS.cards.market(id as string), {
         skipAuth: true,

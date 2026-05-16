@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/api/client";
 import { ENDPOINTS } from "@/api/endpoints";
 import type { CompsResponseWire } from "@/api/types";
+import { queryKeys } from "./queryKeys";
 
 export interface UseCardCompsOptions {
   days?: number;
@@ -21,7 +22,7 @@ export function useCardComps(
   const days = opts.days ?? 90;
   const { grade, house, limit } = opts;
   return useQuery<CompsResponseWire>({
-    queryKey: ["cards", "comps", id, days, grade ?? null, house ?? null, limit ?? null],
+    queryKey: queryKeys.cards.comps(id ?? "", days, grade, house, limit),
     queryFn: () => {
       const qs = new URLSearchParams({ days: String(days) });
       if (grade !== undefined) qs.set("grade", String(grade));

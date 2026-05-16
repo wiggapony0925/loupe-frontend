@@ -13,6 +13,7 @@
  *   - normal         → normal (default)
  *   - large / hero   → large → normal → art_crop (card detail)
  */
+import { Image } from "expo-image";
 import type { CardSearchResult, ImageSet } from "@/api/types";
 
 export type ImageVariant = "thumb" | "small" | "normal" | "large" | "hero";
@@ -61,4 +62,32 @@ export function pickCardBlurhash(
   if (!attrs || typeof attrs !== "object") return undefined;
   const v = (attrs as Record<string, unknown>).blurhash;
   return typeof v === "string" && v.length > 0 ? v : undefined;
+}
+
+/**
+ * Warm the disk cache for a batch of cards. Fire-and-forget: callers
+ * (list query hooks) should invoke this when results arrive so that
+ * when tiles mount, expo-image hits the cache instead of doing a cold
+ * round-trip to slow third-party CDNs (pokemontcg.io, ygoprodeck.com).
+ *
+ * Default variant is `small` because that's what every grid/row uses;
+ * the detail screen prefetches `large` separately on navigate.
+ */
+export function prefetchCardImages(
+  cards: ReadonlyArray<CardLike | null | undefined>,
+  variant: ImageVariant = "small",
+): void {
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  for (const c of cards) {
+    const u = pickCardImageUrl(c, variant);
+    if (u && !seen.has(u)) {
+      seen.add(u);
+      urls.push(u);
+    }
+  }
+  if (urls.length === 0) return;
+  // expo-image returns a promise we don't need to await; failures are
+  // silent and surface later via the normal onError path.
+  void Image.prefetch(urls, "memory-disk");
 }

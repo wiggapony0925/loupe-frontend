@@ -10,6 +10,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { apiFetch } from "@/api/client";
 import { ENDPOINTS } from "@/api/endpoints";
 import type { PriceHistoryWire } from "@/api/types";
+import { queryKeys } from "./queryKeys";
 
 export type PriceHistoryRange = "7d" | "30d" | "90d" | "180d" | "1y";
 
@@ -29,7 +30,7 @@ export function useCardPriceHistory({
   enabled = true,
 }: UseCardPriceHistoryOptions): UseQueryResult<PriceHistoryWire> {
   return useQuery({
-    queryKey: ["card-prices", id, range, house, grade ?? null],
+    queryKey: queryKeys.cards.priceHistory(id ?? "", range, house, grade),
     queryFn: () => {
       const qs = new URLSearchParams({ range, house });
       if (grade) qs.set("grade", grade);

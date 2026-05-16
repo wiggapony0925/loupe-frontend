@@ -14,6 +14,7 @@ import React from "react";
 import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/api/queryKeys";
 import { fetchCardSparklines, fetchCollection } from "@/api/forensicApi";
 import { GradeBars, HoldingRow, PortfolioChart } from "@/features/analytics";
 import { LiveAnalyticsCard } from "@/features/analytics/LiveAnalyticsCard";
@@ -32,7 +33,7 @@ import { useThemedPalette } from "@/theme/tokens";
 
 export default function AnalyticsScreen() {
   useThemedPalette();
-  const collection = useQuery({ queryKey: ["collection"], queryFn: fetchCollection });
+  const collection = useQuery({ queryKey: queryKeys.collection.list(), queryFn: fetchCollection });
   const sparks = useQuery({
     queryKey: ["card-sparklines"],
     queryFn: fetchCardSparklines,

@@ -1,6 +1,7 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
+import { routes } from "@/lib/routes";
 import type { CollectionCard } from "@/types/domain";
 import { Badge } from "@/components/ui/Badge";
 import { CardImage } from "@/components/ui/CardImage";
@@ -22,7 +23,7 @@ export function CardThumbnail({ card }: CardThumbnailProps) {
   const tint = gradeColor(card.grade);
   return (
     <Pressable
-      onPress={() => router.push(`/scan/${card.id}`)}
+      onPress={() => router.push(routes.scan(card.id))}
       className="flex-1 overflow-hidden rounded-2xl border border-line bg-bg-elevated"
       style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
     >
