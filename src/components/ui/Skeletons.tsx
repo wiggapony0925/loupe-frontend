@@ -408,3 +408,19 @@ export function SkeletonCompsList({ rows = 5 }: { rows?: number }) {
     </View>
   );
 }
+
+export function SkeletonTrendingGrid({ count = 6 }: { count?: number }) {
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <View key={i} style={{ flexBasis: "47%", flexGrow: 1, gap: 6 }}>
+          <View style={{ aspectRatio: 5 / 7, width: "100%" }}>
+            <SkeletonImage width="100%" height="100%" radius={12} />
+          </View>
+          <SkeletonText width="80%" height={12} />
+          <SkeletonText width="50%" height={10} />
+        </View>
+      ))}
+    </View>
+  );
+}

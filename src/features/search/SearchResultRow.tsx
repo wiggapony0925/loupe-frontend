@@ -7,44 +7,46 @@
  */
 import React from "react";
 import { Pressable, Text, View } from "react-native";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import type { CardSearchResult } from "@/api/types";
+import { CardImage } from "@/components/ui/CardImage";
 import { Price } from "@/components/ui/Price";
+import { pickCardBlurhash, pickCardImageUrl } from "@/lib/cardImage";
 import { useThemedPalette, withAlpha } from "@/theme/tokens";
 
 interface SearchResultRowProps {
   card: CardSearchResult;
   bordered?: boolean;
+  /** Priority hint for expo-image — off-screen rows should pass "low". */
+  priority?: "low" | "normal" | "high";
 }
 
-const BLURHASH = "L6Pj0^jE.AyE_3t7t7R**0o#DgR4";
-
-export function SearchResultRow({ card, bordered = false }: SearchResultRowProps) {
+export function SearchResultRow({
+  card,
+  bordered = false,
+  priority = "low",
+}: SearchResultRowProps) {
   const p = useThemedPalette();
   const market = card.pricing_summary?.market?.amount ?? null;
-  const imageUrl =
-    card.images?.small?.url ?? card.images?.normal?.url ?? card.image_url ?? null;
+  const small = pickCardImageUrl(card, "small");
+  const normal = pickCardImageUrl(card, "normal");
   return (
     <Pressable
       onPress={() => router.push(`/card/${encodeURIComponent(card.id)}`)}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
     >
-      <View
-        className="overflow-hidden rounded-lg"
-        style={{ width: 56, height: 80, backgroundColor: p.bg.sunken }}
-      >
-        {imageUrl ? (
-          <Image
-            source={{ uri: imageUrl }}
-            placeholder={{ blurhash: BLURHASH }}
-            transition={150}
-            contentFit="cover"
-            style={{ width: "100%", height: "100%" }}
-          />
-        ) : null}
-      </View>
+      <CardImage
+        uri={small ?? normal}
+        fallbackUri={small && normal && small !== normal ? normal : undefined}
+        blurhash={pickCardBlurhash(card)}
+        width={56}
+        height={80}
+        rounded={8}
+        priority={priority}
+        recyclingKey={card.id}
+        alt={card.name}
+      />
 
       <View style={{ flex: 1 }}>
         <Text numberOfLines={1} className="text-sm font-semibold text-ink">

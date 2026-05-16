@@ -29,8 +29,11 @@ import { Sparkline } from "@/components/ui/Sparkline";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { COPY } from "@/lib/copy";
-import { useCardSearch } from "@/hooks/api";
+import { useCardSearch, useTrendingCards } from "@/hooks/api";
 import { SearchResultRow } from "@/features/search/SearchResultRow";
+import { CardImage } from "@/components/ui/CardImage";
+import { SkeletonTrendingGrid } from "@/components/ui/Skeletons";
+import { pickCardImageUrl, pickCardBlurhash } from "@/lib/cardImage";
 import type { CardSearchResult, TcgKey } from "@/api/types";
 import { compactUsd } from "@/lib/format";
 import { getBrandLogo } from "@/lib/brandAssets";
@@ -387,6 +390,9 @@ export default function SearchScreen() {
 
         {!showResults ? (
           <>
+            {query.trim().length === 0 && !activeCategory && quickfilter === "all" ? (
+              <TrendingSection />
+            ) : null}
             {/* Quick category grid — Collectr-style */}
             <View>
               <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
@@ -597,7 +603,16 @@ function ResultRow({
         className="overflow-hidden rounded-lg"
         style={{ width: 36, height: 50, backgroundColor: palette.bg.sunken }}
       >
-        <Image source={{ uri: card.thumbnailUri }} style={{ width: 36, height: 50 }} />
+        <CardImage
+          uri={card.thumbnailUri}
+          width={36}
+          height={50}
+          rounded={8}
+          priority="low"
+          recyclingKey={card.id}
+          alt={card.title}
+          aspectRatio={undefined as unknown as number}
+        />
       </View>
       <View style={{ flex: 1 }}>
         <Text numberOfLines={1} className="text-sm font-semibold text-ink">
@@ -737,9 +752,18 @@ function LiveResultRow({ card, bordered }: { card: CardSearchResult; bordered: b
         className="overflow-hidden rounded-lg"
         style={{ width: 36, height: 50, backgroundColor: palette.bg.sunken }}
       >
-        {card.image_url ? (
-          <Image source={{ uri: card.image_url }} style={{ width: 36, height: 50 }} />
-        ) : null}
+        <CardImage
+          uri={pickCardImageUrl(card, "small")}
+          fallbackUri={card.image_url ?? undefined}
+          blurhash={pickCardBlurhash(card)}
+          width={36}
+          height={50}
+          rounded={8}
+          priority="low"
+          recyclingKey={card.id}
+          alt={card.name}
+          aspectRatio={undefined as unknown as number}
+        />
       </View>
       <View style={{ flex: 1 }}>
         <Text numberOfLines={1} className="text-sm font-semibold text-ink">
@@ -763,6 +787,129 @@ function LiveResultRow({ card, bordered }: { card: CardSearchResult; bordered: b
         {card.rarity ? (
           <Text className="mt-0.5 text-[10px] text-ink-muted" numberOfLines={1}>
             {card.rarity}
+          </Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
+// ── Trending section (empty-state default) ────────────────────────────
+const TRENDING_TCG_CHIPS: { key: TcgChip; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "pokemon", label: "Pokémon" },
+  { key: "magic", label: "Magic" },
+  { key: "yugioh", label: "Yu-Gi-Oh!" },
+];
+
+function TrendingSection() {
+  const p = useThemedPalette();
+  const [trendTcg, setTrendTcg] = useState<TcgChip>("all");
+  const trending = useTrendingCards({ tcg: trendTcg, limit: 24 });
+  const cards = trending.data?.cards ?? [];
+
+  return (
+    <View style={{ marginBottom: 24 }}>
+      <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+        Trending
+      </Text>
+      <Text className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+        What collectors are watching
+      </Text>
+
+      <View
+        style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}
+      >
+        {TRENDING_TCG_CHIPS.map((chip) => {
+          const active = trendTcg === chip.key;
+          return (
+            <Pressable
+              key={chip.key}
+              onPress={() => setTrendTcg(chip.key)}
+              style={({ pressed }) => ({
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: active ? p.ink.default : p.line.default,
+                backgroundColor: active ? p.ink.default : "transparent",
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "600",
+                  color: active ? p.bg.base : p.ink.default,
+                }}
+              >
+                {chip.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={{ marginTop: 16 }}>
+        {trending.isLoading ? (
+          <SkeletonTrendingGrid count={6} />
+        ) : trending.isError ? (
+          <ErrorState title={COPY.searchError.title} message={COPY.searchError.message} />
+        ) : cards.length === 0 ? (
+          <EmptyState title="No trending cards right now" message="" />
+        ) : (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+            {cards.map((card, idx) => (
+              <TrendingTile key={card.id} card={card} priority={idx < 4 ? "normal" : "low"} />
+            ))}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function TrendingTile({
+  card,
+  priority,
+}: {
+  card: CardSearchResult;
+  priority: "low" | "normal" | "high";
+}) {
+  const p = useThemedPalette();
+  const price = card.pricing_summary?.market?.amount ?? null;
+  return (
+    <Pressable
+      onPress={() => router.push(`/card/${encodeURIComponent(card.id)}`)}
+      style={({ pressed }) => ({
+        flexBasis: "47%",
+        flexGrow: 1,
+        opacity: pressed ? 0.85 : 1,
+        gap: 6,
+      })}
+    >
+      <View style={{ width: "100%", aspectRatio: 5 / 7 }}>
+        <CardImage
+          uri={pickCardImageUrl(card, "normal")}
+          fallbackUri={pickCardImageUrl(card, "small")}
+          blurhash={pickCardBlurhash(card)}
+          rounded={12}
+          priority={priority}
+          recyclingKey={card.id}
+          alt={card.name}
+          aspectRatio={undefined as unknown as number}
+        />
+      </View>
+      <Text numberOfLines={1} className="text-sm font-semibold text-ink">
+        {card.name}
+      </Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+        <Text numberOfLines={1} className="text-[11px] text-ink-muted" style={{ flex: 1 }}>
+          {[card.set_name, card.year].filter(Boolean).join(" · ")}
+        </Text>
+        {price !== null ? (
+          <Text style={{ color: p.accent.mint, fontSize: 11, fontWeight: "700" }}>
+            {compactUsd(price)}
           </Text>
         ) : null}
       </View>

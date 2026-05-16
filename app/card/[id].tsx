@@ -27,7 +27,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import Svg, { Polyline } from "react-native-svg";
 import {
@@ -41,6 +40,7 @@ import { useCard } from "@/hooks/api/useCard";
 import { useCardMarket } from "@/hooks/api/useCardMarket";
 import { useCardListings } from "@/hooks/api/useCardListings";
 import { useCardComps } from "@/hooks/api/useCardComps";
+import { CardImage } from "@/components/ui/CardImage";
 import { Price } from "@/components/ui/Price";
 import { QueryState } from "@/components/ui/QueryState";
 import {
@@ -49,6 +49,7 @@ import {
   SkeletonListingsRail,
 } from "@/components/ui/Skeletons";
 import { DataSourcesFooter } from "@/components/ui/DataSourcesFooter";
+import { pickCardBlurhash, pickCardImageUrl } from "@/lib/cardImage";
 import { palette, useThemedPalette, withAlpha } from "@/theme/tokens";
 import type {
   HouseBlockWire,
@@ -59,8 +60,6 @@ import type {
   PriceHistoryWire,
   SoldCompWire,
 } from "@/api/types";
-
-const BLURHASH = "L6Pj0^jE.AyE_3t7t7R**0o#DgR4";
 
 // ── Range chips → backend history keys ────────────────────────────────
 type RangeKey = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
@@ -122,11 +121,8 @@ export default function CardDetailScreen() {
   const isLoading = cardQ.isLoading || marketQ.isLoading;
   const isError = cardQ.isError || marketQ.isError;
 
-  const imageUrl =
-    card?.images?.large?.url ??
-    card?.images?.normal?.url ??
-    card?.image_url ??
-    null;
+  const imageUrl = pickCardImageUrl(card, "large");
+  const blurhash = pickCardBlurhash(card);
 
   const historyKey = RANGE_TO_HISTORY[range];
   const historySeries: PriceHistoryWire | undefined = historyKey
@@ -183,26 +179,17 @@ export default function CardDetailScreen() {
             <>
               {/* 2. Hero strip */}
               <View style={{ flexDirection: "row", gap: 16 }}>
-                <View
-                  style={{
-                    width: 120,
-                    height: 168,
-                    borderRadius: 14,
-                    overflow: "hidden",
-                    backgroundColor: p.bg.sunken,
-                  }}
-                >
-                  {imageUrl ? (
-                    <Image
-                      source={{ uri: imageUrl }}
-                      placeholder={{ blurhash: BLURHASH }}
-                      transition={250}
-                      contentFit="contain"
-                      cachePolicy="memory-disk"
-                      style={{ width: "100%", height: "100%" }}
-                    />
-                  ) : null}
-                </View>
+                <CardImage
+                  uri={imageUrl}
+                  blurhash={blurhash}
+                  width={120}
+                  height={168}
+                  rounded={14}
+                  contentFit="contain"
+                  priority="high"
+                  recyclingKey={card.id}
+                  alt={card.name}
+                />
                 <View style={{ flex: 1, justifyContent: "center", gap: 6 }}>
                   <Text
                     className="text-xl font-semibold text-ink"
@@ -891,12 +878,16 @@ function ListingCard({ listing }: { listing: ListingWire }) {
       }}
     >
       {listing.image_url ? (
-        <Image
-          source={{ uri: listing.image_url }}
-          style={{ width: "100%", height: 120, borderRadius: 10 }}
+        <CardImage
+          uri={listing.image_url}
+          width={148}
+          height={120}
+          rounded={10}
           contentFit="cover"
-          placeholder={BLURHASH}
-          transition={120}
+          priority="low"
+          recyclingKey={listing.id ?? listing.image_url}
+          alt={listing.title ?? "listing"}
+          aspectRatio={undefined as unknown as number}
         />
       ) : (
         <View

@@ -8,15 +8,14 @@
  */
 import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useCardSearch } from "@/hooks/api/useCardSearch";
+import { CardImage } from "@/components/ui/CardImage";
 import { Price } from "@/components/ui/Price";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { QueryState } from "@/components/ui/QueryState";
+import { pickCardBlurhash, pickCardImageUrl } from "@/lib/cardImage";
 import { useThemedPalette, withAlpha } from "@/theme/tokens";
-
-const BLURHASH = "L6Pj0^jE.AyE_3t7t7R**0o#DgR4";
 
 export function HotRightNowRail({ query = "charizard" }: { query?: string }) {
   const p = useThemedPalette();
@@ -49,12 +48,9 @@ export function HotRightNowRail({ query = "charizard" }: { query?: string }) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: 12, paddingRight: 4 }}
       >
-        {results.map((card) => {
-          const imageUrl =
-            card.images?.small?.url ??
-            card.images?.normal?.url ??
-            card.image_url ??
-            null;
+        {results.map((card, idx) => {
+          const small = pickCardImageUrl(card, "small");
+          const normal = pickCardImageUrl(card, "normal");
           const market = card.pricing_summary?.market?.amount ?? null;
           return (
             <Pressable
@@ -68,23 +64,17 @@ export function HotRightNowRail({ query = "charizard" }: { query?: string }) {
               })}
               className="overflow-hidden rounded-2xl border border-line bg-bg-elevated"
             >
-              <View
-                style={{
-                  width: "100%",
-                  height: 170,
-                  backgroundColor: p.bg.sunken,
-                }}
-              >
-                {imageUrl ? (
-                  <Image
-                    source={{ uri: imageUrl }}
-                    placeholder={{ blurhash: BLURHASH }}
-                    transition={150}
-                    contentFit="cover"
-                    style={{ width: "100%", height: "100%" }}
-                  />
-                ) : null}
-              </View>
+              <CardImage
+                uri={normal ?? small}
+                fallbackUri={small && normal && small !== normal ? small : undefined}
+                blurhash={pickCardBlurhash(card)}
+                width="100%"
+                height={170}
+                rounded={0}
+                priority={idx < 3 ? "normal" : "low"}
+                recyclingKey={card.id}
+                alt={card.name}
+              />
               <View className="p-2.5">
                 <Text
                   numberOfLines={1}

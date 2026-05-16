@@ -1,8 +1,9 @@
 import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import type { CollectionCard } from "@/types/domain";
 import { Badge } from "@/components/ui/Badge";
+import { CardImage } from "@/components/ui/CardImage";
 import { Price } from "@/components/ui/Price";
 import { gradeColor, useThemedPalette, withAlpha } from "@/theme/tokens";
 
@@ -26,10 +27,14 @@ export function CardThumbnail({ card }: CardThumbnailProps) {
       style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
     >
       <View className="aspect-[5/7] w-full bg-bg-sunken">
-        <Image
-          source={{ uri: card.thumbnailUri }}
-          resizeMode="cover"
-          style={{ width: "100%", height: "100%" }}
+        <CardImage
+          uri={card.thumbnailUri}
+          width="100%"
+          height="100%"
+          rounded={0}
+          priority="low"
+          recyclingKey={card.id}
+          alt={card.title}
         />
         <View className="absolute right-2 top-2">
           <View

@@ -36,6 +36,7 @@ export const ENDPOINTS = {
   },
   cards: {
     search: `${V1}/cards/search`,
+    trending: `${V1}/cards/trending`,
     item: (id: string) => `${V1}/cards/${id}`,
     prices: (id: string) => `${V1}/cards/${id}/prices`,
     market: (id: string) => `${V1}/cards/${id}/market`,

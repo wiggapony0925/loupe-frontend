@@ -360,6 +360,12 @@ export interface CardSearchResponse {
   error?: string;
 }
 
+export interface TrendingResponseWire {
+  cards: CardSearchResult[];
+  updated_at: string;
+  source: "live" | "cached" | "fallback";
+}
+
 export interface CardSetSummary {
   id: string;
   code?: string;
