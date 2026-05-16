@@ -14,6 +14,9 @@ export const ENDPOINTS = {
     version: "/version",
   },
   auth: {
+    register: `${V1}/auth/register`,
+    login: `${V1}/auth/login`,
+    devLogin: `${V1}/auth/dev-login`,
     apple: `${V1}/auth/apple`,
     google: `${V1}/auth/google`,
     refresh: `${V1}/auth/refresh`,
@@ -22,7 +25,7 @@ export const ENDPOINTS = {
   me: {
     root: `${V1}/me`,
     settings: `${V1}/me/settings`,
-    grades: `${V1}/me/grades`,
+    grades: `${V1}/grades`,
   },
   scanners: {
     list: `${V1}/scanners`,
@@ -47,7 +50,7 @@ export const ENDPOINTS = {
     list: `${V1}/sets`,
   },
   grades: {
-    mine: `${V1}/me/grades`,
+    mine: `${V1}/grades`,
     item: (id: string) => `${V1}/grades/${id}`,
   },
   collections: {

@@ -40,6 +40,46 @@ export interface RefreshRequest {
   refresh_token: string;
 }
 
+export interface EmailSignUpRequest {
+  email: string;
+  password: string;
+  display_name?: string | null;
+}
+
+export interface EmailSignInRequest {
+  email: string;
+  password: string;
+}
+
+export interface DevLoginRequest {
+  email: string;
+  display_name?: string | null;
+}
+
+export function registerWithEmail(body: EmailSignUpRequest): Promise<TokenPair> {
+  return apiFetch<TokenPair>(ENDPOINTS.auth.register, {
+    method: "POST",
+    json: body,
+    skipAuth: true,
+  });
+}
+
+export function loginWithEmail(body: EmailSignInRequest): Promise<TokenPair> {
+  return apiFetch<TokenPair>(ENDPOINTS.auth.login, {
+    method: "POST",
+    json: body,
+    skipAuth: true,
+  });
+}
+
+export function devLogin(body: DevLoginRequest): Promise<TokenPair> {
+  return apiFetch<TokenPair>(ENDPOINTS.auth.devLogin, {
+    method: "POST",
+    json: body,
+    skipAuth: true,
+  });
+}
+
 export function signInWithApple(body: AppleSignInRequest): Promise<TokenPair> {
   return apiFetch<TokenPair>(ENDPOINTS.auth.apple, {
     method: "POST",

@@ -1,13 +1,14 @@
 import "../global.css";
 import React, { useEffect, useState } from "react";
 import { Appearance, View } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import { AppProviders } from "@/providers/AppProviders";
+import { useAuth } from "@/providers/AuthProvider";
 import { BrandSplash } from "@/components/brand/BrandSplash";
 import { NetworkBanner } from "@/components/ui/NetworkBanner";
 import { useSettings } from "@/store/settingsStore";
@@ -64,31 +65,7 @@ export default function RootLayout() {
           <AppProviders>
             <StatusBar style={scheme === "light" ? "dark" : "light"} />
             <View key={`ccy-${currency}`} style={{ flex: 1 }}>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: palette.bg.base },
-                  animation: "fade",
-                }}
-              >
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen
-                  name="scan/[id]"
-                  options={{ presentation: "card", animation: "slide_from_bottom" }}
-                />
-                <Stack.Screen
-                  name="scan/phone"
-                  options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
-                />
-                <Stack.Screen
-                  name="compare"
-                  options={{ presentation: "card", animation: "slide_from_right" }}
-                />
-                <Stack.Screen
-                  name="settings"
-                  options={{ presentation: "card", animation: "slide_from_right" }}
-                />
-              </Stack>
+              <RootStack />
               {!splashDone ? <BrandSplash onFinish={() => setSplashDone(true)} /> : null}
               <NetworkBanner />
             </View>
@@ -96,5 +73,59 @@ export default function RootLayout() {
         </GluestackUIProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+
+/**
+ * RootStack — auth-aware navigator.
+ *
+ * Lives *inside* `<AppProviders>` so it can read `useAuth()`. Until the
+ * stored token has hydrated we render an empty View (the BrandSplash is
+ * already on top); afterwards we either render the tabbed app shell or
+ * redirect to /(auth)/welcome.
+ */
+function RootStack() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (isLoading) return;
+    const inAuthGroup = segments[0] === "(auth)";
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace("/(auth)/welcome");
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [isAuthenticated, isLoading, segments, router]);
+
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: palette.bg.base },
+        animation: "fade",
+      }}
+    >
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen
+        name="scan/[id]"
+        options={{ presentation: "card", animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
+        name="scan/phone"
+        options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
+        name="compare"
+        options={{ presentation: "card", animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="settings"
+        options={{ presentation: "card", animation: "slide_from_right" }}
+      />
+    </Stack>
   );
 }

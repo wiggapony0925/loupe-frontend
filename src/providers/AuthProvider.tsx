@@ -18,6 +18,11 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ApiError, apiFetch, setAuthToken } from "@/api/client";
 import { ENDPOINTS } from "@/api/endpoints";
+import {
+  devLogin as devLoginApi,
+  loginWithEmail as loginWithEmailApi,
+  registerWithEmail as registerWithEmailApi,
+} from "@/api/auth";
 import type { MeResponse } from "@/api/types";
 
 const TOKEN_STORAGE_KEY = "loupe.auth.token";
@@ -27,6 +32,9 @@ interface AuthContextValue {
   user: MeResponse | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signInWithDevLogin: (email: string, displayName?: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => void;
@@ -80,10 +88,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
     return () => {
       cancelled = true;
-    };
-  }, [persistToken]);
+    };UpWithEmail = useCallback(
+    async (email: string, password: string, displayName?: string) => {
+      const pair = await registerWithEmailApi({
+        email: email.trim().toLowerCase(),
+        password,
+        display_name: displayName?.trim() || null,
+      });
+      await persistToken(pair.access_token);
+      setUser(pair.user);
+    },
+    [persistToken],
+  );
 
-  const signOut = useCallback(() => {
+  const signInWithEmail = useCallback(
+    async (email: string, password: string) => {
+      const pair = await loginWithEmailApi({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      await persistToken(pair.access_token);
+      setUser(pair.user);
+    },
+    [persistToken],
+  );
+
+  const signInWithDevLogin = useCallback(
+    async (email: string, displayName?: string) => {
+      const pair = await devLoginApi({
+        email: email.trim().toLowerCase(),
+        display_name: displayName?.trim() || null,
+      });
+      await persistToken(pair.access_token);
+      setUser(pair.user);
+    },
+    [persistToken],
+  );UpWithEmail,
+      signInWithEmail,
+      signInWithDevLogin,
+      signInWithApple,
+      signInWithGoogle,
+      signOut,
+      setToken,
+    }),
+    [
+      token,
+      user,
+      isLoading,
+      signUpWithEmail,
+      signInWithEmail,
+      signInWithDevLogin,
+      signInWithApple,
+      signInWithGoogle,
+      signOut,
+      setToken,
+    
     void persistToken(null);
     setUser(null);
   }, [persistToken]);
