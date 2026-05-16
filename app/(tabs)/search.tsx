@@ -392,7 +392,7 @@ export default function SearchScreen() {
         {!showResults ? (
           <>
             {query.trim().length === 0 && !activeCategory && quickfilter === "all" ? (
-              <TrendingSection />
+              <TrendingSection tcg={selectedTcg} />
             ) : null}
             {/* Quick category grid — Collectr-style */}
             <View>
@@ -796,17 +796,8 @@ function LiveResultRow({ card, bordered }: { card: CardSearchResult; bordered: b
 }
 
 // ── Trending section (empty-state default) ────────────────────────────
-const TRENDING_TCG_CHIPS: { key: TcgChip; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "pokemon", label: "Pokémon" },
-  { key: "magic", label: "Magic" },
-  { key: "yugioh", label: "Yu-Gi-Oh!" },
-];
-
-function TrendingSection() {
-  const p = useThemedPalette();
-  const [trendTcg, setTrendTcg] = useState<TcgChip>("all");
-  const trending = useTrendingCards({ tcg: trendTcg, limit: 24 });
+function TrendingSection({ tcg = "all" }: { tcg?: TcgChip }) {
+  const trending = useTrendingCards({ tcg, limit: 24 });
   const cards = trending.data?.cards ?? [];
 
   return (
@@ -818,48 +809,25 @@ function TrendingSection() {
         What collectors are watching
       </Text>
 
-      <View
-        style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}
-      >
-        {TRENDING_TCG_CHIPS.map((chip) => {
-          const active = trendTcg === chip.key;
-          return (
-            <Pressable
-              key={chip.key}
-              onPress={() => setTrendTcg(chip.key)}
-              style={({ pressed }) => ({
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: active ? p.ink.default : p.line.default,
-                backgroundColor: active ? p.ink.default : "transparent",
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: "600",
-                  color: active ? p.bg.base : p.ink.default,
-                }}
-              >
-                {chip.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
       <View style={{ marginTop: 16 }}>
         {trending.isLoading ? (
           <SkeletonTrendingGrid count={6} />
         ) : trending.isError ? (
-          <ErrorState title={COPY.searchError.title} message={COPY.searchError.message} />
+          <ErrorState
+            title={COPY.searchError.title}
+            message={COPY.searchError.message}
+          />
         ) : cards.length === 0 ? (
           <EmptyState title="No trending cards right now" message="" />
         ) : (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12, rowGap: 12 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              columnGap: 12,
+              rowGap: 16,
+            }}
+          >
             {cards.map((card, idx) => (
               <View key={card.id} style={{ width: "48%" }}>
                 <CardTile
