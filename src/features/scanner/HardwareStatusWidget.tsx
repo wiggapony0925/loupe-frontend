@@ -75,7 +75,11 @@ export function HardwareStatusWidget() {
             <StatusDot color={meta.color} pulse={isOnline} size={8} />
           </View>
           <Text className="mt-0.5 text-xs text-ink-muted">
-            {meta.label} · Signal {Math.round(data.signalStrength * 100)}% · FW{" "}
+            {meta.label}
+            {data.signalStrength != null
+              ? ` · Signal ${Math.round(data.signalStrength * 100)}%`
+              : ""}
+            {" · FW "}
             {scanner.info?.firmware ?? data.firmware}
           </Text>
         </View>
@@ -87,8 +91,16 @@ export function HardwareStatusWidget() {
           label="Battery"
           value={scanner.info ? `${scanner.info.battery}%` : "—"}
         />
-        <Metric Icon={Cpu} label="Scans Left" value={data.scansRemaining.toLocaleString()} />
-        <Metric Icon={Thermometer} label="Sensor" value={`${data.temperatureC.toFixed(1)}°C`} />
+        <Metric
+          Icon={Cpu}
+          label="Scans Left"
+          value={data.scansRemaining != null ? data.scansRemaining.toLocaleString() : "—"}
+        />
+        <Metric
+          Icon={Thermometer}
+          label="Sensor"
+          value={data.temperatureC != null ? `${data.temperatureC.toFixed(1)}°C` : "—"}
+        />
       </View>
 
       {!bleConnected ? (

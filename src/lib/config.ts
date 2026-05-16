@@ -19,5 +19,17 @@ export const config = {
     (env.EXPO_PUBLIC_API_URL
       ? env.EXPO_PUBLIC_API_URL.replace(/^http/, "ws")
       : "ws://localhost:8000"),
-  useMocks: (env.EXPO_PUBLIC_USE_MOCKS ?? "true").toLowerCase() === "true",
+  /**
+   * Hard-off. The app exclusively talks to the real backend. Kept for
+   * back-compat with code paths still referencing the flag; new code
+   * should not read it.
+   */
+  useMocks: false,
+  /**
+   * When true (and only in `__DEV__`), the scanner native facade falls
+   * back to a JS stub so Expo Go can boot without the dev client.
+   * Defaults to false — production must use the real native module.
+   */
+  enableMockBridge:
+    (env.EXPO_PUBLIC_ENABLE_MOCK_BRIDGE ?? "false").toLowerCase() === "true",
 } as const;

@@ -191,6 +191,13 @@ export interface GradedCard {
   graded_at: ISODate;
   created_at: ISODate;
   updated_at: ISODate;
+  // Joined from the cards table so the UI can render a row without an N+1 fetch.
+  card_name: string | null;
+  card_image_url: string | null;
+  card_number: string | null;
+  card_set_name: string | null;
+  card_year: number | null;
+  card_tcg: string | null;
 }
 
 export interface FingerprintSummary {

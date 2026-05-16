@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { getScanJob, streamScanJob, uploadScan } from "@/api/scanJobs";
 import { queryKeys } from "@/hooks/api/queryKeys";
-import { config } from "@/lib/config";
 import { useScannerStore } from "@/store/scannerStore";
 import type { PhotometricCapture, ScanJob } from "@/types/domain";
 
@@ -12,9 +11,6 @@ import type { PhotometricCapture, ScanJob } from "@/types/domain";
  *   1. POST /scanner/upload (multipart)
  *   2. Subscribe to /ws/scanner/jobs/:id for Celery progress
  *   3. On `ready`, navigate to the Forensic Report and refresh collection.
- *
- * In mock mode (no backend yet), the hook fakes the same lifecycle so the
- * UI is fully exercisable without the FastAPI server.
  */
 export function useScanJob() {
   const qc = useQueryClient();
@@ -31,7 +27,6 @@ export function useScanJob() {
       const captures = Array.isArray(input) ? input : input.captures;
       const marketCardId = Array.isArray(input) ? null : input.marketCardId ?? null;
       startScan({ marketCardId });
-      if (config.useMocks) return mockLifecycle(setJob);
 
       const initial = await uploadScan(captures);
       setJob(initial);
@@ -91,28 +86,3 @@ function startPolling(
   }, 1500);
   cleanupRef.current = () => clearInterval(interval);
 }
-
-/** Drives the same state machine without a backend. */
-async function mockLifecycle(setJob: (j: ScanJob) => void): Promise<ScanJob> {
-  const now = () => new Date().toISOString();
-  const jobId = `mock_${Date.now()}`;
-  const base = { jobId, createdAt: now(), updatedAt: now() };
-
-  setJob({ ...base, status: "uploading", progress: 0.15 });
-  await wait(450);
-  setJob({ ...base, status: "queued", progress: 0.3, updatedAt: now() });
-  await wait(500);
-  setJob({ ...base, status: "processing", progress: 0.65, updatedAt: now() });
-  await wait(700);
-  const final: ScanJob = {
-    ...base,
-    status: "ready",
-    progress: 1,
-    reportId: "card_001",
-    updatedAt: now(),
-  };
-  setJob(final);
-  return final;
-}
-
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));

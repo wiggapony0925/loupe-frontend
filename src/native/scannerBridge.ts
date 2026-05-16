@@ -16,6 +16,7 @@ import LoupeScannerBridge, {
   type ScannerInfo,
   type ScannerStateChangePayload,
 } from "../../modules/loupe-scanner-bridge";
+import { config } from "@/lib/config";
 
 export type {
   CapturedFrame,
@@ -162,9 +163,34 @@ function makeMockBridge(): ScannerBridgeImpl {
   };
 }
 
+function makeUnavailableBridge(): ScannerBridgeImpl {
+  const unavailable = () =>
+    Promise.reject(
+      new Error(
+        "Scanner native module is not linked. Build the dev client or set EXPO_PUBLIC_ENABLE_MOCK_BRIDGE=true in development.",
+      ),
+    );
+  return {
+    source: "mock",
+    lightCount: 4,
+    supportedLightIndices: [0, 1, 2, 3],
+    connect: unavailable,
+    disconnect: () => Promise.resolve(),
+    isConnected: () => false,
+    captureFrame: unavailable,
+    captureAllFrames: unavailable,
+    checkImageQuality: unavailable,
+    haptic: () => {},
+    onStateChange: () => () => {},
+    onCaptureProgress: () => () => {},
+  };
+}
+
 export const scannerBridge: ScannerBridgeImpl = LoupeScannerBridge
   ? makeNativeBridge(LoupeScannerBridge)
-  : makeMockBridge();
+  : __DEV__ && config.enableMockBridge
+    ? makeMockBridge()
+    : makeUnavailableBridge();
 
 /** Convenience boolean for UI badges / dev panels. */
 export const isNativeScannerAvailable = scannerBridge.source === "native";

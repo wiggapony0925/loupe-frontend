@@ -113,13 +113,19 @@ export default function CommandCenterScreen() {
                 />
                 <KpiPill
                   label="Accuracy"
-                  value={`${(summary.data.avgAccuracy * 100).toFixed(1)}%`}
+                  value={
+                    summary.data.avgAccuracy != null
+                      ? `${(summary.data.avgAccuracy * 100).toFixed(1)}%`
+                      : "—"
+                  }
                   accent={palette.accent.blue}
                 />
                 <KpiPill
                   label="Scans"
                   value={
-                    hardware.data ? hardware.data.scansRemaining.toLocaleString() : "—"
+                    hardware.data && hardware.data.scansRemaining != null
+                      ? hardware.data.scansRemaining.toLocaleString()
+                      : "—"
                   }
                   accent={palette.accent.amber}
                 />
@@ -478,7 +484,7 @@ function TopMoversSection({
       </View>
     );
   }
-  if (movers.isEmpty || movers.rows.length === 0) {
+  if (movers.isEmpty) {
     return (
       <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
         <EmptyState
@@ -486,6 +492,22 @@ function TopMoversSection({
           message="Scan a card to start tracking real movers on the cards you grade."
           secondaryActionLabel="Scan a card"
           onSecondaryAction={() => router.push(routes.scanPhone())}
+          compact
+        />
+      </View>
+    );
+  }
+  if (movers.rows.length === 0) {
+    // User has graded cards but we couldn't enrich any with live market data
+    // (e.g. locally-seeded cards with no upstream pricing). Be honest about
+    // it instead of telling them their vault is empty.
+    return (
+      <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+        <EmptyState
+          title="Market data syncing"
+          message="We're still pulling live prices for your graded cards. Check back shortly."
+          secondaryActionLabel="View vault"
+          onSecondaryAction={() => router.push(routes.vault())}
           compact
         />
       </View>

@@ -5,10 +5,15 @@ export type ConnectionTransport = "ble" | "wifi" | "offline";
 export interface HardwareStatus {
   transport: ConnectionTransport;
   deviceName: string;
-  signalStrength: number; // 0..1
   firmware: string;
-  scansRemaining: number;
-  temperatureC: number;
+  /** ISO timestamp of the scanner's last heartbeat. `null` if never seen. */
+  lastSeenAt: string | null;
+  /** 0..1 — `null` when the backend doesn't have live telemetry. */
+  signalStrength: number | null;
+  /** Remaining scans on the device's plan. `null` when unknown. */
+  scansRemaining: number | null;
+  /** Live sensor temperature in °C. `null` when unknown. */
+  temperatureC: number | null;
 }
 
 export type CardSet =

@@ -1,301 +1,180 @@
+/**
+ * Forensic / vault API — all real, no mocks.
+ *
+ * Talks exclusively to the FastAPI backend. Functions adapt the wire
+ * shapes (snake_case, ISO datetimes, Decimal strings) into the camelCase
+ * domain types the UI consumes. If a field isn't available from the
+ * backend we surface `null` — we never fabricate values.
+ */
 import type {
   CollectionCard,
   ForensicReport,
   HardwareStatus,
-  HeatmapDing,
   PricePoint,
 } from "@/types/domain";
-import { api } from "@/lib/apiClient";
-import { config } from "@/lib/config";
-// TODO(api): swap to real endpoints when backend deployed
-// (https://github.com/wiggapony0925/loupe-backend). Mocks remain the
-// default while `EXPO_PUBLIC_USE_MOCKS` is truthy; once disabled, prefer
-// `apiFetch` from `./client` over the legacy `api` helper below.
-import { apiFetch as _apiFetch } from "./client";
-void _apiFetch;
+import { ApiError, api } from "@/lib/apiClient";
 
-// Each function dispatches to the FastAPI backend in production and falls
-// back to deterministic fixtures when EXPO_PUBLIC_USE_MOCKS=true so the app
-// remains runnable without the server.
+/* ─── Wire shapes (mirror loupe-backend/app/schemas) ─────────────────── */
 
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+interface GradedCardWire {
+  id: string;
+  user_id: string;
+  card_id: string;
+  scan_job_id: string | null;
+  grade: string; // Decimal as string
+  house: string;
+  subgrades: Record<string, unknown> | null;
+  estimated_value_usd: string | null;
+  fingerprint_hash: string | null;
+  notes: string | null;
+  graded_at: string;
+  created_at: string;
+  updated_at: string;
+  card_name: string | null;
+  card_image_url: string | null;
+  card_number: string | null;
+  card_set_name: string | null;
+  card_year: number | null;
+  card_tcg: string | null;
+}
 
-const SAMPLE_CARDS: CollectionCard[] = [
-  {
-    id: "card_001",
-    title: "Charizard — Holo",
-    set: "Pokemon Base Set",
-    year: 1999,
-    grade: 9.5,
-    estimatedValueUsd: 12500,
-    thumbnailUri: "https://images.pokemontcg.io/base1/4.png",
-    scannedAt: "2026-05-12T14:21:00Z",
-  },
-  {
-    id: "card_002",
-    title: "Pikachu — Holo",
-    set: "Pokemon Base Set",
-    year: 1999,
-    grade: 10,
-    estimatedValueUsd: 4200,
-    thumbnailUri: "https://images.pokemontcg.io/base1/58.png",
-    scannedAt: "2026-05-13T09:02:00Z",
-  },
-  {
-    id: "card_003",
-    title: "Blastoise — Holo",
-    set: "Pokemon Base Set",
-    year: 1999,
-    grade: 8,
-    estimatedValueUsd: 1800,
-    thumbnailUri: "https://images.pokemontcg.io/base1/2.png",
-    scannedAt: "2026-05-14T18:44:00Z",
-  },
-  {
-    id: "card_004",
-    title: "Venusaur — Holo",
-    set: "Pokemon Base Set",
-    year: 1999,
-    grade: 9,
-    estimatedValueUsd: 950,
-    thumbnailUri: "https://images.pokemontcg.io/base1/15.png",
-    scannedAt: "2026-05-14T20:11:00Z",
-  },
-  {
-    id: "card_005",
-    title: "Black Lotus",
-    set: "Magic Alpha",
-    year: 1993,
-    grade: 7,
-    estimatedValueUsd: 28000,
-    thumbnailUri:
-      "https://cards.scryfall.io/small/front/b/d/bd8fa327-dd41-4737-8f19-2cf5eb1f7cdd.jpg",
-    scannedAt: "2026-05-15T08:00:00Z",
-  },
-];
+interface ScannerWire {
+  id: string;
+  device_id: string;
+  name: string | null;
+  firmware_version: string | null;
+  transport: string; // "wifi" | "ble" | "wired" | ...
+  is_active: boolean;
+  last_seen_at: string | null;
+  created_at: string;
+}
 
-const SAMPLE_DINGS: HeatmapDing[] = [
-  { id: "d1", category: "corners", x: 0.06, y: 0.05, radius: 0.06, severity: 0.7 },
-  { id: "d2", category: "corners", x: 0.93, y: 0.96, radius: 0.05, severity: 0.5 },
-  { id: "d3", category: "edges", x: 0.5, y: 0.02, radius: 0.04, severity: 0.4 },
-  { id: "d4", category: "surface", x: 0.42, y: 0.38, radius: 0.08, severity: 0.6 },
-  { id: "d5", category: "centering", x: 0.5, y: 0.5, radius: 0.18, severity: 0.3 },
-];
+interface PortfolioSummaryWire {
+  totalValueUsd: number;
+  cardCount: number;
+  avgGrade: number | null;
+  avgAccuracy: number | null;
+}
 
-export async function fetchHardwareStatus(): Promise<HardwareStatus> {
-  if (!config.useMocks) return api.get<HardwareStatus>("/scanner/status");
-  await wait(280);
+interface PortfolioHistoryWire {
+  range: PortfolioRange;
+  points: { date: string; priceUsd: number }[];
+  deltaUsd: number;
+  deltaPct: number;
+}
+
+interface CardSparklineWire {
+  cardId: string;
+  points: number[];
+  deltaPct: number;
+}
+
+/* ─── Adapters ───────────────────────────────────────────────────────── */
+
+function toCollectionCard(g: GradedCardWire): CollectionCard {
+  // CollectionCard.set is currently a tight literal union; we widen at the
+  // boundary because the backend can return arbitrary set names.
   return {
-    transport: "ble",
-    deviceName: "JFM-Scanner-Δ7",
-    signalStrength: 0.82,
-    firmware: "v2.4.1",
-    scansRemaining: 1428,
-    temperatureC: 41.2,
+    id: g.id,
+    title: g.card_name ?? "Unknown card",
+    set: (g.card_set_name ?? "Unknown set") as CollectionCard["set"],
+    year: g.card_year ?? 0,
+    grade: Number(g.grade),
+    estimatedValueUsd: g.estimated_value_usd ? Number(g.estimated_value_usd) : 0,
+    thumbnailUri: g.card_image_url ?? "",
+    scannedAt: g.graded_at,
   };
 }
 
+function toHardwareStatus(s: ScannerWire): HardwareStatus {
+  const transport: HardwareStatus["transport"] =
+    s.transport === "ble" || s.transport === "wifi" ? s.transport : "offline";
+  return {
+    transport,
+    deviceName: s.name ?? s.device_id,
+    firmware: s.firmware_version ?? "—",
+    lastSeenAt: s.last_seen_at,
+    // The backend doesn't expose live telemetry yet — surface as null so
+    // the UI knows to render "—" rather than fabricate a value.
+    signalStrength: null,
+    scansRemaining: null,
+    temperatureC: null,
+  };
+}
+
+/* ─── Endpoints ──────────────────────────────────────────────────────── */
+
+export async function fetchHardwareStatus(): Promise<HardwareStatus | null> {
+  const wire = await api.get<ScannerWire | null>("/v1/scanners/status");
+  return wire ? toHardwareStatus(wire) : null;
+}
+
 export async function fetchCollection(): Promise<CollectionCard[]> {
-  if (!config.useMocks) return api.get<CollectionCard[]>("/collection");
-  await wait(420);
-  return SAMPLE_CARDS;
+  const wire = await api.get<GradedCardWire[]>("/v1/grades");
+  return wire.map(toCollectionCard);
 }
 
 export interface CollectionSummary {
   totalValueUsd: number;
   cardCount: number;
-  avgAccuracy: number;
+  /** Average grade across the user's vault. `null` when the vault is empty. */
+  avgGrade: number | null;
+  /**
+   * Backend cannot yet compute scan accuracy (would require ground-truth
+   * comparisons). Always `null` for now — UI should hide or render "—".
+   */
+  avgAccuracy: number | null;
 }
 
 export async function fetchCollectionSummary(): Promise<CollectionSummary> {
-  if (!config.useMocks) return api.get<CollectionSummary>("/collection/summary");
-  await wait(220);
-  const totalValueUsd = SAMPLE_CARDS.reduce((s, c) => s + c.estimatedValueUsd, 0);
-  return {
-    totalValueUsd,
-    cardCount: SAMPLE_CARDS.length,
-    avgAccuracy: 0.987,
-  };
+  return api.get<PortfolioSummaryWire>("/v1/grades/summary");
 }
 
-export async function fetchReport(id: string): Promise<ForensicReport> {
-  if (!config.useMocks) return api.get<ForensicReport>(`/reports/${id}`);
-  await wait(380);
-  const card = SAMPLE_CARDS.find((c) => c.id === id) ?? SAMPLE_CARDS[0]!;
-  return {
-    id: `report_${card.id}`,
-    card,
-    frontCaptureUri: card.thumbnailUri,
-    backCaptureUri: card.thumbnailUri,
-    score: {
-      surface: 962,
-      edges: 941,
-      corners: 905,
-      centering: 978,
-      composite: 947,
-      grade: card.grade,
-    },
-    dings: SAMPLE_DINGS,
-    capturedAt: card.scannedAt,
-    source: "scanner",
-    priceHistory: mockPriceHistory(card.estimatedValueUsd),
-    ocr: {
-      title: card.title,
-      set: card.set,
-      year: card.year,
-      confidence: 0.94,
-      rawLines: [card.title.toUpperCase(), card.set.toUpperCase(), `${card.year}`],
-    },
-  };
+export async function fetchReport(_id: string): Promise<ForensicReport> {
+  // Backend has not yet shipped a forensic report endpoint. Refuse to
+  // fabricate one — surface a clear error so the UI can render an empty
+  // state rather than fake confidence numbers.
+  throw new ApiError(
+    501,
+    "Forensic reports are not yet available from the backend.",
+    null,
+    "report.unavailable",
+  );
 }
 
-/**
- * Generates a deterministic 12-month sold-price walk anchored on the card's
- * current estimated value. Used by the price-history sparkline.
- */
-function mockPriceHistory(currentUsd: number): PricePoint[] {
-  const points: PricePoint[] = [];
-  const venues: PricePoint["venue"][] = ["eBay", "PWCC", "Goldin"];
-  let price = currentUsd * 0.7;
-  // Seed the walk with a tiny PRNG so the same card always gets the same chart.
-  let seed = currentUsd;
-  const rand = () => {
-    seed = (seed * 9301 + 49297) % 233280;
-    return seed / 233280;
-  };
-  for (let i = 11; i >= 0; i--) {
-    const drift = 1 + (rand() - 0.4) * 0.18;
-    price = Math.max(currentUsd * 0.45, price * drift);
-    const date = new Date();
-    date.setMonth(date.getMonth() - i);
-    points.push({
-      date: date.toISOString().slice(0, 10),
-      priceUsd: Math.round(price),
-      venue: venues[Math.floor(rand() * venues.length)],
-    });
-  }
-  // Anchor the latest point to the card's current value for visual consistency.
-  points[points.length - 1] = {
-    ...points[points.length - 1]!,
-    priceUsd: currentUsd,
-  };
-  return points;
-}
-
-/* ─── Portfolio history ──────────────────────────────────────────────── */
+/* ─── Portfolio history & sparklines ─────────────────────────────────── */
 
 export type PortfolioRange = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
 
 export interface PortfolioHistory {
   range: PortfolioRange;
-  /** Sorted oldest → newest. Synthetic price walk anchored to current value. */
   points: PricePoint[];
-  /** USD change from first → last point. */
   deltaUsd: number;
-  /** Percentage change from first → last point. */
   deltaPct: number;
 }
 
-/**
- * Returns a seeded synthetic value-over-time walk for the user's whole
- * collection at the requested range. Anchors the final point to the live
- * total so the hero value matches the chart's right edge.
- *
- * Real backend will compute this from per-card sold-comp price history.
- */
 export async function fetchPortfolioHistory(
   range: PortfolioRange,
 ): Promise<PortfolioHistory> {
-  if (!config.useMocks)
-    return api.get<PortfolioHistory>(`/collection/history?range=${range}`);
-  await wait(180);
-
-  const total = SAMPLE_CARDS.reduce((s, c) => s + c.estimatedValueUsd, 0);
-  const cfg: Record<PortfolioRange, { count: number; vol: number; trend: number }> = {
-    "1D": { count: 78, vol: 0.004, trend: 0.012 },
-    "1W": { count: 56, vol: 0.008, trend: 0.022 },
-    "1M": { count: 48, vol: 0.012, trend: 0.035 },
-    "3M": { count: 64, vol: 0.018, trend: 0.06 },
-    "YTD": { count: 80, vol: 0.022, trend: 0.11 },
-    "1Y": { count: 96, vol: 0.025, trend: 0.18 },
-    "ALL": { count: 120, vol: 0.04, trend: 0.42 },
+  const wire = await api.get<PortfolioHistoryWire>(
+    `/v1/grades/history?range=${encodeURIComponent(range)}`,
+  );
+  return {
+    range: wire.range,
+    points: wire.points.map((p) => ({ date: p.date, priceUsd: p.priceUsd })),
+    deltaUsd: wire.deltaUsd,
+    deltaPct: wire.deltaPct,
   };
-  const { count, vol, trend } = cfg[range];
-
-  // Tiny seeded PRNG so the chart is deterministic per range.
-  let seed = (total + range.length * 9973) | 0;
-  const rand = () => {
-    seed = (seed * 9301 + 49297) % 233280;
-    return seed / 233280;
-  };
-
-  // Walk backwards from `total` so the rightmost point equals the live value.
-  const start = total / (1 + trend);
-  const points: PricePoint[] = [];
-  let price = start;
-  for (let i = 0; i < count; i++) {
-    const t = i / (count - 1);
-    const driftToTarget = start + (total - start) * t;
-    const noise = (rand() - 0.5) * 2 * vol * total;
-    price = driftToTarget + noise;
-    const date = new Date();
-    if (range === "1D") {
-      date.setMinutes(date.getMinutes() - (count - 1 - i) * 5);
-    } else if (range === "1W") {
-      date.setHours(date.getHours() - (count - 1 - i) * 3);
-    } else if (range === "1M") {
-      date.setHours(date.getHours() - (count - 1 - i) * 16);
-    } else if (range === "3M") {
-      date.setDate(date.getDate() - (count - 1 - i) * 1.4);
-    } else if (range === "YTD") {
-      const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime();
-      const elapsedDays = (Date.now() - startOfYear) / 86_400_000;
-      const stepDays = elapsedDays / (count - 1);
-      date.setTime(startOfYear + stepDays * i * 86_400_000);
-    } else if (range === "1Y") {
-      date.setDate(date.getDate() - (count - 1 - i) * 4);
-    } else {
-      date.setDate(date.getDate() - (count - 1 - i) * 12);
-    }
-    points.push({
-      date: date.toISOString(),
-      priceUsd: Math.max(1, Math.round(price)),
-    });
-  }
-  // Anchor right edge.
-  points[points.length - 1] = { ...points[points.length - 1]!, priceUsd: total };
-  const first = points[0]!.priceUsd;
-  const deltaUsd = total - first;
-  const deltaPct = first > 0 ? (deltaUsd / first) * 100 : 0;
-  return { range, points, deltaUsd, deltaPct };
 }
-
-/* ─── Per-card sparklines ────────────────────────────────────────────── */
 
 export interface CardSparkline {
   cardId: string;
-  points: number[]; // last 14 normalized closes
-  deltaPct: number; // pct change vs first point
+  /** Last N price samples for the card. May be empty if no history yet. */
+  points: number[];
+  /** Pct change between the first and last points (0 when flat/empty). */
+  deltaPct: number;
 }
 
 export async function fetchCardSparklines(): Promise<CardSparkline[]> {
-  if (!config.useMocks) return api.get<CardSparkline[]>("/collection/sparklines");
-  await wait(140);
-  return SAMPLE_CARDS.map((c) => {
-    let seed = (c.estimatedValueUsd + c.id.length * 7919) | 0;
-    const rand = () => {
-      seed = (seed * 9301 + 49297) % 233280;
-      return seed / 233280;
-    };
-    const points: number[] = [];
-    let v = c.estimatedValueUsd * (0.85 + rand() * 0.2);
-    for (let i = 0; i < 14; i++) {
-      v = v * (1 + (rand() - 0.45) * 0.05);
-      points.push(Math.round(v));
-    }
-    points[points.length - 1] = c.estimatedValueUsd;
-    const deltaPct = ((points[points.length - 1]! - points[0]!) / points[0]!) * 100;
-    return { cardId: c.id, points, deltaPct };
-  });
+  return api.get<CardSparklineWire[]>("/v1/grades/sparklines");
 }
-

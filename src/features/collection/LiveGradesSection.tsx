@@ -16,7 +16,9 @@ import { useMyGrades } from "@/hooks/api/useMyGrades";
 import { useAuth } from "@/providers/AuthProvider";
 import { QueryState } from "@/components/ui/QueryState";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { gradeColor, useThemedPalette, withAlpha } from "@/theme/tokens";
+import { CardImage } from "@/components/ui/CardImage";
+import { compactUsd } from "@/lib/format";
+import { gradeColor, palette, useThemedPalette, withAlpha } from "@/theme/tokens";
 
 interface LiveGradesSectionProps {
   title?: string;
@@ -104,20 +106,32 @@ export function LiveGradesSection({
 function GradeRow({ grade, bordered }: { grade: GradedCard; bordered: boolean }) {
   const p = useThemedPalette();
   // Backend serializes Decimal as string; coerce defensively.
-  const raw = (grade as unknown as { grade: number | string | null }).grade;
-  const numeric = typeof raw === "number" ? raw : Number(raw);
-  const gradeValue = Number.isFinite(numeric) ? numeric : 0;
+  const rawGrade = (grade as unknown as { grade: number | string | null }).grade;
+  const numericGrade = typeof rawGrade === "number" ? rawGrade : Number(rawGrade);
+  const gradeValue = Number.isFinite(numericGrade) ? numericGrade : 0;
   const color = gradeColor(gradeValue);
-  // Backend uses `house` and `graded_at`; legacy TS type uses `grader` and `scanned_at`.
+  // Backend uses `house`; legacy TS type uses `grader`.
   const anyGrade = grade as unknown as {
     house?: string;
     grader?: string;
-    graded_at?: string;
-    scanned_at?: string;
-    cert_number?: string | null;
   };
   const houseLabel = (anyGrade.house ?? anyGrade.grader ?? "").toString();
-  const when = anyGrade.graded_at ?? anyGrade.scanned_at ?? null;
+
+  const rawValue = (grade as unknown as { estimated_value_usd: string | number | null })
+    .estimated_value_usd;
+  const numericValue = rawValue === null || rawValue === undefined ? null : Number(rawValue);
+  const valueText =
+    numericValue !== null && Number.isFinite(numericValue) ? compactUsd(numericValue) : null;
+
+  const subtitle = [
+    houseLabel ? houseLabel.toUpperCase() : null,
+    grade.card_set_name,
+    grade.card_number ? `#${grade.card_number}` : null,
+    grade.card_year,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <Pressable
       onPress={() => router.push(routes.card(grade.card_id))}
@@ -125,41 +139,73 @@ function GradeRow({ grade, bordered }: { grade: GradedCard; bordered: boolean })
       className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
     >
       <View
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 10,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: withAlpha(color, 0.16),
-          borderWidth: 1,
-          borderColor: withAlpha(color, 0.5),
-        }}
+        className="overflow-hidden rounded-lg"
+        style={{ width: 44, height: 60, backgroundColor: palette.bg.sunken }}
       >
-        <Text style={{ color, fontSize: 16, fontWeight: "800" }}>
-          {gradeValue.toFixed(gradeValue % 1 === 0 ? 0 : 1)}
-        </Text>
+        <CardImage
+          uri={grade.card_image_url ?? undefined}
+          width={44}
+          height={60}
+          rounded={8}
+          priority="low"
+          recyclingKey={grade.card_id}
+          alt={grade.card_name ?? "Graded card"}
+        />
       </View>
+
       <View style={{ flex: 1 }}>
         <Text numberOfLines={1} className="text-sm font-semibold text-ink">
-          {grade.card_id}
+          {grade.card_name ?? "Unknown card"}
         </Text>
         <Text numberOfLines={1} className="mt-0.5 text-[11px] text-ink-muted">
-          {houseLabel.toUpperCase()}
-          {anyGrade.cert_number ? ` · #${anyGrade.cert_number}` : ""}
-          {when ? ` · ${new Date(when).toLocaleDateString()}` : ""}
+          {subtitle || "—"}
         </Text>
+        {grade.card_tcg ? (
+          <View className="mt-1 flex-row items-center gap-1.5">
+            <View
+              style={{
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 999,
+                backgroundColor: withAlpha(p.accent.mint, 0.14),
+              }}
+            >
+              <Text
+                style={{
+                  color: p.accent.mint,
+                  fontSize: 9,
+                  fontWeight: "800",
+                  letterSpacing: 0.8,
+                }}
+              >
+                {grade.card_tcg.toUpperCase()}
+              </Text>
+            </View>
+          </View>
+        ) : null}
       </View>
-      <Text
-        style={{
-          color: p.ink.dim,
-          fontSize: 10,
-          fontWeight: "800",
-          letterSpacing: 0.8,
-        }}
-      >
-        DETAIL →
-      </Text>
+
+      <View style={{ alignItems: "flex-end", gap: 6 }}>
+        <View
+          style={{
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderRadius: 8,
+            backgroundColor: withAlpha(color, 0.16),
+            borderWidth: 1,
+            borderColor: withAlpha(color, 0.5),
+            minWidth: 40,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color, fontSize: 13, fontWeight: "800" }}>
+            {gradeValue.toFixed(gradeValue % 1 === 0 ? 0 : 1)}
+          </Text>
+        </View>
+        {valueText ? (
+          <Text className="text-[12px] font-semibold text-ink">{valueText}</Text>
+        ) : null}
+      </View>
     </Pressable>
   );
 }
