@@ -7,8 +7,8 @@
  * `priority="normal"`; the rest fall back to `"low"` so off-screen
  * thumbnails don't compete for decoder bandwidth on launch.
  */
-import React, { useCallback, type ReactElement } from "react";
-import { FlatList, Platform, View, type ListRenderItem } from "react-native";
+import React, { useCallback, useMemo, type ReactElement } from "react";
+import { FlatList, Platform, View, useWindowDimensions, type ListRenderItem } from "react-native";
 import { CardTile } from "./CardTile";
 import type { CardWire, CardTileSize } from "./types";
 
@@ -24,6 +24,8 @@ export interface CardGridProps {
   contentPaddingBottom?: number;
   /** Inter-tile gap (dp). Defaults to 12. */
   gap?: number;
+  /** Page-level horizontal padding. Used to compute pixel-perfect column widths. */
+  horizontalPadding?: number;
 }
 
 export function CardGrid({
@@ -37,28 +39,35 @@ export function CardGrid({
   onCardPress,
   contentPaddingBottom = 0,
   gap = 12,
+  horizontalPadding = 16,
 }: CardGridProps) {
+  const { width: screenW } = useWindowDimensions();
   const keyExtractor = useCallback((c: CardWire) => c.id, []);
+
+  // Compute exact pixel width for tiles to avoid layout blowups on iOS
+  // caused by nested aspectRatios inside flex containers.
+  const tileW = useMemo(() => {
+    return Math.floor((screenW - horizontalPadding * 2 - gap * (numColumns - 1)) / numColumns);
+  }, [screenW, horizontalPadding, gap, numColumns]);
 
   const renderItem: ListRenderItem<CardWire> = useCallback(
     ({ item, index }) => {
       const priority = index < 4 ? "normal" : "low";
       return (
-        <View style={{ flex: 1 / numColumns, paddingHorizontal: gap / 2 }}>
+        <View style={{ width: tileW, paddingHorizontal: gap / 2 }}>
           <CardTile
             card={item}
             size={tileSize}
+            width={tileW}
             showPrice={showPrice}
             showSet={showSet}
             priority={priority}
             onPress={onCardPress ? () => onCardPress(item) : undefined}
-            // Let the wrapper drive width; override tile's intrinsic width.
-            style={{ width: "100%" }}
           />
         </View>
       );
     },
-    [numColumns, gap, tileSize, showPrice, showSet, onCardPress],
+    [tileW, gap, tileSize, showPrice, showSet, onCardPress],
   );
 
   return (
@@ -68,18 +77,14 @@ export function CardGrid({
       renderItem={renderItem}
       numColumns={numColumns}
       columnWrapperStyle={
-        numColumns > 1 ? { marginHorizontal: -gap / 2 } : undefined
+        numColumns > 1 ? { marginHorizontal: horizontalPadding - gap / 2 } : { paddingHorizontal: horizontalPadding }
       }
       contentContainerStyle={{ gap, paddingBottom: contentPaddingBottom }}
       ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={ListEmptyComponent}
       initialNumToRender={12}
       windowSize={10}
-      // On iOS, `removeClippedSubviews` can blank rows during fast scroll
-      // and aborts in-flight image fetches when tiles unmount; only enable
-      // on Android where it materially reduces memory.
-      removeClippedSubviews={Platform.OS === "android"}
-      showsVerticalScrollIndicator={false}
+      removeClippedSubviews={Platform.OS === 'android'}
     />
   );
 }

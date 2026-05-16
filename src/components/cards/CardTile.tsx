@@ -25,8 +25,10 @@ export interface CardTileProps {
   trend?: TrendInfo | null;
   onPress?: () => void;
   priority?: "low" | "normal" | "high";
-  /** Optional outer style override (e.g. width: "47%" inside a wrap grid). */
+  /** Optional outer style override (e.g. width override inside a wrap grid). */
   style?: ViewStyle;
+  /** Override tile width (dp). Falls back to TILE_WIDTH[size]. */
+  width?: number;
 }
 
 function CardTileImpl({
@@ -39,12 +41,19 @@ function CardTileImpl({
   onPress,
   priority = "normal",
   style,
+  width,
 }: CardTileProps) {
   const p = useThemedPalette();
   const showSetResolved = showSet ?? size !== "sm";
   const price = card.pricing_summary?.market?.amount ?? null;
   const small = pickCardImageUrl(card, "small");
   const normal = pickCardImageUrl(card, "normal");
+
+  // Explicit, integer pixel dimensions — nesting aspectRatio on both the
+  // wrapper AND inside CardImage's container blows up to the full screen
+  // on iOS. Pass numbers directly to keep RN's layout deterministic.
+  const tileWidth = Math.round(width ?? TILE_WIDTH[size]);
+  const tileHeight = Math.round(tileWidth * (7 / 5));
 
   const handlePress = useCallback(() => {
     if (onPress) return onPress();
@@ -57,27 +66,21 @@ function CardTileImpl({
       accessibilityRole="button"
       accessibilityLabel={card.name}
       style={({ pressed }) => [
-        { width: TILE_WIDTH[size], opacity: pressed ? 0.85 : 1, gap: 6 },
+        { width: tileWidth, opacity: pressed ? 0.85 : 1, gap: 6 },
         style,
       ]}
     >
-      <View style={{ width: "100%", aspectRatio: 5 / 7 }}>
-        <CardImage
-          // Tiles are small (≤160dp wide) — always use the `small` variant.
-          // Pokemon normal (`*_hires.png`) is ~900KB vs ~165KB for small;
-          // Scryfall/YGO have similar ~5× size deltas. Loading `normal`
-          // here was the dominant cause of "images load slowly" complaints.
-          // Fall back to `normal` only if small is missing or fails.
-          uri={small ?? normal}
-          fallbackUri={small && normal && small !== normal ? normal : undefined}
-          blurhash={pickCardBlurhash(card)}
-          rounded={12}
-          priority={priority}
-          recyclingKey={card.id}
-          alt={card.name}
-          aspectRatio={undefined as unknown as number}
-        />
-      </View>
+      <CardImage
+        uri={small ?? normal}
+        fallbackUri={small && normal && small !== normal ? normal : undefined}
+        blurhash={pickCardBlurhash(card)}
+        width={tileWidth}
+        height={tileHeight}
+        rounded={12}
+        priority={priority}
+        recyclingKey={card.id}
+        alt={card.name}
+      />
       {showName ? (
         <Text numberOfLines={2} className="text-[12px] font-semibold text-ink">
           {card.name}
