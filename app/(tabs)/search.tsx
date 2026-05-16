@@ -33,6 +33,7 @@ import { useCardSearch, useTrendingCards } from "@/hooks/api";
 import { SearchResultRow } from "@/features/search/SearchResultRow";
 import { CardImage } from "@/components/ui/CardImage";
 import { SkeletonTrendingGrid } from "@/components/ui/Skeletons";
+import { CardTile } from "@/components/cards";
 import { pickCardImageUrl, pickCardBlurhash } from "@/lib/cardImage";
 import type { CardSearchResult, TcgKey } from "@/api/types";
 import { compactUsd } from "@/lib/format";
@@ -858,9 +859,19 @@ function TrendingSection() {
         ) : cards.length === 0 ? (
           <EmptyState title="No trending cards right now" message="" />
         ) : (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12, rowGap: 12 }}>
             {cards.map((card, idx) => (
-              <TrendingTile key={card.id} card={card} priority={idx < 4 ? "normal" : "low"} />
+              <View key={card.id} style={{ width: "48%" }}>
+                <CardTile
+                  card={card}
+                  size="md"
+                  showName
+                  showSet
+                  showPrice
+                  priority={idx < 4 ? "normal" : "low"}
+                  style={{ width: "100%" }}
+                />
+              </View>
             ))}
           </View>
         )}
@@ -869,50 +880,12 @@ function TrendingSection() {
   );
 }
 
-function TrendingTile({
-  card,
-  priority,
-}: {
+function TrendingTile(_: {
   card: CardSearchResult;
   priority: "low" | "normal" | "high";
-}) {
-  const p = useThemedPalette();
-  const price = card.pricing_summary?.market?.amount ?? null;
-  return (
-    <Pressable
-      onPress={() => router.push(`/card/${encodeURIComponent(card.id)}`)}
-      style={({ pressed }) => ({
-        flexBasis: "47%",
-        flexGrow: 1,
-        opacity: pressed ? 0.85 : 1,
-        gap: 6,
-      })}
-    >
-      <View style={{ width: "100%", aspectRatio: 5 / 7 }}>
-        <CardImage
-          uri={pickCardImageUrl(card, "normal")}
-          fallbackUri={pickCardImageUrl(card, "small")}
-          blurhash={pickCardBlurhash(card)}
-          rounded={12}
-          priority={priority}
-          recyclingKey={card.id}
-          alt={card.name}
-          aspectRatio={undefined as unknown as number}
-        />
-      </View>
-      <Text numberOfLines={1} className="text-sm font-semibold text-ink">
-        {card.name}
-      </Text>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-        <Text numberOfLines={1} className="text-[11px] text-ink-muted" style={{ flex: 1 }}>
-          {[card.set_name, card.year].filter(Boolean).join(" · ")}
-        </Text>
-        {price !== null ? (
-          <Text style={{ color: p.accent.mint, fontSize: 11, fontWeight: "700" }}>
-            {compactUsd(price)}
-          </Text>
-        ) : null}
-      </View>
-    </Pressable>
-  );
+}): null {
+  // Deprecated: replaced by reusable <CardTile> primitive. Retained as a
+  // no-op shim only to avoid ripping out the symbol mid-refactor; new
+  // call sites should use `CardTile` directly from `@/components/cards`.
+  return null;
 }

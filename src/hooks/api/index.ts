@@ -16,3 +16,5 @@ export type { UseCardListingsOptions } from "./useCardListings";
 export { useCardComps } from "./useCardComps";
 export type { UseCardCompsOptions } from "./useCardComps";
 export { useProvidersStatus } from "./useProvidersStatus";
+export { useTopMovers } from "./useTopMovers";
+export type { TopMoverRow, UseTopMoversResult } from "./useTopMovers";

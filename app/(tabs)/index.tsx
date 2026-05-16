@@ -13,14 +13,17 @@ import {
 import { fetchCollection, fetchCollectionSummary } from "@/api/forensicApi";
 import { HardwareStatusWidget, InitiateScanButton, useScannerConnection } from "@/features/scanner";
 import { PortfolioChart } from "@/features/analytics";
-import { TopMovers } from "@/features/markets/TopMovers";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { HotRightNowRail } from "@/features/search/HotRightNowRail";
 import { LiveSyncChip } from "@/components/ui/LiveSyncChip";
 import { LoupeMark } from "@/components/brand/LoupeMark";
-import { useApiHealth } from "@/hooks/api";
+import { useApiHealth, useTopMovers } from "@/hooks/api";
+import { useAuth } from "@/providers/AuthProvider";
+import { MoversCardRow } from "@/components/cards";
 import { compactUsd, greeting, relativeTime } from "@/lib/format";
 import { gradeColor, palette, useThemedPalette } from "@/theme/tokens";
 import type { CollectionCard } from "@/types/domain";
@@ -28,15 +31,25 @@ import type { CollectionCard } from "@/types/domain";
 export default function CommandCenterScreen() {
   useThemedPalette();
   const qc = useQueryClient();
+  const { isAuthenticated } = useAuth();
   const summary = useQuery({ queryKey: ["collection-summary"], queryFn: fetchCollectionSummary });
   const collection = useQuery({ queryKey: ["collection"], queryFn: fetchCollection });
   const hardware = useScannerConnection();
+  const movers = useTopMovers({ enrichLimit: 12, limit: 5 });
 
-  const refreshing = summary.isFetching || collection.isFetching || hardware.isFetching;
-
-  const onRefresh = useCallback(() => {
-    qc.invalidateQueries();
-  }, [qc]);
+  // Manual-only refresh flag — using TanStack's `isFetching` made the
+  // RefreshControl spin on initial mount, which pushed the screen header
+  // below the viewport on Android.
+  const [pulling, setPulling] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setPulling(true);
+    try {
+      await qc.invalidateQueries();
+      movers.refetch();
+    } finally {
+      setPulling(false);
+    }
+  }, [qc, movers]);
 
   const recent = (collection.data ?? [])
     .slice()
@@ -50,7 +63,7 @@ export default function CommandCenterScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
+            refreshing={pulling}
             onRefresh={onRefresh}
             tintColor={palette.accent.mint}
           />
@@ -115,7 +128,7 @@ export default function CommandCenterScreen() {
           {collection.isLoading || !collection.data ? (
             <SkeletonTile full />
           ) : (
-            <TopMovers cards={collection.data} limit={5} />
+            <TopMoversSection movers={movers} isAuthenticated={isAuthenticated} />
           )}
         </View>
 
@@ -420,5 +433,73 @@ function ModeSegment({
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+/**
+ * Real-data Top Movers — composes `useTopMovers` (vault + market enrichment)
+ * with the reusable `MoversCardRow` primitive. Renders auth/loading/error/
+ * empty states inline so the section never collapses into a blank container.
+ */
+function TopMoversSection({
+  movers,
+  isAuthenticated,
+}: {
+  movers: ReturnType<typeof useTopMovers>;
+  isAuthenticated: boolean;
+}) {
+  if (!isAuthenticated) {
+    return (
+      <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+        <EmptyState
+          title="Sign in to see your movers"
+          message="Connect your vault to track the biggest 1-year price swings on cards you actually own."
+          secondaryActionLabel="Open settings"
+          onSecondaryAction={() => router.push("/settings")}
+          compact
+        />
+      </View>
+    );
+  }
+  if (movers.isLoading) {
+    return <SkeletonTile full />;
+  }
+  if (movers.isError) {
+    return (
+      <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+        <ErrorState
+          title="Movers unavailable"
+          message="We couldn't reach the market service."
+          onRetry={movers.refetch}
+          compact
+        />
+      </View>
+    );
+  }
+  if (movers.isEmpty || movers.rows.length === 0) {
+    return (
+      <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+        <EmptyState
+          title="Your vault is empty"
+          message="Scan a card to start tracking real movers on the cards you grade."
+          secondaryActionLabel="Scan a card"
+          onSecondaryAction={() => router.push("/scan/phone")}
+          compact
+        />
+      </View>
+    );
+  }
+  return (
+    <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+      {movers.rows.map((row, i) => (
+        <MoversCardRow
+          key={row.card.id}
+          card={row.card}
+          price={row.price}
+          trend={row.trend}
+          bordered={i > 0}
+        />
+      ))}
+    </View>
   );
 }
