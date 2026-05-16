@@ -1,26 +1,49 @@
 /**
- * Tiny, dependency-free fetch wrapper for the Loupe backend
- * (https://github.com/wiggapony0925/loupe-backend).
+ * Envelope-aware fetch wrapper for loupe-backend `/v1`.
  *
  * Reads `EXPO_PUBLIC_API_URL` at bundle time, defaults to localhost:8000.
+ *
+ * All `/v1/*` responses ship the universal envelope
+ *   { data, meta, pagination, error }
+ * (see loupe-backend/CONTRACT.md §2). `apiFetch` auto-unwraps to `data`;
+ * `apiFetchEnvelope` returns the full envelope when you need `meta` /
+ * `pagination`. On non-2xx the envelope's `error` block is parsed into a
+ * typed {@link ApiError}.
  */
+
+import type { Envelope, ErrorDetail } from "./types";
 
 const env = (process.env ?? {}) as Record<string, string | undefined>;
 
-export const apiBaseUrl: string =
-  env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
+export const apiBaseUrl: string = env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {
+  code: string;
   status: number;
-  detail?: unknown;
+  field?: string;
+  details?: unknown;
+  requestId?: string;
   path: string;
 
-  constructor(status: number, path: string, message: string, detail?: unknown) {
-    super(message);
+  constructor(
+    path: string,
+    opts: {
+      code: string;
+      message: string;
+      status: number;
+      field?: string;
+      details?: unknown;
+      requestId?: string;
+    },
+  ) {
+    super(opts.message);
     this.name = "ApiError";
-    this.status = status;
     this.path = path;
-    this.detail = detail;
+    this.code = opts.code;
+    this.status = opts.status;
+    this.field = opts.field;
+    this.details = opts.details;
+    this.requestId = opts.requestId;
   }
 }
 
@@ -58,12 +81,21 @@ function buildQuery(query?: Record<string, QueryValue>): string {
   return parts.length ? `?${parts.join("&")}` : "";
 }
 
-export async function apiFetch<T = unknown>(
+function isEnvelope(value: unknown): value is Envelope {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return "meta" in v && ("data" in v || "error" in v);
+}
+
+/**
+ * Issue a request and return the full `Envelope<T>`. Use this when you
+ * need `meta` / `pagination`; otherwise prefer {@link apiFetch}.
+ */
+export async function apiFetchEnvelope<T = unknown>(
   path: string,
   init: ApiFetchInit = {},
-): Promise<T> {
+): Promise<Envelope<T>> {
   const { json, query, skipAuth, headers, body, ...rest } = init;
-
   const url = apiUrl(path) + buildQuery(query);
 
   const finalHeaders: Record<string, string> = {
@@ -76,37 +108,84 @@ export async function apiFetch<T = unknown>(
     finalHeaders["Content-Type"] = "application/json";
     finalBody = JSON.stringify(json);
   }
-
   if (!skipAuth && authToken) {
     finalHeaders.Authorization = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(url, {
-    ...rest,
-    headers: finalHeaders,
-    body: finalBody,
-  });
+  const res = await fetch(url, { ...rest, headers: finalHeaders, body: finalBody });
+  const requestIdHeader = res.headers.get("x-request-id") ?? undefined;
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    let detail: unknown = text || undefined;
+  if (res.status === 204) {
+    return {
+      data: null,
+      meta: {
+        request_id: requestIdHeader ?? "",
+        timestamp: new Date().toISOString(),
+        version: "v1",
+        duration_ms: null,
+      },
+      pagination: null,
+      error: null,
+    };
+  }
+
+  const contentType = res.headers.get("content-type") ?? "";
+  const isJson = contentType.includes("application/json");
+  const rawText = await res.text().catch(() => "");
+  let parsed: unknown = rawText;
+  if (isJson && rawText) {
     try {
-      detail = text ? JSON.parse(text) : undefined;
+      parsed = JSON.parse(rawText);
     } catch {
       /* keep raw text */
     }
-    const message = `${res.status} ${res.statusText} (${path})`;
-    if (res.status >= 500) {
-      // eslint-disable-next-line no-console
-      console.warn(`[apiFetch] ${message}`, detail);
-    }
-    throw new ApiError(res.status, path, message, detail);
   }
 
-  if (res.status === 204) return undefined as T;
-  const contentType = res.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    return (await res.json()) as T;
+  if (!res.ok) {
+    const fallback: ErrorDetail = {
+      code: `http.${res.status}`,
+      message: `${res.status} ${res.statusText || "error"} (${path})`,
+      status: res.status,
+      field: null,
+      details: parsed,
+    };
+    const err: ErrorDetail = isEnvelope(parsed) && parsed.error ? parsed.error : fallback;
+    throw new ApiError(path, {
+      code: err.code,
+      message: err.message,
+      status: err.status ?? res.status,
+      field: err.field ?? undefined,
+      details: err.details,
+      requestId:
+        (isEnvelope(parsed) ? parsed.meta?.request_id : undefined) ?? requestIdHeader,
+    });
   }
-  return (await res.text()) as unknown as T;
+
+  if (isEnvelope(parsed)) {
+    return parsed as Envelope<T>;
+  }
+  // Endpoint did not envelope (system endpoints, signed URLs). Synthesize.
+  return {
+    data: parsed as T,
+    meta: {
+      request_id: requestIdHeader ?? "",
+      timestamp: new Date().toISOString(),
+      version: "v1",
+      duration_ms: null,
+    },
+    pagination: null,
+    error: null,
+  };
+}
+
+/**
+ * Convenience wrapper around {@link apiFetchEnvelope} that unwraps to
+ * `envelope.data`. Throws {@link ApiError} on non-2xx.
+ */
+export async function apiFetch<T = unknown>(
+  path: string,
+  init: ApiFetchInit = {},
+): Promise<T> {
+  const envelope = await apiFetchEnvelope<T>(path, init);
+  return envelope.data as T;
 }

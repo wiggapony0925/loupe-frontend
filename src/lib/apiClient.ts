@@ -1,14 +1,49 @@
 import { config } from "./config";
 import { auth } from "./auth";
 
+/**
+ * Envelope shape mirrors loupe-backend/CONTRACT.md §2. Inlined here so
+ * this module stays self-contained for callers that hit both the API
+ * and signed-URL hosts (forensicApi, scanJobs, marketApi).
+ */
+interface EnvelopeShape<T = unknown> {
+  data: T | null;
+  meta: {
+    request_id: string;
+    timestamp: string;
+    version: string;
+    duration_ms: number | null;
+  };
+  pagination: unknown | null;
+  error: {
+    code: string;
+    message: string;
+    status: number;
+    field: string | null;
+    details: unknown | null;
+  } | null;
+}
+
+function isEnvelope(value: unknown): value is EnvelopeShape {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return "meta" in v && ("data" in v || "error" in v);
+}
+
 export class ApiError extends Error {
+  code: string;
+  requestId?: string;
   constructor(
     public status: number,
     message: string,
     public body?: unknown,
+    code: string = `http.${status}`,
+    requestId?: string,
   ) {
     super(message);
     this.name = "ApiError";
+    this.code = code;
+    this.requestId = requestId;
   }
 }
 
@@ -42,6 +77,10 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     body,
   });
 
+  const requestIdHeader = res.headers.get("x-request-id") ?? undefined;
+  const contentType = res.headers.get("content-type") ?? "";
+  const isJson = contentType.includes("application/json");
+
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     let parsed: unknown = text;
@@ -50,13 +89,32 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     } catch {
       /* keep raw text */
     }
-    throw new ApiError(res.status, `${res.status} ${res.statusText}`, parsed);
+    if (isEnvelope(parsed) && parsed.error) {
+      const e = parsed.error;
+      throw new ApiError(
+        e.status ?? res.status,
+        e.message,
+        e.details ?? parsed,
+        e.code,
+        parsed.meta?.request_id ?? requestIdHeader,
+      );
+    }
+    throw new ApiError(
+      res.status,
+      `${res.status} ${res.statusText}`,
+      parsed,
+      `http.${res.status}`,
+      requestIdHeader,
+    );
   }
 
   // 204 No Content
   if (res.status === 204) return undefined as T;
-  const contentType = res.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) return (await res.json()) as T;
+  if (isJson) {
+    const parsed: unknown = await res.json();
+    if (isEnvelope(parsed)) return parsed.data as T;
+    return parsed as T;
+  }
   return (await res.text()) as unknown as T;
 }
 
