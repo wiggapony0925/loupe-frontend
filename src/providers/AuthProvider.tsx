@@ -3,8 +3,9 @@
  *
  * - Hydrates a saved JWT from AsyncStorage on mount, hands it to the API
  *   client, and fetches `/me` to populate `user`.
- * - Exposes `signInWithApple`/`signInWithGoogle` as stubs (real SDK wiring
- *   lives in a later round); shape is in place so screens can call them.
+ * - Exposes email/password sign-up + sign-in and a dev-login helper.
+ *   `signInWithApple`/`signInWithGoogle` remain stubs until the native
+ *   SDKs are wired.
  * - Persists every token change so the app survives cold boots.
  */
 import React, {
@@ -32,7 +33,11 @@ interface AuthContextValue {
   user: MeResponse | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<void>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    displayName?: string,
+  ) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signInWithDevLogin: (email: string, displayName?: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
@@ -88,7 +93,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
     return () => {
       cancelled = true;
-    };UpWithEmail = useCallback(
+    };
+  }, [persistToken]);
+
+  const signUpWithEmail = useCallback(
     async (email: string, password: string, displayName?: string) => {
       const pair = await registerWithEmailApi({
         email: email.trim().toLowerCase(),
@@ -123,26 +131,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(pair.user);
     },
     [persistToken],
-  );UpWithEmail,
-      signInWithEmail,
-      signInWithDevLogin,
-      signInWithApple,
-      signInWithGoogle,
-      signOut,
-      setToken,
-    }),
-    [
-      token,
-      user,
-      isLoading,
-      signUpWithEmail,
-      signInWithEmail,
-      signInWithDevLogin,
-      signInWithApple,
-      signInWithGoogle,
-      signOut,
-      setToken,
-    
+  );
+
+  const signOut = useCallback(() => {
     void persistToken(null);
     setUser(null);
   }, [persistToken]);
@@ -174,12 +165,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isAuthenticated: !!token,
       isLoading,
+      signUpWithEmail,
+      signInWithEmail,
+      signInWithDevLogin,
       signInWithApple,
       signInWithGoogle,
       signOut,
       setToken,
     }),
-    [token, user, isLoading, signInWithApple, signInWithGoogle, signOut, setToken],
+    [
+      token,
+      user,
+      isLoading,
+      signUpWithEmail,
+      signInWithEmail,
+      signInWithDevLogin,
+      signInWithApple,
+      signInWithGoogle,
+      signOut,
+      setToken,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
