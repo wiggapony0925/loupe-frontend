@@ -8,7 +8,7 @@
  * thumbnails don't compete for decoder bandwidth on launch.
  */
 import React, { useCallback, type ReactElement } from "react";
-import { FlatList, View, type ListRenderItem } from "react-native";
+import { FlatList, Platform, View, type ListRenderItem } from "react-native";
 import { CardTile } from "./CardTile";
 import type { CardWire, CardTileSize } from "./types";
 
@@ -73,9 +73,12 @@ export function CardGrid({
       contentContainerStyle={{ gap, paddingBottom: contentPaddingBottom }}
       ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={ListEmptyComponent}
-      initialNumToRender={8}
-      windowSize={5}
-      removeClippedSubviews
+      initialNumToRender={12}
+      windowSize={10}
+      // On iOS, `removeClippedSubviews` can blank rows during fast scroll
+      // and aborts in-flight image fetches when tiles unmount; only enable
+      // on Android where it materially reduces memory.
+      removeClippedSubviews={Platform.OS === "android"}
       showsVerticalScrollIndicator={false}
     />
   );

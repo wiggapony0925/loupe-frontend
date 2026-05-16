@@ -75,8 +75,11 @@ export function CardHorizontalRail({
         decelerationRate={snap ? "fast" : "normal"}
         contentContainerStyle={{ paddingRight: 4 }}
         initialNumToRender={6}
-        windowSize={5}
-        removeClippedSubviews
+        windowSize={8}
+        // Horizontal rails are short; clipping subviews routinely unmounts
+        // tiles mid-fetch (especially on iOS), which is the visible "image
+        // never appears" symptom. Keep them mounted.
+        removeClippedSubviews={false}
       />
     </View>
   );

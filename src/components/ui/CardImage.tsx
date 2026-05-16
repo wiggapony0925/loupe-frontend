@@ -69,6 +69,21 @@ export function CardImage({
     setTriedFallback(false);
   }, [uri]);
 
+  // Dev-only: surface URLs that take >3s to first-paint so we can see
+  // which CDN/variant combos are the offenders without shipping any
+  // logging in production.
+  React.useEffect(() => {
+    if (!__DEV__ || !activeUri || !loading) return;
+    const started = Date.now();
+    const t = setTimeout(() => {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[CardImage] slow load (${Date.now() - started}ms still pending): ${activeUri}`,
+      );
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [activeUri, loading]);
+
   const onLoad = useCallback(() => {
     setLoading(false);
     setErrored(false);

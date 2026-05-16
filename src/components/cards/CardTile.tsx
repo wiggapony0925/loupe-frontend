@@ -63,8 +63,13 @@ function CardTileImpl({
     >
       <View style={{ width: "100%", aspectRatio: 5 / 7 }}>
         <CardImage
-          uri={normal ?? small}
-          fallbackUri={small && normal && small !== normal ? small : undefined}
+          // Tiles are small (≤160dp wide) — always use the `small` variant.
+          // Pokemon normal (`*_hires.png`) is ~900KB vs ~165KB for small;
+          // Scryfall/YGO have similar ~5× size deltas. Loading `normal`
+          // here was the dominant cause of "images load slowly" complaints.
+          // Fall back to `normal` only if small is missing or fails.
+          uri={small ?? normal}
+          fallbackUri={small && normal && small !== normal ? normal : undefined}
           blurhash={pickCardBlurhash(card)}
           rounded={12}
           priority={priority}
