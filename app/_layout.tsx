@@ -9,8 +9,14 @@ import { useColorScheme } from "nativewind";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
 import { AppProviders } from "@/providers/AppProviders";
 import { BrandSplash } from "@/components/brand/BrandSplash";
+import { NetworkBanner } from "@/components/ui/NetworkBanner";
 import { useSettings } from "@/store/settingsStore";
 import { applyTheme, palette } from "@/theme/tokens";
+import { initSentry } from "@/lib/sentry";
+
+// Fire Sentry init once at module evaluation. The helper is a graceful
+// no-op when EXPO_PUBLIC_SENTRY_DSN is unset, so dev builds stay zero-config.
+initSentry();
 
 /**
  * Resolves the user's preference (`themeMode`) to a concrete scheme,
@@ -84,6 +90,7 @@ export default function RootLayout() {
                 />
               </Stack>
               {!splashDone ? <BrandSplash onFinish={() => setSplashDone(true)} /> : null}
+              <NetworkBanner />
             </View>
           </AppProviders>
         </GluestackUIProvider>

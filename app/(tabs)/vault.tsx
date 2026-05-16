@@ -1,18 +1,24 @@
 import React, { useCallback, useMemo } from "react";
-import { FlatList, RefreshControl, Text, View } from "react-native";
+import { FlatList, RefreshControl, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { Layers } from "lucide-react-native";
 import { CardThumbnail } from "@/features/collection/CardThumbnail";
 import { FilterBar } from "@/features/collection/FilterBar";
 import { LiveGradesSection } from "@/features/collection/LiveGradesSection";
 import { useFilteredCollection } from "@/features/collection/useFilteredCollection";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { COPY } from "@/lib/copy";
 import { compactUsd } from "@/lib/format";
 import { palette, useThemedPalette } from "@/theme/tokens";
+import { Text } from "react-native";
 
 export default function VaultScreen() {
   useThemedPalette();
+  const router = useRouter();
   const qc = useQueryClient();
   const { cards, isLoading, isFetching } = useFilteredCollection();
 
@@ -75,8 +81,14 @@ export default function VaultScreen() {
               ))}
             </View>
           ) : (
-            <View className="items-center py-12">
-              <Text className="text-sm text-ink-muted">No cards match these filters.</Text>
+            <View style={{ paddingTop: 16 }}>
+              <EmptyState
+                title={COPY.vaultFiltersEmpty.title}
+                message={COPY.vaultFiltersEmpty.message}
+                icon={Layers}
+                secondaryActionLabel="Scan a card"
+                onSecondaryAction={() => router.push("/scan/phone")}
+              />
             </View>
           )
         }

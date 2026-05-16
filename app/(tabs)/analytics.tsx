@@ -25,6 +25,9 @@ import {
 } from "@/features/analytics/MarketSegments";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { COPY } from "@/lib/copy";
+import { normalizeError } from "@/lib/errors";
 import { useThemedPalette } from "@/theme/tokens";
 
 export default function AnalyticsScreen() {
@@ -48,6 +51,12 @@ export default function AnalyticsScreen() {
   const losers = [...enriched].sort((a, b) => a.sp.deltaPct - b.sp.deltaPct).slice(0, 3);
 
   const loading = collection.isLoading || sparks.isLoading;
+  const errored = collection.isError || sparks.isError;
+  const erroredNormalized = collection.isError
+    ? normalizeError(collection.error)
+    : sparks.isError
+      ? normalizeError(sparks.error)
+      : null;
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
@@ -65,6 +74,19 @@ export default function AnalyticsScreen() {
         </View>
 
         <LiveAnalyticsCard />
+
+        {errored && erroredNormalized ? (
+          <ErrorState
+            title={COPY.analyticsError.title}
+            message={erroredNormalized.message}
+            code={erroredNormalized.code}
+            onRetry={() => {
+              void collection.refetch();
+              void sparks.refetch();
+            }}
+            compact
+          />
+        ) : null}
 
         <PortfolioChart fallbackTotal={totalValue} />
 

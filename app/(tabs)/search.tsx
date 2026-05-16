@@ -26,6 +26,9 @@ import { Camera, Clock, Search as SearchIcon, X } from "lucide-react-native";
 import { fetchCardSparklines, fetchCollection } from "@/api/forensicApi";
 import { fetchMarketCatalog } from "@/api/marketApi";
 import { Sparkline } from "@/components/ui/Sparkline";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { COPY } from "@/lib/copy";
 import { useCardSearch } from "@/hooks/api";
 import { SearchResultRow } from "@/features/search/SearchResultRow";
 import type { CardSearchResult, TcgKey } from "@/api/types";
@@ -692,22 +695,25 @@ function LiveResultsSection({
 
       <View className="mt-3 overflow-hidden rounded-2xl border border-line bg-bg-elevated">
         {isError ? (
-          <View className="items-center px-4 py-6">
-            <Text className="text-sm font-semibold text-ink">Couldn’t reach Loupe API</Text>
-            <Text className="mt-1 text-center text-[11px] text-ink-muted">
-              Check that the backend is running at {process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000"}.
-            </Text>
+          <View style={{ padding: 8 }}>
+            <ErrorState
+              title={COPY.searchError.title}
+              message={COPY.searchError.message}
+              code="server"
+              compact
+            />
           </View>
         ) : isLoading ? (
           <View className="items-center px-4 py-6">
             <ActivityIndicator size="small" color={p.accent.mint} />
           </View>
         ) : data.length === 0 ? (
-          <View className="items-center px-4 py-6">
-            <Text className="text-sm font-semibold text-ink">No live matches</Text>
-            <Text className="mt-1 text-center text-[11px] text-ink-muted">
-              Try a different spelling or pick a different category.
-            </Text>
+          <View style={{ padding: 8 }}>
+            <EmptyState
+              title={COPY.searchEmpty.title}
+              message={COPY.searchEmpty.message}
+              compact
+            />
           </View>
         ) : (
           data.map((card, i) => (
