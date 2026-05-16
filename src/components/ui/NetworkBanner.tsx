@@ -1,97 +1,111 @@
-/**
- * NetworkBanner — sticky top banner that surfaces offline / back-online
- * state across the app. Rendered once near the root.
- */
-
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, Text, View } from "react-native";
+import { Animated, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Wifi, WifiOff } from "lucide-react-native";
-import { useIsOnline } from "@/lib/network";
-import { COPY } from "@/lib/copy";
-import { useThemedPalette, withAlpha } from "@/theme/tokens";
+import NetInfo from "@react-native-community/netinfo";
+import { WifiOff } from "lucide-react-native";
 
+/**
+ * Sticky offline banner.
+ *
+ * - Debounced: only shows after >1.5s of sustained offline (avoids the
+ *   iOS-simulator quirk where the first NetInfo tick can be a false
+ *   `isConnected: false`).
+ * - Safe-area aware: respects top inset so it never overlaps headers.
+ * - Auto-hides instantly when the network returns.
+ */
 export function NetworkBanner() {
-  const online = useIsOnline();
-  const p = useThemedPalette();
   const insets = useSafeAreaInsets();
-  const [showBackOnline, setShowBackOnline] = useState(false);
-  const wasOffline = useRef(false);
-  const translate = useRef(new Animated.Value(-80)).current;
+  const [showing, setShowing] = useState(false);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!online) {
-      wasOffline.current = true;
-      setShowBackOnline(false);
-      Animated.timing(translate, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
-      return;
-    }
-    if (wasOffline.current) {
-      wasOffline.current = false;
-      setShowBackOnline(true);
-      Animated.timing(translate, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
-      const t = setTimeout(() => {
-        Animated.timing(translate, {
-          toValue: -80,
-          duration: 220,
+    const clearPending = () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+
+    const unsub = NetInfo.addEventListener((state) => {
+      const online =
+        state.isConnected !== false && state.isInternetReachable !== false;
+
+      if (online) {
+        clearPending();
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 200,
           useNativeDriver: true,
-        }).start(() => setShowBackOnline(false));
-      }, 1800);
-      return () => clearTimeout(t);
-    }
-    return;
-  }, [online, translate]);
+        }).start(() => setShowing(false));
+        return;
+      }
 
-  const visible = !online || showBackOnline;
-  if (!visible) return null;
+      // Debounce offline-show by 1.5s.
+      if (!timerRef.current && !showing) {
+        timerRef.current = setTimeout(() => {
+          setShowing(true);
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 220,
+            useNativeDriver: true,
+          }).start();
+          timerRef.current = null;
+        }, 1500);
+      }
+    });
 
-  const accent = online ? p.accent.mint : p.accent.amber;
-  const Icon = online ? Wifi : WifiOff;
-  const copy = online ? COPY.backOnline : COPY.offline;
+    return () => {
+      clearPending();
+      unsub();
+    };
+  }, [opacity, showing]);
+
+  if (!showing) return null;
 
   return (
     <Animated.View
       pointerEvents="none"
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1000,
-        paddingTop: insets.top,
-        transform: [{ translateY: translate }],
-      }}
+      style={[
+        styles.container,
+        { opacity, paddingTop: insets.top + 8 },
+      ]}
     >
-      <View
-        style={{
-          marginHorizontal: 12,
-          marginTop: 6,
-          padding: 10,
-          borderRadius: 12,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 8,
-          backgroundColor: withAlpha(accent, 0.14),
-          borderWidth: 1,
-          borderColor: withAlpha(accent, 0.45),
-        }}
-      >
-        <Icon size={14} color={accent} />
-        <Text style={{ color: accent, fontSize: 12, fontWeight: "700" }}>
-          {copy.title}
-        </Text>
-        <Text style={{ color: p.ink.muted, fontSize: 11 }} numberOfLines={1}>
-          {copy.message}
-        </Text>
+      <View style={styles.row}>
+        <WifiOff size={14} color="#1A1300" />
+        <Text style={styles.title}>You&apos;re offline</Text>
+        <Text style={styles.subtitle}>· showing cached data</Text>
       </View>
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: "#FFD54A",
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  title: {
+    color: "#1A1300",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  subtitle: {
+    color: "#1A1300",
+    fontSize: 12,
+    fontWeight: "500",
+    opacity: 0.7,
+  },
+});
