@@ -55,3 +55,18 @@ src/
 ## Hooking up the real scanner
 
 Every network call lives in [src/api/forensicApi.ts](src/api/forensicApi.ts). Replace the mock bodies with `fetch` against the Pi (e.g. `http://jfm-scanner.local/api/status`). Nothing else needs to change — TanStack Query keys and Zustand stores stay the same.
+
+## Backend (loupe-backend)
+
+The FastAPI service lives at <https://github.com/wiggapony0925/loupe-backend>.
+
+Configuration is via Expo public env vars — copy `.env.example` to `.env` and set:
+
+| Var | Default | Purpose |
+| --- | --- | --- |
+| `EXPO_PUBLIC_API_URL` | `http://localhost:8000` | Base URL used by [src/api/client.ts](src/api/client.ts) |
+| `EXPO_PUBLIC_WS_URL` | `ws://localhost:8000` | WebSocket base (e.g. `/ws/scans`) |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | — | Google OAuth client (sign-in flow) |
+| `EXPO_PUBLIC_APPLE_CLIENT_ID` | — | Apple Services ID |
+
+Anything else (typed client, endpoint catalog, auth wrappers) is in `src/api/`.

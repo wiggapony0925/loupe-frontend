@@ -7,6 +7,12 @@ import type {
 } from "@/types/domain";
 import { api } from "@/lib/apiClient";
 import { config } from "@/lib/config";
+// TODO(api): swap to real endpoints when backend deployed
+// (https://github.com/wiggapony0925/loupe-backend). Mocks remain the
+// default while `EXPO_PUBLIC_USE_MOCKS` is truthy; once disabled, prefer
+// `apiFetch` from `./client` over the legacy `api` helper below.
+import { apiFetch as _apiFetch } from "./client";
+void _apiFetch;
 
 // Each function dispatches to the FastAPI backend in production and falls
 // back to deterministic fixtures when EXPO_PUBLIC_USE_MOCKS=true so the app
