@@ -30,16 +30,22 @@ export function LiveAnalyticsCard() {
         graders: { psa: 0, bgs: 0, cgc: 0 },
       };
     }
-    const avg = grades.reduce((s, g) => s + g.grade, 0) / grades.length;
-    const gem = grades.filter((g) => g.grade >= 9).length;
+    // Backend serializes Decimal as string; coerce for arithmetic.
+    const asNumber = (g: GradedCard) => Number(g.grade) || 0;
+    const avg = grades.reduce((s, g) => s + asNumber(g), 0) / grades.length;
+    const gem = grades.filter((g) => asNumber(g) >= 9).length;
     const last = grades
-      .map((g) => g.scanned_at ?? g.created_at)
+      .map((g) => g.graded_at ?? g.created_at)
       .filter(Boolean)
       .sort()
       .reverse()[0] as string | undefined;
+    // Backend `house` includes loupe/sgc/tag/etc — only surface the 3 the UI tracks.
     const graders = grades.reduce(
       (a, g) => {
-        a[g.grader] = (a[g.grader] ?? 0) + 1;
+        const key = g.house as "psa" | "bgs" | "cgc";
+        if (key === "psa" || key === "bgs" || key === "cgc") {
+          a[key] = (a[key] ?? 0) + 1;
+        }
         return a;
       },
       { psa: 0, bgs: 0, cgc: 0 } as Record<"psa" | "bgs" | "cgc", number>,

@@ -859,8 +859,8 @@ function LiveListingsSection({ cardId }: { cardId: string }) {
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={{ flexDirection: "row", gap: 10, paddingRight: 12 }}>
-            {listings.map((l) => (
-              <ListingCard key={`${l.source}:${l.id}`} listing={l} />
+            {listings.map((l, i) => (
+              <ListingCard key={`${l.source}:${l.url || i}`} listing={l} />
             ))}
           </View>
         </ScrollView>
@@ -895,7 +895,7 @@ function ListingCard({ listing }: { listing: ListingWire }) {
           rounded={10}
           contentFit="cover"
           priority="low"
-          recyclingKey={listing.id ?? listing.image_url}
+          recyclingKey={listing.image_url ?? listing.url}
           alt={listing.title ?? "listing"}
           aspectRatio={undefined as unknown as number}
         />
@@ -932,7 +932,7 @@ function ListingCard({ listing }: { listing: ListingWire }) {
           </Text>
         ) : null}
       </View>
-      {listing.grade ? (
+      {listing.condition ? (
         <View
           style={{
             alignSelf: "flex-start",
@@ -943,7 +943,7 @@ function ListingCard({ listing }: { listing: ListingWire }) {
           }}
         >
           <Text style={{ color: p.accent.mint, fontSize: 10, fontWeight: "700" }}>
-            {listing.grade.company} {listing.grade.value}
+            {listing.condition.toUpperCase()}
           </Text>
         </View>
       ) : null}
@@ -988,7 +988,7 @@ function RecentCompsSection({ cardId }: { cardId: string }) {
         >
           {comps.map((c, i) => (
             <CompRow
-              key={`${c.source}:${c.id}`}
+              key={`${c.source}:${c.url || c.sold_at}:${i}`}
               comp={c}
               isLast={i === comps.length - 1}
             />
@@ -1046,7 +1046,7 @@ function CompRow({ comp, isLast }: { comp: SoldCompWire; isLast: boolean }) {
           }}
         >
           <Text style={{ color: p.accent.mint, fontSize: 10, fontWeight: "700" }}>
-            {comp.grade.company} {comp.grade.value}
+            {(comp.house ?? "").toUpperCase()} {comp.grade}
           </Text>
         </View>
       ) : null}

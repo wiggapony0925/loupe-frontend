@@ -52,6 +52,12 @@ export type ISODate = string;
 export type Currency = string;
 export type Tcg = "pokemon" | "magic" | "yugioh" | "onepiece" | "lorcana" | "sports";
 export type ScanAngle = "front" | "back" | "top" | "bottom" | "left" | "right";
+export type GradeHouse = "psa" | "cgc" | "bgs" | "sgc" | "tag" | "loupe";
+export type ScannerTransport = "ble" | "wifi" | "offline";
+export type ScanSource = "scanner" | "phone";
+export type ScanStatus = "queued" | "uploading" | "processing" | "complete" | "failed";
+/** Decimal money/grade serialized by Pydantic as a string. Coerce with `Number(x)` at the call site. */
+export type DecimalString = string;
 
 export interface Money {
   amount: number;
@@ -74,35 +80,33 @@ export interface ImageSet {
 
 // ─── 17 frozen entities ────────────────────────────────────────────────
 
+// Mirrors UserRead in app/schemas/user.py.
 export interface User {
   id: ID;
   email: string;
   display_name: string | null;
   avatar_url: string | null;
   created_at: ISODate;
-  updated_at: ISODate;
-  deleted_at: ISODate | null;
 }
 
+// Mirrors UserSettingsRead in app/schemas/user.py.
 export interface UserSettings {
-  user_id: ID;
   currency: Currency;
   theme: "system" | "light" | "dark";
-  notifications_enabled: boolean;
-  default_grader: "psa" | "bgs" | "cgc" | null;
-  updated_at: ISODate;
+  live_sync_enabled: boolean;
+  push_notifications_enabled: boolean;
+  updated_at: ISODate | null;
 }
 
+// Mirrors ScannerRead in app/schemas/scanner.py.
 export interface Scanner {
   id: ID;
-  user_id: ID;
   device_id: string;
-  name: string;
+  name: string | null;
   firmware_version: string | null;
-  battery_pct: number | null;
-  signal_strength: number | null;
+  transport: ScannerTransport;
+  is_active: boolean;
   last_seen_at: ISODate | null;
-  paired_at: ISODate;
   created_at: ISODate;
 }
 
@@ -170,16 +174,21 @@ export interface Subgrades {
   surface: SubgradeDetail | null;
 }
 
+// Mirrors GradedCardRead in app/schemas/grade.py.
+// NOTE: `grade` and `estimated_value_usd` are Pydantic Decimals → JSON strings.
+// Coerce with `Number(grade.grade)` before doing arithmetic / .toFixed().
 export interface GradedCard {
   id: ID;
   user_id: ID;
   card_id: ID;
-  grader: "psa" | "bgs" | "cgc";
-  grade: number;
-  cert_number: string | null;
-  subgrades: Subgrades | null;
+  scan_job_id: ID | null;
+  grade: DecimalString;
+  house: GradeHouse;
+  subgrades: Record<string, unknown> | null;
+  estimated_value_usd: DecimalString | null;
+  fingerprint_hash: string | null;
   notes: string | null;
-  scanned_at: ISODate | null;
+  graded_at: ISODate;
   created_at: ISODate;
   updated_at: ISODate;
 }
@@ -192,27 +201,28 @@ export interface FingerprintSummary {
   matched_card_id: ID | null;
 }
 
+// Mirrors ScanJobRead in app/schemas/scan.py.
 export interface ScanJob {
   id: ID;
   user_id: ID;
   scanner_id: ID | null;
-  status: "queued" | "uploading" | "processing" | "complete" | "failed";
-  angles: ScanAngle[];
-  uploaded_angles: ScanAngle[];
-  progress: number;
-  graded_card_id: ID | null;
+  status: ScanStatus;
+  source: ScanSource;
+  images_s3_keys: Record<string, string> | null;
+  error_message: string | null;
   created_at: ISODate;
-  updated_at: ISODate;
+  started_at: ISODate | null;
   completed_at: ISODate | null;
 }
 
+// Mirrors CollectionRead in app/schemas/collection.py.
 export interface Collection {
   id: ID;
   user_id: ID;
   name: string;
   description: string | null;
-  cover_image_url: string | null;
-  item_count: number;
+  color: string | null;
+  is_public: boolean;
   created_at: ISODate;
   updated_at: ISODate;
 }
@@ -384,11 +394,13 @@ export interface CardSetListResponse {
   error?: string;
 }
 
+// Mirrors UserRead returned by GET /v1/me.
 export interface MeResponse {
   id: string;
-  email?: string;
-  display_name?: string;
-  created_at?: string;
+  email: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
 }
 
 export interface HealthResponse {
@@ -457,19 +469,16 @@ export interface GradeWire {
   value: number;
 }
 
+// Mirrors ListingWire in app/schemas/listings.py.
 export interface ListingWire {
   source: string;
-  id: string;
   title: string;
-  url: string | null;
-  image_url: string | null;
   price: Money;
+  url: string;
+  condition: string | null;
+  image_url: string | null;
   is_auction: boolean;
   time_left_seconds: number | null;
-  grade: GradeWire | null;
-  seller: string | null;
-  location: string | null;
-  extras: Record<string, unknown>;
 }
 
 export interface ListingsResponseWire {
@@ -482,19 +491,22 @@ export interface ListingsResponseWire {
 // Sold comps (`GET /v1/cards/{id}/comps`)
 // ---------------------------------------------------------------------------
 
+// Mirrors SoldCompWire in app/schemas/comps.py.
 export interface SoldCompWire {
   source: string;
-  id: string;
   title: string;
-  url: string | null;
   price: Money;
   sold_at: string;
-  grade: GradeWire | null;
-  extras: Record<string, unknown>;
+  condition: string | null;
+  grade: string | null;
+  house: string | null;
+  url: string | null;
+  image_url: string | null;
 }
 
+// Mirrors CompsFilters in app/schemas/comps.py.
 export interface CompsFiltersWire {
-  grade: number | null;
+  grade: string | null;
   house: string | null;
 }
 

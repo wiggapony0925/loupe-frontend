@@ -20,7 +20,7 @@ import { useThemedPalette } from "@/theme/tokens";
 
 export default function SignInScreen() {
   const p = useThemedPalette();
-  const { signInWithEmail, signInWithDevLogin } = useAuth();
+  const { signInWithEmail } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -46,9 +46,15 @@ export default function SignInScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      await signInWithDevLogin("test+01@loupe.app", "Alex Rivera");
+      // /v1/auth/dev-login is disabled in production, so we sign in with
+      // the seeded test credentials instead.
+      await signInWithEmail("test+01@loupe.app", "Loupe2026!");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Dev login failed.");
+      if (err instanceof ApiError && err.status === 401) {
+        setError("Dev login failed: invalid seeded credentials.");
+      } else {
+        setError(err instanceof Error ? err.message : "Dev login failed.");
+      }
     } finally {
       setSubmitting(false);
     }

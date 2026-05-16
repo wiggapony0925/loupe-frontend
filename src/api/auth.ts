@@ -8,14 +8,9 @@
 
 import { apiFetch } from "./client";
 import { ENDPOINTS } from "./endpoints";
+import type { MeResponse } from "./types";
 
-export interface MeResponse {
-  id: string;
-  email: string;
-  display_name?: string | null;
-  avatar_url?: string | null;
-  created_at: string;
-}
+export type { MeResponse };
 
 export interface TokenPair {
   access_token: string;

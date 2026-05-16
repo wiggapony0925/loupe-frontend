@@ -103,7 +103,21 @@ export function LiveGradesSection({
 
 function GradeRow({ grade, bordered }: { grade: GradedCard; bordered: boolean }) {
   const p = useThemedPalette();
-  const color = gradeColor(grade.grade);
+  // Backend serializes Decimal as string; coerce defensively.
+  const raw = (grade as unknown as { grade: number | string | null }).grade;
+  const numeric = typeof raw === "number" ? raw : Number(raw);
+  const gradeValue = Number.isFinite(numeric) ? numeric : 0;
+  const color = gradeColor(gradeValue);
+  // Backend uses `house` and `graded_at`; legacy TS type uses `grader` and `scanned_at`.
+  const anyGrade = grade as unknown as {
+    house?: string;
+    grader?: string;
+    graded_at?: string;
+    scanned_at?: string;
+    cert_number?: string | null;
+  };
+  const houseLabel = (anyGrade.house ?? anyGrade.grader ?? "").toString();
+  const when = anyGrade.graded_at ?? anyGrade.scanned_at ?? null;
   return (
     <Pressable
       onPress={() => router.push(routes.card(grade.card_id))}
@@ -123,7 +137,7 @@ function GradeRow({ grade, bordered }: { grade: GradedCard; bordered: boolean })
         }}
       >
         <Text style={{ color, fontSize: 16, fontWeight: "800" }}>
-          {grade.grade.toFixed(grade.grade % 1 === 0 ? 0 : 1)}
+          {gradeValue.toFixed(gradeValue % 1 === 0 ? 0 : 1)}
         </Text>
       </View>
       <View style={{ flex: 1 }}>
@@ -131,11 +145,9 @@ function GradeRow({ grade, bordered }: { grade: GradedCard; bordered: boolean })
           {grade.card_id}
         </Text>
         <Text numberOfLines={1} className="mt-0.5 text-[11px] text-ink-muted">
-          {grade.grader.toUpperCase()}
-          {grade.cert_number ? ` · #${grade.cert_number}` : ""}
-          {grade.scanned_at
-            ? ` · ${new Date(grade.scanned_at).toLocaleDateString()}`
-            : ""}
+          {houseLabel.toUpperCase()}
+          {anyGrade.cert_number ? ` · #${anyGrade.cert_number}` : ""}
+          {when ? ` · ${new Date(when).toLocaleDateString()}` : ""}
         </Text>
       </View>
       <Text
