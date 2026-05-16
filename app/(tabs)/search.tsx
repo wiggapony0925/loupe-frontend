@@ -27,10 +27,24 @@ import { fetchCardSparklines, fetchCollection } from "@/api/forensicApi";
 import { fetchMarketCatalog } from "@/api/marketApi";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { useCardSearch } from "@/hooks/api";
+import { SearchResultRow } from "@/features/search/SearchResultRow";
 import type { CardSearchResult, TcgKey } from "@/api/types";
 import { compactUsd } from "@/lib/format";
 import { getBrandLogo } from "@/lib/brandAssets";
 import { gradeColor, palette, useThemedPalette, withAlpha } from "@/theme/tokens";
+
+/** All TCG facets supported by the chip row, in render order. */
+type TcgChip = TcgKey | "all";
+const SUPPORTED_TCGS = new Set<TcgChip>(["all", "pokemon", "magic", "yugioh"]);
+const TCG_CHIPS: { key: TcgChip; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "pokemon", label: "Pokémon" },
+  { key: "magic", label: "Magic" },
+  { key: "yugioh", label: "Yu-Gi-Oh!" },
+  { key: "onepiece", label: "One Piece" },
+  { key: "lorcana", label: "Lorcana" },
+  { key: "sports", label: "Sports" },
+];
 
 interface SearchableCard {
   id: string;
@@ -113,6 +127,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [quickfilter, setQuickfilter] = useState<Quickfilter>("all");
+  const [selectedTcg, setSelectedTcg] = useState<TcgChip>("all");
   const [recent, setRecent] = useState<string[]>([]);
 
   const collection = useQuery({ queryKey: ["collection"], queryFn: fetchCollection });
@@ -194,10 +209,15 @@ export default function SearchScreen() {
     const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
     return () => clearTimeout(t);
   }, [query]);
+  // Explicit chip beats category fallback; chips for unsupported facets
+  // collapse to "all" so we still hit the wire and don't 400.
+  const chipTcg: TcgChip = SUPPORTED_TCGS.has(selectedTcg) ? selectedTcg : "all";
   const liveTcg: TcgKey | "all" =
-    activeCategory === "pokemon" || activeCategory === "magic" || activeCategory === "yugioh"
-      ? activeCategory
-      : "all";
+    chipTcg !== "all"
+      ? chipTcg
+      : activeCategory === "pokemon" || activeCategory === "magic" || activeCategory === "yugioh"
+        ? activeCategory
+        : "all";
   const live = useCardSearch({ q: debouncedQuery, tcg: liveTcg, limit: 20 });
   const showLive = debouncedQuery.length >= 2;
 
@@ -251,6 +271,61 @@ export default function SearchScreen() {
             <Camera size={15} color={p.accent.mint} />
           </Pressable>
         </View>
+
+        {/* TCG facet chips (drive the live backend search) */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingTop: 12, paddingRight: 8 }}
+        >
+          {TCG_CHIPS.map((c) => {
+            const active = selectedTcg === c.key;
+            const supported = SUPPORTED_TCGS.has(c.key);
+            return (
+              <Pressable
+                key={c.key}
+                onPress={() => setSelectedTcg(c.key)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  backgroundColor: active
+                    ? withAlpha(p.accent.mint, 0.15)
+                    : "transparent",
+                  borderWidth: 1,
+                  borderColor: active ? p.accent.mint : p.line.default,
+                  opacity: supported ? 1 : 0.7,
+                }}
+              >
+                <Text
+                  style={{
+                    color: active ? p.accent.mint : p.ink.muted,
+                    fontSize: 12,
+                    fontWeight: "700",
+                    letterSpacing: 0.4,
+                  }}
+                >
+                  {c.label}
+                </Text>
+                {!supported ? (
+                  <Text
+                    style={{
+                      color: p.ink.dim,
+                      fontSize: 9,
+                      fontWeight: "800",
+                      letterSpacing: 0.8,
+                    }}
+                  >
+                    SOON
+                  </Text>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
         {/* Quickfilter chips */}
         <ScrollView
@@ -636,11 +711,7 @@ function LiveResultsSection({
           </View>
         ) : (
           data.map((card, i) => (
-            <LiveResultRow
-              key={card.id}
-              card={card}
-              bordered={i > 0}
-            />
+            <SearchResultRow key={card.id} card={card} bordered={i > 0} />
           ))
         )}
       </View>

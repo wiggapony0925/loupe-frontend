@@ -17,6 +17,7 @@ import { TopMovers } from "@/features/markets/TopMovers";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { HotRightNowRail } from "@/features/search/HotRightNowRail";
 import { LiveSyncChip } from "@/components/ui/LiveSyncChip";
 import { LoupeMark } from "@/components/brand/LoupeMark";
 import { useApiHealth } from "@/hooks/api";
@@ -121,6 +122,11 @@ export default function CommandCenterScreen() {
         <View>
           <SectionHeader eyebrow="Device" title="Scanner connection" />
           <HardwareStatusWidget />
+        </View>
+
+        <View>
+          <SectionHeader eyebrow="Live catalog" title="Hot right now" />
+          <HotRightNowRail />
         </View>
 
         <View>

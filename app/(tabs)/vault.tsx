@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { CardThumbnail } from "@/features/collection/CardThumbnail";
 import { FilterBar } from "@/features/collection/FilterBar";
+import { LiveGradesSection } from "@/features/collection/LiveGradesSection";
 import { useFilteredCollection } from "@/features/collection/useFilteredCollection";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -43,6 +44,7 @@ export default function VaultScreen() {
         ListHeaderComponent={
           <View className="gap-5 pb-4">
             <SectionHeader eyebrow="Collection" title="The Vault" />
+            <LiveGradesSection />
             <View className="flex-row gap-2">
               <PillStat label="Holdings" value={stats.count.toString()} />
               <PillStat label="Value" value={compactUsd(stats.value)} />

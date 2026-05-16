@@ -1,5 +1,7 @@
 export { useCardSearch } from "./useCardSearch";
 export { useCard } from "./useCard";
+export { useCardPriceHistory } from "./useCardPriceHistory";
+export type { PriceHistoryRange } from "./useCardPriceHistory";
 export { useSets } from "./useSets";
 export { useMe } from "./useMe";
 export { useMyGrades } from "./useMyGrades";

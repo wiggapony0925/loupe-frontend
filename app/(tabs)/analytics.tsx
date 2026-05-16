@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCardSparklines, fetchCollection } from "@/api/forensicApi";
 import { GradeBars, HoldingRow, PortfolioChart } from "@/features/analytics";
+import { LiveAnalyticsCard } from "@/features/analytics/LiveAnalyticsCard";
 import {
   ConcentrationCard,
   SetIndexes,
@@ -62,6 +63,8 @@ export default function AnalyticsScreen() {
             Analytics
           </Text>
         </View>
+
+        <LiveAnalyticsCard />
 
         <PortfolioChart fallbackTotal={totalValue} />
 

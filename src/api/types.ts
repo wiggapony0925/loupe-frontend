@@ -62,12 +62,14 @@ export interface ImageAsset {
   url: string;
   width: number | null;
   height: number | null;
+  alt?: string | null;
 }
 
 export interface ImageSet {
   small: ImageAsset | null;
   normal: ImageAsset | null;
   large: ImageAsset | null;
+  art_crop?: ImageAsset | null;
 }
 
 // ─── 17 frozen entities ────────────────────────────────────────────────
@@ -296,6 +298,59 @@ export interface CardSearchResult {
   image_url?: string;
   year?: number;
   source: string;
+
+  /* ── Rich fields emitted by the multi-provider catalog service ── */
+  images?: ImageSet | null;
+  attributes?: Record<string, unknown>;
+  pricing_summary?: PricingSummaryWire | null;
+  set?: RichCardSet | null;
+  tags?: string[];
+  metadata?: { source: string; last_synced_at: string; confidence: number };
+}
+
+/** Wire shape of `pricing_summary`: bands are `Money` objects, not plain numbers. */
+export interface PricingSummaryWire {
+  card_id: string;
+  currency: Currency;
+  market: Money | null;
+  low: Money | null;
+  mid: Money | null;
+  high: Money | null;
+  as_of: string | null;
+  sample_size: number | null;
+  sources: string[] | null;
+}
+
+/** Wire shape of the inline `set` block on rich card responses. */
+export interface RichCardSet {
+  id: string | null;
+  code: string | null;
+  name: string | null;
+  series: string | null;
+  release_date: string | null;
+  printed_total: number | null;
+  total_cards: number | null;
+  logo: ImageAsset | null;
+  symbol: ImageAsset | null;
+}
+
+/** Wire shape of `/v1/cards/{id}/prices` response. */
+export interface PriceHistoryWire {
+  card_id: string;
+  currency: Currency;
+  points: PricePoint[];
+  granularity: "daily" | "weekly" | "monthly";
+  range: string;
+  house?: string;
+  grade?: string;
+  summary: {
+    min: number | null;
+    max: number | null;
+    avg: number | null;
+    current: number | null;
+    change_pct: number | null;
+    n_points: number;
+  };
 }
 
 export interface CardSearchResponse {
