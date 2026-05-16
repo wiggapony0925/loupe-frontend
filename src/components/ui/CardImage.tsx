@@ -60,6 +60,7 @@ export function CardImage({
   const [loading, setLoading] = useState<boolean>(Boolean(uri));
   const [errored, setErrored] = useState<boolean>(!uri);
   const [triedFallback, setTriedFallback] = useState<boolean>(false);
+  const loadedRef = React.useRef<boolean>(false);
 
   // Reset internal state when caller swaps the URI (e.g., list recycling).
   React.useEffect(() => {
@@ -67,24 +68,27 @@ export function CardImage({
     setLoading(Boolean(uri));
     setErrored(!uri);
     setTriedFallback(false);
+    loadedRef.current = false;
   }, [uri]);
 
-  // Dev-only: surface URLs that take >3s to first-paint so we can see
-  // which CDN/variant combos are the offenders without shipping any
-  // logging in production.
+  // Dev-only: surface URLs that take >8s to first-paint so we can see
+  // which CDN/variant combos are the genuinely-slow offenders. Skips
+  // the warn if the image loaded in the meantime (cuts queue noise).
   React.useEffect(() => {
     if (!__DEV__ || !activeUri || !loading) return;
     const started = Date.now();
     const t = setTimeout(() => {
+      if (loadedRef.current) return;
       // eslint-disable-next-line no-console
       console.warn(
         `[CardImage] slow load (${Date.now() - started}ms still pending): ${activeUri}`,
       );
-    }, 3000);
+    }, 8000);
     return () => clearTimeout(t);
   }, [activeUri, loading]);
 
   const onLoad = useCallback(() => {
+    loadedRef.current = true;
     setLoading(false);
     setErrored(false);
   }, []);

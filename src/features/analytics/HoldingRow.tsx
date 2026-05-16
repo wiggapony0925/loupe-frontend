@@ -9,9 +9,10 @@
  * based on the period change.
  */
 import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { router } from "expo-router";
+import { CardImage } from "@/components/ui/CardImage";
 import { useThemedPalette } from "@/theme/tokens";
 import { compactUsd } from "@/lib/format";
 import type { CollectionCard } from "@/types/domain";
@@ -39,7 +40,15 @@ export function HoldingRow({ card, spark, deltaPct = 0 }: HoldingRowProps) {
         className="overflow-hidden rounded-lg"
         style={{ width: 36, height: 50, backgroundColor: p.bg.elevated }}
       >
-        <Image source={{ uri: card.thumbnailUri }} style={{ width: 36, height: 50 }} />
+        <CardImage
+          uri={card.thumbnailUri}
+          width={36}
+          height={50}
+          rounded={8}
+          priority="low"
+          recyclingKey={card.id}
+          alt={card.title}
+        />
       </View>
 
       <View className="flex-1">
