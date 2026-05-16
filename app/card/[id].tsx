@@ -1,117 +1,136 @@
 /**
  * Card detail — `/card/[id]`
  *
- * Sections:
- *   - Hero (large image, title, set + year, TCG badge, market price)
- *   - Pricing card (market/low/mid/high, as_of, sources)
- *   - Price history chart (30d/90d/1y toggle, react-native-svg polyline)
- *   - Attributes grid (filtered by TCG type)
- *   - Set info (logo, name, code, release date, total)
- *   - Tags chip row
- *   - Actions ("Add to Collection", "Grade This Card" — stub toast)
+ * Unified market screen. Replaces the legacy "hero + pricing card +
+ * chart + attributes" stack with the scan/[id] aesthetic merged on top
+ * of live `/v1/cards/{id}/market` data:
  *
- * Loading skeleton + error empty state with retry are shared via the
- * `<QueryState>` helper.
+ *   1. Header bar (back · MARKET label · heart/bell)
+ *   2. Hero strip (small art left · name/set/year right)
+ *   3. Big price block (pop_top + change_pct_1y)
+ *   4. Sparkline chart (range-driven)
+ *   5. Range chips (1D · 1W · 1M · 3M · YTD · 1Y · ALL)
+ *   6. Three-up RAW / GRADED / POP tiles
+ *   7. GRADED PRICES section header
+ *   8. House filter chips (ALL · PSA · CGC · BGS · SGC · TAG)
+ *   9. House × grade rows (population + market + Δ)
+ *  10. Collapsible CARD DETAILS (attributes / set / tags from useCard)
+ *
+ * Loading state: `<SkeletonCardDetailPage />`. Error: error card with retry.
  */
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import Svg, { Polyline } from "react-native-svg";
-import { ChevronLeft } from "lucide-react-native";
-import { useCard } from "@/hooks/api/useCard";
 import {
-  useCardPriceHistory,
-  type PriceHistoryRange,
-} from "@/hooks/api/useCardPriceHistory";
+  Bell,
+  ChevronDown,
+  ChevronLeft,
+  ChevronUp,
+  Heart,
+} from "lucide-react-native";
+import { useCard } from "@/hooks/api/useCard";
+import { useCardMarket } from "@/hooks/api/useCardMarket";
 import { Price } from "@/components/ui/Price";
-import { Skeleton } from "@/components/ui/Skeleton";
 import { QueryState } from "@/components/ui/QueryState";
+import { SkeletonCardDetailPage } from "@/components/ui/Skeletons";
 import { palette, useThemedPalette, withAlpha } from "@/theme/tokens";
+import type {
+  HouseBlockWire,
+  HouseGradeRowWire,
+  HouseId,
+  MarketSnapshotWire,
+  PriceHistoryWire,
+} from "@/api/types";
 
 const BLURHASH = "L6Pj0^jE.AyE_3t7t7R**0o#DgR4";
 
-const RANGE_OPTIONS: { key: PriceHistoryRange; label: string }[] = [
-  { key: "30d", label: "30D" },
-  { key: "90d", label: "90D" },
-  { key: "1y", label: "1Y" },
-];
+// ── Range chips → backend history keys ────────────────────────────────
+type RangeKey = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
 
-// Which `attributes.*` keys are interesting per-TCG, in render order.
-const ATTRIBUTE_KEYS: Record<string, string[]> = {
-  pokemon: [
-    "hp",
-    "supertype",
-    "subtypes",
-    "types",
-    "evolvesFrom",
-    "evolvesTo",
-    "retreatCost",
-    "regulationMark",
-    "artist",
-    "flavorText",
-  ],
-  magic: [
-    "mana_cost",
-    "cmc",
-    "type_line",
-    "oracle_text",
-    "power",
-    "toughness",
-    "loyalty",
-    "colors",
-    "color_identity",
-    "keywords",
-    "artist",
-    "flavor_text",
-  ],
-  yugioh: [
-    "type",
-    "frameType",
-    "race",
-    "archetype",
-    "atk",
-    "def",
-    "level",
-    "attribute",
-    "scale",
-    "linkval",
-    "desc",
-  ],
+const RANGE_TO_HISTORY: Record<RangeKey, keyof MarketSnapshotWire["history"] | null> = {
+  "1D": null, // not available yet
+  "1W": null,
+  "1M": "30d",
+  "3M": "90d",
+  YTD: "1y",
+  "1Y": "1y",
+  ALL: "all",
 };
 
-function formatAttr(v: unknown): string {
-  if (v === null || v === undefined) return "—";
-  if (Array.isArray(v))
-    return v
-      .map((x) => (typeof x === "object" ? JSON.stringify(x) : String(x)))
-      .join(", ");
-  if (typeof v === "object") return JSON.stringify(v);
-  return String(v);
+const RANGE_KEYS: RangeKey[] = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
+
+// ── House palette (one source of truth) ───────────────────────────────
+const HOUSE_LABEL: Record<string, string> = {
+  psa: "PSA",
+  cgc: "CGC",
+  bgs: "BGS",
+  sgc: "SGC",
+  tag: "TAG",
+};
+const HOUSE_ORDER: HouseId[] = ["psa", "cgc", "bgs", "sgc", "tag"];
+
+function houseColor(house: string, p: ReturnType<typeof useThemedPalette>) {
+  switch (house) {
+    case "psa":
+      return p.accent.mint;
+    case "cgc":
+      return p.accent.blue;
+    case "bgs":
+      return p.accent.amber;
+    case "sgc":
+      return "#9D6BFF"; // purple — not in base palette
+    case "tag":
+      return p.ink.default;
+    default:
+      return p.ink.muted;
+  }
 }
+
+// ─────────────────────────────────────────────────────────────────────
 
 export default function CardDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const cardQ = useCard(id ?? "");
-  const card = cardQ.data;
-  const tcg = card?.tcg ?? "all";
+  const cardId = id ?? "";
+  const cardQ = useCard(cardId);
+  const marketQ = useCardMarket(cardId);
   const p = useThemedPalette();
-  const [range, setRange] = useState<PriceHistoryRange>("30d");
-  const historyQ = useCardPriceHistory({ id, range, enabled: !!id });
 
-  const market = card?.pricing_summary?.market?.amount ?? null;
+  const [range, setRange] = useState<RangeKey>("1Y");
+  const [house, setHouse] = useState<HouseId | "all">("all");
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const card = cardQ.data;
+  const snapshot = marketQ.data?.snapshot;
+  const isLoading = cardQ.isLoading || marketQ.isLoading;
+  const isError = cardQ.isError || marketQ.isError;
+
   const imageUrl =
     card?.images?.large?.url ??
     card?.images?.normal?.url ??
     card?.image_url ??
     null;
 
-  const attrKeys = useMemo(() => ATTRIBUTE_KEYS[tcg] ?? [], [tcg]);
-  const attributes = (card?.attributes ?? {}) as Record<string, unknown>;
+  const historyKey = RANGE_TO_HISTORY[range];
+  const historySeries: PriceHistoryWire | undefined = historyKey
+    ? snapshot?.history?.[historyKey]
+    : undefined;
+
+  const rows = useMemo(
+    () => flattenHouses(snapshot?.houses ?? [], house),
+    [snapshot?.houses, house],
+  );
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
+      {/* 1. Header */}
       <View className="flex-row items-center justify-between px-4 pb-2 pt-2">
         <Pressable
           onPress={() => router.back()}
@@ -121,34 +140,45 @@ export default function CardDetailScreen() {
           <ChevronLeft size={18} color={palette.ink.default} />
         </Pressable>
         <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-          Card Detail
+          Market
         </Text>
-        <View style={{ width: 36 }} />
+        <View className="flex-row gap-2">
+          <IconBtn>
+            <Heart size={16} color={p.ink.muted} />
+          </IconBtn>
+          <IconBtn>
+            <Bell size={16} color={p.ink.muted} />
+          </IconBtn>
+        </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 24 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 64, gap: 24 }}
         showsVerticalScrollIndicator={false}
       >
         <QueryState
-          isLoading={cardQ.isLoading}
-          isError={cardQ.isError}
-          isEmpty={!cardQ.isLoading && !cardQ.isError && !card}
-          loadingFallback={<CardDetailSkeleton />}
-          errorMessage="Couldn't load card"
+          isLoading={isLoading}
+          isError={isError}
+          isEmpty={!isLoading && !isError && !card}
+          loadingFallback={<SkeletonCardDetailPage />}
+          errorMessage="Couldn't load market"
           emptyTitle="Card not found"
           emptyMessage="The catalog returned no match for this id."
-          onRetry={() => void cardQ.refetch()}
+          onRetry={() => {
+            void cardQ.refetch();
+            void marketQ.refetch();
+          }}
         >
           {card ? (
             <>
-              {/* Hero */}
-              <View className="items-center">
+              {/* 2. Hero strip */}
+              <View style={{ flexDirection: "row", gap: 16 }}>
                 <View
-                  className="overflow-hidden rounded-2xl"
                   style={{
-                    width: 220,
-                    height: 308,
+                    width: 120,
+                    height: 168,
+                    borderRadius: 14,
+                    overflow: "hidden",
                     backgroundColor: p.bg.sunken,
                   }}
                 >
@@ -156,231 +186,201 @@ export default function CardDetailScreen() {
                     <Image
                       source={{ uri: imageUrl }}
                       placeholder={{ blurhash: BLURHASH }}
-                      transition={200}
-                      contentFit="cover"
+                      transition={250}
+                      contentFit="contain"
+                      cachePolicy="memory-disk"
                       style={{ width: "100%", height: "100%" }}
                     />
                   ) : null}
                 </View>
-                <Text className="mt-4 text-center text-2xl font-semibold tracking-tight text-ink">
-                  {card.name}
-                </Text>
-                <Text className="mt-1 text-[12px] text-ink-muted">
-                  {[card.set_name, card.year].filter(Boolean).join(" · ")}
-                </Text>
-                <View
-                  className="mt-2"
-                  style={{
-                    paddingHorizontal: 10,
-                    paddingVertical: 3,
-                    borderRadius: 999,
-                    backgroundColor: withAlpha(p.accent.mint, 0.14),
-                  }}
-                >
+                <View style={{ flex: 1, justifyContent: "center", gap: 6 }}>
                   <Text
+                    className="text-xl font-semibold text-ink"
+                    numberOfLines={2}
+                  >
+                    {card.name}
+                  </Text>
+                  <Text className="text-[12px] text-ink-muted" numberOfLines={1}>
+                    {card.set_name ?? "—"}
+                  </Text>
+                  <Text className="text-[11px] text-ink-dim">
+                    {[card.year, card.number ? `#${card.number}` : null]
+                      .filter(Boolean)
+                      .join(" · ") || "—"}
+                  </Text>
+                  <View
                     style={{
-                      color: p.accent.mint,
-                      fontSize: 10,
-                      fontWeight: "800",
-                      letterSpacing: 1,
+                      alignSelf: "flex-start",
+                      paddingHorizontal: 10,
+                      paddingVertical: 3,
+                      borderRadius: 999,
+                      backgroundColor: withAlpha(p.accent.mint, 0.14),
+                      marginTop: 4,
                     }}
                   >
-                    {tcg.toUpperCase()}
-                  </Text>
+                    <Text
+                      style={{
+                        color: p.accent.mint,
+                        fontSize: 10,
+                        fontWeight: "800",
+                        letterSpacing: 1,
+                      }}
+                    >
+                      {(card.tcg ?? "—").toString().toUpperCase()}
+                    </Text>
+                  </View>
                 </View>
-                {market !== null ? (
-                  <Price
-                    usd={market}
-                    className="mt-3 text-3xl font-semibold text-ink"
+              </View>
+
+              {/* 3. Big price */}
+              <BigPrice
+                amount={snapshot?.summary.pop_top?.amount ?? null}
+                changePct={snapshot?.summary.change_pct_1y ?? null}
+                subLabel="PSA 10 · last 12 months"
+              />
+
+              {/* 4. Sparkline */}
+              <Sparkline
+                points={historySeries?.points.map((pt) => pt.price) ?? []}
+                changePct={historySeries?.summary?.change_pct ?? null}
+                disabled={historyKey === null}
+              />
+
+              {/* 5. Range chips */}
+              <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+                {RANGE_KEYS.map((k) => {
+                  const active = range === k;
+                  const disabled = RANGE_TO_HISTORY[k] === null;
+                  return (
+                    <Pressable
+                      key={k}
+                      disabled={disabled}
+                      onPress={() => setRange(k)}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: active ? p.accent.mint : p.line.default,
+                        backgroundColor: active
+                          ? withAlpha(p.accent.mint, 0.15)
+                          : "transparent",
+                        opacity: disabled ? 0.35 : 1,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: active ? p.accent.mint : p.ink.muted,
+                          fontSize: 10,
+                          fontWeight: "800",
+                          letterSpacing: 0.6,
+                        }}
+                      >
+                        {k}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* 6. Three-up tiles */}
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <StatTile
+                  label="Raw"
+                  amount={snapshot?.summary.raw?.amount ?? null}
+                />
+                <StatTile
+                  label="Graded Avg"
+                  amount={snapshot?.summary.graded_avg?.amount ?? null}
+                />
+                <StatTile
+                  label="Population"
+                  amount={null}
+                  text={
+                    snapshot?.summary.pop_total
+                      ? snapshot.summary.pop_total.toLocaleString()
+                      : "—"
+                  }
+                />
+              </View>
+
+              {/* 7. Section header */}
+              <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+                Graded Prices
+              </Text>
+
+              {/* 8. House filter chips */}
+              <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+                <HouseChip
+                  id="all"
+                  label="ALL"
+                  active={house === "all"}
+                  onPress={() => setHouse("all")}
+                />
+                {HOUSE_ORDER.map((h) => (
+                  <HouseChip
+                    key={h}
+                    id={h}
+                    label={HOUSE_LABEL[h] ?? h.toUpperCase()}
+                    color={houseColor(h, p)}
+                    active={house === h}
+                    onPress={() => setHouse(h)}
                   />
+                ))}
+              </View>
+
+              {/* 9. House × grade rows */}
+              <View
+                style={{
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: p.line.default,
+                  backgroundColor: p.bg.elevated,
+                  overflow: "hidden",
+                }}
+              >
+                {rows.length === 0 ? (
+                  <View style={{ padding: 16, alignItems: "center" }}>
+                    <Text className="text-[12px] text-ink-muted">
+                      No graded comps yet
+                    </Text>
+                  </View>
                 ) : (
-                  <Text className="mt-3 text-3xl font-semibold text-ink-muted">
-                    —
-                  </Text>
+                  rows.map((r, i) => (
+                    <GradeRow
+                      key={`${r.house}-${r.grade_label}-${i}`}
+                      row={r}
+                      isLast={i === rows.length - 1}
+                    />
+                  ))
                 )}
               </View>
 
-              {/* Pricing */}
-              <PricingCard pricing={card.pricing_summary ?? null} />
-
-              {/* Price history */}
-              <View>
-                <View className="mb-2 flex-row items-center justify-between">
-                  <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-                    Price history
-                  </Text>
-                  <View className="flex-row gap-1.5">
-                    {RANGE_OPTIONS.map((opt) => {
-                      const active = range === opt.key;
-                      return (
-                        <Pressable
-                          key={opt.key}
-                          onPress={() => setRange(opt.key)}
-                          style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 4,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                            borderColor: active ? p.accent.mint : p.line.default,
-                            backgroundColor: active
-                              ? withAlpha(p.accent.mint, 0.15)
-                              : "transparent",
-                          }}
-                        >
-                          <Text
-                            style={{
-                              fontSize: 10,
-                              fontWeight: "700",
-                              letterSpacing: 0.5,
-                              color: active ? p.accent.mint : p.ink.muted,
-                            }}
-                          >
-                            {opt.label}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-                <PriceHistoryChart
-                  isLoading={historyQ.isLoading}
-                  isError={historyQ.isError}
-                  points={
-                    historyQ.data?.points.map((pt) => pt.price) ?? []
-                  }
-                  changePct={historyQ.data?.summary?.change_pct ?? null}
-                />
-              </View>
-
-              {/* Attributes */}
-              {attrKeys.length ? (
-                <View>
-                  <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-                    Attributes
-                  </Text>
-                  <View className="mt-2 rounded-2xl border border-line bg-bg-elevated">
-                    {attrKeys
-                      .filter((k) => attributes[k] !== undefined)
-                      .map((k, i, arr) => (
-                        <View
-                          key={k}
-                          className={`flex-row items-start justify-between px-4 py-3 ${i < arr.length - 1 ? "border-b border-line/60" : ""}`}
-                        >
-                          <Text className="text-[11px] uppercase tracking-wider text-ink-dim">
-                            {k}
-                          </Text>
-                          <Text
-                            className="ml-4 flex-1 text-right text-[12px] text-ink"
-                            numberOfLines={4}
-                          >
-                            {formatAttr(attributes[k])}
-                          </Text>
-                        </View>
-                      ))}
-                  </View>
-                </View>
-              ) : null}
-
-              {/* Set info */}
-              {card.set ? (
-                <View>
-                  <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-                    Set
-                  </Text>
-                  <View className="mt-2 flex-row items-center gap-3 rounded-2xl border border-line bg-bg-elevated p-4">
-                    {card.set.logo?.url ? (
-                      <Image
-                        source={{ uri: card.set.logo.url }}
-                        contentFit="contain"
-                        style={{ width: 48, height: 48 }}
-                      />
-                    ) : (
-                      <View
-                        style={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: 8,
-                          backgroundColor: p.bg.sunken,
-                        }}
-                      />
-                    )}
-                    <View style={{ flex: 1 }}>
-                      <Text className="text-sm font-semibold text-ink">
-                        {card.set.name ?? "—"}
-                      </Text>
-                      <Text className="mt-0.5 text-[11px] text-ink-muted">
-                        {[
-                          card.set.code,
-                          card.set.release_date,
-                          card.set.total_cards
-                            ? `${card.set.total_cards} cards`
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              ) : null}
-
-              {/* Tags */}
-              {card.tags && card.tags.length ? (
-                <View>
-                  <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-                    Tags
-                  </Text>
-                  <View className="mt-2 flex-row flex-wrap gap-2">
-                    {card.tags.map((t) => (
-                      <View
-                        key={t}
-                        style={{
-                          paddingHorizontal: 10,
-                          paddingVertical: 4,
-                          borderRadius: 999,
-                          borderWidth: 1,
-                          borderColor: p.line.default,
-                          backgroundColor: withAlpha(p.bg.elevated, 0.6),
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: p.ink.muted,
-                            fontSize: 10,
-                            fontWeight: "700",
-                            letterSpacing: 0.5,
-                          }}
-                        >
-                          {t.toUpperCase()}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ) : null}
-
-              {/* Actions */}
-              <View className="flex-row gap-3">
-                <ActionButton
-                  label="Add to Collection"
-                  primary
-                  onPress={() =>
-                    Alert.alert(
-                      "Coming soon",
-                      "Collection wiring lands in the next pass.",
-                    )
-                  }
-                />
-                <ActionButton
-                  label="Grade This Card"
-                  onPress={() =>
-                    Alert.alert(
-                      "Coming soon",
-                      "Grading flow lands in the next pass.",
-                    )
-                  }
-                />
-              </View>
+              {/* 10. Collapsible card details */}
+              <Pressable
+                onPress={() => setDetailsOpen((v) => !v)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingVertical: 12,
+                  paddingHorizontal: 14,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: p.line.default,
+                  backgroundColor: p.bg.elevated,
+                }}
+              >
+                <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+                  Card Details
+                </Text>
+                {detailsOpen ? (
+                  <ChevronUp size={16} color={p.ink.muted} />
+                ) : (
+                  <ChevronDown size={16} color={p.ink.muted} />
+                )}
+              </Pressable>
+              {detailsOpen ? <CardDetailsBlock card={card} /> : null}
             </>
           ) : null}
         </QueryState>
@@ -389,92 +389,94 @@ export default function CardDetailScreen() {
   );
 }
 
-function PricingCard({
-  pricing,
+// ─── Sub-components ────────────────────────────────────────────────────
+
+function IconBtn({ children }: { children: React.ReactNode }) {
+  return (
+    <View className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated">
+      {children}
+    </View>
+  );
+}
+
+function BigPrice({
+  amount,
+  changePct,
+  subLabel,
 }: {
-  pricing: import("@/api/types").PricingSummaryWire | null;
+  amount: number | null;
+  changePct: number | null;
+  subLabel: string;
 }) {
   const p = useThemedPalette();
-  if (!pricing) {
-    return (
-      <View className="rounded-2xl border border-line bg-bg-elevated p-4">
-        <Text className="text-sm font-semibold text-ink-muted">
-          No pricing data
-        </Text>
-      </View>
-    );
-  }
-  const cells: { label: string; amount: number | null }[] = [
-    { label: "Market", amount: pricing.market?.amount ?? null },
-    { label: "Low", amount: pricing.low?.amount ?? null },
-    { label: "Mid", amount: pricing.mid?.amount ?? null },
-    { label: "High", amount: pricing.high?.amount ?? null },
-  ];
+  const positive = (changePct ?? 0) >= 0;
+  const color = positive ? p.accent.mint : p.accent.rose;
   return (
-    <View className="rounded-2xl border border-line bg-bg-elevated p-4">
-      <View className="flex-row justify-between">
-        {cells.map((c) => (
-          <View key={c.label} className="flex-1 items-center">
-            <Text className="text-[10px] uppercase tracking-wider text-ink-dim">
-              {c.label}
-            </Text>
-            {c.amount !== null ? (
-              <Price
-                usd={c.amount}
-                className="mt-1 text-sm font-semibold text-ink"
-              />
-            ) : (
-              <Text className="mt-1 text-sm font-semibold text-ink-muted">—</Text>
-            )}
-          </View>
-        ))}
-      </View>
-      <View
-        className="mt-3 flex-row items-center justify-between border-t pt-2"
-        style={{ borderColor: p.line.default }}
-      >
-        <Text className="text-[10px] text-ink-dim">
-          {pricing.sources?.length ? pricing.sources.join(", ") : "—"}
-        </Text>
-        <Text className="text-[10px] text-ink-dim">
-          {pricing.as_of ?? "live"}
-        </Text>
+    <View>
+      {amount !== null ? (
+        <Price usd={amount} className="text-5xl font-bold text-ink" />
+      ) : (
+        <Text className="text-5xl font-bold text-ink-muted">—</Text>
+      )}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 }}>
+        {changePct !== null ? (
+          <Text style={{ color, fontSize: 13, fontWeight: "700" }}>
+            {positive ? "+" : ""}
+            {changePct.toFixed(2)}%
+          </Text>
+        ) : null}
+        <Text className="text-[11px] text-ink-dim">{subLabel}</Text>
       </View>
     </View>
   );
 }
 
-function PriceHistoryChart({
-  isLoading,
-  isError,
+function Sparkline({
   points,
   changePct,
+  disabled,
 }: {
-  isLoading: boolean;
-  isError: boolean;
   points: number[];
   changePct: number | null;
+  disabled: boolean;
 }) {
   const p = useThemedPalette();
   const W = 320;
-  const H = 110;
+  const H = 140;
   const PAD = 8;
 
-  if (isLoading) {
+  if (disabled) {
     return (
       <View
-        className="rounded-2xl border border-line bg-bg-elevated"
-        style={{ height: H + 16, alignItems: "center", justifyContent: "center" }}
+        style={{
+          height: H,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: p.line.default,
+          backgroundColor: p.bg.elevated,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
-        <Skeleton width={W - 32} height={H} />
+        <Text className="text-[11px] text-ink-dim">
+          Intraday history coming soon
+        </Text>
       </View>
     );
   }
-  if (isError || points.length < 2) {
+
+  if (points.length < 2) {
     return (
       <View
-        className="items-center rounded-2xl border border-line bg-bg-elevated"
-        style={{ height: H + 16, justifyContent: "center" }}
+        style={{
+          height: H,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: p.line.default,
+          backgroundColor: p.bg.elevated,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
         <Text className="text-[11px] text-ink-muted">No history available</Text>
       </View>
@@ -496,7 +498,15 @@ function PriceHistoryChart({
   const color = positive ? p.accent.mint : p.accent.rose;
 
   return (
-    <View className="rounded-2xl border border-line bg-bg-elevated p-3">
+    <View
+      style={{
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: p.line.default,
+        backgroundColor: p.bg.elevated,
+        padding: 12,
+      }}
+    >
       <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
         <Polyline
           points={coords}
@@ -507,18 +517,18 @@ function PriceHistoryChart({
           strokeLinejoin="round"
         />
       </Svg>
-      <View className="mt-2 flex-row justify-between">
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          marginTop: 6,
+        }}
+      >
         <Text className="text-[10px] text-ink-dim">
           ${min.toFixed(2)} – ${max.toFixed(2)}
         </Text>
         {changePct !== null ? (
-          <Text
-            style={{
-              color,
-              fontSize: 11,
-              fontWeight: "700",
-            }}
-          >
+          <Text style={{ color, fontSize: 11, fontWeight: "700" }}>
             {positive ? "+" : ""}
             {changePct.toFixed(2)}%
           </Text>
@@ -528,61 +538,234 @@ function PriceHistoryChart({
   );
 }
 
-function ActionButton({
+function StatTile({
   label,
-  primary,
-  onPress,
+  amount,
+  text,
 }: {
   label: string;
-  primary?: boolean;
-  onPress: () => void;
+  amount: number | null;
+  text?: string;
 }) {
   const p = useThemedPalette();
   return (
+    <View
+      style={{
+        flex: 1,
+        padding: 12,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: p.line.default,
+        backgroundColor: p.bg.elevated,
+        gap: 4,
+      }}
+    >
+      <Text className="text-[10px] uppercase tracking-wider text-ink-dim">
+        {label}
+      </Text>
+      {amount !== null ? (
+        <Price usd={amount} className="text-base font-semibold text-ink" />
+      ) : (
+        <Text className="text-base font-semibold text-ink">{text ?? "—"}</Text>
+      )}
+    </View>
+  );
+}
+
+function HouseChip({
+  id,
+  label,
+  color,
+  active,
+  onPress,
+}: {
+  id: string;
+  label: string;
+  color?: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const p = useThemedPalette();
+  const accent = color ?? p.ink.default;
+  return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => ({
-        flex: 1,
-        opacity: pressed ? 0.7 : 1,
-        paddingVertical: 12,
-        borderRadius: 12,
+      style={{
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 999,
         borderWidth: 1,
-        borderColor: primary ? p.accent.mint : p.line.default,
-        backgroundColor: primary
-          ? withAlpha(p.accent.mint, 0.18)
-          : "transparent",
-        alignItems: "center",
-      })}
+        borderColor: active ? accent : p.line.default,
+        backgroundColor: active ? withAlpha(accent, 0.16) : "transparent",
+      }}
+      accessibilityLabel={`Filter by ${id}`}
     >
       <Text
         style={{
-          color: primary ? p.accent.mint : p.ink.default,
-          fontSize: 12,
+          color: active ? accent : p.ink.muted,
+          fontSize: 10,
           fontWeight: "800",
           letterSpacing: 0.6,
         }}
       >
-        {label.toUpperCase()}
+        {label}
       </Text>
     </Pressable>
   );
 }
 
-function CardDetailSkeleton() {
+function GradeRow({
+  row,
+  isLast,
+}: {
+  row: HouseGradeRowWire;
+  isLast: boolean;
+}) {
+  const p = useThemedPalette();
+  const accent = houseColor(row.house, p);
+  const positive = row.change_pct >= 0;
+  const changeColor = positive ? p.accent.mint : p.accent.rose;
   return (
-    <View style={{ gap: 16 }}>
-      <View className="items-center">
-        <Skeleton width={220} height={308} radius={16} />
-        <View style={{ marginTop: 12 }}>
-          <Skeleton width={180} height={20} />
-        </View>
-        <View style={{ marginTop: 8 }}>
-          <Skeleton width={120} height={14} />
-        </View>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        gap: 10,
+        borderBottomWidth: isLast ? 0 : 1,
+        borderBottomColor: p.line.default,
+      }}
+    >
+      <View
+        style={{
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          borderRadius: 999,
+          backgroundColor: withAlpha(accent, 0.18),
+          minWidth: 56,
+          alignItems: "center",
+        }}
+      >
+        <Text
+          style={{
+            color: accent,
+            fontSize: 10,
+            fontWeight: "800",
+            letterSpacing: 0.6,
+          }}
+        >
+          {HOUSE_LABEL[row.house] ?? row.house.toUpperCase()} {row.grade_label}
+        </Text>
       </View>
-      <Skeleton width="100%" height={80} radius={16} />
-      <Skeleton width="100%" height={130} radius={16} />
-      <Skeleton width="100%" height={120} radius={16} />
+      <Text className="text-[11px] text-ink-muted">
+        {row.population.toLocaleString()} pop
+      </Text>
+      <View style={{ flex: 1 }} />
+      <Text style={{ color: changeColor, fontSize: 11, fontWeight: "700" }}>
+        {positive ? "+" : ""}
+        {row.change_pct.toFixed(1)}%
+      </Text>
+      <Price usd={row.market.amount} className="text-sm font-semibold text-ink" />
     </View>
   );
 }
+
+function CardDetailsBlock({
+  card,
+}: {
+  card: import("@/api/types").CardSearchResult;
+}) {
+  const p = useThemedPalette();
+  const rows: { label: string; value: string }[] = [];
+  const push = (label: string, value: string | number | null | undefined) => {
+    if (value === null || value === undefined || value === "") return;
+    rows.push({ label, value: String(value) });
+  };
+  push("Number", card.number);
+  push("Rarity", card.rarity);
+  push("Year", card.year);
+  push("Set", card.set_name);
+  push("TCG", card.tcg);
+  push("Source", card.source);
+
+  return (
+    <View style={{ gap: 14 }}>
+      <View
+        style={{
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: p.line.default,
+          backgroundColor: p.bg.elevated,
+          overflow: "hidden",
+        }}
+      >
+        {rows.map((r, i) => (
+          <View
+            key={r.label}
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              borderBottomWidth: i < rows.length - 1 ? 1 : 0,
+              borderBottomColor: p.line.default,
+            }}
+          >
+            <Text className="text-[11px] uppercase tracking-wider text-ink-dim">
+              {r.label}
+            </Text>
+            <Text className="ml-3 flex-1 text-right text-[12px] text-ink" numberOfLines={3}>
+              {r.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+      {card.tags && card.tags.length ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+          {card.tags.map((t) => (
+            <View
+              key={t}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: p.line.default,
+              }}
+            >
+              <Text
+                style={{
+                  color: p.ink.muted,
+                  fontSize: 10,
+                  fontWeight: "700",
+                  letterSpacing: 0.5,
+                }}
+              >
+                {t.toUpperCase()}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+// ─── helpers ───────────────────────────────────────────────────────────
+
+function flattenHouses(
+  houses: HouseBlockWire[],
+  filter: HouseId | "all",
+): HouseGradeRowWire[] {
+  const out: HouseGradeRowWire[] = [];
+  for (const h of houses) {
+    if (filter !== "all" && h.house !== filter) continue;
+    for (const g of h.grades) out.push(g);
+  }
+  // High → low by market, capped to keep the list readable.
+  out.sort((a, b) => b.market.amount - a.market.amount);
+  return out.slice(0, filter === "all" ? 24 : 16);
+}
+

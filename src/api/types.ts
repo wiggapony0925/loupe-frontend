@@ -397,3 +397,46 @@ export interface ScanProgressEvent {
   progress: number;
   message?: string;
 }
+
+// ─── Market snapshot wire shapes (GET /v1/cards/{id}/market) ───────────
+
+export type HouseId = "psa" | "cgc" | "bgs" | "sgc" | "tag";
+
+export interface MarketSummaryWire {
+  raw: Money | null;
+  graded_avg: Money | null;
+  pop_top: Money | null;
+  pop_total: number;
+  change_pct_1y: number;
+  last_sale_at: string | null;
+  primary_house: HouseId | string;
+}
+
+export interface HouseGradeRowWire {
+  house: HouseId | string;
+  grade: number;
+  grade_label: string;
+  population: number;
+  market: Money;
+  change_pct: number;
+  last_sale_at: string | null;
+  listing_url: string | null;
+}
+
+export interface HouseBlockWire {
+  house: HouseId | string;
+  pop_total: number;
+  grades: HouseGradeRowWire[];
+}
+
+export interface MarketSnapshotWire {
+  summary: MarketSummaryWire;
+  history: Record<string, PriceHistoryWire>;
+  houses: HouseBlockWire[];
+  tiers_total: number;
+}
+
+export interface MarketResponseWire {
+  card_id: string;
+  snapshot: MarketSnapshotWire;
+}
