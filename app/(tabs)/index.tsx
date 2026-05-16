@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { LiveSyncChip } from "@/components/ui/LiveSyncChip";
 import { LoupeMark } from "@/components/brand/LoupeMark";
+import { useApiHealth } from "@/hooks/api";
 import { compactUsd, greeting, relativeTime } from "@/lib/format";
 import { gradeColor, palette, useThemedPalette } from "@/theme/tokens";
 import type { CollectionCard } from "@/types/domain";
@@ -164,6 +165,14 @@ export default function CommandCenterScreen() {
 
 function Header({ online, lastSyncIso }: { online: boolean; lastSyncIso?: string }) {
   const p = useThemedPalette();
+  const health = useApiHealth();
+  const apiOk = health.isSuccess && (health.data?.status ?? "").toLowerCase().startsWith("ok");
+  const apiTint = health.isLoading
+    ? p.ink.muted
+    : apiOk
+      ? p.accent.mint
+      : p.accent.rose;
+  const apiLabel = health.isLoading ? "API…" : apiOk ? "API live" : "API down";
   return (
     <View>
       <View className="flex-row items-center justify-between">
@@ -172,6 +181,32 @@ function Header({ online, lastSyncIso }: { online: boolean; lastSyncIso?: string
           <Text className="text-base font-semibold tracking-tight text-ink">Loupe</Text>
         </View>
         <View className="flex-row items-center gap-2">
+          <View
+            accessibilityLabel={`Loupe backend ${apiLabel}`}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: apiTint,
+              backgroundColor: "transparent",
+            }}
+          >
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: apiTint,
+              }}
+            />
+            <Text style={{ color: apiTint, fontSize: 10, fontWeight: "700", letterSpacing: 0.4 }}>
+              {apiLabel}
+            </Text>
+          </View>
           <LiveSyncChip online={online} lastSyncIso={lastSyncIso} />
           <Pressable
             onPress={() => router.push("/settings")}

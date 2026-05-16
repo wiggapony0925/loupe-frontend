@@ -8,8 +8,9 @@
  *   • Live search rail — filtered card list with mini sparklines.
  *   • Recent searches (in-memory, last 6).
  */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Keyboard,
   Pressable,
@@ -25,6 +26,8 @@ import { Camera, Clock, Search as SearchIcon, X } from "lucide-react-native";
 import { fetchCardSparklines, fetchCollection } from "@/api/forensicApi";
 import { fetchMarketCatalog } from "@/api/marketApi";
 import { Sparkline } from "@/components/ui/Sparkline";
+import { useCardSearch } from "@/hooks/api";
+import type { CardSearchResult, TcgKey } from "@/api/types";
 import { compactUsd } from "@/lib/format";
 import { getBrandLogo } from "@/lib/brandAssets";
 import { gradeColor, palette, useThemedPalette, withAlpha } from "@/theme/tokens";
@@ -182,6 +185,22 @@ export default function SearchScreen() {
 
   const showResults = query.trim().length > 0 || activeCategory !== null || quickfilter !== "all";
 
+  // ── Live backend catalog search ────────────────────────────────────────────
+  // Debounce the input by 300ms; map the active category to a backend `tcg`
+  // facet (unsupported facets fall through as "all"). The hook itself enforces
+  // the ≥2-character floor.
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+  const liveTcg: TcgKey | "all" =
+    activeCategory === "pokemon" || activeCategory === "magic" || activeCategory === "yugioh"
+      ? activeCategory
+      : "all";
+  const live = useCardSearch({ q: debouncedQuery, tcg: liveTcg, limit: 20 });
+  const showLive = debouncedQuery.length >= 2;
+
   const commitRecentSearch = (q: string) => {
     const trimmed = q.trim();
     if (!trimmed) return;
@@ -277,6 +296,17 @@ export default function SearchScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {showLive ? (
+          <LiveResultsSection
+            query={debouncedQuery}
+            tcg={liveTcg}
+            isLoading={live.isLoading}
+            isError={live.isError}
+            data={live.data?.results ?? []}
+            upstreamError={live.data?.error}
+          />
+        ) : null}
+
         {!showResults ? (
           <>
             {/* Quick category grid — Collectr-style */}
@@ -534,6 +564,130 @@ function ResultRow({
         <Text style={{ color: tint, fontSize: 10, fontWeight: "700" }}>
           {up ? "▲" : "▼"} {Math.abs(deltaPct).toFixed(2)}%
         </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/**
+ * Live Loupe-API search rail.
+ * Rendered above the local results whenever the debounced query is ≥2 chars.
+ * Shows loading / error / empty / success states, plus a soft banner when
+ * the backend returned a 200 with an `error` field (upstream degradation).
+ */
+function LiveResultsSection({
+  query,
+  tcg,
+  isLoading,
+  isError,
+  data,
+  upstreamError,
+}: {
+  query: string;
+  tcg: TcgKey | "all";
+  isLoading: boolean;
+  isError: boolean;
+  data: CardSearchResult[];
+  upstreamError?: string;
+}) {
+  const p = useThemedPalette();
+  const tcgLabel = tcg === "all" ? "All TCGs" : tcg;
+  return (
+    <View>
+      <View className="flex-row items-center justify-between">
+        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+          Live catalog · {tcgLabel}
+        </Text>
+        {isLoading ? <ActivityIndicator size="small" color={p.accent.mint} /> : null}
+      </View>
+      <Text className="mt-1 text-base font-semibold text-ink">
+        Results for “{query}”
+      </Text>
+
+      {upstreamError ? (
+        <View
+          className="mt-2 rounded-xl border px-3 py-2"
+          style={{ borderColor: withAlpha(p.accent.amber, 0.4), backgroundColor: withAlpha(p.accent.amber, 0.08) }}
+        >
+          <Text style={{ color: p.accent.amber, fontSize: 11, fontWeight: "600" }}>
+            Upstream degraded: {upstreamError}
+          </Text>
+        </View>
+      ) : null}
+
+      <View className="mt-3 overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+        {isError ? (
+          <View className="items-center px-4 py-6">
+            <Text className="text-sm font-semibold text-ink">Couldn’t reach Loupe API</Text>
+            <Text className="mt-1 text-center text-[11px] text-ink-muted">
+              Check that the backend is running at {process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000"}.
+            </Text>
+          </View>
+        ) : isLoading ? (
+          <View className="items-center px-4 py-6">
+            <ActivityIndicator size="small" color={p.accent.mint} />
+          </View>
+        ) : data.length === 0 ? (
+          <View className="items-center px-4 py-6">
+            <Text className="text-sm font-semibold text-ink">No live matches</Text>
+            <Text className="mt-1 text-center text-[11px] text-ink-muted">
+              Try a different spelling or pick a different category.
+            </Text>
+          </View>
+        ) : (
+          data.map((card, i) => (
+            <LiveResultRow
+              key={card.id}
+              card={card}
+              bordered={i > 0}
+            />
+          ))
+        )}
+      </View>
+    </View>
+  );
+}
+
+function LiveResultRow({ card, bordered }: { card: CardSearchResult; bordered: boolean }) {
+  const p = useThemedPalette();
+  return (
+    <Pressable
+      onPress={() => router.push(`/market/${encodeURIComponent(card.id)}`)}
+      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+      className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
+    >
+      <View
+        className="overflow-hidden rounded-lg"
+        style={{ width: 36, height: 50, backgroundColor: palette.bg.sunken }}
+      >
+        {card.image_url ? (
+          <Image source={{ uri: card.image_url }} style={{ width: 36, height: 50 }} />
+        ) : null}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text numberOfLines={1} className="text-sm font-semibold text-ink">
+          {card.name}
+        </Text>
+        <Text numberOfLines={1} className="mt-0.5 text-[11px] text-ink-muted">
+          {[card.set_name, card.number, card.year].filter(Boolean).join(" · ")}
+        </Text>
+      </View>
+      <View style={{ minWidth: 56, alignItems: "flex-end" }}>
+        <Text
+          style={{
+            color: p.accent.mint,
+            fontSize: 9,
+            fontWeight: "800",
+            letterSpacing: 0.8,
+          }}
+        >
+          {card.tcg.toUpperCase()}
+        </Text>
+        {card.rarity ? (
+          <Text className="mt-0.5 text-[10px] text-ink-muted" numberOfLines={1}>
+            {card.rarity}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   );

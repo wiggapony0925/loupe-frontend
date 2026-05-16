@@ -5,12 +5,10 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { useColorScheme } from "nativewind";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
-import { ThemeProvider } from "@/theme/ThemeProvider";
+import { AppProviders } from "@/providers/AppProviders";
 import { BrandSplash } from "@/components/brand/BrandSplash";
-import { queryClient } from "@/lib/queryClient";
 import { useSettings } from "@/store/settingsStore";
 import { applyTheme, palette } from "@/theme/tokens";
 
@@ -57,39 +55,37 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: palette.bg.base }}>
       <SafeAreaProvider>
         <GluestackUIProvider mode={scheme}>
-          <QueryClientProvider client={queryClient}>
-            <ThemeProvider>
-              <StatusBar style={scheme === "light" ? "dark" : "light"} />
-              <View key={`ccy-${currency}`} style={{ flex: 1 }}>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: palette.bg.base },
-                    animation: "fade",
-                  }}
-                >
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen
-                    name="scan/[id]"
-                    options={{ presentation: "card", animation: "slide_from_bottom" }}
-                  />
-                  <Stack.Screen
-                    name="scan/phone"
-                    options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
-                  />
-                  <Stack.Screen
-                    name="compare"
-                    options={{ presentation: "card", animation: "slide_from_right" }}
-                  />
-                  <Stack.Screen
-                    name="settings"
-                    options={{ presentation: "card", animation: "slide_from_right" }}
-                  />
-                </Stack>
-                {!splashDone ? <BrandSplash onFinish={() => setSplashDone(true)} /> : null}
-              </View>
-            </ThemeProvider>
-          </QueryClientProvider>
+          <AppProviders>
+            <StatusBar style={scheme === "light" ? "dark" : "light"} />
+            <View key={`ccy-${currency}`} style={{ flex: 1 }}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: palette.bg.base },
+                  animation: "fade",
+                }}
+              >
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen
+                  name="scan/[id]"
+                  options={{ presentation: "card", animation: "slide_from_bottom" }}
+                />
+                <Stack.Screen
+                  name="scan/phone"
+                  options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+                />
+                <Stack.Screen
+                  name="compare"
+                  options={{ presentation: "card", animation: "slide_from_right" }}
+                />
+                <Stack.Screen
+                  name="settings"
+                  options={{ presentation: "card", animation: "slide_from_right" }}
+                />
+              </Stack>
+              {!splashDone ? <BrandSplash onFinish={() => setSplashDone(true)} /> : null}
+            </View>
+          </AppProviders>
         </GluestackUIProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
