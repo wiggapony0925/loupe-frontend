@@ -21,7 +21,6 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { HotRightNowRail } from "@/features/search/HotRightNowRail";
-import { LiveSyncChip } from "@/components/ui/LiveSyncChip";
 import { LoupeMark } from "@/components/brand/LoupeMark";
 import { useApiHealth, useTopMovers } from "@/hooks/api";
 import { useAuth } from "@/providers/AuthProvider";
@@ -71,12 +70,7 @@ export default function CommandCenterScreen() {
           />
         }
       >
-        <Header
-          online={hardware.data?.transport !== "offline"}
-          lastSyncIso={
-            hardware.dataUpdatedAt ? new Date(hardware.dataUpdatedAt).toISOString() : undefined
-          }
-        />
+        <Header />
 
         <PortfolioChart fallbackTotal={summary.data?.totalValueUsd ?? 0} />
 
@@ -141,7 +135,23 @@ export default function CommandCenterScreen() {
         </View>
 
         <View>
-          <SectionHeader eyebrow="Device" title="Scanner connection" />
+          <SectionHeader
+            eyebrow="Device"
+            title="Scanner connection"
+            trailing={
+              <Pressable
+                onPress={() => router.push("/scan/pair")}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Manage paired devices"
+                className="flex-row items-center gap-1"
+                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+              >
+                <Text className="text-xs font-medium text-ink-muted">Manage</Text>
+                <ArrowUpRight size={14} color={palette.ink.muted} />
+              </Pressable>
+            }
+          />
           <HardwareStatusWidget />
         </View>
 
@@ -190,16 +200,20 @@ export default function CommandCenterScreen() {
   );
 }
 
-function Header({ online, lastSyncIso }: { online: boolean; lastSyncIso?: string }) {
+function Header() {
   const p = useThemedPalette();
   const health = useApiHealth();
   const apiOk = health.isSuccess && (health.data?.status ?? "").toLowerCase().startsWith("ok");
-  const apiTint = health.isLoading
-    ? p.ink.muted
-    : apiOk
-      ? p.accent.mint
-      : p.accent.rose;
-  const apiLabel = health.isLoading ? "API…" : apiOk ? "API live" : "API down";
+  // Only flip to the rose "down" state once React Query has actually
+  // observed a failed fetch — otherwise the idle/fetching window
+  // (isLoading false, isSuccess false, isError false) renders as down.
+  const apiDown = health.isError;
+  const apiTint = apiOk
+    ? p.accent.mint
+    : apiDown
+      ? p.accent.rose
+      : p.ink.muted;
+  const apiLabel = apiOk ? "API live" : apiDown ? "API down" : "API…";
   return (
     <View>
       <View className="flex-row items-center justify-between">
@@ -208,9 +222,20 @@ function Header({ online, lastSyncIso }: { online: boolean; lastSyncIso?: string
           <Text className="text-base font-semibold tracking-tight text-ink">Loupe</Text>
         </View>
         <View className="flex-row items-center gap-2">
-          <View
-            accessibilityLabel={`Loupe backend ${apiLabel}`}
-            style={{
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Loupe backend ${apiLabel}. Tap to retry.`}
+            onPress={() => {
+              health.refetch().catch((err) => {
+                // Surface the underlying network error so we can tell a
+                // genuine outage from a stale-bundle / wedged-simulator
+                // false negative. ApiError instances include status+code.
+                // eslint-disable-next-line no-console
+                console.warn("[health] manual refetch failed:", err);
+              });
+            }}
+            hitSlop={6}
+            style={({ pressed }) => ({
               flexDirection: "row",
               alignItems: "center",
               gap: 6,
@@ -220,7 +245,8 @@ function Header({ online, lastSyncIso }: { online: boolean; lastSyncIso?: string
               borderWidth: 1,
               borderColor: apiTint,
               backgroundColor: "transparent",
-            }}
+              opacity: pressed ? 0.6 : 1,
+            })}
           >
             <View
               style={{
@@ -233,8 +259,9 @@ function Header({ online, lastSyncIso }: { online: boolean; lastSyncIso?: string
             <Text style={{ color: apiTint, fontSize: 10, fontWeight: "700", letterSpacing: 0.4 }}>
               {apiLabel}
             </Text>
-          </View>
-          <LiveSyncChip online={online} lastSyncIso={lastSyncIso} />
+          </Pressable>
+          {/* LIVE sync chip intentionally hidden — diagnostic-only; will
+              also remove the API pill before shipping to production. */}
           <Pressable
             onPress={() => router.push(routes.settings())}
             hitSlop={8}

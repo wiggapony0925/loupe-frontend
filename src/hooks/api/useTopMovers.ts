@@ -52,7 +52,22 @@ export function useTopMovers({
 }: UseTopMoversOptions = {}): UseTopMoversResult {
   const { isAuthenticated } = useAuth();
   const grades = useMyGrades<GradedCard[]>();
-  const enrichmentTargets = (grades.data ?? []).slice(0, enrichLimit);
+  // Dedupe by card_id BEFORE building useQueries — owning multiple copies
+  // of the same card would otherwise register duplicate observers for the
+  // same query key, triggering React Query's "Duplicate Queries found"
+  // warning on every render (and flooding Metro's log buffer to the
+  // point of OOM).
+  const enrichmentTargets = useMemo(() => {
+    const seen = new Set<string>();
+    const out: GradedCard[] = [];
+    for (const g of grades.data ?? []) {
+      if (!g.card_id || seen.has(g.card_id)) continue;
+      seen.add(g.card_id);
+      out.push(g);
+      if (out.length >= enrichLimit) break;
+    }
+    return out;
+  }, [grades.data, enrichLimit]);
 
   // Parallel-fetch card metadata + market snapshot for each target.
   const cardQueries = useQueries({
@@ -82,8 +97,15 @@ export function useTopMovers({
     enrichmentTargets.length > 0 &&
     (cardQueries.some((q) => q.isLoading) ||
       marketQueries.some((q) => q.isLoading));
-  const enrichmentError =
-    cardQueries.some((q) => q.isError) || marketQueries.some((q) => q.isError);
+  // Per-card enrichment is best-effort: if a single owned card isn't in
+  // the catalog (or its market snapshot 404s) we silently drop that row
+  // instead of nuking the whole widget. We only surface an error when
+  // *every* enrichment failed AND grades returned something to enrich —
+  // i.e. the upstream catalog is genuinely down.
+  const allEnrichmentsFailed =
+    enrichmentTargets.length > 0 &&
+    cardQueries.every((q) => q.isError) &&
+    marketQueries.every((q) => q.isError);
 
   const rows = useMemo<TopMoverRow[]>(() => {
     const out: TopMoverRow[] = [];
@@ -117,7 +139,7 @@ export function useTopMovers({
     rows,
     isAuthenticated,
     isLoading: grades.isLoading || enrichmentLoading,
-    isError: grades.isError || enrichmentError,
+    isError: grades.isError || allEnrichmentsFailed,
     isEmpty:
       isAuthenticated &&
       !grades.isLoading &&

@@ -20,6 +20,13 @@ interface EmptyStateProps {
   compact?: boolean;
 }
 
+/**
+ * Background + border come from NativeWind classes (CSS variables) so the
+ * card stays in sync with the active theme even if a parent hasn't yet
+ * re-rendered the imperative `palette` snapshot. Inline `palette.*` reads
+ * here previously rendered the dark surface on top of a light page when
+ * the theme switched mid-render.
+ */
 export function EmptyState({
   title,
   message,
@@ -33,48 +40,34 @@ export function EmptyState({
   return (
     <View
       accessibilityRole="summary"
+      className="items-center rounded-2xl border border-line bg-bg-elevated"
       style={{
-        alignItems: "center",
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: p.line.default,
-        backgroundColor: p.bg.elevated,
         paddingHorizontal: compact ? 16 : 20,
         paddingVertical: compact ? 16 : 28,
         gap: compact ? 6 : 10,
       }}
     >
       <View
+        className="items-center justify-center rounded-full"
         style={{
           width: compact ? 36 : 48,
           height: compact ? 36 : 48,
-          borderRadius: 999,
           backgroundColor: withAlpha(p.ink.muted, 0.1),
-          alignItems: "center",
-          justifyContent: "center",
           marginBottom: compact ? 2 : 4,
         }}
       >
         <Resolved size={compact ? 18 : 22} color={p.ink.muted} />
       </View>
       <Text
-        style={{
-          color: p.ink.default,
-          fontSize: compact ? 13 : 15,
-          fontWeight: "700",
-          textAlign: "center",
-        }}
+        className="text-center font-bold text-ink"
+        style={{ fontSize: compact ? 13 : 15 }}
       >
         {title}
       </Text>
       {message ? (
         <Text
-          style={{
-            color: p.ink.muted,
-            fontSize: compact ? 11 : 12,
-            textAlign: "center",
-            maxWidth: 320,
-          }}
+          className="text-center text-ink-muted"
+          style={{ fontSize: compact ? 11 : 12, maxWidth: 320 }}
         >
           {message}
         </Text>

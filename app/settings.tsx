@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Constants from "expo-constants";
@@ -11,13 +11,12 @@ import {
   CircleDollarSign,
   Github,
   Info,
+  LogOut,
   Monitor,
   Moon,
-  Palette as PaletteIcon,
   RotateCcw,
   Shield,
   ShieldCheck,
-  Sliders,
   Sparkles,
   Sun,
   Vibrate,
@@ -28,29 +27,55 @@ import { useSettings, type Currency, type ThemeMode } from "@/store/settingsStor
 import { CurrencyPickerSheet } from "@/components/ui/CurrencyPickerSheet";
 import { getCurrency } from "@/lib/currency";
 import { palette, useThemedPalette } from "@/theme/tokens";
+import { useAuth } from "@/providers/AuthProvider";
 
-type TabKey = "general" | "appearance" | "about";
-const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
-  { key: "general", label: "General", icon: Sliders },
-  { key: "appearance", label: "Appearance", icon: PaletteIcon },
-  { key: "about", label: "About", icon: Info },
-];
+type PageKey = "menu" | "general" | "appearance" | "legal" | "about";
+
+const PAGE_TITLES: Record<PageKey, string> = {
+  menu: "",
+  general: "Preferences",
+  appearance: "Appearance",
+  legal: "Legal",
+  about: "About",
+};
 
 export default function SettingsScreen() {
   useThemedPalette();
-  const [tab, setTab] = useState<TabKey>("general");
+  const [page, setPage] = useState<PageKey>("menu");
+
+  const onBack = () => {
+    if (page === "menu") router.back();
+    else setPage("menu");
+  };
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
-      <Header />
-      <Tabs active={tab} onChange={setTab} />
+      <Header title={PAGE_TITLES[page]} onBack={onBack} />
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 64, gap: 16 }}
+        contentContainerStyle={{ paddingBottom: 64 }}
         showsVerticalScrollIndicator={false}
       >
-        {tab === "general" && <GeneralTab />}
-        {tab === "appearance" && <AppearanceTab />}
-        {tab === "about" && <AboutTab />}
+        {page === "menu" && <MenuPage onNavigate={setPage} />}
+        {page === "general" && (
+          <View className="px-5 pt-2" style={{ gap: 16 }}>
+            <GeneralTab />
+          </View>
+        )}
+        {page === "appearance" && (
+          <View className="px-5 pt-2" style={{ gap: 16 }}>
+            <AppearanceTab />
+          </View>
+        )}
+        {page === "legal" && (
+          <View className="px-5 pt-2" style={{ gap: 16 }}>
+            <LegalTab />
+          </View>
+        )}
+        {page === "about" && (
+          <View className="px-5 pt-2" style={{ gap: 16 }}>
+            <AboutTab />
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -58,52 +83,199 @@ export default function SettingsScreen() {
 
 /* ─── Header ──────────────────────────────────────────────────────────── */
 
-function Header() {
+function Header({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <View className="flex-row items-center justify-between px-5 pb-3 pt-2">
       <Pressable
-        onPress={() => router.back()}
+        onPress={onBack}
         hitSlop={10}
-        className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
+        className="-ml-1 h-9 w-9 items-center justify-center"
         accessibilityRole="button"
         accessibilityLabel="Back"
       >
-        <ChevronLeft size={18} color={palette.ink.default} />
+        <ChevronLeft size={22} color={palette.ink.default} />
       </Pressable>
-      <Text className="text-base font-semibold tracking-tight text-ink">Settings</Text>
+      <Text className="text-base font-semibold tracking-tight text-ink">{title}</Text>
       <View className="h-9 w-9" />
     </View>
   );
 }
 
-/* ─── Tabs ────────────────────────────────────────────────────────────── */
+/* ─── Robinhood-style menu page ──────────────────────────────────────── */
 
-function Tabs({ active, onChange }: { active: TabKey; onChange: (k: TabKey) => void }) {
+function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
+  const { user, signOut } = useAuth();
+  const version = Constants.expoConfig?.version ?? "0.1.0";
+
+  const displayName =
+    user?.display_name?.trim() || user?.email?.split("@")[0] || "operator";
+  const initial = displayName.charAt(0).toUpperCase();
+  const handle = user?.email
+    ? `@${user.email.split("@")[0]}`
+    : `@${displayName.toLowerCase().replace(/\s+/g, "")}`;
+
   return (
-    <View className="mx-5 mb-2 flex-row items-center gap-1 rounded-full border border-line bg-bg-elevated p-1">
-      {TABS.map((t) => {
-        const isActive = t.key === active;
-        return (
-          <Pressable
-            key={t.key}
-            onPress={() => onChange(t.key)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isActive }}
-            accessibilityLabel={`${t.label} tab`}
-            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-full px-3 py-2"
-            style={{ backgroundColor: isActive ? `${palette.accent.mint}22` : "transparent" }}
+    <View>
+      {/* Hero — large title + mint-ringed avatar bubble */}
+      <View className="flex-row items-center justify-between px-5 pb-4 pt-1">
+        <Text className="text-[40px] font-bold tracking-tight text-ink">Settings</Text>
+        <View
+          className="h-14 w-14 items-center justify-center rounded-full"
+          style={{ borderWidth: 2, borderColor: palette.accent.mint }}
+        >
+          <View
+            className="h-11 w-11 items-center justify-center rounded-full"
+            style={{ backgroundColor: `${palette.accent.mint}22` }}
           >
-            <t.icon size={13} color={isActive ? palette.accent.mint : palette.ink.dim} />
-            <Text
-              className="text-xs font-semibold uppercase tracking-[2px]"
-              style={{ color: isActive ? palette.accent.mint : palette.ink.dim }}
-            >
-              {t.label}
+            <Text className="text-lg font-bold" style={{ color: palette.accent.mint }}>
+              {initial}
             </Text>
-          </Pressable>
-        );
-      })}
+          </View>
+        </View>
+      </View>
+
+      {/* Menu rows — hairline separators, no card containers */}
+      <View className="mt-2 border-t border-line">
+        <MenuRow
+          title="Loupe Support"
+          subtitle="Help center, contact us 24/7, your support chats"
+          onPress={() =>
+            Alert.alert(
+              "Support",
+              "Email support@loupe.app or visit help.loupe.app for 24/7 assistance.",
+            )
+          }
+        />
+        <MenuRow
+          title="Preferences"
+          subtitle="Currency, capture, haptics, notifications"
+          onPress={() => onNavigate("general")}
+        />
+        <MenuRow
+          title="Appearance"
+          subtitle="Light, dark, system theme · precision palette"
+          onPress={() => onNavigate("appearance")}
+        />
+        <MenuRow
+          title="Devices"
+          subtitle="Loupe scanner, BLE pairing, firmware"
+          onPress={() => router.push("/scan/pair")}
+        />
+        <MenuRow
+          title="Security and privacy"
+          subtitle="Captures stay on-device until you grade"
+          onPress={() =>
+            Alert.alert(
+              "Privacy",
+              "Loupe never uploads your captures unless you tap Grade. OCR runs locally on your device.",
+            )
+          }
+        />
+        <MenuRow
+          title="Legal"
+          subtitle="Terms of service, privacy policy, acknowledgements"
+          onPress={() => onNavigate("legal")}
+        />
+        <MenuRow
+          title="About"
+          subtitle={`Version ${version} · build, source, credits`}
+          onPress={() => onNavigate("about")}
+          isLast
+        />
+      </View>
+
+      {/* Account info block */}
+      <View className="mt-7 px-5">
+        <Text className="text-[14px] font-bold text-ink">Account</Text>
+        <Text className="mt-1 text-[14px] text-ink-muted">
+          {user?.email ?? "Signed out"}
+        </Text>
+        <Pressable
+          onPress={() => Alert.alert("Account ID", user?.id ?? "—")}
+          hitSlop={6}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          className="mt-2"
+        >
+          <Text
+            className="text-[13px] font-semibold text-ink"
+            style={{ textDecorationLine: "underline" }}
+          >
+            Show account ID
+          </Text>
+        </Pressable>
+
+        <Text className="mt-5 text-[14px] font-bold text-ink">Username</Text>
+        <Text className="mt-1 text-[14px] text-ink-muted">{handle}</Text>
+      </View>
+
+      {/* Log out — large outlined pill */}
+      <View className="mt-7 px-5">
+        <Pressable
+          onPress={() =>
+            Alert.alert("Log out?", "You'll need to sign in again to access your vault.", [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Log out",
+                style: "destructive",
+                onPress: () => {
+                  signOut();
+                  router.replace("/");
+                },
+              },
+            ])
+          }
+          accessibilityRole="button"
+          accessibilityLabel="Log out"
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.7 : 1,
+            borderWidth: 1.5,
+            borderColor: palette.accent.rose,
+            borderRadius: 999,
+            paddingVertical: 16,
+            alignItems: "center",
+            flexDirection: "row",
+            justifyContent: "center",
+            gap: 8,
+          })}
+        >
+          <LogOut size={16} color={palette.accent.rose} />
+          <Text className="text-base font-bold" style={{ color: palette.accent.rose }}>
+            Log out
+          </Text>
+        </Pressable>
+      </View>
     </View>
+  );
+}
+
+function MenuRow({
+  title,
+  subtitle,
+  onPress,
+  isLast = false,
+}: {
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  isLast?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      style={({ pressed }) => ({ opacity: pressed ? 0.55 : 1 })}
+    >
+      <View
+        className={`flex-row items-center gap-3 px-5 py-5 ${isLast ? "" : "border-b border-line"}`}
+      >
+        <View className="flex-1">
+          <Text className="text-[17px] font-semibold text-ink">{title}</Text>
+          <Text className="mt-1 text-[13px] leading-[18px] text-ink-muted">{subtitle}</Text>
+        </View>
+        <ChevronRight size={18} color={palette.ink.dim} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -458,8 +630,78 @@ function AboutTab() {
       </Section>
 
       <Text className="mt-2 text-center text-[11px] text-ink-dim">
-        Made with mint · {new Date().getFullYear()} JFM Forensic Suite
+        Made with mint · JFM Forensic Suite
       </Text>
+      <Text className="mt-1 text-center text-[10px] text-ink-dim">
+        © {new Date().getFullYear()} Loupe · All rights reserved
+      </Text>
+    </>
+  );
+}
+
+/* ─── Legal tab ──────────────────────────────────────────────────────── */
+
+const LEGAL_LINKS = {
+  terms: "https://loupe.app/legal/terms",
+  privacy: "https://loupe.app/legal/privacy",
+  acknowledgements: "https://loupe.app/legal/acknowledgements",
+} as const;
+
+async function openLegal(url: string, label: string) {
+  try {
+    const ok = await Linking.canOpenURL(url);
+    if (ok) {
+      await Linking.openURL(url);
+      return;
+    }
+  } catch {
+    /* fall through to alert */
+  }
+  Alert.alert(label, url);
+}
+
+function LegalTab() {
+  const version = Constants.expoConfig?.version ?? "0.1.0";
+  return (
+    <>
+      <Section title="Documents">
+        <Row
+          icon={Shield}
+          iconTint={palette.accent.mint}
+          label="Terms of service"
+          description="Your agreement with Loupe — read before continuing."
+          trailing={<ChevronRight size={16} color={palette.ink.dim} />}
+          onPress={() => openLegal(LEGAL_LINKS.terms, "Terms of service")}
+        />
+        <Row
+          icon={ShieldCheck}
+          iconTint={palette.accent.blue}
+          label="Privacy policy"
+          description="How we collect, store, and use your data."
+          trailing={<ChevronRight size={16} color={palette.ink.dim} />}
+          onPress={() => openLegal(LEGAL_LINKS.privacy, "Privacy policy")}
+        />
+        <Row
+          icon={Info}
+          iconTint={palette.accent.amber}
+          label="Open-source acknowledgements"
+          description="Credits for the libraries Loupe is built on."
+          trailing={<ChevronRight size={16} color={palette.ink.dim} />}
+          onPress={() =>
+            openLegal(LEGAL_LINKS.acknowledgements, "Open-source acknowledgements")
+          }
+          isLast
+        />
+      </Section>
+
+      <View className="mt-2 items-center">
+        <Text className="text-[11px] text-ink-dim">
+          Loupe v{version} · JFM Forensic Suite
+        </Text>
+        <Text className="mt-1 text-[10px] text-ink-dim">
+          © {new Date().getFullYear()} Loupe · All rights reserved
+        </Text>
+      </View>
     </>
   );
 }

@@ -299,12 +299,10 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
             ) : null}
           </>
         ) : (
-          <View
-            style={{
-              height: CHART_HEIGHT,
-              borderRadius: 12,
-              backgroundColor: withAlpha(p.ink.dim, 0.06),
-            }}
+          <ChartPlaceholder
+            height={CHART_HEIGHT}
+            loading={history.isLoading}
+            tint={tint}
           />
         )}
       </View>
@@ -396,6 +394,121 @@ function RangePill({
 
 function getX(e: GestureResponderEvent): number {
   return e.nativeEvent.locationX;
+}
+
+/**
+ * Placeholder shown when there is no chart data yet. Two modes:
+ *  - `loading=true`  \u2192 shimmering bar that sweeps left-to-right so the
+ *                       area doesn't read as a dead gray rectangle.
+ *  - `loading=false` \u2192 friendly empty state ("No history yet") layered
+ *                       over faint gridlines so users see the chart's
+ *                       intended shape instead of a blank slab.
+ */
+function ChartPlaceholder({
+  height,
+  loading,
+  tint,
+}: {
+  height: number;
+  loading: boolean;
+  tint: string;
+}) {
+  const p = useThemedPalette();
+  const sweep = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!loading) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(sweep, {
+          toValue: 1,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(sweep, {
+          toValue: 0,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [loading, sweep]);
+
+  const gridLine = withAlpha(p.ink.dim, 0.18);
+  const shimmerOpacity = sweep.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.7] });
+
+  return (
+    <View
+      style={{
+        height,
+        borderRadius: 14,
+        backgroundColor: withAlpha(p.ink.dim, 0.05),
+        borderWidth: 1,
+        borderColor: withAlpha(p.ink.dim, 0.12),
+        overflow: "hidden",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      {/* Faint gridlines hint at the chart's eventual shape */}
+      {[0.25, 0.5, 0.75].map((r) => (
+        <View
+          key={r}
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: 12,
+            right: 12,
+            top: height * r,
+            height: 1,
+            backgroundColor: gridLine,
+          }}
+        />
+      ))}
+
+      {loading ? (
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: 16,
+            right: 16,
+            height: 2,
+            borderRadius: 1,
+            backgroundColor: tint,
+            opacity: shimmerOpacity,
+          }}
+        />
+      ) : (
+        <>
+          <Text
+            style={{
+              color: p.ink.muted,
+              fontSize: 13,
+              fontWeight: "700",
+              letterSpacing: 0.3,
+            }}
+          >
+            No history yet
+          </Text>
+          <Text
+            style={{
+              marginTop: 4,
+              color: p.ink.dim,
+              fontSize: 11,
+              textAlign: "center",
+              maxWidth: 240,
+            }}
+          >
+            Scan a card to start charting your portfolio.
+          </Text>
+        </>
+      )}
+    </View>
+  );
 }
 
 function labelForRange(r: PortfolioRange): string {

@@ -1,5 +1,9 @@
 import { config } from "./config";
 import { auth } from "./auth";
+// Single source of truth for the JWT lives in `@/api/client` (set by
+// AuthProvider). Older code paths still call `auth.setToken` from
+// `./auth`, so we fall back to it if the canonical store is empty.
+import { getAuthToken } from "@/api/client";
 
 /**
  * Envelope shape mirrors loupe-backend/CONTRACT.md §2. Inlined here so
@@ -58,7 +62,7 @@ type RequestOptions = Omit<RequestInit, "body" | "headers"> & {
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { json, headers = {}, baseUrl = config.apiUrl, ...rest } = opts;
 
-  const token = auth.getToken();
+  const token = getAuthToken() ?? auth.getToken();
   const finalHeaders: Record<string, string> = {
     Accept: "application/json",
     ...headers,

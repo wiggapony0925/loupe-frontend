@@ -1,13 +1,16 @@
 /**
  * Market data layer — pricing, comps, listings for a single card.
  *
- * Real-API-only. The previous synthetic CATALOG + per-card price walk
- * has been removed. Until the backend exposes `/v1/market/...` endpoints
- * these helpers will throw `ApiError` with `http.404`, which the Market
- * screens should render as an empty state.
+ * Real-API-only. There is no `/v1/market/...` namespace on the backend;
+ * `fetchMarketCatalog` adapts `/v1/cards/trending` into the
+ * `CatalogEntry[]` shape the Search screen expects. The detail page
+ * (`app/market/[id].tsx`) consumes `useCard` / `useCardMarket` etc.
+ * directly, so `fetchMarketCard` is retained only for legacy callers
+ * and will throw if invoked at runtime.
  */
 import type { CollectionCard, PricePoint } from "@/types/domain";
-import { api } from "@/lib/apiClient";
+import type { CardSearchResult, TrendingResponseWire } from "@/api/types";
+import { ApiError, api } from "@/lib/apiClient";
 
 export type MarketRange = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
 export type MarketCondition = "raw" | "graded" | "pop";
@@ -89,18 +92,43 @@ export interface CatalogEntry {
 }
 
 /**
- * Returns the searchable market catalog. Backend endpoint is pending —
- * callers should handle the resulting `ApiError` as an empty state.
+ * Returns the searchable catalog used by the Search screen as the
+ * browse universe (alongside the user's vault). Implemented on top of
+ * the real `/v1/cards/trending` endpoint — there is no separate market
+ * catalog route on the backend.
  */
-export function fetchMarketCatalog(): Promise<CatalogEntry[]> {
-  return api.get<CatalogEntry[]>("/v1/market/catalog");
+export async function fetchMarketCatalog(): Promise<CatalogEntry[]> {
+  const wire = await api.get<TrendingResponseWire>(
+    "/v1/cards/trending?limit=60",
+  );
+  return (wire.cards ?? []).map(toCatalogEntry);
+}
+
+function toCatalogEntry(c: CardSearchResult): CatalogEntry {
+  const spot = c.pricing_summary?.market?.amount ?? 0;
+  return {
+    id: c.id,
+    title: c.name,
+    set: c.set?.name ?? c.set_name ?? "Unknown set",
+    year: c.year ?? 0,
+    spot,
+    imageUri: c.images?.large?.url ?? c.images?.small?.url ?? c.image_url ?? "",
+  };
 }
 
 export function fetchMarketCard(
-  id: string,
-  condition: MarketCondition = "graded",
+  _id: string,
+  _condition: MarketCondition = "graded",
 ): Promise<MarketCard> {
-  return api.get<MarketCard>(
-    `/v1/market/${encodeURIComponent(id)}?condition=${condition}`,
+  // The Market detail page (`app/market/[id].tsx`) reads `useCard` /
+  // `useCardMarket` / `useCardListings` / `useCardComps` directly from
+  // the real `/v1/cards/...` endpoints. This helper is no longer used
+  // at runtime; we throw so anything that calls it surfaces clearly
+  // instead of silently producing fake data.
+  throw new ApiError(
+    501,
+    "fetchMarketCard is deprecated — use useCardMarket() against /v1/cards/{id}/market.",
+    null,
+    "market.deprecated",
   );
 }

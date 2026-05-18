@@ -11,7 +11,12 @@ export function useApiHealth() {
       apiFetch<HealthResponse>(ENDPOINTS.system.health, { skipAuth: true }),
     refetchInterval: 30_000,
     refetchOnWindowFocus: false,
-    retry: 0,
+    refetchOnReconnect: true,
+    // Cold-mount fetches can race the simulator network coming up; retry a
+    // few times with backoff so a single transient failure doesn't pin the
+    // header pill to "API down" for 30s.
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
     staleTime: 15_000,
   });
 }

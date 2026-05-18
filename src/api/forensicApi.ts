@@ -109,6 +109,31 @@ export async function fetchHardwareStatus(): Promise<HardwareStatus | null> {
   return wire ? toHardwareStatus(wire) : null;
 }
 
+export interface PairScannerInput {
+  deviceId: string;
+  name?: string | null;
+  firmwareVersion?: string | null;
+  transport?: "ble" | "wifi";
+}
+
+/**
+ * Registers a freshly-discovered scanner against the signed-in user's
+ * account. The native bridge returns the device id + firmware after a
+ * successful BLE handshake; we mirror that into the backend so
+ * `/v1/scanners/status` will start returning it.
+ */
+export async function pairScanner(input: PairScannerInput): Promise<HardwareStatus> {
+  const wire = await api.post<ScannerWire>("/v1/scanners", {
+    json: {
+      device_id: input.deviceId,
+      name: input.name ?? null,
+      firmware_version: input.firmwareVersion ?? null,
+      transport: input.transport ?? "ble",
+    },
+  });
+  return toHardwareStatus(wire);
+}
+
 export async function fetchCollection(): Promise<CollectionCard[]> {
   const wire = await api.get<GradedCardWire[]>("/v1/grades");
   return wire.map(toCollectionCard);

@@ -23,7 +23,22 @@ import {
   type DimensionValue,
   type ViewStyle,
 } from "react-native";
-import { useThemedPalette } from "@/theme/tokens";
+import { getActiveScheme, useThemedPalette, withAlpha } from "@/theme/tokens";
+
+/**
+ * Returns a fill color that is visibly distinct from the surrounding
+ * card surface in either theme. In dark mode the card sits on `bg.base`
+ * (#121214) with `bg.elevated` (#1C1C1E) cards — so `line.default`
+ * reads as a clear gray. In light mode cards are pure white, so we
+ * tint with the muted ink at low alpha to get a recognizable shimmer
+ * instead of the near-invisible white-on-white we used to render.
+ */
+function useSkeletonFill(): string {
+  const p = useThemedPalette();
+  return getActiveScheme() === "light"
+    ? withAlpha(p.ink.dim, 0.18)
+    : p.line.default;
+}
 
 // ─── Shared pulse ──────────────────────────────────────────────────────
 
@@ -68,7 +83,7 @@ export function SkeletonBox({
   radius = 8,
   style,
 }: BoxProps) {
-  const p = useThemedPalette();
+  const fill = useSkeletonFill();
   const opacity = useShimmer();
   return (
     <View
@@ -78,7 +93,7 @@ export function SkeletonBox({
       ]}
     >
       <Animated.View
-        style={{ flex: 1, backgroundColor: p.bg.elevated, opacity }}
+        style={{ flex: 1, backgroundColor: fill, opacity }}
       />
     </View>
   );
