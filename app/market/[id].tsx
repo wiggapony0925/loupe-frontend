@@ -25,7 +25,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { routes } from "@/lib/routes";
+import { routes } from "@/shared/routes";
 import { useQuery } from "@tanstack/react-query";
 import Svg, {
   Circle,
@@ -50,10 +50,10 @@ import {
   type MarketCondition,
   type MarketRange,
   type MarketSource,
-} from "@/api/marketApi";
-import { compactUsd } from "@/lib/format";
-import { clampLabelX, monotoneCubic, nearestIndex } from "@/lib/chart";
-import { useThemedPalette, withAlpha } from "@/theme/tokens";
+} from "@/infrastructure/repositories/marketRepository";
+import { compactUsd } from "@/shared/format";
+import { clampLabelX, monotoneCubic, nearestIndex } from "@/shared/chart";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 const RANGES: MarketRange[] = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
 const CHART_HEIGHT = 200;

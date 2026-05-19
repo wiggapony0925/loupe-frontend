@@ -36,21 +36,21 @@ import {
   ChevronUp,
   Heart,
 } from "lucide-react-native";
-import { useCard } from "@/hooks/api/useCard";
-import { useCardMarket } from "@/hooks/api/useCardMarket";
-import { useCardListings } from "@/hooks/api/useCardListings";
-import { useCardComps } from "@/hooks/api/useCardComps";
-import { CardImage } from "@/components/ui/CardImage";
-import { Price } from "@/components/ui/Price";
-import { QueryState } from "@/components/ui/QueryState";
+import { useCard } from "@/application/queries/useCard";
+import { useCardMarket } from "@/application/queries/useCardMarket";
+import { useCardListings } from "@/application/queries/useCardListings";
+import { useCardComps } from "@/application/queries/useCardComps";
+import { CardImage } from "@/presentation/components/CardImage";
+import { Price } from "@/presentation/components/Price";
+import { QueryState } from "@/presentation/components/QueryState";
 import {
   SkeletonCardDetailPage,
   SkeletonCompsList,
   SkeletonListingsRail,
-} from "@/components/ui/Skeletons";
-import { DataSourcesFooter } from "@/components/ui/DataSourcesFooter";
-import { pickCardBlurhash, pickCardImageUrl } from "@/lib/cardImage";
-import { palette, useThemedPalette, withAlpha } from "@/theme/tokens";
+} from "@/presentation/components/Skeletons";
+import { DataSourcesFooter } from "@/presentation/components/DataSourcesFooter";
+import { pickCardBlurhash, pickCardImageUrl } from "@/shared/cardImage";
+import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import type {
   HouseBlockWire,
   HouseGradeRowWire,
@@ -59,7 +59,7 @@ import type {
   MarketSnapshotWire,
   PriceHistoryWire,
   SoldCompWire,
-} from "@/api/types";
+} from "@/infrastructure/http";
 
 // ── Range chips → backend history keys ────────────────────────────────
 type RangeKey = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
@@ -702,7 +702,7 @@ function GradeRow({
 function CardDetailsBlock({
   card,
 }: {
-  card: import("@/api/types").CardSearchResult;
+  card: import("@/infrastructure/http").CardSearchResult;
 }) {
   const p = useThemedPalette();
   const rows: { label: string; value: string }[] = [];

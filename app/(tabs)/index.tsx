@@ -2,32 +2,33 @@ import React, { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/hooks/api/queryKeys";
+import { queryKeys } from "@/application/queries/queryKeys";
 import { router } from "expo-router";
-import { routes } from "@/lib/routes";
+import { routes } from "@/shared/routes";
 import {
   ArrowUpRight,
+  Bell,
   Camera,
   Settings2,
   Smartphone,
   Zap,
 } from "lucide-react-native";
-import { fetchCollection, fetchCollectionSummary } from "@/api/forensicApi";
-import { HardwareStatusWidget, InitiateScanButton, useScannerConnection } from "@/features/scanner";
-import { PortfolioChart } from "@/features/analytics";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { SectionHeader } from "@/components/ui/SectionHeader";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { ErrorState } from "@/components/ui/ErrorState";
-import { HotRightNowRail } from "@/features/search/HotRightNowRail";
-import { LoupeMark } from "@/components/brand/LoupeMark";
-import { useApiHealth, useTopMovers } from "@/hooks/api";
-import { useAuth } from "@/providers/AuthProvider";
-import { MoversCardRow } from "@/components/cards";
-import { compactUsd, greeting, relativeTime } from "@/lib/format";
-import { gradeColor, palette, useThemedPalette } from "@/theme/tokens";
-import type { CollectionCard } from "@/types/domain";
+import { fetchCollection, fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
+import { HardwareStatusWidget, InitiateScanButton, useScannerConnection } from "@/presentation/features/scanner";
+import { PortfolioChart } from "@/presentation/features/analytics";
+import { PrimaryButton } from "@/presentation/components/PrimaryButton";
+import { Skeleton } from "@/presentation/components/Skeleton";
+import { SectionHeader } from "@/presentation/components/SectionHeader";
+import { EmptyState } from "@/presentation/components/EmptyState";
+import { ErrorState } from "@/presentation/components/ErrorState";
+import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
+import { LoupeMark } from "@/presentation/brand/LoupeMark";
+import { useApiHealth, useTopMovers } from "@/application/queries";
+import { useAuth } from "@/presentation/providers/AuthProvider";
+import { MoversCardRow } from "@/presentation/cards";
+import { compactUsd, greeting, relativeTime } from "@/shared/format";
+import { gradeColor, palette, useThemedPalette } from "@/presentation/theme/tokens";
+import type { CollectionCard } from "@/domain";
 
 export default function CommandCenterScreen() {
   useThemedPalette();
@@ -262,6 +263,16 @@ function Header() {
           </Pressable>
           {/* LIVE sync chip intentionally hidden — diagnostic-only; will
               also remove the API pill before shipping to production. */}
+          <Pressable
+            onPress={() => router.push(routes.notifications())}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Open notifications"
+            className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          >
+            <Bell size={16} color={p.ink.muted} />
+          </Pressable>
           <Pressable
             onPress={() => router.push(routes.settings())}
             hitSlop={8}

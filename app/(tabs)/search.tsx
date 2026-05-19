@@ -21,27 +21,27 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@/hooks/api/queryKeys";
+import { queryKeys } from "@/application/queries/queryKeys";
 import { router } from "expo-router";
-import { routes } from "@/lib/routes";
+import { routes } from "@/shared/routes";
 import { Camera, Clock, Search as SearchIcon, X } from "lucide-react-native";
-import { fetchCardSparklines, fetchCollection } from "@/api/forensicApi";
-import { fetchMarketCatalog } from "@/api/marketApi";
-import { Sparkline } from "@/components/ui/Sparkline";
-import { ErrorState } from "@/components/ui/ErrorState";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { COPY } from "@/lib/copy";
-import { useCardSearch, useTrendingCards } from "@/hooks/api";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { SearchResultRow } from "@/features/search/SearchResultRow";
-import { CardImage } from "@/components/ui/CardImage";
-import { SkeletonTrendingGrid } from "@/components/ui/Skeletons";
-import { CardTile } from "@/components/cards";
-import { pickCardImageUrl, pickCardBlurhash } from "@/lib/cardImage";
-import type { CardSearchResult, TcgKey } from "@/api/types";
-import { compactUsd } from "@/lib/format";
-import { getBrandLogo } from "@/lib/brandAssets";
-import { gradeColor, palette, useThemedPalette, withAlpha } from "@/theme/tokens";
+import { fetchCardSparklines, fetchCollection } from "@/infrastructure/repositories/forensicRepository";
+import { fetchMarketCatalog } from "@/infrastructure/repositories/marketRepository";
+import { Sparkline } from "@/presentation/components/Sparkline";
+import { ErrorState } from "@/presentation/components/ErrorState";
+import { EmptyState } from "@/presentation/components/EmptyState";
+import { COPY } from "@/shared/copy";
+import { useCardSearch, useTrendingCards } from "@/application/queries";
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
+import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
+import { CardImage } from "@/presentation/components/CardImage";
+import { SkeletonTrendingGrid } from "@/presentation/components/Skeletons";
+import { CardTile } from "@/presentation/cards";
+import { pickCardImageUrl, pickCardBlurhash } from "@/shared/cardImage";
+import type { CardSearchResult, TcgKey } from "@/infrastructure/http";
+import { compactUsd } from "@/shared/format";
+import { getBrandLogo } from "@/shared/brandAssets";
+import { gradeColor, palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /** All TCG facets supported by the chip row, in render order. */
 type TcgChip = TcgKey | "all";
@@ -861,6 +861,6 @@ function TrendingTile(_: {
 }): null {
   // Deprecated: replaced by reusable <CardTile> primitive. Retained as a
   // no-op shim only to avoid ripping out the symbol mid-refactor; new
-  // call sites should use `CardTile` directly from `@/components/cards`.
+  // call sites should use `CardTile` directly from `@/presentation/cards`.
   return null;
 }

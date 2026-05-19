@@ -3,7 +3,7 @@
  */
 import React from "react";
 import { Stack } from "expo-router";
-import { palette } from "@/theme/tokens";
+import { palette } from "@/presentation/theme/tokens";
 
 export default function AuthLayout() {
   return (

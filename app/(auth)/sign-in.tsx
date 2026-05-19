@@ -10,13 +10,13 @@ import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { LogIn, Zap } from "lucide-react-native";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { AuthScreen } from "@/features/auth/AuthScreen";
-import { FormInput } from "@/features/auth/FormInput";
-import { AuthFooter } from "@/features/auth/AuthFooter";
-import { useAuth } from "@/providers/AuthProvider";
-import { ApiError } from "@/api/client";
-import { useThemedPalette } from "@/theme/tokens";
+import { PrimaryButton } from "@/presentation/components/PrimaryButton";
+import { AuthScreen } from "@/presentation/features/auth/AuthScreen";
+import { FormInput } from "@/presentation/features/auth/FormInput";
+import { AuthFooter } from "@/presentation/features/auth/AuthFooter";
+import { useAuth } from "@/presentation/providers/AuthProvider";
+import { ApiError } from "@/infrastructure/http/client";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 
 export default function SignInScreen() {
   const p = useThemedPalette();

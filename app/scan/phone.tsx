@@ -13,9 +13,9 @@ import {
   CaptureReviewScreen,
   PhoneCaptureFlow,
   type PhoneCaptureMode,
-} from "@/features/phoneCapture";
-import { useScanJob } from "@/features/scanner/useScanJob";
-import type { OcrSuggestion, PhotometricCapture } from "@/types/domain";
+} from "@/presentation/features/phoneCapture";
+import { useScanJob } from "@/presentation/features/scanner/useScanJob";
+import type { OcrSuggestion, PhotometricCapture } from "@/domain";
 
 export default function PhoneScanScreen() {
   const params = useLocalSearchParams<{ mode?: string; marketCardId?: string }>();

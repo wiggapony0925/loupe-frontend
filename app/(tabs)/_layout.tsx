@@ -2,8 +2,8 @@ import React from "react";
 import { useColorScheme } from "react-native";
 import { Tabs } from "expo-router";
 import { Gauge, Layers, BarChart3, Search } from "lucide-react-native";
-import { palette } from "@/theme/tokens";
-import { useSettings } from "@/store/settingsStore";
+import { palette } from "@/presentation/theme/tokens";
+import { useSettings } from "@/application/stores/settingsStore";
 
 export default function TabsLayout() {
   // Subscribe to theme so the screenOptions object below is rebuilt with

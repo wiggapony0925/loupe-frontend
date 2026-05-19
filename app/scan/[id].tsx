@@ -12,8 +12,8 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { SkeletonCardDetailPage } from "@/components/ui/Skeletons";
-import { palette } from "@/theme/tokens";
+import { SkeletonCardDetailPage } from "@/presentation/components/Skeletons";
+import { palette } from "@/presentation/theme/tokens";
 
 export default function ScanDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

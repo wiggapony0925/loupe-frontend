@@ -14,22 +14,22 @@ import React from "react";
 import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@/hooks/api/queryKeys";
-import { fetchCardSparklines, fetchCollection } from "@/api/forensicApi";
-import { GradeBars, HoldingRow, PortfolioChart } from "@/features/analytics";
-import { LiveAnalyticsCard } from "@/features/analytics/LiveAnalyticsCard";
+import { queryKeys } from "@/application/queries/queryKeys";
+import { fetchCardSparklines, fetchCollection } from "@/infrastructure/repositories/forensicRepository";
+import { GradeBars, HoldingRow, PortfolioChart } from "@/presentation/features/analytics";
+import { LiveAnalyticsCard } from "@/presentation/features/analytics/LiveAnalyticsCard";
 import {
   ConcentrationCard,
   SetIndexes,
   StatsGrid,
   YearDistribution,
-} from "@/features/analytics/MarketSegments";
-import { SectionHeader } from "@/components/ui/SectionHeader";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { ErrorState } from "@/components/ui/ErrorState";
-import { COPY } from "@/lib/copy";
-import { normalizeError } from "@/lib/errors";
-import { useThemedPalette } from "@/theme/tokens";
+} from "@/presentation/features/analytics/MarketSegments";
+import { SectionHeader } from "@/presentation/components/SectionHeader";
+import { Skeleton } from "@/presentation/components/Skeleton";
+import { ErrorState } from "@/presentation/components/ErrorState";
+import { COPY } from "@/shared/copy";
+import { normalizeError } from "@/shared/errors";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 
 export default function AnalyticsScreen() {
   useThemedPalette();

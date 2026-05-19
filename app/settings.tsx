@@ -23,11 +23,11 @@ import {
   Wand2,
   type LucideIcon,
 } from "lucide-react-native";
-import { useSettings, type Currency, type ThemeMode } from "@/store/settingsStore";
-import { CurrencyPickerSheet } from "@/components/ui/CurrencyPickerSheet";
-import { getCurrency } from "@/lib/currency";
-import { palette, useThemedPalette } from "@/theme/tokens";
-import { useAuth } from "@/providers/AuthProvider";
+import { useSettings, type Currency, type ThemeMode } from "@/application/stores/settingsStore";
+import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
+import { getCurrency } from "@/shared/currency";
+import { palette, useThemedPalette } from "@/presentation/theme/tokens";
+import { useAuth } from "@/presentation/providers/AuthProvider";
 
 type PageKey = "menu" | "general" | "appearance" | "legal" | "about";
 

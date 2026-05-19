@@ -13,10 +13,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react-native";
-import { fetchReport } from "@/api/forensicApi";
-import { gradeColor, palette, useThemedPalette } from "@/theme/tokens";
-import { compactUsd } from "@/lib/format";
-import type { ForensicReport, ForensicScore } from "@/types/domain";
+import { fetchReport } from "@/infrastructure/repositories/forensicRepository";
+import { gradeColor, palette, useThemedPalette } from "@/presentation/theme/tokens";
+import { compactUsd } from "@/shared/format";
+import type { ForensicReport, ForensicScore } from "@/domain";
 
 export default function CompareScreen() {
   useThemedPalette();
@@ -41,7 +41,25 @@ export default function CompareScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}>
-        {ra.isLoading || rb.isLoading || !ra.data || !rb.data ? (
+        {ra.isError || rb.isError ? (
+          <View className="rounded-2xl border border-line bg-bg-elevated p-5">
+            <Text className="text-base font-semibold text-ink">Couldn't load report</Text>
+            <Text className="mt-1 text-[12px] text-ink-muted">
+              One or both reports failed to fetch. Pull to retry from the previous screen.
+            </Text>
+            <Pressable
+              onPress={() => {
+                ra.refetch();
+                rb.refetch();
+              }}
+              hitSlop={8}
+              className="mt-3 self-start rounded-full border border-line px-3 py-1.5"
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+            >
+              <Text className="text-[12px] font-semibold text-ink">Retry</Text>
+            </Pressable>
+          </View>
+        ) : ra.isLoading || rb.isLoading || !ra.data || !rb.data ? (
           <View className="items-center py-20">
             <ActivityIndicator color={palette.accent.mint} />
           </View>

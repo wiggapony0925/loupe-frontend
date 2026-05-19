@@ -39,11 +39,11 @@ import {
   X,
   Zap,
 } from "lucide-react-native";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { useThemedPalette, withAlpha } from "@/theme/tokens";
-import { useScanner } from "@/features/scanner/useScanner";
-import { pairScanner } from "@/api/forensicApi";
+import { GlassCard } from "@/presentation/components/GlassCard";
+import { PrimaryButton } from "@/presentation/components/PrimaryButton";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useScanner } from "@/presentation/features/scanner/useScanner";
+import { pairScanner } from "@/infrastructure/repositories/forensicRepository";
 
 type Stage = "welcome" | "prepare" | "searching" | "success" | "error";
 

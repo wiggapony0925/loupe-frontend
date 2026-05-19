@@ -8,10 +8,10 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Mail, UserPlus } from "lucide-react-native";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { AuthScreen } from "@/features/auth/AuthScreen";
-import { AuthFooter } from "@/features/auth/AuthFooter";
-import { useThemedPalette } from "@/theme/tokens";
+import { PrimaryButton } from "@/presentation/components/PrimaryButton";
+import { AuthScreen } from "@/presentation/features/auth/AuthScreen";
+import { AuthFooter } from "@/presentation/features/auth/AuthFooter";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 
 export default function WelcomeScreen() {
   const p = useThemedPalette();

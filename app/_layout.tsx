@@ -7,13 +7,13 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
-import { AppProviders } from "@/providers/AppProviders";
-import { useAuth } from "@/providers/AuthProvider";
-import { BrandSplash } from "@/components/brand/BrandSplash";
-import { NetworkBanner } from "@/components/ui/NetworkBanner";
-import { useSettings } from "@/store/settingsStore";
-import { applyTheme, palette } from "@/theme/tokens";
-import { initSentry } from "@/lib/sentry";
+import { AppProviders } from "@/presentation/providers/AppProviders";
+import { useAuth } from "@/presentation/providers/AuthProvider";
+import { BrandSplash } from "@/presentation/brand/BrandSplash";
+import { NetworkBanner } from "@/presentation/components/NetworkBanner";
+import { useSettings } from "@/application/stores/settingsStore";
+import { applyTheme, palette } from "@/presentation/theme/tokens";
+import { initSentry } from "@/infrastructure/observability/sentry";
 
 // Fire Sentry init once at module evaluation. The helper is a graceful
 // no-op when EXPO_PUBLIC_SENTRY_DSN is unset, so dev builds stay zero-config.
@@ -124,6 +124,10 @@ function RootStack() {
       />
       <Stack.Screen
         name="settings"
+        options={{ presentation: "card", animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="notifications"
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
     </Stack>
