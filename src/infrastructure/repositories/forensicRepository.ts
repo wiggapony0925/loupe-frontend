@@ -13,6 +13,7 @@ import type {
   PricePoint,
 } from "@/domain";
 import { ApiError, api } from "@/infrastructure/http/apiClient";
+import type { PortfolioSummaryWire } from "@/infrastructure/http";
 
 /* ─── Wire shapes (mirror loupe-backend/app/schemas) ─────────────────── */
 
@@ -47,13 +48,6 @@ interface ScannerWire {
   is_active: boolean;
   last_seen_at: string | null;
   created_at: string;
-}
-
-interface PortfolioSummaryWire {
-  totalValueUsd: number;
-  cardCount: number;
-  avgGrade: number | null;
-  avgAccuracy: number | null;
 }
 
 interface PortfolioHistoryWire {
@@ -149,6 +143,15 @@ export interface CollectionSummary {
    * comparisons). Always `null` for now — UI should hide or render "—".
    */
   avgAccuracy: number | null;
+  /**
+   * Cost-basis aggregates. `null` until the user records a purchase
+   * price on at least one card; UI must hide P/L chip in that case
+   * rather than show "+$0.00 (+0%)".
+   */
+  totalCostUsd: number | null;
+  costBasisCardCount: number;
+  unrealizedPnlUsd: number | null;
+  unrealizedPnlPct: number | null;
 }
 
 export async function fetchCollectionSummary(): Promise<CollectionSummary> {

@@ -43,6 +43,8 @@ import { useCardComps } from "@/application/queries/useCardComps";
 import { CardImage } from "@/presentation/components/CardImage";
 import { Price } from "@/presentation/components/Price";
 import { QueryState } from "@/presentation/components/QueryState";
+import { PriceAlertSheet } from "@/presentation/features/alerts/PriceAlertSheet";
+import { EbaySoldListingsPanel } from "@/presentation/features/market/EbaySoldListingsPanel";
 import {
   SkeletonCardDetailPage,
   SkeletonCompsList,
@@ -115,6 +117,7 @@ export default function CardDetailScreen() {
   const [range, setRange] = useState<RangeKey>("1Y");
   const [house, setHouse] = useState<HouseId | "all">("all");
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
 
   const card = cardQ.data;
   const snapshot = marketQ.data?.snapshot;
@@ -152,7 +155,7 @@ export default function CardDetailScreen() {
           <IconBtn label="Save to watchlist">
             <Heart size={16} color={p.ink.muted} />
           </IconBtn>
-          <IconBtn label="Set price alert">
+          <IconBtn label="Set price alert" onPress={() => setAlertOpen(true)}>
             <Bell size={16} color={p.ink.muted} />
           </IconBtn>
         </View>
@@ -356,6 +359,7 @@ export default function CardDetailScreen() {
               {/* Live listings + recent comps (real data, gracefully empty) */}
               <LiveListingsSection cardId={cardId} />
               <RecentCompsSection cardId={cardId} />
+              <EbaySoldListingsPanel cardId={cardId} cardName={card?.name ?? null} />
 
               {/* 10. Collapsible card details */}
               <Pressable
@@ -387,6 +391,13 @@ export default function CardDetailScreen() {
           ) : null}
         </QueryState>
       </ScrollView>
+      <PriceAlertSheet
+        cardId={cardId}
+        cardName={card?.name ?? null}
+        currentPriceUsd={snapshot?.summary.pop_top?.amount ?? null}
+        visible={alertOpen}
+        onClose={() => setAlertOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -396,18 +407,22 @@ export default function CardDetailScreen() {
 function IconBtn({
   children,
   label,
+  onPress,
 }: {
   children: React.ReactNode;
   label?: string;
+  onPress?: () => void;
 }) {
   return (
-    <View
+    <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={8}
       className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
     >
       {children}
-    </View>
+    </Pressable>
   );
 }
 

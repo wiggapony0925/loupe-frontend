@@ -25,6 +25,12 @@ export const queryKeys = {
     profile: () => ["me"] as const,
     grades: () => ["me", "grades"] as const,
   },
+  portfolio: {
+    all: ["portfolio"] as const,
+    summary: () => ["portfolio", "summary"] as const,
+    history: (timeframe: string) => ["portfolio", "history", timeframe] as const,
+    sparklines: () => ["portfolio", "sparklines"] as const,
+  },
   cards: {
     all: ["cards"] as const,
     item: (id: string) => ["cards", "item", id] as const,
@@ -61,6 +67,7 @@ export const queryKeys = {
   sets: {
     all: ["sets"] as const,
     list: (tcg: TcgOrAll) => ["sets", tcg] as const,
+    progress: () => ["sets", "progress"] as const,
   },
   scans: {
     all: ["scans"] as const,
@@ -73,5 +80,14 @@ export const queryKeys = {
   collection: {
     all: ["collection"] as const,
     list: () => ["collection"] as const,
+  },
+  alerts: {
+    all: ["alerts"] as const,
+    list: (pending: boolean) => ["alerts", "list", pending] as const,
+  },
+  marketIndex: {
+    all: ["market-index"] as const,
+    history: (indexId: string, range: string) =>
+      ["market-index", indexId, range] as const,
   },
 } as const;

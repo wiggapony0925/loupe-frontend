@@ -80,27 +80,8 @@ export function Sparkline({
 
 /**
  * Generates a deterministic short price walk for sparkline rendering.
- * Seeds off any string id so the same card always draws the same line.
+ *
+ * @deprecated Import `seededWalk` from `@/domain/charts` instead. This
+ * re-export exists only for back-compat with existing call sites.
  */
-export function seededWalk(seedKey: string, anchor: number, length = 24): number[] {
-  let h = 2166136261;
-  for (let i = 0; i < seedKey.length; i++) {
-    h ^= seedKey.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  let seed = (h >>> 0) || 1;
-  const rand = () => {
-    seed = (seed * 9301 + 49297) % 233280;
-    return seed / 233280;
-  };
-  const out: number[] = [];
-  let price = anchor * (0.85 + rand() * 0.1);
-  for (let i = 0; i < length; i++) {
-    const drift = 1 + (rand() - 0.45) * 0.07;
-    price = Math.max(anchor * 0.5, price * drift);
-    out.push(price);
-  }
-  // Anchor the last value to the current price so the chip matches reality.
-  out[out.length - 1] = anchor;
-  return out;
-}
+export { seededWalk } from "@/domain/charts";

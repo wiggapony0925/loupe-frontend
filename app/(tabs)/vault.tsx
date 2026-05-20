@@ -17,6 +17,7 @@ import { CardThumbnail } from "@/presentation/features/collection/CardThumbnail"
 import { FilterBar } from "@/presentation/features/collection/FilterBar";
 import { LiveGradesSection } from "@/presentation/features/collection/LiveGradesSection";
 import { PositionRow } from "@/presentation/features/collection/PositionRow";
+import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { useFilteredCollection } from "@/presentation/features/collection/useFilteredCollection";
 import { fetchCardSparklines, type CardSparkline } from "@/infrastructure/repositories/forensicRepository";
 import { Skeleton } from "@/presentation/components/Skeleton";
@@ -119,6 +120,7 @@ export default function VaultScreen() {
           <View className="gap-5 pb-4" style={{ paddingHorizontal: headerPadX }}>
             <SectionHeader eyebrow="Collection" title="The Vault" />
             <LiveGradesSection />
+            <SetProgressCarousel />
             <PortfolioPills stats={stats} />
             <FilterBar />
             <ViewModeToggle value={viewMode} onChange={setViewMode} />

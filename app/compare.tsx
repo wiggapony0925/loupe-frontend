@@ -8,7 +8,7 @@
  * deltas. Designed to help collectors decide which copy to keep / sell.
  */
 import React from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ import { ChevronLeft } from "lucide-react-native";
 import { fetchReport } from "@/infrastructure/repositories/forensicRepository";
 import { gradeColor, palette, useThemedPalette } from "@/presentation/theme/tokens";
 import { compactUsd } from "@/shared/format";
+import { SkeletonComparePage } from "@/presentation/components/Skeletons";
 import type { ForensicReport, ForensicScore } from "@/domain";
 
 export default function CompareScreen() {
@@ -59,9 +60,17 @@ export default function CompareScreen() {
               <Text className="text-[12px] font-semibold text-ink">Retry</Text>
             </Pressable>
           </View>
-        ) : ra.isLoading || rb.isLoading || !ra.data || !rb.data ? (
-          <View className="items-center py-20">
-            <ActivityIndicator color={palette.accent.mint} />
+        ) : ra.isLoading || rb.isLoading ? (
+          <SkeletonComparePage />
+        ) : !ra.data || !rb.data ? (
+          <View className="rounded-2xl border border-line bg-bg-elevated p-5">
+            <Text className="text-base font-semibold text-ink">
+              Report unavailable
+            </Text>
+            <Text className="mt-1 text-[12px] text-ink-muted">
+              One or both reports returned no data. They may have been deleted
+              or not yet generated.
+            </Text>
           </View>
         ) : (
           <>

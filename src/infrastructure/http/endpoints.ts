@@ -48,10 +48,14 @@ export const ENDPOINTS = {
   },
   sets: {
     list: `${V1}/sets`,
+    progress: `${V1}/sets/progress`,
   },
   grades: {
     mine: `${V1}/grades`,
     item: (id: string) => `${V1}/grades/${id}`,
+    summary: `${V1}/grades/summary`,
+    history: `${V1}/grades/history`,
+    sparklines: `${V1}/grades/sparklines`,
   },
   collections: {
     list: `${V1}/collections`,
@@ -59,6 +63,15 @@ export const ENDPOINTS = {
   },
   providers: {
     status: `${V1}/providers/status`,
+  },
+  alerts: {
+    list: `${V1}/alerts`,
+    create: `${V1}/alerts`,
+    item: (id: string) => `${V1}/alerts/${id}`,
+  },
+  market: {
+    indexHistory: (indexId: string) =>
+      `${V1}/market/indices/${indexId}/history`,
   },
   ws: {
     scans: "/ws/scans",

@@ -439,3 +439,104 @@ export function SkeletonTrendingGrid({ count = 6 }: { count?: number }) {
     </View>
   );
 }
+
+/**
+ * Skeleton for `/compare` — mirrors the two-column ReportColumn layout
+ * (image with 2.5:3.5 aspect, title, sub-set, big grade row, four
+ * score lines) plus the delta strip beneath.
+ */
+export function SkeletonComparePage() {
+  return (
+    <View style={{ gap: 20 }}>
+      <View style={{ flexDirection: "row", gap: 12 }}>
+        {[0, 1].map((i) => (
+          <View
+            key={i}
+            style={{ flex: 1, gap: 12, padding: 12, borderRadius: 16 }}
+          >
+            <View style={{ aspectRatio: 2.5 / 3.5, width: "100%" }}>
+              <SkeletonImage width="100%" height="100%" radius={12} />
+            </View>
+            <View style={{ gap: 6 }}>
+              <SkeletonText width="85%" height={14} />
+              <SkeletonText width="55%" height={11} />
+            </View>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+            >
+              <SkeletonText width={60} height={28} />
+              <SkeletonText width={48} height={12} />
+            </View>
+            <View style={{ gap: 6 }}>
+              {Array.from({ length: 4 }).map((_, k) => (
+                <SkeletonKVRow key={k} />
+              ))}
+            </View>
+          </View>
+        ))}
+      </View>
+      {/* Delta strip */}
+      <View style={{ gap: 8 }}>
+        <SkeletonText width="35%" height={11} />
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <View key={i} style={{ flex: 1 }}>
+              <SkeletonStatTile />
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Skeleton for the legacy `/market/[id]` route — hero image + title,
+ * big chart placeholder, condition toggle, market stats grid. Used
+ * while the market-card payload streams in so the page never collapses
+ * to a single spinner.
+ */
+export function SkeletonMarketDetailPage() {
+  return (
+    <View style={{ gap: 20, paddingHorizontal: 20, paddingTop: 8 }}>
+      {/* Hero */}
+      <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
+        <SkeletonImage width={96} height={134} radius={12} />
+        <View style={{ flex: 1, gap: 8 }}>
+          <SkeletonText width="60%" height={10} />
+          <SkeletonText width="90%" height={20} />
+          <SkeletonText width="70%" height={20} />
+          <SkeletonPill width={90} height={20} />
+        </View>
+      </View>
+      {/* Big price + delta */}
+      <View style={{ gap: 8 }}>
+        <SkeletonText width="55%" height={36} />
+        <SkeletonText width="35%" height={12} />
+      </View>
+      {/* Chart */}
+      <SkeletonChart height={200} />
+      {/* Range pills */}
+      <SkeletonChipRow count={7} />
+      {/* Condition toggle */}
+      <View
+        style={{ flexDirection: "row", gap: 0, borderRadius: 12, overflow: "hidden" }}
+      >
+        {Array.from({ length: 3 }).map((_, i) => (
+          <View key={i} style={{ flex: 1 }}>
+            <SkeletonStatTile />
+          </View>
+        ))}
+      </View>
+      {/* Stat grid */}
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <SkeletonStatTile />
+        <SkeletonStatTile />
+      </View>
+      {/* Comps rail */}
+      <SkeletonText width="40%" height={11} />
+      <SkeletonListingsRail rows={4} />
+    </View>
+  );
+}
+

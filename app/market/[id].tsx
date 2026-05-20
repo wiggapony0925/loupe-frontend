@@ -54,6 +54,9 @@ import {
 import { compactUsd } from "@/shared/format";
 import { clampLabelX, monotoneCubic, nearestIndex } from "@/shared/chart";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { SkeletonMarketDetailPage } from "@/presentation/components/Skeletons";
+import { EmptyState } from "@/presentation/components/EmptyState";
+import { ErrorState } from "@/presentation/components/ErrorState";
 
 const RANGES: MarketRange[] = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
 const CHART_HEIGHT = 200;
@@ -133,6 +136,25 @@ export default function MarketDetailScreen() {
         contentContainerStyle={{ paddingBottom: 140 }}
         showsVerticalScrollIndicator={false}
       >
+        {market.isLoading && !data ? (
+          <SkeletonMarketDetailPage />
+        ) : market.isError ? (
+          <View style={{ padding: 20 }}>
+            <ErrorState
+              title="Couldn't load market"
+              message="Pull to retry, or check your connection."
+              onRetry={() => market.refetch()}
+            />
+          </View>
+        ) : !data ? (
+          <View style={{ padding: 20 }}>
+            <EmptyState
+              title="Card not found"
+              message="We couldn't find this card in the catalog."
+            />
+          </View>
+        ) : (
+        <>
         {/* Hero — image + headline */}
         <View className="px-5 pt-2">
           <View className="flex-row items-center gap-4">
@@ -325,6 +347,8 @@ export default function MarketDetailScreen() {
             </View>
           </View>
         ) : null}
+        </>
+        )}
       </ScrollView>
 
       {/* Sticky CTA — "I have this card → Grade it" */}

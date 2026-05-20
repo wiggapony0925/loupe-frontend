@@ -73,7 +73,11 @@ export default function CommandCenterScreen() {
       >
         <Header />
 
-        <PortfolioChart fallbackTotal={summary.data?.totalValueUsd ?? 0} />
+        <PortfolioChart
+          fallbackTotal={summary.data?.totalValueUsd ?? 0}
+          costBasisUsd={summary.data?.totalCostUsd ?? null}
+          showPsa10Overlay
+        />
 
         <View>
           <SectionHeader
@@ -106,15 +110,32 @@ export default function CommandCenterScreen() {
                   value={compactUsd(summary.data.totalValueUsd)}
                   accent={palette.accent.mint}
                 />
-                <KpiPill
-                  label="Accuracy"
-                  value={
-                    summary.data.avgAccuracy != null
-                      ? `${(summary.data.avgAccuracy * 100).toFixed(1)}%`
-                      : "—"
-                  }
-                  accent={palette.accent.blue}
-                />
+                {summary.data.unrealizedPnlUsd != null &&
+                summary.data.unrealizedPnlPct != null ? (
+                  <KpiPill
+                    label="P/L"
+                    value={`${
+                      summary.data.unrealizedPnlUsd >= 0 ? "+" : ""
+                    }${compactUsd(summary.data.unrealizedPnlUsd)} (${
+                      summary.data.unrealizedPnlPct >= 0 ? "+" : ""
+                    }${summary.data.unrealizedPnlPct.toFixed(1)}%)`}
+                    accent={
+                      summary.data.unrealizedPnlUsd >= 0
+                        ? palette.accent.mint
+                        : palette.accent.rose
+                    }
+                  />
+                ) : (
+                  <KpiPill
+                    label="Accuracy"
+                    value={
+                      summary.data.avgAccuracy != null
+                        ? `${(summary.data.avgAccuracy * 100).toFixed(1)}%`
+                        : "—"
+                    }
+                    accent={palette.accent.blue}
+                  />
+                )}
                 <KpiPill
                   label="Scans"
                   value={

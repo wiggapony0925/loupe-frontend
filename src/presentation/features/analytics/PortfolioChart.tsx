@@ -31,26 +31,53 @@ import Svg, {
   Stop,
 } from "react-native-svg";
 import { ChevronDown } from "lucide-react-native";
-import { useQuery } from "@tanstack/react-query";
-import { fetchPortfolioHistory, type PortfolioRange } from "@/infrastructure/repositories/forensicRepository";
+import { usePortfolioHistory, useMarketIndex } from "@/application/queries";
+import {
+  PORTFOLIO_TIMEFRAMES,
+  clampLabelX,
+  monotoneCubic,
+  nearestIndex,
+  type PortfolioTimeframe,
+} from "@/domain/charts";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { compactUsd } from "@/shared/format";
 import { getCurrency } from "@/shared/currency";
 import { useSettings } from "@/application/stores/settingsStore";
 import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
-import { clampLabelX, monotoneCubic, nearestIndex } from "@/shared/chart";
 
-const RANGES: PortfolioRange[] = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
+/** @deprecated Use `PortfolioTimeframe` from `@/domain/charts`. */
+type PortfolioRange = PortfolioTimeframe;
+
+const RANGES = PORTFOLIO_TIMEFRAMES;
 const CHART_HEIGHT = 200;
 
 interface PortfolioChartProps {
   /** Live total to anchor the right-edge value when the API is loading. */
   fallbackTotal?: number;
+  /**
+   * Total purchase cost across cards with recorded cost basis. When
+   * provided (non-null), a "vs Cost" toggle appears next to the delta
+   * chip and shows unrealized P/L against cost instead of the period
+   * start. Pass `null` (or omit) when the user has not recorded any
+   * purchase prices yet — the toggle stays hidden.
+   */
+  costBasisUsd?: number | null;
+  /**
+   * When true, overlays the normalized PSA-10 cohort index as a faded
+   * dashed line behind the portfolio line. Both series share the same
+   * starting baseline so the gap between them at any point is the
+   * portfolio's outperformance vs. the broader PSA-10 market.
+   */
+  showPsa10Overlay?: boolean;
 }
 
-export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
+export function PortfolioChart({
+  fallbackTotal = 0,
+  costBasisUsd = null,
+  showPsa10Overlay = false,
+}: PortfolioChartProps) {
   const p = useThemedPalette();
-  const [range, setRange] = useState<PortfolioRange>("1Y");
+  const [range, setRange] = useState<PortfolioTimeframe>("1Y");
   const [width, setWidth] = useState(0);
   const currency = useSettings((s) => s.currency);
   const setCurrency = useSettings((s) => s.setCurrency);
@@ -58,11 +85,24 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
   const ccyMeta = getCurrency(currency);
   const ccyTint = ccyMeta.kind === "crypto" ? p.accent.amber : p.accent.mint;
   const [scrub, setScrub] = useState<number | null>(null);
+  // Hero delta basis: "period" (vs first point on the chart) or "cost"
+  // (vs user's recorded purchase price across all cards). Defaults to
+  // period so the chart still behaves like Robinhood when no cost basis
+  // is recorded; clicking "vs Cost" gives a true unrealized P/L view
+  // that no Robinhood-style competitor ships out of the box.
+  const hasCost = costBasisUsd != null && costBasisUsd > 0;
+  const [basis, setBasis] = useState<"period" | "cost">("period");
+  useEffect(() => {
+    // If cost basis disappears (user deleted last cost-recorded card),
+    // snap back to "period" so the chip doesn't show stale state.
+    if (!hasCost && basis === "cost") setBasis("period");
+  }, [hasCost, basis]);
 
-  const history = useQuery({
-    queryKey: ["portfolio-history", range],
-    queryFn: () => fetchPortfolioHistory(range),
-    staleTime: 60_000,
+  const history = usePortfolioHistory({ timeframe: range });
+  const overlay = useMarketIndex({
+    indexId: "psa10",
+    range,
+    enabled: showPsa10Overlay,
   });
 
   const data = history.data;
@@ -90,13 +130,56 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
     return { pathLine, pathArea, baselineY: yScale(points[0]!.priceUsd), coords };
   }, [points, width]);
 
+  // PSA-10 overlay path. Reuses the portfolio's x-domain (index → x) and
+  // y-scale (so the overlay line is visually comparable). Each index
+  // value is converted to "portfolio-equivalent dollars" by scaling the
+  // normalized series (first point = 100) up to the portfolio's first
+  // value. That guarantees both lines start at the same baselineY and
+  // the vertical gap at any later x reads as relative outperformance.
+  const overlayPath = useMemo(() => {
+    if (
+      !showPsa10Overlay ||
+      !points ||
+      points.length < 2 ||
+      width === 0 ||
+      !overlay.data ||
+      overlay.data.points.length < 2
+    ) {
+      return "";
+    }
+    const portfolioFirst = points[0]!.priceUsd;
+    if (portfolioFirst <= 0) return "";
+    const ys = points.map((pt) => pt.priceUsd);
+    const lo = Math.min(...ys);
+    const hi = Math.max(...ys);
+    const PAD_Y = 18;
+    const yScale = (v: number) => {
+      if (hi === lo) return CHART_HEIGHT / 2;
+      return PAD_Y + (1 - (v - lo) / (hi - lo)) * (CHART_HEIGHT - PAD_Y * 2);
+    };
+    const op = overlay.data.points;
+    const xScale = (i: number) => (i / (op.length - 1)) * width;
+    const overlayCoords = op.map((pt, i) => {
+      const equivUsd = (pt.indexValue / 100) * portfolioFirst;
+      return [xScale(i), yScale(equivUsd)] as const;
+    });
+    return monotoneCubic(overlayCoords);
+  }, [showPsa10Overlay, overlay.data, points, width]);
+
   const latestVal = points?.[points.length - 1]?.priceUsd ?? fallbackTotal;
   const firstVal = points?.[0]?.priceUsd ?? latestVal;
 
   const scrubIdx = scrub !== null && coords.length > 0 ? nearestIndex(scrub, coords) : null;
   const displayVal = scrubIdx !== null ? points![scrubIdx]!.priceUsd : latestVal;
-  const displayDeltaUsd = displayVal - firstVal;
-  const displayDeltaPct = firstVal > 0 ? (displayDeltaUsd / firstVal) * 100 : 0;
+  // Delta basis. "period" uses the first point on the visible chart so
+  // the % matches the active timeframe (Robinhood behavior). "cost"
+  // uses the user's total purchase price so the chip shows true
+  // unrealized P/L regardless of timeframe. We swap silently if cost
+  // basis is missing to avoid a divide-by-zero "NaN%" flash.
+  const basisVal =
+    basis === "cost" && hasCost ? (costBasisUsd as number) : firstVal;
+  const displayDeltaUsd = displayVal - basisVal;
+  const displayDeltaPct = basisVal > 0 ? (displayDeltaUsd / basisVal) * 100 : 0;
   const up = displayDeltaUsd >= 0;
   const tint = up ? p.accent.mint : p.accent.rose;
 
@@ -190,8 +273,46 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
             {displayDeltaPct.toFixed(2)}%)
           </Text>
           <Text className="text-sm text-ink-muted">
-            {scrubLabel ? formatScrubDate(scrubLabel, range) : labelForRange(range)}
+            {scrubLabel
+              ? formatScrubDate(scrubLabel, range)
+              : basis === "cost"
+              ? "vs Cost"
+              : labelForRange(range)}
           </Text>
+          {hasCost ? (
+            <BasisToggle basis={basis} tint={tint} onChange={setBasis} />
+          ) : null}
+          {showPsa10Overlay && overlayPath ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                marginLeft: 4,
+              }}
+              accessibilityLabel="PSA-10 cohort index shown as faded dashed line"
+            >
+              <View
+                style={{
+                  width: 14,
+                  height: 1.5,
+                  borderRadius: 1,
+                  backgroundColor: p.ink.muted,
+                  opacity: 0.6,
+                }}
+              />
+              <Text
+                style={{
+                  color: p.ink.muted,
+                  fontSize: 10,
+                  fontWeight: "700",
+                  letterSpacing: 0.4,
+                }}
+              >
+                PSA 10
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -211,6 +332,20 @@ export function PortfolioChart({ fallbackTotal = 0 }: PortfolioChartProps) {
                 </SvgGradient>
               </Defs>
               <Path d={pathArea} fill="url(#portfolioFill)" />
+              {/* PSA-10 cohort overlay — drawn before the baseline + main
+                  line so it sits visually behind them. */}
+              {overlayPath ? (
+                <Path
+                  d={overlayPath}
+                  stroke={p.ink.muted}
+                  strokeWidth={1.25}
+                  strokeDasharray="3,3"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity={0.55}
+                />
+              ) : null}
               {/* Period-start baseline (Robinhood's signature dashed flat line) */}
               <Line
                 x1={0}
@@ -394,6 +529,54 @@ function RangePill({
 
 function getX(e: GestureResponderEvent): number {
   return e.nativeEvent.locationX;
+}
+
+/**
+ * Small pill that flips the hero delta between "vs period start" (the
+ * Robinhood default) and "vs Cost" (true unrealized P/L using the user's
+ * recorded purchase prices). Only mounted when cost basis is available.
+ */
+function BasisToggle({
+  basis,
+  tint,
+  onChange,
+}: {
+  basis: "period" | "cost";
+  tint: string;
+  onChange: (next: "period" | "cost") => void;
+}) {
+  const p = useThemedPalette();
+  const isCost = basis === "cost";
+  const label = isCost ? "vs Cost" : "vs Start";
+  return (
+    <Pressable
+      onPress={() => onChange(isCost ? "period" : "cost")}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityLabel={`Toggle delta basis. Currently ${label}.`}
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.7 : 1,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: isCost ? withAlpha(tint, 0.55) : withAlpha(p.ink.dim, 0.4),
+        backgroundColor: isCost ? withAlpha(tint, 0.14) : "transparent",
+        marginLeft: 4,
+      })}
+    >
+      <Text
+        style={{
+          color: isCost ? tint : p.ink.muted,
+          fontSize: 10,
+          fontWeight: "700",
+          letterSpacing: 0.5,
+        }}
+      >
+        {label.toUpperCase()}
+      </Text>
+    </Pressable>
+  );
 }
 
 /**

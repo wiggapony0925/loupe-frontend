@@ -18,3 +18,18 @@ export type { UseCardCompsOptions } from "./useCardComps";
 export { useProvidersStatus } from "./useProvidersStatus";
 export { useTopMovers } from "./useTopMovers";
 export type { TopMoverRow, UseTopMoversResult } from "./useTopMovers";
+export { usePortfolioHistory } from "./usePortfolioHistory";
+export type { UsePortfolioHistoryOptions } from "./usePortfolioHistory";
+export { useCardSparklines } from "./useCardSparklines";
+export type {
+  UseCardSparklinesOptions,
+  UseCardSparklinesResult,
+} from "./useCardSparklines";
+export { useSetProgress } from "./useSetProgress";
+export {
+  useCreatePriceAlert,
+  useDeletePriceAlert,
+  usePriceAlerts,
+} from "./usePriceAlerts";
+export { useMarketIndex } from "./useMarketIndex";
+export type { UseMarketIndexOptions } from "./useMarketIndex";

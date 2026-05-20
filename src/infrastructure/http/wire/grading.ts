@@ -35,6 +35,10 @@ export interface GradedCard {
   house: GradeHouse;
   subgrades: Record<string, unknown> | null;
   estimated_value_usd: DecimalString | null;
+  /** What the user paid for the card. `null` = no cost recorded. */
+  purchase_price_usd: DecimalString | null;
+  /** ISO date (YYYY-MM-DD) the user acquired the card. */
+  purchase_date: ISODate | null;
   fingerprint_hash: string | null;
   notes: string | null;
   graded_at: ISODate;
@@ -55,4 +59,60 @@ export interface FingerprintSummary {
   algorithm: "phash" | "dhash" | "ahash";
   similarity: number | null;
   matched_card_id: ID | null;
+}
+
+/* ─── Portfolio analytics (mirrors app/services/portfolio_service.py) ─── */
+
+/**
+ * Mirrors `portfolio_service.summary()`. Note: this endpoint returns
+ * camelCase keys (it predates the snake_case convention in CONTRACT.md).
+ */
+export interface PortfolioSummaryWire {
+  totalValueUsd: number;
+  cardCount: number;
+  avgGrade: number | null;
+  avgAccuracy: number | null;
+  /**
+   * Cost-basis aggregates. All four are `null` until the user records a
+   * purchase price on at least one card — the UI should hide the P/L
+   * chip in that case rather than show "+$0.00 (+0%)".
+   */
+  totalCostUsd: number | null;
+  costBasisCardCount: number;
+  unrealizedPnlUsd: number | null;
+  unrealizedPnlPct: number | null;
+}
+
+export type PortfolioRangeWire =
+  | "1D"
+  | "1W"
+  | "1M"
+  | "3M"
+  | "YTD"
+  | "1Y"
+  | "ALL";
+
+export interface PortfolioPointWire {
+  /** ISO date (UTC). */
+  date: ISODate;
+  /** USD value of the portfolio at this bucket. */
+  priceUsd: number;
+}
+
+/** Mirrors `portfolio_service.PortfolioHistory.to_dict()`. */
+export interface PortfolioHistoryWire {
+  range: PortfolioRangeWire;
+  points: PortfolioPointWire[];
+  deltaUsd: number;
+  deltaPct: number;
+}
+
+/** Mirrors `portfolio_service.CardSparkline.to_dict()`. */
+export interface CardSparklineWire {
+  /** The GradedCard.id (not the catalog card id). */
+  cardId: ID;
+  /** Real USD values, length 14, oldest → newest. */
+  points: number[];
+  /** First → last pct change, 0 when flat/empty. */
+  deltaPct: number;
 }

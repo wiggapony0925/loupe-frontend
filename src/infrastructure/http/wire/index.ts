@@ -14,3 +14,6 @@ export * from "./collection";
 export * from "./providers";
 export * from "./ws";
 export * from "./health";
+export * from "./setProgress";
+export * from "./alerts";
+export * from "./marketIndex";
