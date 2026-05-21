@@ -1,15 +1,17 @@
 /**
- * Portfolio statements — Amex-style PDF statements of the user's
- * collection, generated monthly or yearly and persisted to the user's
- * account for life.
+ * Portfolio statements — Amex-style auto-generated PDF archive.
  *
- * Visual language:
- *   - Hero "statement card" with embossed feel, mint accent, brand mark
- *     (Robinhood metal card / Amex Black Card vibe).
- *   - Segmented control for Monthly | Yearly (Robinhood pill segments).
- *   - Primary CTA pill (mint, full width) "Generate statement →".
- *   - List rows with leading status dot, monospace date, ghost download
- *     button. Subtle dividers, no heavy borders.
+ * Users never tap a "Generate" button. Statements close automatically
+ * on the 1st of each month (and Jan 1 for the annual) on the server;
+ * this screen just renders:
+ *
+ *   1. A hero "card" showing when the next monthly + annual statements
+ *      will close (so a brand-new account understands the cadence).
+ *   2. The user's archive of every statement that has already closed,
+ *      each downloadable forever.
+ *
+ * Visual language: embossed Amex/Robinhood metal-card vibe, mint accent,
+ * monospaced period chips, glow-dot status indicators.
  */
 
 import React from "react";
@@ -24,10 +26,13 @@ import {
 
 import {
   fetchReportDownloadUrl,
-  useGenerateReport,
   useReports,
+  useUpcomingReports,
 } from "@/application/queries";
-import type { UserReportWire } from "@/infrastructure/http";
+import type {
+  UpcomingReportWire,
+  UserReportWire,
+} from "@/infrastructure/http";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
@@ -38,28 +43,6 @@ const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
-const MONTH_ABBR = [
-  "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-  "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
-];
-
-type PeriodKind = "monthly" | "yearly";
-
-function lastMonth(): { year: number; month: number; long: string; short: string } {
-  const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  return {
-    year: d.getFullYear(),
-    month: d.getMonth() + 1,
-    long: `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`,
-    short: `${MONTH_ABBR[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`,
-  };
-}
-
-function lastYear(): { year: number; long: string; short: string } {
-  const y = new Date().getFullYear() - 1;
-  return { year: y, long: `${y}`, short: `${String(y).slice(-2)}` };
-}
 
 function formatSize(bytes: number | null): string {
   if (!bytes) return "—";
@@ -79,8 +62,31 @@ function formatDate(iso: string | null): string {
 
 function periodLabel(r: UserReportWire): string {
   const start = new Date(r.period_start);
-  if (r.period === "yearly") return String(start.getFullYear());
-  return `${MONTH_NAMES[start.getMonth()]} ${start.getFullYear()}`;
+  if (r.period === "yearly") return String(start.getUTCFullYear());
+  return `${MONTH_NAMES[start.getUTCMonth()]} ${start.getUTCFullYear()}`;
+}
+
+function relativeUntil(iso: string): string {
+  const target = new Date(iso).getTime();
+  const diffMs = target - Date.now();
+  if (diffMs <= 0) return "any moment now";
+  const days = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
+  if (days >= 60) {
+    const months = Math.round(days / 30);
+    return `in ~${months} months`;
+  }
+  if (days > 1) return `in ${days} days`;
+  if (days === 1) return "tomorrow";
+  const hours = Math.max(1, Math.ceil(diffMs / (60 * 60 * 1000)));
+  return `in ${hours}h`;
+}
+
+function formatCloseDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 // ─── component ───────────────────────────────────────────────────────────
@@ -88,31 +94,8 @@ function periodLabel(r: UserReportWire): string {
 export function ReportsSection() {
   const p = useThemedPalette();
   const list = useReports();
-  const gen = useGenerateReport();
-  const [kind, setKind] = React.useState<PeriodKind>("monthly");
+  const upcoming = useUpcomingReports();
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
-
-  const monthly = React.useMemo(() => lastMonth(), []);
-  const yearly = React.useMemo(() => lastYear(), []);
-
-  const onGenerate = React.useCallback(async () => {
-    try {
-      if (kind === "monthly") {
-        await gen.mutateAsync({
-          period: "monthly",
-          year: monthly.year,
-          month: monthly.month,
-        });
-      } else {
-        await gen.mutateAsync({ period: "yearly", year: yearly.year });
-      }
-    } catch (e) {
-      Alert.alert(
-        "Couldn't generate statement",
-        e instanceof Error ? e.message : "Please try again in a moment.",
-      );
-    }
-  }, [gen, kind, monthly, yearly]);
 
   const onDownload = React.useCallback(async (report: UserReportWire) => {
     setDownloadingId(report.id);
@@ -139,39 +122,19 @@ export function ReportsSection() {
   }, []);
 
   const reports = list.data ?? [];
+  const upcomingRows = upcoming.data ?? [];
+  const nextMonthly = upcomingRows.find((r) => r.period === "monthly");
+  const nextYearly = upcomingRows.find((r) => r.period === "yearly");
 
   return (
     <View>
       <SectionHeader eyebrow="Statements" title="Reports" />
 
-      <StatementHeroCard
-        kind={kind}
-        monthlyShort={monthly.short}
-        yearlyShort={yearly.short}
+      <NextStatementHeroCard
+        nextMonthly={nextMonthly}
+        nextYearly={nextYearly}
+        loading={upcoming.isLoading}
       />
-
-      <View className="mt-3">
-        <Segmented
-          value={kind}
-          onChange={setKind}
-          options={[
-            { value: "monthly", label: "Monthly" },
-            { value: "yearly", label: "Yearly" },
-          ]}
-        />
-      </View>
-
-      <View className="mt-3">
-        <PrimaryButton
-          label={
-            kind === "monthly"
-              ? `Generate ${monthly.long} statement`
-              : `Generate ${yearly.long} statement`
-          }
-          onPress={onGenerate}
-          busy={gen.isPending}
-        />
-      </View>
 
       <View className="mt-5">
         <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
@@ -182,7 +145,7 @@ export function ReportsSection() {
           {list.isLoading ? (
             <SkeletonList />
           ) : reports.length === 0 ? (
-            <EmptyState />
+            <EmptyState nextClose={nextMonthly?.closes_at ?? null} />
           ) : (
             <View
               className="overflow-hidden rounded-2xl border border-line"
@@ -210,17 +173,16 @@ export function ReportsSection() {
 
 // ─── hero card ───────────────────────────────────────────────────────────
 
-function StatementHeroCard({
-  kind,
-  monthlyShort,
-  yearlyShort,
+function NextStatementHeroCard({
+  nextMonthly,
+  nextYearly,
+  loading,
 }: {
-  kind: PeriodKind;
-  monthlyShort: string;
-  yearlyShort: string;
+  nextMonthly: UpcomingReportWire | undefined;
+  nextYearly: UpcomingReportWire | undefined;
+  loading: boolean;
 }) {
   const p = useThemedPalette();
-  const periodChip = kind === "monthly" ? monthlyShort : yearlyShort;
 
   return (
     <View
@@ -265,14 +227,26 @@ function StatementHeroCard({
             Loupe · Statement
           </Text>
           <View
-            className="rounded-md px-2 py-0.5"
+            className="flex-row items-center rounded-md px-2 py-0.5"
             style={{ backgroundColor: withAlpha(p.accent.mint, 0.12) }}
           >
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: p.accent.mint,
+                marginRight: 6,
+                shadowColor: p.accent.mint,
+                shadowOpacity: 0.7,
+                shadowRadius: 3,
+              }}
+            />
             <Text
               className="text-[10px] font-bold tracking-[2px]"
               style={{ color: p.accent.mint }}
             >
-              {periodChip}
+              AUTO
             </Text>
           </View>
         </View>
@@ -281,126 +255,55 @@ function StatementHeroCard({
           Your portfolio,{"\n"}on paper.
         </Text>
         <Text className="mt-2 text-xs leading-5 text-ink-muted">
-          A monthly or yearly PDF of your collection — total value, top
-          movers, grade mix, and full holdings. Saved to your account
-          forever.
+          We close your statement automatically at the end of every
+          month — just like a credit card. Open it any time, forever.
         </Text>
 
+        {/* Next-close panel */}
         <View
-          className="mt-5 flex-row items-center justify-between border-t pt-3"
-          style={{ borderColor: withAlpha(p.line.default, 0.6) }}
+          className="mt-5 rounded-xl border px-4 py-3"
+          style={{
+            borderColor: withAlpha(p.line.default, 0.6),
+            backgroundColor: withAlpha(p.bg.base, 0.4),
+          }}
         >
-          <View>
-            <Text className="text-[9px] uppercase tracking-[2px] text-ink-dim">
-              Member
+          {loading ? (
+            <>
+              <Skeleton width={140} height={11} />
+              <View className="h-1.5" />
+              <Skeleton width={200} height={14} />
+            </>
+          ) : nextMonthly ? (
+            <>
+              <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+                Next monthly statement
+              </Text>
+              <View className="mt-1 flex-row items-baseline justify-between">
+                <Text className="text-base font-semibold text-ink">
+                  {nextMonthly.label}
+                </Text>
+                <Text
+                  className="text-[11px] font-semibold"
+                  style={{ color: p.accent.mint }}
+                >
+                  Closes {relativeUntil(nextMonthly.closes_at)}
+                </Text>
+              </View>
+              <Text className="mt-0.5 text-[11px]" style={{ color: p.ink.muted }}>
+                Available {formatCloseDate(nextMonthly.closes_at)}
+                {nextYearly
+                  ? ` · Annual closes ${formatCloseDate(nextYearly.closes_at)}`
+                  : ""}
+              </Text>
+            </>
+          ) : (
+            <Text className="text-xs text-ink-muted">
+              Your next statement window will appear shortly.
             </Text>
-            <Text className="mt-0.5 text-xs font-semibold text-ink">
-              LOUPE COLLECTOR
-            </Text>
-          </View>
-          <View>
-            <Text className="text-[9px] uppercase tracking-[2px] text-ink-dim">
-              Period
-            </Text>
-            <Text
-              className="mt-0.5 text-right text-xs font-semibold"
-              style={{ color: p.accent.mint }}
-            >
-              {kind === "monthly" ? "MONTHLY" : "ANNUAL"}
-            </Text>
-          </View>
+          )}
         </View>
       </View>
     </View>
-  );
-}
-
-// ─── segmented control ───────────────────────────────────────────────────
-
-function Segmented<T extends string>({
-  value,
-  onChange,
-  options,
-}: {
-  value: T;
-  onChange: (v: T) => void;
-  options: { value: T; label: string }[];
-}) {
-  const p = useThemedPalette();
-  return (
-    <View
-      className="flex-row rounded-full border border-line p-1"
-      style={{ backgroundColor: p.bg.sunken }}
-    >
-      {options.map((opt) => {
-        const active = opt.value === value;
-        return (
-          <Pressable
-            key={opt.value}
-            onPress={() => onChange(opt.value)}
-            className="flex-1 items-center justify-center rounded-full py-2"
-            style={{
-              backgroundColor: active ? p.bg.elevated : "transparent",
-              shadowColor: active ? "#000" : "transparent",
-              shadowOpacity: active ? 0.25 : 0,
-              shadowRadius: active ? 6 : 0,
-              shadowOffset: { width: 0, height: 2 },
-              elevation: active ? 2 : 0,
-            }}
-          >
-            <Text
-              className="text-xs font-semibold"
-              style={{ color: active ? p.ink.default : p.ink.muted }}
-            >
-              {opt.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-// ─── primary CTA ─────────────────────────────────────────────────────────
-
-function PrimaryButton({
-  label,
-  onPress,
-  busy,
-}: {
-  label: string;
-  onPress: () => void;
-  busy: boolean;
-}) {
-  const p = useThemedPalette();
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={busy}
-      className="flex-row items-center justify-center rounded-full px-5 py-3.5"
-      style={{
-        backgroundColor: busy ? withAlpha(p.accent.mint, 0.5) : p.accent.mint,
-      }}
-    >
-      {busy ? (
-        <>
-          <ActivityIndicator color={p.bg.base} />
-          <Text
-            className="ml-2 text-sm font-bold"
-            style={{ color: p.bg.base }}
-          >
-            Generating…
-          </Text>
-        </>
-      ) : (
-        <Text
-          className="text-sm font-bold tracking-wide"
-          style={{ color: p.bg.base }}
-        >
-          {label}  →
-        </Text>
-      )}
-    </Pressable>
   );
 }
 
@@ -474,7 +377,7 @@ function ReportRow({
             className="text-[11px] font-bold tracking-wide"
             style={{ color: ready ? p.accent.mint : p.ink.dim }}
           >
-            {ready ? "DOWNLOAD" : statusLabel.toUpperCase()}
+            {ready ? "OPEN" : statusLabel.toUpperCase()}
           </Text>
         )}
       </Pressable>
@@ -501,7 +404,7 @@ function SkeletonList() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ nextClose }: { nextClose: string | null }) {
   const p = useThemedPalette();
   return (
     <View
@@ -526,7 +429,9 @@ function EmptyState() {
         No statements yet
       </Text>
       <Text className="mt-1 text-center text-[11px] text-ink-muted">
-        Generate one to start your archive.{"\n"}Your statements live with your account forever.
+        {nextClose
+          ? `Your first statement will be ready on ${formatCloseDate(nextClose)}.\nIt'll show up here automatically — nothing to tap.`
+          : "Your first statement will close at the end of this month.\nIt'll show up here automatically."}
       </Text>
     </View>
   );

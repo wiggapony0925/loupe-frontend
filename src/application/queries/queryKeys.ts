@@ -88,6 +88,7 @@ export const queryKeys = {
   reports: {
     all: ["reports"] as const,
     list: () => ["reports", "list"] as const,
+    upcoming: () => ["reports", "upcoming"] as const,
     item: (id: string) => ["reports", "item", id] as const,
   },
   marketIndex: {

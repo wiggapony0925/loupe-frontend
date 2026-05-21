@@ -73,6 +73,7 @@ export const ENDPOINTS = {
   },
   reports: {
     list: `${V1}/reports`,
+    upcoming: `${V1}/reports/upcoming`,
     create: `${V1}/reports`,
     item: (id: string) => `${V1}/reports/${id}`,
     download: (id: string) => `${V1}/reports/${id}/download`,

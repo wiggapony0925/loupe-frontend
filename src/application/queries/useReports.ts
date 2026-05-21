@@ -20,6 +20,7 @@ import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type {
   ReportDownloadWire,
   ReportGenerateWire,
+  UpcomingReportWire,
   UserReportWire,
 } from "@/infrastructure/http";
 
@@ -30,6 +31,22 @@ export function useReports() {
     queryKey: queryKeys.reports.list(),
     queryFn: () => apiFetch<UserReportWire[]>(ENDPOINTS.reports.list),
     staleTime: 30_000,
+  });
+}
+
+/**
+ * When the next monthly + yearly statements will auto-close.
+ *
+ * Statements are server-generated on a cycle (1st of month, 1st of
+ * year). The UI uses this to render "Your next statement closes on…"
+ * instead of a Generate button. Cheap endpoint — fine to refetch on
+ * focus / poll.
+ */
+export function useUpcomingReports() {
+  return useQuery<UpcomingReportWire[]>({
+    queryKey: queryKeys.reports.upcoming(),
+    queryFn: () => apiFetch<UpcomingReportWire[]>(ENDPOINTS.reports.upcoming),
+    staleTime: 5 * 60_000,
   });
 }
 

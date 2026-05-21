@@ -37,3 +37,18 @@ export interface ReportDownloadWire {
   download_url: string | null;
   expires_in_seconds: number;
 }
+
+/**
+ * Upcoming-statement payload — returned by `GET /v1/reports/upcoming`.
+ *
+ * Drives the Amex-style "Your next statement closes on Jun 1" hero.
+ * The client never triggers generation; statements materialise on the
+ * server when `closes_at` passes.
+ */
+export interface UpcomingReportWire {
+  period: ReportPeriod;
+  period_start: ISODate;
+  period_end: ISODate;
+  closes_at: string; // ISO datetime in UTC
+  label: string;
+}
