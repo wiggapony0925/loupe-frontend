@@ -48,7 +48,7 @@ export function TopMovers({ cards, limit = 5 }: TopMoversProps) {
         return (
           <Pressable
             key={row.card.id}
-            onPress={() => router.push(routes.scan(row.card.id))}
+            onPress={() => router.push(routes.card(row.card.id))}
             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
             className={`flex-row items-center gap-3 px-4 py-3 ${
               i > 0 ? "border-t border-line/60" : ""

@@ -33,7 +33,7 @@ export function HoldingRow({ card, spark, deltaPct = 0 }: HoldingRowProps) {
 
   return (
     <Pressable
-      onPress={() => router.push(routes.scan(card.id))}
+      onPress={() => router.push(routes.card(card.id))}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       className="flex-row items-center gap-3 px-1 py-3"
     >

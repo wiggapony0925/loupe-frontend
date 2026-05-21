@@ -9,11 +9,12 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
-import { LogIn, Zap } from "lucide-react-native";
+import { LogIn, Users } from "lucide-react-native";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { AuthScreen } from "@/presentation/features/auth/AuthScreen";
 import { FormInput } from "@/presentation/features/auth/FormInput";
 import { AuthFooter } from "@/presentation/features/auth/AuthFooter";
+import { DevPersonaSheet } from "@/presentation/features/auth/DevPersonaSheet";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { ApiError } from "@/infrastructure/http/client";
 import { useThemedPalette } from "@/presentation/theme/tokens";
@@ -25,6 +26,7 @@ export default function SignInScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const onSubmit = async () => {
     setError(null);
@@ -36,24 +38,6 @@ export default function SignInScreen() {
         setError("Invalid email or password.");
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const onDevLogin = async () => {
-    setError(null);
-    setSubmitting(true);
-    try {
-      // /v1/auth/dev-login is disabled in production, so we sign in with
-      // the seeded test credentials instead.
-      await signInWithEmail("test+01@loupe.app", "Loupe2026!");
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        setError("Dev login failed: invalid seeded credentials.");
-      } else {
-        setError(err instanceof Error ? err.message : "Dev login failed.");
       }
     } finally {
       setSubmitting(false);
@@ -102,10 +86,10 @@ export default function SignInScreen() {
         />
         {__DEV__ ? (
           <PrimaryButton
-            label="Dev login (test+01)"
-            icon={Zap}
+            label="Dev personas (50)"
+            icon={Users}
             variant="ghost"
-            onPress={onDevLogin}
+            onPress={() => setPickerOpen(true)}
           />
         ) : null}
         <Pressable onPress={() => router.replace("/(auth)/sign-up")}>
@@ -119,6 +103,13 @@ export default function SignInScreen() {
       </View>
 
       <AuthFooter />
+
+      {__DEV__ ? (
+        <DevPersonaSheet
+          visible={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+        />
+      ) : null}
     </AuthScreen>
   );
 }

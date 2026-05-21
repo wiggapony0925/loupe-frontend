@@ -318,7 +318,7 @@ function RecentChip({ card }: { card: CollectionCard }) {
   const tint = gradeColor(card.grade);
   return (
     <Pressable
-      onPress={() => router.push(routes.scan(card.id))}
+      onPress={() => router.push(routes.card(card.id))}
       className="w-44 rounded-2xl border border-line bg-bg-elevated p-3"
       style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
     >

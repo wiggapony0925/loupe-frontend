@@ -19,6 +19,7 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ApiError, apiFetch, setAuthToken } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
+import { queryClient } from "@/application/queries/queryClient";
 import {
   devLogin as devLoginApi,
   loginWithEmail as loginWithEmailApi,
@@ -54,6 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const persistToken = useCallback(async (next: string | null) => {
+    // Any cached query data belongs to the previous user — wipe it so the
+    // next account doesn't see stale portfolio totals, vault rows, etc.
+    queryClient.clear();
     setTokenState(next);
     setAuthToken(next);
     try {

@@ -83,7 +83,7 @@ export function PositionRow({ card, spark }: PositionRowProps) {
 
   return (
     <Pressable
-      onPress={() => router.push(routes.scan(card.id))}
+      onPress={() => router.push(routes.card(card.id))}
       accessibilityRole="button"
       accessibilityLabel={`${card.title}, grade ${card.grade.toFixed(1)}`}
       android_ripple={{ color: withAlpha(p.ink.dim, 0.1) }}

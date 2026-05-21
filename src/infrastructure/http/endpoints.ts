@@ -45,6 +45,8 @@ export const ENDPOINTS = {
     market: (id: string) => `${V1}/cards/${id}/market`,
     listings: (id: string) => `${V1}/cards/${id}/listings`,
     comps: (id: string) => `${V1}/cards/${id}/comps`,
+    canonical: (id: string) => `${V1}/cards/${id}/canonical`,
+    resolve: `${V1}/cards/resolve`,
   },
   sets: {
     list: `${V1}/sets`,

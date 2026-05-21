@@ -17,3 +17,5 @@ export * from "./health";
 export * from "./setProgress";
 export * from "./alerts";
 export * from "./marketIndex";
+export * from "./canonicalCard";
+export * from "./cardResolve";

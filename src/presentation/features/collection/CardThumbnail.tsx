@@ -47,7 +47,7 @@ export function CardThumbnail({ card, spark }: CardThumbnailProps) {
 
   return (
     <Pressable
-      onPress={() => router.push(routes.scan(card.id))}
+      onPress={() => router.push(routes.card(card.id))}
       accessibilityRole="button"
       accessibilityLabel={`${card.title}, grade ${card.grade.toFixed(1)}, ${delta.label}`}
       className="flex-1 overflow-hidden rounded-2xl border border-line bg-bg-elevated"
