@@ -6,6 +6,15 @@ export type { PriceHistoryRange } from "./useCardPriceHistory";
 export { useSets } from "./useSets";
 export { useMe } from "./useMe";
 export { useMyGrades } from "./useMyGrades";
+export {
+  useCreateGrade,
+  useUpdateGrade,
+  useDeleteGrade,
+} from "./useGradeMutations";
+export type {
+  CreateGradeInput,
+  UpdateGradeInput,
+} from "./useGradeMutations";
 export { useMyScans } from "./useMyScans";
 export { useScanners } from "./useScanners";
 export { useScanProgress } from "./useScanProgress";
@@ -33,3 +42,8 @@ export {
 } from "./usePriceAlerts";
 export { useMarketIndex } from "./useMarketIndex";
 export type { UseMarketIndexOptions } from "./useMarketIndex";
+export {
+  fetchReportDownloadUrl,
+  useGenerateReport,
+  useReports,
+} from "./useReports";

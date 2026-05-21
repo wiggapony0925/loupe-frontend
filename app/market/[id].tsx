@@ -40,6 +40,8 @@ import {
   Bell,
   Camera,
   Heart,
+  Pencil,
+  Plus,
   ScanLine,
   ShoppingBag,
 } from "lucide-react-native";
@@ -51,6 +53,9 @@ import {
   type MarketRange,
   type MarketSource,
 } from "@/infrastructure/repositories/marketRepository";
+import { useMyGrades } from "@/application/queries/useMyGrades";
+import { useAuth } from "@/presentation/providers/AuthProvider";
+import type { GradedCard } from "@/infrastructure/http";
 import { compactUsd } from "@/shared/format";
 import { clampLabelX, monotoneCubic, nearestIndex } from "@/shared/chart";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
@@ -78,6 +83,31 @@ export default function MarketDetailScreen() {
 
   const data = market.data;
   const owned = !!data?.ownedCard;
+  const { isAuthenticated } = useAuth();
+  const myGradesQ = useMyGrades<GradedCard[]>();
+  const ownedGrade = useMemo(
+    () =>
+      (myGradesQ.data ?? []).find(
+        (g) => g.card_id === id || (data?.ownedCard && g.card_id === data.ownedCard.id),
+      ) ?? null,
+    [myGradesQ.data, id, data?.ownedCard],
+  );
+
+  const handleAddManually = () => {
+    if (ownedGrade) {
+      router.push(routes.gradeEdit(ownedGrade.id));
+      return;
+    }
+    router.push(
+      routes.gradeNew({
+        cardId: id,
+        cardName: data?.title ?? undefined,
+        cardImage: data?.imageUri ?? undefined,
+        cardSet: data?.set ?? undefined,
+        cardYear: data?.year ?? undefined,
+      }),
+    );
+  };
 
   const handleGradeIt = () => {
     if (owned && data?.ownedCard) {
@@ -351,7 +381,7 @@ export default function MarketDetailScreen() {
         )}
       </ScrollView>
 
-      {/* Sticky CTA — "I have this card → Grade it" */}
+      {/* Sticky CTA stack — Add to collection (primary) + scan secondary */}
       {data ? (
         <View
           style={{
@@ -365,8 +395,33 @@ export default function MarketDetailScreen() {
             backgroundColor: p.bg.base,
             borderTopWidth: 1,
             borderTopColor: p.line.default,
+            gap: 10,
           }}
         >
+          {isAuthenticated ? (
+            <Pressable
+              onPress={handleAddManually}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                height: 56,
+                borderRadius: 16,
+                backgroundColor: p.accent.mint,
+                opacity: pressed ? 0.85 : 1,
+              })}
+            >
+              {ownedGrade ? (
+                <Pencil size={18} color={p.bg.base} />
+              ) : (
+                <Plus size={18} color={p.bg.base} />
+              )}
+              <Text style={{ color: p.bg.base, fontSize: 15, fontWeight: "800" }}>
+                {ownedGrade ? "Edit holding" : "Add to collection"}
+              </Text>
+            </Pressable>
+          ) : null}
           <Pressable
             onPress={handleGradeIt}
             style={({ pressed }) => ({
@@ -374,19 +429,21 @@ export default function MarketDetailScreen() {
               alignItems: "center",
               justifyContent: "center",
               gap: 10,
-              height: 56,
-              borderRadius: 16,
-              backgroundColor: p.accent.mint,
+              height: 48,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: p.line.default,
+              backgroundColor: p.bg.elevated,
               opacity: pressed ? 0.85 : 1,
             })}
           >
             {owned ? (
-              <ScanLine size={18} color={p.bg.base} />
+              <ScanLine size={16} color={p.ink.default} />
             ) : (
-              <Camera size={18} color={p.bg.base} />
+              <Camera size={16} color={p.ink.default} />
             )}
-            <Text style={{ color: p.bg.base, fontSize: 15, fontWeight: "800" }}>
-              {owned ? "Open my report" : "I have this card · Grade it"}
+            <Text style={{ color: p.ink.default, fontSize: 13, fontWeight: "700" }}>
+              {owned ? "Open scan report" : "Scan it instead"}
             </Text>
           </Pressable>
         </View>

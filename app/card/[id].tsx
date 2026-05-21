@@ -40,6 +40,12 @@ import { useCard } from "@/application/queries/useCard";
 import { useCardMarket } from "@/application/queries/useCardMarket";
 import { useCardListings } from "@/application/queries/useCardListings";
 import { useCardComps } from "@/application/queries/useCardComps";
+import { useMyGrades } from "@/application/queries/useMyGrades";
+import { useAuth } from "@/presentation/providers/AuthProvider";
+import type { GradedCard } from "@/infrastructure/http";
+import { routes } from "@/shared/routes";
+import { PrimaryButton } from "@/presentation/components/PrimaryButton";
+import { Plus, Pencil } from "lucide-react-native";
 import { CardImage } from "@/presentation/components/CardImage";
 import { Price } from "@/presentation/components/Price";
 import { QueryState } from "@/presentation/components/QueryState";
@@ -113,6 +119,12 @@ export default function CardDetailScreen() {
   const cardQ = useCard(cardId);
   const marketQ = useCardMarket(cardId);
   const p = useThemedPalette();
+  const { isAuthenticated } = useAuth();
+  const myGradesQ = useMyGrades<GradedCard[]>();
+  const ownedGrade = useMemo(
+    () => (myGradesQ.data ?? []).find((g) => g.card_id === cardId) ?? null,
+    [myGradesQ.data, cardId],
+  );
 
   const [range, setRange] = useState<RangeKey>("1Y");
   const [house, setHouse] = useState<HouseId | "all">("all");
@@ -231,6 +243,32 @@ export default function CardDetailScreen() {
                   </View>
                 </View>
               </View>
+
+              {/* Add to vault / Edit holding CTA */}
+              {isAuthenticated ? (
+                <PrimaryButton
+                  label={
+                    ownedGrade ? "Edit holding" : "Add to collection"
+                  }
+                  icon={ownedGrade ? Pencil : Plus}
+                  variant={ownedGrade ? "ghost" : "mint"}
+                  onPress={() => {
+                    if (ownedGrade) {
+                      router.push(routes.gradeEdit(ownedGrade.id));
+                    } else {
+                      router.push(
+                        routes.gradeNew({
+                          cardId,
+                          cardName: card.name,
+                          cardImage: imageUrl ?? undefined,
+                          cardSet: card.set_name ?? undefined,
+                          cardYear: card.year ?? undefined,
+                        }),
+                      );
+                    }
+                  }}
+                />
+              ) : null}
 
               {/* 3. Big price */}
               <BigPrice

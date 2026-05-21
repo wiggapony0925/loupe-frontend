@@ -95,9 +95,14 @@ export default function CommandCenterScreen() {
             }
           />
 
-          {/* Compact KPI strip — 3-up summary above the watchlist */}
+          {/* Compact KPI strip — 3-up summary above the watchlist. We
+              skeleton ONLY while React Query is actively fetching with no
+              cached data yet. Once the request settles (success OR error)
+              we render the strip with whatever we have — using "—" for
+              missing values — so a 401/404/network blip can't pin the
+              page on a forever-skeleton. */}
           <View className="mb-3 flex-row gap-3">
-            {summary.isLoading || !summary.data ? (
+            {summary.isLoading && !summary.data ? (
               <>
                 <KpiPill />
                 <KpiPill />
@@ -107,11 +112,15 @@ export default function CommandCenterScreen() {
               <>
                 <KpiPill
                   label="Value"
-                  value={compactUsd(summary.data.totalValueUsd)}
+                  value={
+                    summary.data
+                      ? compactUsd(summary.data.totalValueUsd)
+                      : "—"
+                  }
                   accent={palette.accent.mint}
                 />
-                {summary.data.unrealizedPnlUsd != null &&
-                summary.data.unrealizedPnlPct != null ? (
+                {summary.data?.unrealizedPnlUsd != null &&
+                summary.data?.unrealizedPnlPct != null ? (
                   <KpiPill
                     label="P/L"
                     value={`${
@@ -129,7 +138,7 @@ export default function CommandCenterScreen() {
                   <KpiPill
                     label="Accuracy"
                     value={
-                      summary.data.avgAccuracy != null
+                      summary.data?.avgAccuracy != null
                         ? `${(summary.data.avgAccuracy * 100).toFixed(1)}%`
                         : "—"
                     }
@@ -149,11 +158,13 @@ export default function CommandCenterScreen() {
             )}
           </View>
 
-          {collection.isLoading || !collection.data ? (
-            <SkeletonTile full />
-          ) : (
-            <TopMoversSection movers={movers} isAuthenticated={isAuthenticated} />
-          )}
+          {/* Hand the entire loading/error/empty/loaded decision to
+              TopMoversSection — it already renders skeleton on
+              `movers.isLoading`, ErrorState on `movers.isError`,
+              and EmptyState when the vault is empty. The previous gate
+              on the legacy `collection` query left this section stuck
+              on skeleton whenever /v1/grades returned [] or errored. */}
+          <TopMoversSection movers={movers} isAuthenticated={isAuthenticated} />
         </View>
 
         <View>

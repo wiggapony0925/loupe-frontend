@@ -85,6 +85,11 @@ export const queryKeys = {
     all: ["alerts"] as const,
     list: (pending: boolean) => ["alerts", "list", pending] as const,
   },
+  reports: {
+    all: ["reports"] as const,
+    list: () => ["reports", "list"] as const,
+    item: (id: string) => ["reports", "item", id] as const,
+  },
   marketIndex: {
     all: ["market-index"] as const,
     history: (indexId: string, range: string) =>

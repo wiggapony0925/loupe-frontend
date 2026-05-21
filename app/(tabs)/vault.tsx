@@ -178,8 +178,8 @@ export default function VaultScreen() {
                 title={COPY.vaultFiltersEmpty.title}
                 message={COPY.vaultFiltersEmpty.message}
                 icon={Layers}
-                secondaryActionLabel="Scan a card"
-                onSecondaryAction={() => router.push(routes.scanPhone())}
+                secondaryActionLabel="Add a card"
+                onSecondaryAction={() => router.push(routes.gradeNew())}
               />
             </View>
           )

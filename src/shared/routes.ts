@@ -29,6 +29,30 @@ export const routes = {
   scan: (id: string) => `/scan/${enc(id)}`,
   scanPhone: (mode?: ScanPhoneMode) =>
     mode ? `/scan/phone?mode=${mode}` : "/scan/phone",
+  /**
+   * Add a card to the user's vault without scanning.
+   *
+   * Pre-fills the form with a catalog card when `cardId` (resolved
+   * local UUID) or `upstreamId` (composite like `"pokemontcg:base1-4"`)
+   * is provided. With no params the user picks the card from inside
+   * the form.
+   */
+  gradeNew: (params: {
+    cardId?: string;
+    upstreamId?: string;
+    cardName?: string;
+    cardImage?: string;
+    cardSet?: string;
+    cardYear?: number;
+  } = {}) => {
+    const qs = Object.entries(params)
+      .filter(([, v]) => v !== undefined && v !== null && v !== "")
+      .map(([k, v]) => `${k}=${enc(String(v))}`)
+      .join("&");
+    return qs ? `/grade/new?${qs}` : "/grade/new";
+  },
+  /** Edit an existing holding by its grade UUID. */
+  gradeEdit: (id: string) => `/grade/${enc(id)}`,
   compare: (a?: string, b?: string) => {
     const params = [a && `a=${enc(a)}`, b && `b=${enc(b)}`]
       .filter(Boolean)

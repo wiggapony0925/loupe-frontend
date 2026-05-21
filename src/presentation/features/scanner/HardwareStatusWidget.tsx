@@ -32,7 +32,7 @@ import { useScannerConnection } from "./useScannerConnection";
  */
 export function HardwareStatusWidget() {
   const p = useThemedPalette();
-  const { data, isLoading } = useScannerConnection();
+  const { data, isLoading, isError } = useScannerConnection();
   const scanner = useScanner();
 
   const TRANSPORT = {
@@ -41,7 +41,11 @@ export function HardwareStatusWidget() {
     offline: { Icon: WifiOff, label: "Offline", color: p.accent.rose },
   } as const;
 
-  if (isLoading || data === undefined) {
+  // Only skeleton on the *initial* load (no cached data yet, no error).
+  // Once the query has resolved \u2014 success or failure \u2014 we fall through
+  // to the data/empty branch below so the widget never sits on a forever
+  // skeleton when /v1/scanners/status 401s, 404s, or the network blips.
+  if (isLoading && data === undefined && !isError) {
     return (
       <GlassCard>
         <View className="flex-row items-center justify-between">
@@ -65,10 +69,11 @@ export function HardwareStatusWidget() {
   }
 
   // Backend explicitly returns `null` (not 404) when the signed-in user
-  // has never paired a scanner. Render a richer empty state that sells
-  // the hardware benefits and offers a phone-camera fallback so users
-  // aren't dead-ended while their Loupe ships.
-  if (data === null) {
+  // has never paired a scanner. We also fall into this branch when the
+  // request errored \u2014 from the user's perspective "we can't tell you
+  // about a scanner right now" reads exactly the same as "you don't
+  // have one yet", and the path forward (pair / use phone) is identical.
+  if (data === null || data === undefined) {
     return (
       <GlassCard>
         <View className="flex-row items-center justify-between">

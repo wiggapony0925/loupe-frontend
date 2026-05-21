@@ -26,8 +26,10 @@ import { queryKeys } from "./queryKeys";
 export interface TopMoverRow {
   card: CardWire;
   grade: GradedCard;
-  price: number;
-  trend: TrendInfo;
+  /** Live price in USD. `null` when no market snapshot is available yet. */
+  price: number | null;
+  /** Trailing change. `null` when no market snapshot is available yet. */
+  trend: TrendInfo | null;
 }
 
 export interface UseTopMoversResult {
@@ -111,21 +113,30 @@ export function useTopMovers({
     const out: TopMoverRow[] = [];
     enrichmentTargets.forEach((grade, i) => {
       const card = cardQueries[i]?.data;
+      // If we couldn't even resolve the card metadata there's literally
+      // nothing to render — skip. Missing *market* data is fine: we still
+      // show the card with a "—" price so the user sees their vault
+      // instead of a forever "syncing" empty state.
+      if (!card) return;
       const market = marketQueries[i]?.data?.snapshot.summary;
-      if (!card || !market) return;
-      // Prefer graded average if present; otherwise fall back to raw.
-      const priceMoney = market.graded_avg ?? market.raw;
-      if (!priceMoney) return;
+      const priceMoney = market?.graded_avg ?? market?.raw ?? null;
       out.push({
         card,
         grade,
-        price: priceMoney.amount,
-        trend: { pct: market.change_pct_1y },
+        price: priceMoney?.amount ?? null,
+        trend:
+          market && typeof market.change_pct_1y === "number"
+            ? { pct: market.change_pct_1y }
+            : null,
       });
     });
+    // Sort by |1y change| desc; rows without trend data sink to the bottom.
     return out
       .slice()
-      .sort((a, b) => Math.abs(b.trend.pct) - Math.abs(a.trend.pct))
+      .sort(
+        (a, b) =>
+          Math.abs(b.trend?.pct ?? -1) - Math.abs(a.trend?.pct ?? -1),
+      )
       .slice(0, limit);
   }, [enrichmentTargets, cardQueries, marketQueries, limit]);
 

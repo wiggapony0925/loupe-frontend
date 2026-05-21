@@ -12,8 +12,10 @@ import type { CardWire, TrendInfo } from "./types";
 
 export interface MoversCardRowProps {
   card: CardWire;
-  price: number;
-  trend: TrendInfo;
+  /** Live USD price. When `null`, the pill renders "—". */
+  price: number | null;
+  /** 1y trend. When `null`, the pill omits the arrow/percent line. */
+  trend: TrendInfo | null;
   onPress?: () => void;
   bordered?: boolean;
 }
@@ -29,10 +31,22 @@ function MoversCardRowImpl({ card, price, trend, onPress, bordered }: MoversCard
   );
 }
 
-function MoverPill({ price, trend }: { price: number; trend: TrendInfo }) {
+function MoverPill({
+  price,
+  trend,
+}: {
+  price: number | null;
+  trend: TrendInfo | null;
+}) {
   const p = useThemedPalette();
-  const up = trend.pct >= 0;
-  const tint = up ? p.accent.mint : p.accent.rose;
+  // No trend → neutral slate pill. Up → mint. Down → rose.
+  const tint =
+    trend == null
+      ? p.ink.muted
+      : trend.pct >= 0
+        ? p.accent.mint
+        : p.accent.rose;
+  const up = (trend?.pct ?? 0) >= 0;
   return (
     <View
       style={{
@@ -47,19 +61,33 @@ function MoverPill({ price, trend }: { price: number; trend: TrendInfo }) {
       }}
     >
       <Text style={{ color: p.ink.default, fontSize: 13, fontWeight: "700" }}>
-        {compactUsd(price)}
+        {price != null ? compactUsd(price) : "—"}
       </Text>
-      <Text
-        style={{
-          color: tint,
-          fontSize: 9,
-          fontWeight: "800",
-          letterSpacing: 0.3,
-          marginTop: 1,
-        }}
-      >
-        {up ? "▲" : "▼"} {Math.abs(trend.pct).toFixed(2)}%
-      </Text>
+      {trend != null ? (
+        <Text
+          style={{
+            color: tint,
+            fontSize: 9,
+            fontWeight: "800",
+            letterSpacing: 0.3,
+            marginTop: 1,
+          }}
+        >
+          {up ? "▲" : "▼"} {Math.abs(trend.pct).toFixed(2)}%
+        </Text>
+      ) : (
+        <Text
+          style={{
+            color: tint,
+            fontSize: 9,
+            fontWeight: "800",
+            letterSpacing: 0.3,
+            marginTop: 1,
+          }}
+        >
+          NO DATA
+        </Text>
+      )}
     </View>
   );
 }

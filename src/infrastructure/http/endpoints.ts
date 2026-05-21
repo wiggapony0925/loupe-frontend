@@ -71,6 +71,13 @@ export const ENDPOINTS = {
     create: `${V1}/alerts`,
     item: (id: string) => `${V1}/alerts/${id}`,
   },
+  reports: {
+    list: `${V1}/reports`,
+    create: `${V1}/reports`,
+    item: (id: string) => `${V1}/reports/${id}`,
+    download: (id: string) => `${V1}/reports/${id}/download`,
+    file: (id: string) => `${V1}/reports/${id}/file`,
+  },
   market: {
     indexHistory: (indexId: string) =>
       `${V1}/market/indices/${indexId}/history`,

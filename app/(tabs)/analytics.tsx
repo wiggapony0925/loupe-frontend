@@ -27,6 +27,7 @@ import {
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { ErrorState } from "@/presentation/components/ErrorState";
+import { ReportsSection } from "@/presentation/features/reports";
 import { COPY } from "@/shared/copy";
 import { normalizeError } from "@/shared/errors";
 import { useThemedPalette } from "@/presentation/theme/tokens";
@@ -149,6 +150,8 @@ export default function AnalyticsScreen() {
           <SectionHeader eyebrow="Mix" title="Quality breakdown" />
           {loading ? <SkeletonBlock height={140} /> : <GradeBars cards={cards} />}
         </View>
+
+        <ReportsSection />
       </ScrollView>
     </SafeAreaView>
   );
