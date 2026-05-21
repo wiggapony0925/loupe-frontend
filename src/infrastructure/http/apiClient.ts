@@ -3,7 +3,12 @@ import { auth } from "@/infrastructure/storage/tokenStorage";
 // Single source of truth for the JWT lives in `@/infrastructure/http/client`
 // (set by AuthProvider). Older code paths still call `auth.setToken` from
 // the token storage, so we fall back to it if the canonical store is empty.
-import { getAuthToken } from "@/infrastructure/http/client";
+// `refreshAccessToken` is the shared single-flight refresh hook so this
+// wrapper picks up the same rotation behaviour as `apiFetchEnvelope`.
+import {
+  getAuthToken,
+  refreshAccessToken,
+} from "@/infrastructure/http/client";
 
 /**
  * Envelope shape mirrors loupe-backend/CONTRACT.md §2. Inlined here so
@@ -57,10 +62,18 @@ type RequestOptions = Omit<RequestInit, "body" | "headers"> & {
   headers?: Record<string, string>;
   /** Override base URL (e.g. signed S3 URLs). Defaults to config.apiUrl. */
   baseUrl?: string;
+  /** Internal: prevents infinite refresh loops on the 401-retry path. */
+  _retriedAfterRefresh?: boolean;
 };
 
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { json, headers = {}, baseUrl = config.apiUrl, ...rest } = opts;
+  const {
+    json,
+    headers = {},
+    baseUrl = config.apiUrl,
+    _retriedAfterRefresh,
+    ...rest
+  } = opts;
 
   const token = getAuthToken() ?? auth.getToken();
   const finalHeaders: Record<string, string> = {
@@ -86,6 +99,15 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const isJson = contentType.includes("application/json");
 
   if (!res.ok) {
+    // Mirror `apiFetchEnvelope`: one-shot refresh + retry on 401 for
+    // authenticated requests. Only attempts refresh when we actually
+    // sent a bearer token and haven't already retried this request.
+    if (res.status === 401 && token && !_retriedAfterRefresh) {
+      const fresh = await refreshAccessToken();
+      if (fresh) {
+        return request<T>(path, { ...opts, _retriedAfterRefresh: true });
+      }
+    }
     const text = await res.text().catch(() => "");
     let parsed: unknown = text;
     try {

@@ -70,6 +70,49 @@ export function getAuthToken(): string | null {
   return authToken;
 }
 
+/**
+ * Called by `apiFetchEnvelope` on a 401 from an authenticated request.
+ * Should attempt to mint a new access token (e.g. via the refresh-token
+ * endpoint), call {@link setAuthToken} with the new value, and resolve
+ * to the new token. Resolve to `null` to indicate refresh failed — the
+ * original 401 will then propagate to the caller.
+ *
+ * Registered by `AuthProvider`; not coupled to it from this module so
+ * the client stays UI-free.
+ */
+export type RefreshHandler = () => Promise<string | null>;
+
+let refreshHandler: RefreshHandler | null = null;
+let inflightRefresh: Promise<string | null> | null = null;
+
+export function setRefreshHandler(handler: RefreshHandler | null): void {
+  refreshHandler = handler;
+}
+
+/**
+ * Trigger the registered {@link RefreshHandler}, deduping concurrent
+ * callers so we only hit `/auth/refresh` once even when many requests
+ * race to 401. Resolves to the new access token, or `null` when no
+ * handler is registered / refresh failed.
+ *
+ * Exported so other low-level HTTP wrappers (e.g. `apiClient.ts`) can
+ * share the same single-flight refresh state.
+ */
+export async function refreshAccessToken(): Promise<string | null> {
+  return runRefresh();
+}
+
+async function runRefresh(): Promise<string | null> {
+  if (!refreshHandler) return null;
+  // Serialize concurrent 401s so we only hit /auth/refresh once.
+  if (!inflightRefresh) {
+    inflightRefresh = refreshHandler().finally(() => {
+      inflightRefresh = null;
+    });
+  }
+  return inflightRefresh;
+}
+
 export function apiUrl(path: string, base: string = activeApiBase): string {
   if (/^https?:\/\//i.test(path)) return path;
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
@@ -82,6 +125,8 @@ export interface ApiFetchInit extends Omit<RequestInit, "body"> {
   json?: unknown;
   query?: Record<string, QueryValue>;
   skipAuth?: boolean;
+  /** Internal — set by the 401-retry path to prevent infinite refresh loops. */
+  _retriedAfterRefresh?: boolean;
 }
 
 function buildQuery(query?: Record<string, QueryValue>): string {
@@ -108,7 +153,8 @@ export async function apiFetchEnvelope<T = unknown>(
   path: string,
   init: ApiFetchInit = {},
 ): Promise<Envelope<T>> {
-  const { json, query, skipAuth, headers, body, ...rest } = init;
+  const { json, query, skipAuth, headers, body, _retriedAfterRefresh, ...rest } =
+    init;
   const qs = buildQuery(query);
 
   const finalHeaders: Record<string, string> = {
@@ -196,6 +242,24 @@ export async function apiFetchEnvelope<T = unknown>(
   }
 
   if (!res.ok) {
+    // Authenticated request returned 401 — try a one-shot refresh + retry
+    // before surfacing the error. Skips this dance when the caller opted
+    // out of auth, when we have nothing to refresh, or when we've
+    // already retried once for this request.
+    if (
+      res.status === 401 &&
+      !skipAuth &&
+      !_retriedAfterRefresh &&
+      refreshHandler
+    ) {
+      const fresh = await runRefresh();
+      if (fresh) {
+        return apiFetchEnvelope<T>(path, {
+          ...init,
+          _retriedAfterRefresh: true,
+        });
+      }
+    }
     const fb: ErrorDetail = {
       code: `http.${res.status}`,
       message: `${res.status} ${res.statusText || "error"} (${path})`,

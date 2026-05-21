@@ -17,17 +17,24 @@ import React, {
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ApiError, apiFetch, setAuthToken } from "@/infrastructure/http/client";
+import {
+  ApiError,
+  apiFetch,
+  setAuthToken,
+  setRefreshHandler,
+} from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import { queryClient } from "@/application/queries/queryClient";
 import {
   devLogin as devLoginApi,
   loginWithEmail as loginWithEmailApi,
   registerWithEmail as registerWithEmailApi,
+  refreshSession as refreshSessionApi,
 } from "@/infrastructure/repositories/authRepository";
 import type { MeResponse } from "@/infrastructure/http";
 
 const TOKEN_STORAGE_KEY = "loupe.auth.token";
+const REFRESH_STORAGE_KEY = "loupe.auth.refresh";
 
 interface AuthContextValue {
   token: string | null;
@@ -53,40 +60,108 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null);
   const [user, setUser] = useState<MeResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Held in a ref so the refresh handler (registered once on mount) can
+  // always read the latest token without re-registering on every change.
+  const refreshTokenRef = React.useRef<string | null>(null);
 
-  const persistToken = useCallback(async (next: string | null) => {
-    // Any cached query data belongs to the previous user — wipe it so the
-    // next account doesn't see stale portfolio totals, vault rows, etc.
-    queryClient.clear();
-    setTokenState(next);
-    setAuthToken(next);
-    try {
-      if (next) await AsyncStorage.setItem(TOKEN_STORAGE_KEY, next);
-      else await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
-    } catch {
-      /* storage unavailable in some test envs — non-fatal */
-    }
-  }, []);
+  const persistTokens = useCallback(
+    async (next: { access: string; refresh: string | null } | null) => {
+      // Any cached query data belongs to the previous user — wipe it so the
+      // next account doesn't see stale portfolio totals, vault rows, etc.
+      // (Only on full sign-out / account switch — a silent refresh keeps
+      // the same user, so we leave the cache alone.)
+      const isFullSwap = next === null;
+      if (isFullSwap) queryClient.clear();
+      const nextAccess = next?.access ?? null;
+      const nextRefresh = next?.refresh ?? null;
+      setTokenState(nextAccess);
+      setAuthToken(nextAccess);
+      refreshTokenRef.current = nextRefresh;
+      try {
+        if (nextAccess) await AsyncStorage.setItem(TOKEN_STORAGE_KEY, nextAccess);
+        else await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
+        if (nextRefresh)
+          await AsyncStorage.setItem(REFRESH_STORAGE_KEY, nextRefresh);
+        else await AsyncStorage.removeItem(REFRESH_STORAGE_KEY);
+      } catch {
+        /* storage unavailable in some test envs — non-fatal */
+      }
+    },
+    [],
+  );
+
+  // Back-compat for call sites that still pass a bare token string.
+  const persistToken = useCallback(
+    async (next: string | null) => {
+      if (next === null) {
+        await persistTokens(null);
+      } else {
+        await persistTokens({ access: next, refresh: refreshTokenRef.current });
+      }
+    },
+    [persistTokens],
+  );
+
+  // Register the refresh-on-401 handler exactly once. The client module
+  // will call this whenever an authenticated request comes back 401; we
+  // exchange the stored refresh token for a fresh pair, or sign the user
+  // out if the refresh itself is rejected.
+  useEffect(() => {
+    setRefreshHandler(async () => {
+      const rt = refreshTokenRef.current;
+      if (!rt) return null;
+      try {
+        const pair = await refreshSessionApi({ refresh_token: rt });
+        // Update both tokens (backend rotates the refresh token too).
+        setTokenState(pair.access_token);
+        setAuthToken(pair.access_token);
+        refreshTokenRef.current = pair.refresh_token;
+        try {
+          await AsyncStorage.setItem(TOKEN_STORAGE_KEY, pair.access_token);
+          await AsyncStorage.setItem(REFRESH_STORAGE_KEY, pair.refresh_token);
+        } catch {
+          /* non-fatal */
+        }
+        if (pair.user) setUser(pair.user);
+        return pair.access_token;
+      } catch (err) {
+        if (__DEV__) {
+          // eslint-disable-next-line no-console
+          console.log("[auth] refresh failed, signing out:", String(err));
+        }
+        await persistTokens(null);
+        setUser(null);
+        return null;
+      }
+    });
+    return () => {
+      setRefreshHandler(null);
+    };
+  }, [persistTokens]);
 
   // Hydrate token + user on mount.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const stored = await AsyncStorage.getItem(TOKEN_STORAGE_KEY).catch(
-          () => null,
-        );
+        const [stored, storedRefresh] = await Promise.all([
+          AsyncStorage.getItem(TOKEN_STORAGE_KEY).catch(() => null),
+          AsyncStorage.getItem(REFRESH_STORAGE_KEY).catch(() => null),
+        ]);
         if (cancelled) return;
         if (stored) {
           setAuthToken(stored);
           setTokenState(stored);
+          refreshTokenRef.current = storedRefresh;
           try {
             const me = await apiFetch<MeResponse>(ENDPOINTS.me.root);
             if (!cancelled) setUser(me);
           } catch (err) {
+            // 401 here means hydrated access token is expired AND the
+            // refresh handler (registered above) couldn't trade the
+            // refresh token for a new pair. Drop everything.
             if (err instanceof ApiError && err.status === 401) {
-              // Token expired/revoked → drop it.
-              await persistToken(null);
+              await persistTokens(null);
               if (!cancelled) setUser(null);
             }
           }
@@ -98,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [persistToken]);
+  }, [persistTokens]);
 
   const signUpWithEmail = useCallback(
     async (email: string, password: string, displayName?: string) => {
@@ -107,10 +182,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         display_name: displayName?.trim() || null,
       });
-      await persistToken(pair.access_token);
+      await persistTokens({ access: pair.access_token, refresh: pair.refresh_token });
       setUser(pair.user);
     },
-    [persistToken],
+    [persistTokens],
   );
 
   const signInWithEmail = useCallback(
@@ -119,10 +194,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: email.trim().toLowerCase(),
         password,
       });
-      await persistToken(pair.access_token);
+      await persistTokens({ access: pair.access_token, refresh: pair.refresh_token });
       setUser(pair.user);
     },
-    [persistToken],
+    [persistTokens],
   );
 
   const signInWithDevLogin = useCallback(
@@ -131,16 +206,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: email.trim().toLowerCase(),
         display_name: displayName?.trim() || null,
       });
-      await persistToken(pair.access_token);
+      await persistTokens({ access: pair.access_token, refresh: pair.refresh_token });
       setUser(pair.user);
     },
-    [persistToken],
+    [persistTokens],
   );
 
   const signOut = useCallback(() => {
-    void persistToken(null);
+    void persistTokens(null);
     setUser(null);
-  }, [persistToken]);
+  }, [persistTokens]);
 
   const signInWithApple = useCallback(async () => {
     if (__DEV__) {
