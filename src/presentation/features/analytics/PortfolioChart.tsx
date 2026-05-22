@@ -288,9 +288,12 @@ export function PortfolioChart({
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 4,
-                marginLeft: 4,
+                marginLeft: 8,
+                paddingLeft: 8,
+                borderLeftWidth: 1,
+                borderLeftColor: withAlpha(p.line.default, 0.6),
               }}
-              accessibilityLabel="PSA-10 cohort index shown as faded dashed line"
+              accessibilityLabel="PSA-10 cohort index shown as faded dashed line for comparison"
             >
               <View
                 style={{
@@ -309,7 +312,7 @@ export function PortfolioChart({
                   letterSpacing: 0.4,
                 }}
               >
-                PSA 10
+                vs PSA•10 INDEX
               </Text>
             </View>
           ) : null}

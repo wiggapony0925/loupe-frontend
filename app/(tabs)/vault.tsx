@@ -15,7 +15,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Grid2x2, Layers, List as ListIcon } from "lucide-react-native";
 import { CardThumbnail } from "@/presentation/features/collection/CardThumbnail";
 import { FilterBar } from "@/presentation/features/collection/FilterBar";
-import { LiveGradesSection } from "@/presentation/features/collection/LiveGradesSection";
 import { PositionRow } from "@/presentation/features/collection/PositionRow";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { useFilteredCollection } from "@/presentation/features/collection/useFilteredCollection";
@@ -119,7 +118,6 @@ export default function VaultScreen() {
         ListHeaderComponent={
           <View className="gap-5 pb-4" style={{ paddingHorizontal: headerPadX }}>
             <SectionHeader eyebrow="Collection" title="The Vault" />
-            <LiveGradesSection />
             <SetProgressCarousel />
             <PortfolioPills stats={stats} />
             <FilterBar />
