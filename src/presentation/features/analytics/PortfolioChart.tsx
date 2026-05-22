@@ -31,6 +31,7 @@ import Svg, {
   Stop,
 } from "react-native-svg";
 import { ChevronDown } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePortfolioHistory, useMarketIndex } from "@/application/queries";
 import {
   PORTFOLIO_TIMEFRAMES,
@@ -44,6 +45,7 @@ import { compactUsd } from "@/shared/format";
 import { getCurrency } from "@/shared/currency";
 import { useSettings } from "@/application/stores/settingsStore";
 import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
+import { usePressScale } from "@/presentation/components/usePressScale";
 
 /** @deprecated Use `PortfolioTimeframe` from `@/domain/charts`. */
 type PortfolioRange = PortfolioTimeframe;
@@ -69,14 +71,34 @@ interface PortfolioChartProps {
    * portfolio's outperformance vs. the broader PSA-10 market.
    */
   showPsa10Overlay?: boolean;
+  /**
+   * Horizontal bleed in points applied to **only** the chart plot
+   * (SVG + scrub overlay). The hero value row and timeframe pills stay
+   * within the parent's padding so text/control alignment matches the
+   * rest of the screen. Pass the consumer's container horizontal
+   * padding to make the plot run full-bleed to the screen edges — e.g.
+   * `bleedX={20}` when the screen uses `padding: 20`. Defaults to 0.
+   */
+  bleedX?: number;
 }
 
 export function PortfolioChart({
   fallbackTotal = 0,
   costBasisUsd = null,
   showPsa10Overlay = false,
+  bleedX = 0,
 }: PortfolioChartProps) {
   const p = useThemedPalette();
+  const insets = useSafeAreaInsets();
+  // Per-side bleed: extend to the device edge, but never past the safe
+  // area. On portrait iPhones insets.left/right are 0, so the chart
+  // bleeds the full `bleedX`. In landscape or on iPad-style devices
+  // with non-zero side insets, the bleed shrinks so the SVG stays
+  // inside the safe area and is never clipped by notches or rounded
+  // corners. Clamped at 0 — we never *add* margin, only remove parent
+  // padding up to the safe edge.
+  const bleedLeft = Math.max(0, bleedX - insets.left);
+  const bleedRight = Math.max(0, bleedX - insets.right);
   const [range, setRange] = useState<PortfolioTimeframe>("1Y");
   const [width, setWidth] = useState(0);
   const currency = useSettings((s) => s.currency);
@@ -231,7 +253,15 @@ export function PortfolioChart({
         <View className="flex-row items-end justify-between">
           <Text
             className="font-semibold text-ink"
-            style={{ fontSize: 36, lineHeight: 40, letterSpacing: -0.6 }}
+            style={{
+              fontSize: 36,
+              lineHeight: 40,
+              letterSpacing: -1.2,
+              // Tabular numerals keep digits a fixed width so the
+              // headline value doesn't jitter as the scrubber moves
+              // across the chart.
+              fontVariant: ["tabular-nums"],
+            }}
           >
             {compactUsd(displayVal)}
           </Text>
@@ -322,7 +352,19 @@ export function PortfolioChart({
       {/* Chart */}
       <View
         onLayout={onLayout}
-        style={{ height: CHART_HEIGHT, marginTop: 14 }}
+        style={{
+          height: CHART_HEIGHT,
+          marginTop: 14,
+          // Negative horizontal margin lets the plot run edge-to-edge
+          // on screens whose ScrollView already pads at `bleedX`. The
+          // header rows above and pills below stay inside the padding
+          // so text never touches the device bezel. Bleed is clamped
+          // by the safe-area insets so the SVG never hides behind
+          // notches, rounded corners, or landscape sensor housings —
+          // works the same on every phone and iPad.
+          marginLeft: -bleedLeft,
+          marginRight: -bleedRight,
+        }}
         {...panResponder.panHandlers}
       >
         {width > 0 && pathLine ? (
@@ -503,29 +545,38 @@ function RangePill({
   onPress: () => void;
 }) {
   const p = useThemedPalette();
+  // Match the rest of the app's tap feedback — the pill briefly
+  // scales down on press to confirm the touch landed.
+  const { scale, onPressIn, onPressOut } = usePressScale();
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       hitSlop={8}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      style={{
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        backgroundColor: active ? withAlpha(tint, 0.15) : "transparent",
-      }}
     >
-      <Text
+      <Animated.View
         style={{
-          color: active ? tint : p.ink.muted,
-          fontSize: 11,
-          fontWeight: "700",
-          letterSpacing: 0.6,
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          borderRadius: 999,
+          backgroundColor: active ? withAlpha(tint, 0.15) : "transparent",
+          transform: [{ scale }],
         }}
       >
-        {label}
-      </Text>
+        <Text
+          style={{
+            color: active ? tint : p.ink.muted,
+            fontSize: 11,
+            fontWeight: "700",
+            letterSpacing: 0.6,
+          }}
+        >
+          {label}
+        </Text>
+      </Animated.View>
     </Pressable>
   );
 }

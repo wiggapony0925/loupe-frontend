@@ -90,7 +90,7 @@ export default function AnalyticsScreen() {
           />
         ) : null}
 
-        <PortfolioChart fallbackTotal={totalValue} />
+        <PortfolioChart fallbackTotal={totalValue} bleedX={20} />
 
         <View>
           <SectionHeader eyebrow="Snapshot" title="Book stats" />

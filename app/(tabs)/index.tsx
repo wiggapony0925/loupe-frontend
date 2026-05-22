@@ -77,6 +77,7 @@ export default function CommandCenterScreen() {
           fallbackTotal={summary.data?.totalValueUsd ?? 0}
           costBasisUsd={summary.data?.totalCostUsd ?? null}
           showPsa10Overlay
+          bleedX={20}
         />
 
         <View>
@@ -421,7 +422,12 @@ function KpiPill({
           {label}
         </Text>
       </View>
-      <Text className="mt-1 text-sm font-bold text-ink">{value}</Text>
+      <Text
+        className="mt-1 text-sm font-bold text-ink"
+        style={{ fontVariant: ["tabular-nums"], letterSpacing: -0.2 }}
+      >
+        {value}
+      </Text>
     </View>
   );
 }

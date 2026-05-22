@@ -11,12 +11,13 @@
  * eye, while the sparkline + delta carry the up/down signal.
  */
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Animated, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { routes } from "@/shared/routes";
 import { CardImage } from "@/presentation/components/CardImage";
 import { Sparkline, seededWalk } from "@/presentation/components/Sparkline";
 import { Price } from "@/presentation/components/Price";
+import { usePressScale } from "@/presentation/components/usePressScale";
 import { useThemedPalette, withAlpha, gradeColor } from "@/presentation/theme/tokens";
 import type { CollectionCard } from "@/domain";
 
@@ -44,6 +45,9 @@ export function PositionRow({ card, spark, copies = 1 }: PositionRowProps) {
   const p = useThemedPalette();
   const tint = gradeColor(card.grade);
   const hasDuplicates = copies > 1;
+  // Robinhood-style press feedback — row gently scales to 0.97 on
+  // touch. Native-driver spring so the list keeps scrolling smoothly.
+  const { scale, onPressIn, onPressOut } = usePressScale();
 
   const points =
     spark && spark.points.length >= 2
@@ -91,6 +95,8 @@ export function PositionRow({ card, spark, copies = 1 }: PositionRowProps) {
   return (
     <Pressable
       onPress={() => router.push(routes.card(card.cardId))}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       accessibilityRole="button"
       accessibilityLabel={
         hasDuplicates
@@ -100,13 +106,14 @@ export function PositionRow({ card, spark, copies = 1 }: PositionRowProps) {
       android_ripple={{ color: withAlpha(p.ink.dim, 0.1) }}
     >
       {({ pressed }) => (
-        <View
+        <Animated.View
           style={{
             flexDirection: "row",
             alignItems: "center",
             paddingVertical: 12,
             paddingHorizontal: POSITION_ROW_INDENT,
             backgroundColor: pressed ? withAlpha(p.ink.dim, 0.06) : "transparent",
+            transform: [{ scale }],
           }}
         >
           {/* Art */}
@@ -245,6 +252,7 @@ export function PositionRow({ card, spark, copies = 1 }: PositionRowProps) {
                   fontSize: 13,
                   fontWeight: "700",
                   letterSpacing: -0.1,
+                  fontVariant: ["tabular-nums"],
                 }}
               />
             </View>
@@ -257,6 +265,7 @@ export function PositionRow({ card, spark, copies = 1 }: PositionRowProps) {
                   fontSize: 11,
                   fontWeight: "700",
                   letterSpacing: 0.2,
+                  fontVariant: ["tabular-nums"],
                 }}
               >
                 {direction === "up" ? "+" : ""}
@@ -264,7 +273,7 @@ export function PositionRow({ card, spark, copies = 1 }: PositionRowProps) {
               </Text>
             ) : null}
           </View>
-        </View>
+        </Animated.View>
       )}
     </Pressable>
   );

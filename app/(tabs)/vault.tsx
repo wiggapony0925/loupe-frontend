@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { routes } from "@/shared/routes";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -134,12 +135,21 @@ export default function VaultScreen() {
             )}
           </View>
         }
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const copies = copiesByCardId.get(item.cardId) ?? 1;
-          return viewMode === "list" ? (
-            <PositionRow card={item} spark={sparkMap.get(item.cardId)} copies={copies} />
-          ) : (
-            <CardThumbnail card={item} spark={sparkMap.get(item.cardId)} copies={copies} />
+          // Staggered fade-in — each row enters ~40ms after the one
+          // above it for a Robinhood-style cascade. Only the first
+          // dozen are staggered so a long list doesn't queue a 2-second
+          // animation chain when the user scrolls back into view.
+          const delay = Math.min(index, 12) * 40;
+          return (
+            <Animated.View entering={FadeInDown.delay(delay).duration(260)}>
+              {viewMode === "list" ? (
+                <PositionRow card={item} spark={sparkMap.get(item.cardId)} copies={copies} />
+              ) : (
+                <CardThumbnail card={item} spark={sparkMap.get(item.cardId)} copies={copies} />
+              )}
+            </Animated.View>
           );
         }}
         ListFooterComponent={
@@ -257,7 +267,10 @@ function PillStat({
       <Text className="text-[9px] uppercase tracking-[2px] text-ink-dim">{label}</Text>
       <Text
         className="mt-1 text-base font-semibold text-ink"
-        style={valueColor ? { color: valueColor } : undefined}
+        style={[
+          { fontVariant: ["tabular-nums"] as const, letterSpacing: -0.3 },
+          valueColor ? { color: valueColor } : null,
+        ]}
       >
         {value}
       </Text>

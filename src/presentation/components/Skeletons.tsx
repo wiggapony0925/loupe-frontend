@@ -15,7 +15,7 @@
  * The legacy `<Skeleton />` in `Skeleton.tsx` re-exports `SkeletonBox`
  * for back-compat.
  */
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Easing,
@@ -23,7 +23,10 @@ import {
   type DimensionValue,
   type ViewStyle,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { getActiveScheme, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 /**
  * Returns a fill color that is visibly distinct from the surrounding
@@ -68,6 +71,28 @@ export function useShimmer(): Animated.Value {
   return opacity;
 }
 
+/**
+ * Looping 0 → 1 progress value (1600ms linear) used to translate a
+ * highlight gradient across each skeleton block. Native-driver so it
+ * stays smooth even when the screen is busy.
+ */
+function useSweep(): Animated.Value {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(v, {
+        toValue: 1,
+        duration: 1600,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [v]);
+  return v;
+}
+
 // ─── Atoms ─────────────────────────────────────────────────────────────
 
 interface BoxProps {
@@ -85,6 +110,22 @@ export function SkeletonBox({
 }: BoxProps) {
   const fill = useSkeletonFill();
   const opacity = useShimmer();
+  const sweep = useSweep();
+  // Highlight tint: a touch of white in dark mode, a touch of black in
+  // light mode. Either way it travels diagonally across the block to
+  // sell the "loading" beat better than a flat opacity pulse can.
+  const highlight = useMemo(
+    () => (getActiveScheme() === "light"
+      ? "rgba(255,255,255,0.55)"
+      : "rgba(255,255,255,0.07)"),
+    [],
+  );
+  // Translate the highlight from −100% to +100% of the block's width.
+  // The block masks via `overflow: hidden` so it never bleeds outside.
+  const translateX = sweep.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["-100%", "100%"],
+  });
   return (
     <View
       style={[
@@ -92,8 +133,20 @@ export function SkeletonBox({
         style,
       ]}
     >
-      <Animated.View
-        style={{ flex: 1, backgroundColor: fill, opacity }}
+      <Animated.View style={{ flex: 1, backgroundColor: fill, opacity }} />
+      <AnimatedLinearGradient
+        pointerEvents="none"
+        colors={["transparent", highlight, "transparent"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          transform: [{ translateX } as unknown as { translateX: number }],
+        }}
       />
     </View>
   );
