@@ -5,18 +5,10 @@ import { useVaultFilters } from "@/application/stores/vaultStore";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { TcgMark, tcgShortLabel } from "@/presentation/brand/TcgMark";
 
-const SETS: (CardSet | "All")[] = [
-  "All",
-  "Pokemon Base Set",
-  "2026 World Cup Goals",
-  "Topps Chrome 2025",
-  "Magic Alpha",
-];
-
 const GRADES = [1, 7, 8, 9, 10] as const;
 
 /** Brand-evocative accent colours used to tint each TCG chip. */
-function tcgTint(set: CardSet | "All"): string {
+function tcgTint(set: CardSet | "All" | string): string {
   switch (set) {
     case "Pokemon Base Set":
       return "#FFCB05"; // pikachu yellow
@@ -27,26 +19,47 @@ function tcgTint(set: CardSet | "All"): string {
     case "Magic Alpha":
       return "#7E5BEF"; // arcane purple
     case "All":
-    default:
       return "#7AA2FF"; // neutral blue
+    default:
+      // Unknown set name from the user's actual vault — use the neutral
+      // brand blue so the chip still reads as on-brand rather than gray.
+      return "#7AA2FF";
   }
 }
 
-export function FilterBar() {
+interface FilterBarProps {
+  /**
+   * Distinct set names present in the user's vault. The Category row is
+   * driven entirely from this list (plus an "All" chip) so we never
+   * show a filter the user can't possibly hit. When the list is empty
+   * or only one set is owned, the row collapses entirely.
+   */
+  availableSets: string[];
+}
+
+export function FilterBar({ availableSets }: FilterBarProps) {
   const { set, minGrade, setSet, setMinGrade } = useVaultFilters();
+
+  // Only show the Category row when there's a real choice to make.
+  // One owned set means the chip would only ever say "All / <thatSet>" —
+  // pure noise.
+  const showCategory = availableSets.length >= 2;
+  const setOptions: (CardSet | "All")[] = ["All", ...(availableSets as CardSet[])];
 
   return (
     <View className="gap-3">
-      <FilterRow label="Category">
-        {SETS.map((s) => (
-          <TcgChip
-            key={s}
-            tcg={s}
-            active={set === s}
-            onPress={() => setSet(s)}
-          />
-        ))}
-      </FilterRow>
+      {showCategory ? (
+        <FilterRow label="Category">
+          {setOptions.map((s) => (
+            <TcgChip
+              key={s}
+              tcg={s}
+              active={set === s}
+              onPress={() => setSet(s)}
+            />
+          ))}
+        </FilterRow>
+      ) : null}
       <FilterRow label="Min Grade">
         {GRADES.map((g) => (
           <Chip
@@ -85,7 +98,12 @@ function TcgChip({
 }) {
   const p = useThemedPalette();
   const tint = tcgTint(tcg);
-  const label = tcgShortLabel(tcg);
+  // `tcgShortLabel` only knows the seed-fixture set names. For any
+  // real-world set the user owns we fall back to a truncated copy of
+  // the raw name so the chip never collapses to "All".
+  const known = tcgShortLabel(tcg);
+  const isKnown = known !== "All" || tcg === "All";
+  const label = isKnown ? known : tcg.length > 14 ? `${tcg.slice(0, 13)}…` : tcg;
   // Logo glyph wants a contrasting ink + chip-coloured background.
   const glyphInk = active ? tint : p.ink.default;
   const glyphBg = active ? p.bg.base : p.bg.elevated;

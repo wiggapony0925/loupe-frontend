@@ -9,6 +9,7 @@ import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { AuthScreen } from "@/presentation/features/auth/AuthScreen";
 import { FormInput } from "@/presentation/features/auth/FormInput";
 import { AuthFooter } from "@/presentation/features/auth/AuthFooter";
+import { LoupeMark } from "@/presentation/brand/LoupeMark";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { ApiError } from "@/infrastructure/http/client";
 import { useThemedPalette } from "@/presentation/theme/tokens";
@@ -48,6 +49,9 @@ export default function SignUpScreen() {
   return (
     <AuthScreen>
       <View style={styles.header}>
+        {/* Brand mark — mirrors sign-in so the two screens read as a
+            pair, and matches the Command tab's top-left identity. */}
+        <LoupeMark size={44} color={p.ink.default} />
         <Text style={[styles.title, { color: p.ink.default }]}>Create account</Text>
         <Text style={[styles.subtitle, { color: p.ink.muted }]}>
           Build your portfolio in seconds.
@@ -109,7 +113,7 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { gap: 8 },
+  header: { gap: 12 },
   title: { fontSize: 32, fontWeight: "800", letterSpacing: -0.5 },
   subtitle: { fontSize: 15 },
   form: { gap: 16 },

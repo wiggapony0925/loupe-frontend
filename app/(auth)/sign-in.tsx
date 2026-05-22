@@ -15,6 +15,7 @@ import { AuthScreen } from "@/presentation/features/auth/AuthScreen";
 import { FormInput } from "@/presentation/features/auth/FormInput";
 import { AuthFooter } from "@/presentation/features/auth/AuthFooter";
 import { DevPersonaSheet } from "@/presentation/features/auth/DevPersonaSheet";
+import { LoupeMark } from "@/presentation/brand/LoupeMark";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { ApiError } from "@/infrastructure/http/client";
 import { useThemedPalette } from "@/presentation/theme/tokens";
@@ -47,6 +48,10 @@ export default function SignInScreen() {
   return (
     <AuthScreen>
       <View style={styles.header}>
+        {/* Brand mark anchors the page — matches the Command tab's
+            top-left identity so returning users see the same glyph
+            they associate with the app. */}
+        <LoupeMark size={44} color={p.ink.default} />
         <Text style={[styles.title, { color: p.ink.default }]}>Welcome back</Text>
         <Text style={[styles.subtitle, { color: p.ink.muted }]}>
           Sign in to your Loupe account.
@@ -115,7 +120,7 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { gap: 8 },
+  header: { gap: 12 },
   title: { fontSize: 32, fontWeight: "800", letterSpacing: -0.5 },
   subtitle: { fontSize: 15 },
   form: { gap: 16 },

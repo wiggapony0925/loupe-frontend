@@ -12,6 +12,11 @@ interface CardThumbnailProps {
   card: CollectionCard;
   /** Optional pre-fetched sparkline (points + deltaPct). */
   spark?: { points: number[]; deltaPct: number };
+  /**
+   * How many total copies of this printing the user owns. When ≥ 2 the
+   * tile renders a "×N" badge so duplicates pop in the grid.
+   */
+  copies?: number;
 }
 
 // Reserved heights so every tile in the grid is identical regardless of
@@ -33,9 +38,10 @@ function formatDelta(delta: number): { label: string; up: boolean; valid: boolea
   return { label: `${up ? "+" : ""}${(delta * 100).toFixed(2)}%`, up, valid: true };
 }
 
-export function CardThumbnail({ card, spark }: CardThumbnailProps) {
+export function CardThumbnail({ card, spark, copies = 1 }: CardThumbnailProps) {
   const p = useThemedPalette();
   const tint = gradeColor(card.grade);
+  const hasDuplicates = copies > 1;
 
   // Fall back to a deterministic walk so the tile never feels empty.
   const points =
@@ -47,9 +53,13 @@ export function CardThumbnail({ card, spark }: CardThumbnailProps) {
 
   return (
     <Pressable
-      onPress={() => router.push(routes.card(card.id))}
+      onPress={() => router.push(routes.card(card.cardId))}
       accessibilityRole="button"
-      accessibilityLabel={`${card.title}, grade ${card.grade.toFixed(1)}, ${delta.label}`}
+      accessibilityLabel={
+        hasDuplicates
+          ? `${card.title}, grade ${card.grade.toFixed(1)}, ${delta.label}, ${copies} copies owned`
+          : `${card.title}, grade ${card.grade.toFixed(1)}, ${delta.label}`
+      }
       className="flex-1 overflow-hidden rounded-2xl border border-line bg-bg-elevated"
       style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
     >
@@ -93,6 +103,25 @@ export function CardThumbnail({ card, spark }: CardThumbnailProps) {
                 style={{ color: deltaTint, letterSpacing: 0.3 }}
               >
                 {delta.label}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+        {/* Duplicate-copies badge — bottom-left, mint pill so it reads
+            as an inventory fact (not market signal). */}
+        {hasDuplicates ? (
+          <View className="absolute bottom-2 left-2">
+            <View
+              className="rounded-md px-1.5 py-0.5"
+              style={{
+                backgroundColor: withAlpha(p.accent.mint, 0.92),
+              }}
+            >
+              <Text
+                className="text-[10px] font-extrabold"
+                style={{ color: "#fff", letterSpacing: 0.3 }}
+              >
+                ×{copies}
               </Text>
             </View>
           </View>

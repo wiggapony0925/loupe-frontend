@@ -74,10 +74,12 @@ function toCollectionCard(g: GradedCardWire): CollectionCard {
   // boundary because the backend can return arbitrary set names.
   return {
     id: g.id,
+    cardId: g.card_id,
     title: g.card_name ?? "Unknown card",
     set: (g.card_set_name ?? "Unknown set") as CollectionCard["set"],
     year: g.card_year ?? 0,
     grade: Number(g.grade),
+    house: g.house,
     estimatedValueUsd: g.estimated_value_usd ? Number(g.estimated_value_usd) : 0,
     thumbnailUri: g.card_image_url ?? "",
     scannedAt: g.graded_at,

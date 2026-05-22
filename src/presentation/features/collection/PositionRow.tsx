@@ -24,6 +24,12 @@ interface PositionRowProps {
   card: CollectionCard;
   /** Optional pre-fetched sparkline (points + deltaPct). */
   spark?: { points: number[]; deltaPct: number };
+  /**
+   * How many total copies of this printing the user owns. When ≥ 2 the
+   * row renders a "×N" badge next to the title to flag the duplicate.
+   * Defaults to 1 (no badge).
+   */
+  copies?: number;
 }
 
 /** Horizontal padding for the row — vault.tsx uses this to align separators. */
@@ -34,9 +40,10 @@ const SPARK_W = 52;
 const SPARK_H = 22;
 const PILL_MIN_W = 76;
 
-export function PositionRow({ card, spark }: PositionRowProps) {
+export function PositionRow({ card, spark, copies = 1 }: PositionRowProps) {
   const p = useThemedPalette();
   const tint = gradeColor(card.grade);
+  const hasDuplicates = copies > 1;
 
   const points =
     spark && spark.points.length >= 2
@@ -83,9 +90,13 @@ export function PositionRow({ card, spark }: PositionRowProps) {
 
   return (
     <Pressable
-      onPress={() => router.push(routes.card(card.id))}
+      onPress={() => router.push(routes.card(card.cardId))}
       accessibilityRole="button"
-      accessibilityLabel={`${card.title}, grade ${card.grade.toFixed(1)}`}
+      accessibilityLabel={
+        hasDuplicates
+          ? `${card.title}, grade ${card.grade.toFixed(1)}, ${copies} copies owned`
+          : `${card.title}, grade ${card.grade.toFixed(1)}`
+      }
       android_ripple={{ color: withAlpha(p.ink.dim, 0.1) }}
     >
       {({ pressed }) => (
@@ -121,18 +132,44 @@ export function PositionRow({ card, spark }: PositionRowProps) {
 
           {/* Title + meta */}
           <View style={{ flex: 1, marginLeft: 12, marginRight: 8 }}>
-            <Text
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              style={{
-                color: p.ink.default,
-                fontSize: 15,
-                fontWeight: "700",
-                letterSpacing: -0.2,
-              }}
-            >
-              {card.title}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{
+                  color: p.ink.default,
+                  fontSize: 15,
+                  fontWeight: "700",
+                  letterSpacing: -0.2,
+                  flexShrink: 1,
+                }}
+              >
+                {card.title}
+              </Text>
+              {hasDuplicates ? (
+                <View
+                  style={{
+                    marginLeft: 6,
+                    paddingHorizontal: 6,
+                    paddingVertical: 1,
+                    borderRadius: 4,
+                    backgroundColor: withAlpha(p.accent.mint, 0.18),
+                  }}
+                  accessibilityLabel={`${copies} copies owned`}
+                >
+                  <Text
+                    style={{
+                      color: p.accent.mint,
+                      fontSize: 10,
+                      fontWeight: "800",
+                      letterSpacing: 0.4,
+                    }}
+                  >
+                    ×{copies}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
             <View
               style={{
                 marginTop: 3,
