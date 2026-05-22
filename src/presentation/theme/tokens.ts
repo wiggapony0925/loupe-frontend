@@ -37,6 +37,7 @@ export const darkPalette = {
     blue: "#0A84FF",
     amber: "#FFB020",
     rose: "#FF453A",
+    purple: "#9D6BFF",
   },
 };
 
@@ -60,6 +61,7 @@ export const lightPalette: typeof darkPalette = {
     blue: "#0A84FF",
     amber: "#B8860B",
     rose: "#D63B30",
+    purple: "#7A4FE8",
   },
 };
 

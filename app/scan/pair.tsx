@@ -44,6 +44,7 @@ import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useScanner } from "@/presentation/features/scanner/useScanner";
 import { pairScanner } from "@/infrastructure/repositories/forensicRepository";
+import { queryKeys } from "@/application/queries/queryKeys";
 
 type Stage = "welcome" | "prepare" | "searching" | "success" | "error";
 
@@ -70,7 +71,7 @@ export default function PairScannerScreen() {
       });
       // Refresh the Command Center widget so the new device shows up
       // the moment the user lands back on home.
-      await qc.invalidateQueries({ queryKey: ["hardware-status"] });
+      await qc.invalidateQueries({ queryKey: queryKeys.hardware.status() });
       setStage("success");
     } catch (err) {
       const message =

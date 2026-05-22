@@ -9,11 +9,12 @@
  */
 import { useCallback, useRef } from "react";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useStableCallback<T extends (...args: any[]) => any>(fn: T): T {
+export function useStableCallback<T extends (...args: never[]) => unknown>(
+  fn: T,
+): T {
   const ref = useRef<T>(fn);
   ref.current = fn;
   // The wrapper itself never changes identity; it always forwards to
   // the latest `fn` stored in the ref.
-  return useCallback(((...args) => ref.current(...args)) as T, []);
+  return useCallback(((...args: never[]) => ref.current(...args)) as T, []);
 }

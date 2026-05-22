@@ -10,7 +10,7 @@
  */
 import type { CollectionCard, PricePoint } from "@/domain";
 import type { CardSearchResult, TrendingResponseWire } from "@/infrastructure/http";
-import { ApiError, api } from "@/infrastructure/http/apiClient";
+import { ApiError, apiFetch } from "@/infrastructure/http/client";
 
 export type MarketRange = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
 export type MarketCondition = "raw" | "graded" | "pop";
@@ -98,7 +98,7 @@ export interface CatalogEntry {
  * catalog route on the backend.
  */
 export async function fetchMarketCatalog(): Promise<CatalogEntry[]> {
-  const wire = await api.get<TrendingResponseWire>(
+  const wire = await apiFetch<TrendingResponseWire>(
     "/v1/cards/trending?limit=60",
   );
   return (wire.cards ?? []).map(toCatalogEntry);
@@ -125,10 +125,10 @@ export function fetchMarketCard(
   // the real `/v1/cards/...` endpoints. This helper is no longer used
   // at runtime; we throw so anything that calls it surfaces clearly
   // instead of silently producing fake data.
-  throw new ApiError(
-    501,
-    "fetchMarketCard is deprecated — use useCardMarket() against /v1/cards/{id}/market.",
-    null,
-    "market.deprecated",
-  );
+  throw new ApiError(`/v1/cards/${_id}/market`, {
+    code: "market.deprecated",
+    message:
+      "fetchMarketCard is deprecated \u2014 use useCardMarket() against /v1/cards/{id}/market.",
+    status: 501,
+  });
 }

@@ -6,7 +6,8 @@
  * decoder isn't saturated on launch.
  */
 import React, { useCallback } from "react";
-import { FlatList, Text, View, type ListRenderItem } from "react-native";
+import { Text, View } from "react-native";
+import { FlashList, type ListRenderItem } from "@shopify/flash-list";
 import { CardTile } from "./CardTile";
 import { TILE_WIDTH, type CardWire, type CardTileSize } from "./types";
 
@@ -65,7 +66,7 @@ export function CardHorizontalRail({
           {title}
         </Text>
       ) : null}
-      <FlatList
+      <FlashList
         data={cards}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
@@ -75,12 +76,6 @@ export function CardHorizontalRail({
         snapToInterval={snap ? TILE_WIDTH[tileSize] + gap : undefined}
         decelerationRate={snap ? "fast" : "normal"}
         contentContainerStyle={{ paddingRight: 4 }}
-        initialNumToRender={6}
-        windowSize={8}
-        // Horizontal rails are short; clipping subviews routinely unmounts
-        // tiles mid-fetch (especially on iOS), which is the visible "image
-        // never appears" symptom. Keep them mounted.
-        removeClippedSubviews={false}
       />
     </View>
   );

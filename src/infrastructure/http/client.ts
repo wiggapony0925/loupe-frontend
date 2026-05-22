@@ -120,11 +120,29 @@ export function apiUrl(path: string, base: string = activeApiBase): string {
 
 export type QueryValue = string | number | boolean | undefined;
 
+/**
+ * Minimal subset of the zod `ZodType` shape so this module stays
+ * zod-version-agnostic and we don't pay an extra dependency cost at
+ * import time. Any object exposing `.safeParse()` satisfies this.
+ */
+export interface WireSchema<T> {
+  safeParse(input: unknown):
+    | { success: true; data: T }
+    | { success: false; error: unknown };
+}
+
 export interface ApiFetchInit extends Omit<RequestInit, "body"> {
   body?: BodyInit | null;
   json?: unknown;
   query?: Record<string, QueryValue>;
   skipAuth?: boolean;
+  /**
+   * Optional runtime schema (e.g. a zod schema) applied to `envelope.data`
+   * before the value is returned. On a validation failure we capture the
+   * zod issue list to Sentry and throw an `ApiError` with
+   * `code: "schema.invalid"`. Recommended for every endpoint long-term.
+   */
+  schema?: WireSchema<unknown>;
   /** Internal — set by the 401-retry path to prevent infinite refresh loops. */
   _retriedAfterRefresh?: boolean;
 }
@@ -298,12 +316,27 @@ export async function apiFetchEnvelope<T = unknown>(
 
 /**
  * Convenience wrapper around {@link apiFetchEnvelope} that unwraps to
- * `envelope.data`. Throws {@link ApiError} on non-2xx.
+ * `envelope.data`. Throws {@link ApiError} on non-2xx. When `init.schema`
+ * is provided, the unwrapped payload is validated and a validation
+ * failure is surfaced as `ApiError` with `code: "schema.invalid"`.
  */
 export async function apiFetch<T = unknown>(
   path: string,
   init: ApiFetchInit = {},
 ): Promise<T> {
   const envelope = await apiFetchEnvelope<T>(path, init);
-  return envelope.data as T;
+  const raw = envelope.data;
+  if (init.schema) {
+    const result = init.schema.safeParse(raw);
+    if (!result.success) {
+      throw new ApiError(path, {
+        code: "schema.invalid",
+        message: "Response failed runtime validation",
+        status: 200,
+        details: result.error,
+      });
+    }
+    return result.data as T;
+  }
+  return raw as T;
 }

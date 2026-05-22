@@ -5,7 +5,7 @@
  */
 import React from "react";
 import { Text, type TextProps } from "react-native";
-import { compactUsd } from "@/shared/format";
+import { useCompactUsd } from "@/shared/format";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 
 export interface PriceTextProps extends Omit<TextProps, "children"> {
@@ -26,6 +26,7 @@ export function PriceText({
   ...rest
 }: PriceTextProps) {
   const p = useThemedPalette();
+  const compactUsd = useCompactUsd();
   const color = tone === "accent" ? p.accent.mint : p.ink.default;
   return (
     <Text

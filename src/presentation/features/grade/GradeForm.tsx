@@ -175,7 +175,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
     } catch (e) {
       Alert.alert(
         mode === "create" ? "Couldn't add card" : "Couldn't update",
-        (e as Error).message ?? "Try again in a moment.",
+        e instanceof Error ? e.message : "Try again in a moment.",
       );
     } finally {
       setSubmitting(false);
@@ -197,7 +197,10 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
               await deleteMut.mutateAsync(gradeId);
               router.back();
             } catch (e) {
-              Alert.alert("Couldn't delete", (e as Error).message);
+              Alert.alert(
+                "Couldn't delete",
+                e instanceof Error ? e.message : "Try again in a moment.",
+              );
             }
           },
         },

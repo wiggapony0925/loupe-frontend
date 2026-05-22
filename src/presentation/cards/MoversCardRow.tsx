@@ -5,7 +5,7 @@
  */
 import React, { memo } from "react";
 import { Text, View } from "react-native";
-import { compactUsd } from "@/shared/format";
+import { useCompactUsd } from "@/shared/format";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { CardRow } from "./CardRow";
 import type { CardWire, TrendInfo } from "./types";
@@ -39,6 +39,7 @@ function MoverPill({
   trend: TrendInfo | null;
 }) {
   const p = useThemedPalette();
+  const compactUsd = useCompactUsd();
   // No trend → neutral slate pill. Up → mint. Down → rose.
   const tint =
     trend == null

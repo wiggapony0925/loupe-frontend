@@ -14,6 +14,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react-native";
 import { fetchReport } from "@/infrastructure/repositories/forensicRepository";
+import { queryKeys } from "@/application/queries/queryKeys";
 import { gradeColor, palette, useThemedPalette } from "@/presentation/theme/tokens";
 import { compactUsd } from "@/shared/format";
 import { SkeletonComparePage } from "@/presentation/components/Skeletons";
@@ -22,8 +23,8 @@ import type { ForensicReport, ForensicScore } from "@/domain";
 export default function CompareScreen() {
   useThemedPalette();
   const { a, b } = useLocalSearchParams<{ a?: string; b?: string }>();
-  const ra = useQuery({ queryKey: ["report", a], queryFn: () => fetchReport(a!), enabled: !!a });
-  const rb = useQuery({ queryKey: ["report", b], queryFn: () => fetchReport(b!), enabled: !!b });
+  const ra = useQuery({ queryKey: queryKeys.reports.item(a ?? ""), queryFn: () => fetchReport(a!), enabled: !!a });
+  const rb = useQuery({ queryKey: queryKeys.reports.item(b ?? ""), queryFn: () => fetchReport(b!), enabled: !!b });
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">

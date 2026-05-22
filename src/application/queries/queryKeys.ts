@@ -41,6 +41,7 @@ export const queryKeys = {
     market: (id: string) => ["cards", "market", id] as const,
     listings: (id: string, limit: number) =>
       ["cards", "listings", id, limit] as const,
+    sparklines: () => ["cards", "sparklines"] as const,
     comps: (
       id: string,
       days: number,
@@ -80,6 +81,7 @@ export const queryKeys = {
   collection: {
     all: ["collection"] as const,
     list: () => ["collection"] as const,
+    summary: () => ["collection", "summary"] as const,
   },
   alerts: {
     all: ["alerts"] as const,
@@ -90,6 +92,16 @@ export const queryKeys = {
     list: () => ["reports", "list"] as const,
     upcoming: () => ["reports", "upcoming"] as const,
     item: (id: string) => ["reports", "item", id] as const,
+  },
+  market: {
+    all: ["market"] as const,
+    catalog: () => ["market", "catalog"] as const,
+    detail: (id: string, condition: string) =>
+      ["market", id, condition] as const,
+  },
+  hardware: {
+    all: ["hardware"] as const,
+    status: () => ["hardware", "status"] as const,
   },
   marketIndex: {
     all: ["market-index"] as const,

@@ -1,5 +1,4 @@
-import { api } from "@/infrastructure/http/apiClient";
-import { auth } from "@/infrastructure/storage/tokenStorage";
+import { apiFetch, getAuthToken } from "@/infrastructure/http/client";
 import { config } from "@/shared/config";
 import type { PhotometricCapture, ScanJob } from "@/domain";
 
@@ -20,11 +19,11 @@ export async function uploadScan(captures: PhotometricCapture[]): Promise<ScanJo
     form.append("light_indices", String(c.lightIndex));
   });
 
-  return api.post<ScanJob>("/scanner/upload", { body: form });
+  return apiFetch<ScanJob>("/scanner/upload", { method: "POST", body: form });
 }
 
 export function getScanJob(jobId: string): Promise<ScanJob> {
-  return api.get<ScanJob>(`/scanner/jobs/${jobId}`);
+  return apiFetch<ScanJob>(`/scanner/jobs/${jobId}`);
 }
 
 /**
@@ -37,7 +36,7 @@ export function streamScanJob(
   onUpdate: (job: ScanJob) => void,
   onError?: (err: Event) => void,
 ): () => void {
-  const token = auth.getToken();
+  const token = getAuthToken();
   const qs = token ? `?token=${encodeURIComponent(token)}` : "";
   const ws = new WebSocket(`${config.wsUrl}/ws/scanner/jobs/${jobId}${qs}`);
 

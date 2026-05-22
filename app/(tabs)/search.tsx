@@ -142,12 +142,12 @@ export default function SearchScreen() {
 
   const collection = useQuery({ queryKey: queryKeys.collection.list(), queryFn: fetchCollection });
   const sparks = useQuery({
-    queryKey: ["card-sparklines"],
+    queryKey: queryKeys.cards.sparklines(),
     queryFn: fetchCardSparklines,
     staleTime: 60_000,
   });
   const catalog = useQuery({
-    queryKey: ["market-catalog"],
+    queryKey: queryKeys.market.catalog(),
     queryFn: fetchMarketCatalog,
     staleTime: 5 * 60_000,
   });

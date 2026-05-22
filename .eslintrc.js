@@ -28,6 +28,8 @@ module.exports = {
         "newlines-between": "never",
       },
     ],
-    "no-console": ["warn", { allow: ["warn", "error", "info"] }],
+    // No console.* in source — pipe through the Sentry helpers instead.
+    // `warn`/`error`/`info` slip past linters in prod and leak data; ban them.
+    "no-console": "warn",
   },
 };

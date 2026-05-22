@@ -12,7 +12,11 @@ import type {
   HardwareStatus,
   PricePoint,
 } from "@/domain";
-import { ApiError, api } from "@/infrastructure/http/apiClient";
+import { ApiError, apiFetch } from "@/infrastructure/http/client";
+import {
+  GradedCardListSchema,
+  PortfolioSummarySchema,
+} from "@/infrastructure/http/schemas";
 import type { PortfolioSummaryWire } from "@/infrastructure/http";
 
 /* ─── Wire shapes (mirror loupe-backend/app/schemas) ─────────────────── */
@@ -99,7 +103,7 @@ function toHardwareStatus(s: ScannerWire): HardwareStatus {
 /* ─── Endpoints ──────────────────────────────────────────────────────── */
 
 export async function fetchHardwareStatus(): Promise<HardwareStatus | null> {
-  const wire = await api.get<ScannerWire | null>("/v1/scanners/status");
+  const wire = await apiFetch<ScannerWire | null>("/v1/scanners/status");
   return wire ? toHardwareStatus(wire) : null;
 }
 
@@ -117,7 +121,8 @@ export interface PairScannerInput {
  * `/v1/scanners/status` will start returning it.
  */
 export async function pairScanner(input: PairScannerInput): Promise<HardwareStatus> {
-  const wire = await api.post<ScannerWire>("/v1/scanners", {
+  const wire = await apiFetch<ScannerWire>("/v1/scanners", {
+    method: "POST",
     json: {
       device_id: input.deviceId,
       name: input.name ?? null,
@@ -129,7 +134,9 @@ export async function pairScanner(input: PairScannerInput): Promise<HardwareStat
 }
 
 export async function fetchCollection(): Promise<CollectionCard[]> {
-  const wire = await api.get<GradedCardWire[]>("/v1/grades");
+  const wire = await apiFetch<GradedCardWire[]>("/v1/grades", {
+    schema: GradedCardListSchema,
+  });
   return wire.map(toCollectionCard);
 }
 
@@ -155,19 +162,20 @@ export interface CollectionSummary {
 }
 
 export async function fetchCollectionSummary(): Promise<CollectionSummary> {
-  return api.get<PortfolioSummaryWire>("/v1/grades/summary");
+  return apiFetch<PortfolioSummaryWire>("/v1/grades/summary", {
+    schema: PortfolioSummarySchema,
+  });
 }
 
 export async function fetchReport(_id: string): Promise<ForensicReport> {
   // Backend has not yet shipped a forensic report endpoint. Refuse to
   // fabricate one — surface a clear error so the UI can render an empty
   // state rather than fake confidence numbers.
-  throw new ApiError(
-    501,
-    "Forensic reports are not yet available from the backend.",
-    null,
-    "report.unavailable",
-  );
+  throw new ApiError("/v1/reports", {
+    code: "report.unavailable",
+    message: "Forensic reports are not yet available from the backend.",
+    status: 501,
+  });
 }
 
 /* ─── Portfolio history & sparklines ─────────────────────────────────── */
@@ -184,7 +192,7 @@ export interface PortfolioHistory {
 export async function fetchPortfolioHistory(
   range: PortfolioRange,
 ): Promise<PortfolioHistory> {
-  const wire = await api.get<PortfolioHistoryWire>(
+  const wire = await apiFetch<PortfolioHistoryWire>(
     `/v1/grades/history?range=${encodeURIComponent(range)}`,
   );
   return {
@@ -204,5 +212,5 @@ export interface CardSparkline {
 }
 
 export async function fetchCardSparklines(): Promise<CardSparkline[]> {
-  return api.get<CardSparklineWire[]>("/v1/grades/sparklines");
+  return apiFetch<CardSparklineWire[]>("/v1/grades/sparklines");
 }

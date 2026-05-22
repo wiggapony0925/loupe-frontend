@@ -103,7 +103,7 @@ function houseColor(house: string, p: ReturnType<typeof useThemedPalette>) {
     case "bgs":
       return p.accent.amber;
     case "sgc":
-      return "#9D6BFF"; // purple — not in base palette
+      return p.accent.purple;
     case "tag":
       return p.ink.default;
     default:

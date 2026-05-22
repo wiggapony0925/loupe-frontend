@@ -16,7 +16,6 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ApiError,
   apiFetch,
@@ -31,10 +30,14 @@ import {
   registerWithEmail as registerWithEmailApi,
   refreshSession as refreshSessionApi,
 } from "@/infrastructure/repositories/authRepository";
+import {
+  TOKEN_KEY as TOKEN_STORAGE_KEY,
+  REFRESH_KEY as REFRESH_STORAGE_KEY,
+  getSecureItem,
+  setSecureItem,
+  deleteSecureItem,
+} from "@/infrastructure/storage/secureTokenStore";
 import type { MeResponse } from "@/infrastructure/http";
-
-const TOKEN_STORAGE_KEY = "loupe.auth.token";
-const REFRESH_STORAGE_KEY = "loupe.auth.refresh";
 
 interface AuthContextValue {
   token: string | null;
@@ -77,15 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setTokenState(nextAccess);
       setAuthToken(nextAccess);
       refreshTokenRef.current = nextRefresh;
-      try {
-        if (nextAccess) await AsyncStorage.setItem(TOKEN_STORAGE_KEY, nextAccess);
-        else await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
-        if (nextRefresh)
-          await AsyncStorage.setItem(REFRESH_STORAGE_KEY, nextRefresh);
-        else await AsyncStorage.removeItem(REFRESH_STORAGE_KEY);
-      } catch {
-        /* storage unavailable in some test envs — non-fatal */
-      }
+      if (nextAccess) await setSecureItem(TOKEN_STORAGE_KEY, nextAccess);
+      else await deleteSecureItem(TOKEN_STORAGE_KEY);
+      if (nextRefresh) await setSecureItem(REFRESH_STORAGE_KEY, nextRefresh);
+      else await deleteSecureItem(REFRESH_STORAGE_KEY);
     },
     [],
   );
@@ -116,12 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTokenState(pair.access_token);
         setAuthToken(pair.access_token);
         refreshTokenRef.current = pair.refresh_token;
-        try {
-          await AsyncStorage.setItem(TOKEN_STORAGE_KEY, pair.access_token);
-          await AsyncStorage.setItem(REFRESH_STORAGE_KEY, pair.refresh_token);
-        } catch {
-          /* non-fatal */
-        }
+        await setSecureItem(TOKEN_STORAGE_KEY, pair.access_token);
+        await setSecureItem(REFRESH_STORAGE_KEY, pair.refresh_token);
         if (pair.user) setUser(pair.user);
         return pair.access_token;
       } catch (err) {
@@ -145,8 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         const [stored, storedRefresh] = await Promise.all([
-          AsyncStorage.getItem(TOKEN_STORAGE_KEY).catch(() => null),
-          AsyncStorage.getItem(REFRESH_STORAGE_KEY).catch(() => null),
+          getSecureItem(TOKEN_STORAGE_KEY),
+          getSecureItem(REFRESH_STORAGE_KEY),
         ]);
         if (cancelled) return;
         if (stored) {
@@ -218,17 +212,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [persistTokens]);
 
   const signInWithApple = useCallback(async () => {
-    if (__DEV__) {
-      // eslint-disable-next-line no-console
-      console.log("[auth] signInWithApple: not yet wired");
-    }
+    // Fail loudly so QA / call sites notice unwired buttons in any env.
+    throw new Error("signInWithApple is not implemented yet");
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    if (__DEV__) {
-      // eslint-disable-next-line no-console
-      console.log("[auth] signInWithGoogle: not yet wired");
-    }
+    throw new Error("signInWithGoogle is not implemented yet");
   }, []);
 
   const setToken = useCallback(

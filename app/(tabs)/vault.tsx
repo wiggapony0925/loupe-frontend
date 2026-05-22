@@ -39,7 +39,7 @@ export default function VaultScreen() {
   // Pair each holding with its sparkline + delta. Same query Analytics uses,
   // so the React Query cache is shared at no extra cost.
   const sparks = useQuery({
-    queryKey: ["card-sparklines"],
+    queryKey: queryKeys.cards.sparklines(),
     queryFn: fetchCardSparklines,
     staleTime: 60_000,
   });
@@ -72,7 +72,7 @@ export default function VaultScreen() {
 
   const onRefresh = useCallback(() => {
     qc.invalidateQueries({ queryKey: queryKeys.collection.all });
-    qc.invalidateQueries({ queryKey: ["card-sparklines"] });
+    qc.invalidateQueries({ queryKey: queryKeys.cards.sparklines() });
   }, [qc]);
 
   const headerPadX = viewMode === "grid" ? 0 : 14;

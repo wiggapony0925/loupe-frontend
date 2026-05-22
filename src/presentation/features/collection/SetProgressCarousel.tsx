@@ -8,7 +8,8 @@
  */
 
 import React, { useMemo } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import Svg, { Circle } from "react-native-svg";
 
 import { useSetProgress } from "@/application/queries/useSetProgress";
@@ -58,12 +59,13 @@ export function SetProgressCarousel() {
           ))}
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={data ?? []}
           keyExtractor={(s) => s.setId}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 14, gap: 12 }}
+          contentContainerStyle={{ paddingHorizontal: 14 }}
+          ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
           renderItem={({ item }) => <SetProgressTile item={item} bgElev={p.bg.elevated} line={p.line.default} inkDim={p.ink.dim} ink={p.ink.default} />}
         />
       )}

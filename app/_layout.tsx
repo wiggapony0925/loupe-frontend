@@ -11,6 +11,7 @@ import { AppProviders } from "@/presentation/providers/AppProviders";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { BrandSplash } from "@/presentation/brand/BrandSplash";
 import { NetworkBanner } from "@/presentation/components/NetworkBanner";
+import { ErrorBoundary } from "@/presentation/components/ErrorBoundary";
 import { useSettings } from "@/application/stores/settingsStore";
 import { applyTheme, palette } from "@/presentation/theme/tokens";
 import { initSentry } from "@/infrastructure/observability/sentry";
@@ -43,11 +44,6 @@ export default function RootLayout() {
   const scheme = useResolvedScheme();
   const { setColorScheme } = useColorScheme();
   const [splashDone, setSplashDone] = useState(false);
-  // Subscribing here makes the root re-render when the user changes their
-  // currency in the bottom-sheet picker. We pipe it into the inner View as
-  // a `key` so the entire app tree remounts and every formatter (every $
-  // sign, every chart label) is re-evaluated against the new currency.
-  const currency = useSettings((s) => s.currency);
 
   // Mutate the JS palette + flip the NativeWind class on every change.
   // Synchronous so the first render after a toggle already sees new values.
@@ -64,8 +60,10 @@ export default function RootLayout() {
         <GluestackUIProvider mode={scheme}>
           <AppProviders>
             <StatusBar style={scheme === "light" ? "dark" : "light"} />
-            <View key={`ccy-${currency}`} style={{ flex: 1 }}>
-              <RootStack />
+            <View style={{ flex: 1 }}>
+              <ErrorBoundary>
+                <RootStack />
+              </ErrorBoundary>
               {!splashDone ? <BrandSplash onFinish={() => setSplashDone(true)} /> : null}
               <NetworkBanner />
             </View>

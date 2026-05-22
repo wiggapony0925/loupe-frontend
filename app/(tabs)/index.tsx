@@ -34,7 +34,7 @@ export default function CommandCenterScreen() {
   useThemedPalette();
   const qc = useQueryClient();
   const { isAuthenticated } = useAuth();
-  const summary = useQuery({ queryKey: ["collection-summary"], queryFn: fetchCollectionSummary });
+  const summary = useQuery({ queryKey: queryKeys.collection.summary(), queryFn: fetchCollectionSummary });
   const collection = useQuery({ queryKey: queryKeys.collection.list(), queryFn: fetchCollection });
   const hardware = useScannerConnection();
   const movers = useTopMovers({ enrichLimit: 12, limit: 5 });

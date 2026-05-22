@@ -31,11 +31,21 @@ export function relativeTime(iso: string, now = new Date()): string {
  *   compactUsd(28_540) //  EUR selected → "€26.3k"
  *   compactUsd(28_540) //  BTC selected → "₿0.4234"
  *
- * Reads currency from the global settings store at call-time, so any
- * component that re-renders after a currency change automatically picks
- * up the new formatting.
+ * NOTE: this snapshots the store at call-time and does NOT subscribe.
+ * Components that want live-updates on currency change must use the
+ * `useCompactUsd()` hook below (or `useMoney()` from `Price.tsx`).
  */
 export function compactUsd(value: number): string {
   const code = useSettings.getState().currency;
   return formatMoney(value, code, { compact: true });
+}
+
+/**
+ * Hook variant of `compactUsd`. Subscribes to the currency setting so
+ * the host component re-renders whenever the operator switches
+ * currencies. Returns a stable-by-currency formatter.
+ */
+export function useCompactUsd(): (value: number) => string {
+  const code = useSettings((s) => s.currency);
+  return (value: number) => formatMoney(value, code, { compact: true });
 }

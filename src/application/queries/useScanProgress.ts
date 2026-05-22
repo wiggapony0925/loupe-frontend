@@ -4,7 +4,11 @@ import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import type { ScanProgressEvent } from "@/infrastructure/http";
 
-type Status = "connecting" | "open" | "closed";
+type Status = "connecting" | "open" | "closed" | "unreachable";
+
+// Backoff: cap exponent at 6 (=> 64s) and give up entirely after this many
+// consecutive failures so a permanently-down backend doesn't drain battery.
+const MAX_RECONNECT_ATTEMPTS = 8;
 
 const env = (process.env ?? {}) as Record<string, string | undefined>;
 
@@ -71,9 +75,13 @@ export function useScanProgress(): { events: ScanProgressEvent[]; status: Status
 
     const scheduleReconnect = () => {
       if (cancelledRef.current) return;
-      const attempt = Math.min(retryRef.current + 1, 6);
+      if (retryRef.current >= MAX_RECONNECT_ATTEMPTS) {
+        setStatus("unreachable");
+        return;
+      }
+      const attempt = retryRef.current + 1;
       retryRef.current = attempt;
-      const delay = Math.min(1000 * 2 ** attempt, 30_000);
+      const delay = Math.min(1000 * 2 ** Math.min(attempt, 6), 30_000);
       setTimeout(connect, delay);
     };
 

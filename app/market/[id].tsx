@@ -54,6 +54,7 @@ import {
   type MarketSource,
 } from "@/infrastructure/repositories/marketRepository";
 import { useMyGrades } from "@/application/queries/useMyGrades";
+import { queryKeys } from "@/application/queries/queryKeys";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import type { GradedCard } from "@/infrastructure/http";
 import { compactUsd } from "@/shared/format";
@@ -75,7 +76,7 @@ export default function MarketDetailScreen() {
   const [watching, setWatching] = useState(false);
 
   const market = useQuery({
-    queryKey: ["market", id, condition],
+    queryKey: queryKeys.market.detail(id, condition),
     queryFn: () => fetchMarketCard(id, condition),
     staleTime: 30_000,
     enabled: !!id,

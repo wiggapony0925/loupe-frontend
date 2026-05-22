@@ -8,7 +8,7 @@ import { router } from "expo-router";
 import { routes } from "@/shared/routes";
 import { CardImage } from "@/presentation/components/CardImage";
 import { pickCardBlurhash, pickCardImageUrl } from "@/shared/cardImage";
-import { compactUsd } from "@/shared/format";
+import { useCompactUsd } from "@/shared/format";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import type { CardWire } from "./types";
 
@@ -28,6 +28,7 @@ function CardRowImpl({
   bordered = false,
 }: CardRowProps) {
   const p = useThemedPalette();
+  const compactUsd = useCompactUsd();
   const price = card.pricing_summary?.market?.amount ?? null;
   const small = pickCardImageUrl(card, "small");
   const normal = pickCardImageUrl(card, "normal");
