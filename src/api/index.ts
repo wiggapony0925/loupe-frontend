@@ -1,18 +1,23 @@
 /**
  * `@/api` — single import surface for everything backend-related.
  *
- *   import {
- *     useApi,            // context hook (endpoints, apiFetch, queryClient, …)
- *     ENDPOINTS,         // URL registry
- *     useAnalyticsOverview, useHomeFeed, useCard, …  // TanStack Query hooks
- *     fetchHomeFeed, fetchAnalyticsOverview, …       // repo functions
- *     AnalyticsOverviewSchema,                       // zod validators
- *     ApiError,                                      // typed errors
- *   } from "@/api";
+ * Two equivalent styles — pick whichever you prefer at the call site:
+ *
+ *   // Named imports
+ *   import { useApi, ENDPOINTS, useAnalyticsOverview, ApiError } from "@/api";
+ *
+ *   // Namespace import (shape mirrors a future @loupe/api package)
+ *   import { LoupeAPI } from "@/api";
+ *   LoupeAPI.useAnalyticsOverview();
+ *   LoupeAPI.endpoints.cards.item(id);
  *
  * UI code should never reach into `@/infrastructure/...` or
  * `@/application/queries/...` directly — import from `@/api` instead.
  */
+
+// ── Namespace export (recommended for new code) ─────────────────────────────
+export { LoupeAPI } from "./LoupeAPI";
+export type { LoupeAPIType } from "./LoupeAPI";
 
 // ── React context + provider ────────────────────────────────────────────────
 export { ApiProvider, useApi } from "./ApiProvider";
