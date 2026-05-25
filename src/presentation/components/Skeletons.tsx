@@ -485,7 +485,11 @@ export function SkeletonTrendingGrid({ count = 6 }: { count?: number }) {
           <View style={{ aspectRatio: 5 / 7, width: "100%" }}>
             <SkeletonImage width="100%" height="100%" radius={12} />
           </View>
-          <SkeletonText width="80%" height={12} />
+          {/* Two name bars match CardTile's 2-line name clamp so the
+              shimmer height equals the loaded height and the grid
+              doesn't shift when data arrives. */}
+          <SkeletonText width="90%" height={12} />
+          <SkeletonText width="65%" height={12} />
           <SkeletonText width="50%" height={10} />
         </View>
       ))}

@@ -66,7 +66,15 @@ function CardTileImpl({
   // missing a set/year would be shorter than its neighbor and the next
   // wrap-row would visually misalign (the bug visible in the trending
   // grid screenshot). Heights match the skeleton primitive (12 / 10).
-  const NAME_HEIGHT = 16;
+  //
+  // Name uses a 2-line clamp because real-world TCG names blow past
+  // 120dp easily (e.g. Yu-Gi-Oh's "Unchained Malevolent Magistrate
+  // Kamura" or Magic's "Jolrael, Mwonvuli Recluse" run 35+ chars).
+  // A single line forced ellipsis to fire after ~10 chars and looked
+  // worse than wrapping. Two lines with tail-ellipsis is the
+  // shopping-app standard (Amazon / eBay / Collectr all do this).
+  const NAME_LINE_HEIGHT = 16;
+  const NAME_HEIGHT = NAME_LINE_HEIGHT * 2;
   const SUBTITLE_HEIGHT = 14;
   const PRICE_ROW_HEIGHT = 18;
 
@@ -101,8 +109,9 @@ function CardTileImpl({
       />
       {showName ? (
         <Text
-          numberOfLines={1}
-          style={{ height: NAME_HEIGHT, lineHeight: NAME_HEIGHT }}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+          style={{ height: NAME_HEIGHT, lineHeight: NAME_LINE_HEIGHT }}
           className="text-[12px] font-semibold text-ink"
         >
           {card.name}
