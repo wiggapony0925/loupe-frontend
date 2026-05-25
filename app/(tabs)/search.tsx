@@ -392,47 +392,30 @@ export default function SearchScreen() {
 
         {!showResults ? (
           <>
-            {query.trim().length === 0 && !activeCategory && quickfilter === "all" ? (
-              <TrendingSection tcg={selectedTcg} />
-            ) : null}
+            {/* eBay-style idle layout. The previous version led with a
+                "What collectors are watching" trending grid + three TCG
+                discovery rails (Chase rares / Newest releases / EDHREC
+                favorites). That visual stack was off — the trending
+                grid loaded asymmetrically, the rails competed with the
+                search bar for attention, and users who came here to
+                LOOK SOMETHING UP had to scroll past four hero blocks
+                before reaching the Browse categories.
 
-            {/* Discovery rails — these used to live on the Command Center
-                and pushed personal data + the scan CTA below the fold.
-                Moved here because Search is where users go to discover
-                what's HOT outside their vault. Hidden once the user
-                starts filtering, so the results stay the centerpiece.
-                Rails are TCG-aware: we only show a rail when the chip
-                is "all" or matches the rail's TCG. */}
-            {query.trim().length === 0 && !activeCategory && quickfilter === "all" ? (
-              <>
-                {selectedTcg === "all" || selectedTcg === "pokemon" ? (
-                  <View>
-                    <SectionHeader eyebrow="Pokémon" title="Chase rares" />
-                    <HotRightNowRail tcg="pokemon" limit={12} />
-                  </View>
-                ) : null}
-                {selectedTcg === "all" || selectedTcg === "yugioh" ? (
-                  <View>
-                    <SectionHeader eyebrow="Yu-Gi-Oh!" title="Newest releases" />
-                    <HotRightNowRail tcg="yugioh" limit={12} />
-                  </View>
-                ) : null}
-                {selectedTcg === "all" || selectedTcg === "magic" ? (
-                  <View>
-                    <SectionHeader eyebrow="Magic" title="EDHREC favorites" />
-                    <HotRightNowRail tcg="magic" limit={12} />
-                  </View>
-                ) : null}
-              </>
-            ) : null}
+                eBay solves this by leading with category tiles and a
+                small trending list, nothing more. So we now show:
+                  1. Browse categories (the workhorse)
+                  2. Recent searches (when populated)
+                  3. Top picks from the user's vault (compact list)
+                Discovery rails still live on the Command Center's
+                Pokémon Chase rares slot — Search stays utilitarian. */}
 
-            {/* Quick category grid — Collectr-style */}
+            {/* Quick category grid — Collectr/eBay-style */}
             <View>
               <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
                 Browse
               </Text>
               <Text className="mt-1 text-2xl font-semibold tracking-tight text-ink">
-                Quick filters
+                Categories
               </Text>
               <View className="mt-4 flex-row flex-wrap" style={{ gap: 12 }}>
                 {CATEGORIES.map((cat) => {
@@ -534,10 +517,10 @@ export default function SearchScreen() {
             {cards.length > 0 ? (
               <View>
                 <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-                  Trending in vault
+                  Your vault
                 </Text>
                 <Text className="mt-1 mb-3 text-base font-semibold text-ink">
-                  Highest value picks
+                  Top picks
                 </Text>
                 <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
                   {[...cards]
