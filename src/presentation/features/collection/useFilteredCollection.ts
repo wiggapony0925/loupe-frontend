@@ -1,30 +1,75 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
-import { fetchCollection } from "@/infrastructure/repositories/forensicRepository";
+import { useEffect, useMemo, useState } from "react";
+import { fetchCollection, fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { useVaultFilters } from "@/application/stores/vaultStore";
+import type { CardSet } from "@/domain";
+
+/**
+ * Server-driven Vault list.
+ *
+ * Sends the active (debounced) filters to `/v1/grades` and lets the
+ * backend do the SQL — keeps mobile snappy on 5k-card vaults where
+ * client-side `.filter()` over the entire collection stalls the JS
+ * thread for a noticeable beat.
+ *
+ * Aggregates that drive the header chips (unique-card count, loupe-
+ * graded count, the Category chip row) are read from
+ * `/v1/grades/summary` so they reflect the *whole* vault, not whatever
+ * the current filter happens to expose.
+ *
+ * The hook degrades gracefully against a backend that hasn't deployed
+ * the summary aggregates yet — it falls back to client-side derivation
+ * over the (filtered) list so nothing crashes during the rollout
+ * window.
+ */
+const DEBOUNCE_MS = 250;
 
 export function useFilteredCollection() {
   const { set, minGrade, query: searchTerm } = useVaultFilters();
   const setSet = useVaultFilters((s) => s.setSet);
-  const query = useQuery({ queryKey: queryKeys.collection.list(), queryFn: fetchCollection });
 
-  // Tokenise once; each token must hit somewhere in the haystack (AND match).
-  // Empty/whitespace-only input short-circuits the text filter entirely so
-  // typing then clearing the input restores the full set instantly.
-  const tokens = useMemo(
-    () =>
-      searchTerm
-        .toLowerCase()
-        .split(/\s+/)
-        .filter((t) => t.length > 0),
-    [searchTerm],
+  // Debounce the free-text query so every keystroke doesn't fire a new
+  // request. Set & grade filters apply immediately — they're rare,
+  // intentional taps.
+  const [debouncedQuery, setDebouncedQuery] = useState(searchTerm);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchTerm), DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const params = useMemo(
+    () => ({
+      q: debouncedQuery.trim() || undefined,
+      set: set === "All" ? undefined : (set as string),
+      // The Vault grade slider's "show everything" sentinel is 1 — sending
+      // min_grade=1 to the backend would still match every grade ≥ 1,
+      // which is correct but a wasted predicate. Drop it.
+      minGrade: minGrade > 1 ? minGrade : undefined,
+      sort: "recent" as const,
+    }),
+    [debouncedQuery, set, minGrade],
   );
 
-  // Copies are counted across the **unfiltered** collection so the "×2"
-  // badge tells the truth even when one of the duplicates is hidden by
-  // the active filter. cardId is the catalog FK — every graded copy of
-  // the same printing shares it.
+  const query = useQuery({
+    queryKey: queryKeys.collection.list(params),
+    queryFn: () => fetchCollection(params),
+    // Keep previous data visible while a new filter is in flight so the
+    // list doesn't blank to a skeleton on every keystroke — feels much
+    // closer to "instant" even on a slow network.
+    placeholderData: (prev) => prev,
+  });
+
+  const summaryQuery = useQuery({
+    queryKey: queryKeys.collection.summary(),
+    queryFn: fetchCollectionSummary,
+  });
+
+  // Per-card copy counts — currently we only have the *filtered* page
+  // available client-side, so this badge can under-count when a sibling
+  // copy is hidden by the active filter. Backend `copies_owned` is
+  // already correct for each row; we leave the local map as a
+  // best-effort fallback for any UI that wants O(1) lookup.
   const copiesByCardId = useMemo(() => {
     const map = new Map<string, number>();
     for (const c of query.data ?? []) {
@@ -33,44 +78,44 @@ export function useFilteredCollection() {
     return map;
   }, [query.data]);
 
-  const cards = useMemo(() => {
-    if (!query.data) return [];
-    return query.data.filter((c) => {
-      if (set !== "All" && c.set !== set) return false;
-      if (c.grade < minGrade) return false;
-      if (tokens.length > 0) {
-        const haystack = `${c.title} ${c.set} ${c.year} psa ${c.grade.toFixed(1)}`.toLowerCase();
-        for (const t of tokens) {
-          if (!haystack.includes(t)) return false;
-        }
-      }
-      return true;
-    });
-  }, [query.data, set, minGrade, tokens]);
+  /** Total unique catalog cards owned across the whole vault. */
+  const uniqueCount =
+    summaryQuery.data?.uniqueCardCount ?? copiesByCardId.size;
 
-  /** Total unique catalog cards owned (cardId-distinct). */
-  const uniqueCount = copiesByCardId.size;
+  /** Loupe-graded count across the whole vault. */
+  const loupeGradedCount = summaryQuery.data?.loupeGradedCount ?? 0;
 
-  // Set names the user actually owns — derived from the **unfiltered**
-  // collection so tapping a Category chip never causes the chip row to
-  // collapse to a single option (which would make the filter look like
-  // it had wiped every other tag away).
-  const availableSets = useMemo(() => {
+  // Set names the user actually owns. Prefer the server-computed list
+  // (covers the whole vault) and fall back to deriving from whatever
+  // page we have loaded so the chip row never disappears entirely on
+  // older backends.
+  const availableSets = useMemo<string[]>(() => {
+    if (summaryQuery.data?.availableSets) {
+      return summaryQuery.data.availableSets;
+    }
     const seen = new Set<string>();
     for (const c of query.data ?? []) seen.add(c.set);
     return Array.from(seen).sort((a, b) => a.localeCompare(b));
-  }, [query.data]);
+  }, [summaryQuery.data, query.data]);
 
   // If the active set filter no longer corresponds to anything the user
   // owns (e.g. they just deleted their last Topps copy), silently reset
   // it to "All" so the list never appears empty for an invisible reason.
-  // Runs after collection data loads — guarded on `query.data` so we don't
-  // clobber the filter while the query is still pending.
+  // Guarded on `summaryQuery.data` so we don't clobber the filter while
+  // the truth table is still loading.
   useEffect(() => {
-    if (!query.data || set === "All") return;
-    const owned = query.data.some((c) => c.set === set);
-    if (!owned) setSet("All");
-  }, [query.data, set, setSet]);
+    if (!summaryQuery.data?.availableSets || set === "All") return;
+    if (!summaryQuery.data.availableSets.includes(set as string)) {
+      setSet("All" as CardSet | "All");
+    }
+  }, [summaryQuery.data, set, setSet]);
 
-  return { ...query, cards, copiesByCardId, uniqueCount, availableSets };
+  return {
+    ...query,
+    cards: query.data ?? [],
+    copiesByCardId,
+    uniqueCount,
+    loupeGradedCount,
+    availableSets,
+  };
 }

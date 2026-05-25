@@ -55,6 +55,7 @@
     "expo-sharing": "~55.0.19",
     "expo-status-bar": "~55.0.6",
     "expo-system-ui": "~55.0.18",
+    "expo-updates": "~55.0.24",
     "jest-expo": "~55.0.18",
     "lucide-react-native": "^0.460.0",
     "nativewind": "^4.2.3",

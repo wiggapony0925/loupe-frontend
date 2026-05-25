@@ -86,4 +86,13 @@ export const ENDPOINTS = {
   ws: {
     scans: "/ws/scans",
   },
+  appConfig: {
+    get: `${V1}/app/config`,
+  },
+  home: {
+    feed: `${V1}/home/feed`,
+  },
+  analytics: {
+    overview: `${V1}/analytics/overview`,
+  },
 } as const;

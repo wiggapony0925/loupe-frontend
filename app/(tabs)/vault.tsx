@@ -34,7 +34,7 @@ export default function VaultScreen() {
   const p = useThemedPalette();
   const router = useRouter();
   const qc = useQueryClient();
-  const { cards, isLoading, isFetching, copiesByCardId, uniqueCount, availableSets } =
+  const { cards, isLoading, isFetching, copiesByCardId, uniqueCount, loupeGradedCount, availableSets } =
     useFilteredCollection();
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
@@ -58,12 +58,17 @@ export default function VaultScreen() {
   const stats = useMemo(() => {
     const value = cards.reduce((s, c) => s + c.estimatedValueUsd, 0);
     const avgGrade = cards.length > 0 ? cards.reduce((s, c) => s + c.grade, 0) / cards.length : 0;
-    // Count Loupe-graded copies separately — this is the product-defining
-    // story (we evaluated it ourselves) and the only place in the app
-    // that surfaces it.
-    const loupeGraded = cards.reduce((n, c) => (c.house === "loupe" ? n + 1 : n), 0);
+    // Loupe-graded count is the product-defining story (we evaluated
+    // it ourselves). Prefer the server-side aggregate — which spans the
+    // whole vault — and fall back to counting the filtered page so
+    // older backends or in-flight requests still render a sensible
+    // number instead of a blank pill.
+    const loupeGraded =
+      loupeGradedCount > 0
+        ? loupeGradedCount
+        : cards.reduce((n, c) => (c.house === "loupe" ? n + 1 : n), 0);
     return { value, avgGrade, count: cards.length, unique: uniqueCount, loupeGraded };
-  }, [cards, uniqueCount]);
+  }, [cards, uniqueCount, loupeGradedCount]);
 
   const onRefresh = useCallback(() => {
     qc.invalidateQueries({ queryKey: queryKeys.collection.all });

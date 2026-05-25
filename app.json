@@ -8,6 +8,15 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/86107c1a-082a-47d9-ba76-0aaaafe52090"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.loupe.client"
@@ -16,12 +25,17 @@
       "package": "app.loupe.client",
       "adaptiveIcon": {
         "backgroundColor": "#121214"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.CAMERA"
+      ]
     },
     "plugins": [
       "expo-router",
       "expo-asset",
       "expo-font",
+      "expo-updates",
       [
         "expo-camera",
         {
@@ -35,6 +49,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "86107c1a-082a-47d9-ba76-0aaaafe52090"
+      }
+    },
+    "owner": "jfmcapitalgroup"
   }
 }

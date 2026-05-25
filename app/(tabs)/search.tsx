@@ -140,7 +140,7 @@ export default function SearchScreen() {
   const [selectedTcg, setSelectedTcg] = useState<TcgChip>("all");
   const [recent, setRecent] = useState<string[]>([]);
 
-  const collection = useQuery({ queryKey: queryKeys.collection.list(), queryFn: fetchCollection });
+  const collection = useQuery({ queryKey: queryKeys.collection.list(), queryFn: () => fetchCollection() });
   const sparks = useQuery({
     queryKey: queryKeys.cards.sparklines(),
     queryFn: fetchCardSparklines,

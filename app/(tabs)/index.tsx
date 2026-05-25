@@ -13,7 +13,7 @@ import {
   Smartphone,
   Zap,
 } from "lucide-react-native";
-import { fetchCollection, fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
+import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { HardwareStatusWidget, InitiateScanButton, useScannerConnection } from "@/presentation/features/scanner";
 import { PortfolioChart } from "@/presentation/features/analytics";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
@@ -23,19 +23,19 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { ErrorState } from "@/presentation/components/ErrorState";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
 import { LoupeMark } from "@/presentation/brand/LoupeMark";
-import { useApiHealth, useTopMovers } from "@/application/queries";
+import { useApiHealth, useHomeFeed, useTopMovers } from "@/application/queries";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { MoversCardRow } from "@/presentation/cards";
 import { compactUsd, greeting, relativeTime } from "@/shared/format";
 import { gradeColor, palette, useThemedPalette } from "@/presentation/theme/tokens";
-import type { CollectionCard } from "@/domain";
+import type { RecentScanRow } from "@/infrastructure/repositories/homeRepository";
 
 export default function CommandCenterScreen() {
   useThemedPalette();
   const qc = useQueryClient();
   const { isAuthenticated } = useAuth();
   const summary = useQuery({ queryKey: queryKeys.collection.summary(), queryFn: fetchCollectionSummary });
-  const collection = useQuery({ queryKey: queryKeys.collection.list(), queryFn: fetchCollection });
+  const feed = useHomeFeed({ topMovers: 5, recentScans: 6 });
   const hardware = useScannerConnection();
   const movers = useTopMovers({ enrichLimit: 12, limit: 5 });
 
@@ -53,10 +53,7 @@ export default function CommandCenterScreen() {
     }
   }, [qc, movers]);
 
-  const recent = (collection.data ?? [])
-    .slice()
-    .sort((a, b) => +new Date(b.scannedAt) - +new Date(a.scannedAt))
-    .slice(0, 6);
+  const recent = feed.data?.recentScans ?? [];
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
@@ -215,7 +212,7 @@ export default function CommandCenterScreen() {
               </Pressable>
             }
           />
-          {collection.isLoading ? (
+          {feed.isLoading ? (
             <RecentRailSkeleton />
           ) : (
             <ScrollView
@@ -224,7 +221,7 @@ export default function CommandCenterScreen() {
               contentContainerStyle={{ gap: 10, paddingRight: 4 }}
             >
               {recent.map((c) => (
-                <RecentChip key={c.id} card={c} />
+                <RecentChip key={c.gradeId} card={c} />
               ))}
             </ScrollView>
           )}
@@ -326,27 +323,30 @@ function Header() {
   );
 }
 
-function RecentChip({ card }: { card: CollectionCard }) {
-  const tint = gradeColor(card.grade);
+function RecentChip({ card }: { card: RecentScanRow }) {
+  const tint = gradeColor(card.grade ?? 0);
+  const onPress = card.cardId
+    ? () => router.push(routes.card(card.cardId as string))
+    : undefined;
   return (
     <Pressable
-      onPress={() => router.push(routes.card(card.id))}
+      onPress={onPress}
       className="w-44 rounded-2xl border border-line bg-bg-elevated p-3"
       style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
     >
       <View className="flex-row items-center justify-between">
         <Text className="text-[10px] uppercase tracking-[2px] text-ink-dim">
-          {relativeTime(card.scannedAt)}
+          {card.scannedAt ? relativeTime(card.scannedAt) : "—"}
         </Text>
         <Text className="text-xs font-bold" style={{ color: tint }}>
-          {card.grade.toFixed(1)}
+          {card.grade != null ? card.grade.toFixed(1) : "—"}
         </Text>
       </View>
       <Text numberOfLines={1} className="mt-2 text-sm font-semibold text-ink">
-        {card.title}
+        {card.cardName ?? "Unknown card"}
       </Text>
       <Text numberOfLines={1} className="mt-0.5 text-[11px] text-ink-muted">
-        {card.set}
+        {card.cardSetName ?? ""}
       </Text>
     </Pressable>
   );

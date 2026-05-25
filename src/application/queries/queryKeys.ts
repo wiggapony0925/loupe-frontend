@@ -80,8 +80,35 @@ export const queryKeys = {
   },
   collection: {
     all: ["collection"] as const,
-    list: () => ["collection"] as const,
+    // Filters are part of the key so each (q, set, minGrade, sort) tuple
+    // gets its own cache slot. Empty/default params still produce a
+    // stable key (object shape, not JSON string, so React-Query's deep
+    // equality kicks in).
+    list: (
+      params?: {
+        q?: string;
+        set?: string;
+        house?: string;
+        minGrade?: number;
+        sort?: string;
+        cursor?: number;
+        limit?: number;
+      },
+    ) => ["collection", "list", params ?? {}] as const,
     summary: () => ["collection", "summary"] as const,
+  },
+  appConfig: {
+    all: ["appConfig"] as const,
+    get: () => ["appConfig"] as const,
+  },
+  home: {
+    all: ["home"] as const,
+    feed: (topMovers = 5, recentScans = 6) =>
+      ["home", "feed", topMovers, recentScans] as const,
+  },
+  analytics: {
+    all: ["analytics"] as const,
+    overview: () => ["analytics", "overview"] as const,
   },
   alerts: {
     all: ["alerts"] as const,

@@ -14,6 +14,7 @@ import type {
 } from "@/domain";
 import { ApiError, apiFetch } from "@/infrastructure/http/client";
 import {
+  AppConfigSchema,
   GradedCardListSchema,
   PortfolioSummarySchema,
 } from "@/infrastructure/http/schemas";
@@ -135,8 +136,42 @@ export async function pairScanner(input: PairScannerInput): Promise<HardwareStat
   return toHardwareStatus(wire);
 }
 
-export async function fetchCollection(): Promise<CollectionCard[]> {
-  const wire = await apiFetch<GradedCardWire[]>("/v1/grades", {
+export interface CollectionQueryParams {
+  /** Free-text search across card + set name. */
+  q?: string;
+  /** Exact set-name filter (matches `card_set_name` from the backend). */
+  set?: string;
+  /** Grading-house slug (`loupe`, `psa`, `bgs`, …). */
+  house?: string;
+  /** Minimum grade (inclusive). */
+  minGrade?: number;
+  /** `recent` | `oldest` | `value_desc` | `value_asc` | `grade_desc` | `grade_asc`. */
+  sort?: string;
+  /** Page offset (rows to skip). */
+  cursor?: number;
+  /** Page size (rows). Backend caps at 1000. */
+  limit?: number;
+}
+
+export async function fetchCollection(
+  params?: CollectionQueryParams,
+): Promise<CollectionCard[]> {
+  // Serialize only the keys the caller actually supplied so we don't
+  // push `set=undefined` over the wire — keeps the URL tidy and the
+  // query-key stable across React renders.
+  const search = new URLSearchParams();
+  if (params?.q) search.set("q", params.q);
+  if (params?.set) search.set("set", params.set);
+  if (params?.house) search.set("house", params.house);
+  if (params?.minGrade !== undefined && params.minGrade > 0)
+    search.set("min_grade", String(params.minGrade));
+  if (params?.sort) search.set("sort", params.sort);
+  if (params?.cursor !== undefined && params.cursor > 0)
+    search.set("cursor", String(params.cursor));
+  if (params?.limit !== undefined) search.set("limit", String(params.limit));
+  const qs = search.toString();
+  const url = qs ? `/v1/grades?${qs}` : "/v1/grades";
+  const wire = await apiFetch<GradedCardWire[]>(url, {
     schema: GradedCardListSchema,
   });
   return wire.map(toCollectionCard);
@@ -161,6 +196,15 @@ export interface CollectionSummary {
   costBasisCardCount: number;
   unrealizedPnlUsd: number | null;
   unrealizedPnlPct: number | null;
+  /**
+   * Vault aggregates moved to the server so the Vault header renders
+   * without downloading the full collection. Optional because older
+   * backend deployments may not return them — callers must fall back
+   * to client-side computation when these are missing.
+   */
+  uniqueCardCount?: number;
+  loupeGradedCount?: number;
+  availableSets?: string[];
 }
 
 export async function fetchCollectionSummary(): Promise<CollectionSummary> {
@@ -215,4 +259,25 @@ export interface CardSparkline {
 
 export async function fetchCardSparklines(): Promise<CardSparkline[]> {
   return apiFetch<CardSparklineWire[]>("/v1/grades/sparklines");
+}
+
+/* ─── remote app config (feature flags / min version / SDUI) ─────────── */
+
+export interface AppConfig {
+  minSupportedVersion: string;
+  forceUpdate: boolean;
+  flags: Record<string, boolean>;
+  homeRails: string[];
+}
+
+/**
+ * Fetches the live remote config from the backend. Cheap GET, intended
+ * to be cached aggressively (TanStack staleTime ~5 min) and persisted
+ * across launches so the app boots offline-tolerant.
+ */
+export async function fetchAppConfig(clientVersion?: string): Promise<AppConfig> {
+  const qs = clientVersion
+    ? `?clientVersion=${encodeURIComponent(clientVersion)}`
+    : "";
+  return apiFetch<AppConfig>(`/v1/app/config${qs}`, { schema: AppConfigSchema });
 }

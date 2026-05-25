@@ -27,6 +27,8 @@ export type { UseCardCompsOptions } from "./useCardComps";
 export { useProvidersStatus } from "./useProvidersStatus";
 export { useTopMovers } from "./useTopMovers";
 export type { TopMoverRow, UseTopMoversResult } from "./useTopMovers";
+export { useHomeFeed } from "./useHomeFeed";
+export { useAnalyticsOverview } from "./useAnalyticsOverview";
 export { usePortfolioHistory } from "./usePortfolioHistory";
 export type { UsePortfolioHistoryOptions } from "./usePortfolioHistory";
 export { useCardSparklines } from "./useCardSparklines";

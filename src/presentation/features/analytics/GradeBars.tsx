@@ -1,37 +1,34 @@
 /**
- * Collectr-style horizontal grade-distribution bars.
+ * GradeBars — server-driven horizontal grade-distribution.
  *
- * Each row: [grade label] [bar fill] [count].
- * Bar fills proportional to the largest bucket; tint follows grade band.
+ * Bucket counts come from `GET /v1/analytics/overview` and the bar
+ * fills proportionally to the largest bucket; tint follows grade band.
  */
 import React, { useMemo } from "react";
 import { Text, View } from "react-native";
 import { gradeColor, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-import type { CollectionCard } from "@/domain";
+import type { AnalyticsGradeBucket } from "@/infrastructure/repositories/analyticsRepository";
 
 interface GradeBarsProps {
-  cards: CollectionCard[];
+  buckets: AnalyticsGradeBucket[];
 }
 
-const BUCKETS = [
-  { key: "Gem 10", min: 9.5, max: 10.1 },
-  { key: "Mint 9", min: 8.5, max: 9.5 },
-  { key: "NM 8",  min: 7.5, max: 8.5 },
-  { key: "EX 7",  min: 6.5, max: 7.5 },
-  { key: "≤ 6",  min: 0,    max: 6.5 },
-];
+// Visual centre-grade used purely for the row tint (must match backend buckets).
+const TINT_CENTER: Record<string, number> = {
+  "Gem 10": 10,
+  "Mint 9.5": 9.5,
+  "NM 9": 9,
+  "8": 8,
+  "7": 7,
+  "≤ 6": 6,
+};
 
-export function GradeBars({ cards }: GradeBarsProps) {
+export function GradeBars({ buckets }: GradeBarsProps) {
   const p = useThemedPalette();
-
   const rows = useMemo(() => {
-    const counts = BUCKETS.map((b) => ({
-      ...b,
-      count: cards.filter((c) => c.grade >= b.min && c.grade < b.max).length,
-    }));
-    const max = Math.max(1, ...counts.map((c) => c.count));
-    return counts.map((c) => ({ ...c, pct: c.count / max }));
-  }, [cards]);
+    const max = Math.max(1, ...buckets.map((b) => b.count));
+    return buckets.map((b) => ({ ...b, pct: b.count / max }));
+  }, [buckets]);
 
   return (
     <View className="rounded-2xl border border-line bg-bg-elevated p-4">
@@ -40,14 +37,14 @@ export function GradeBars({ cards }: GradeBarsProps) {
       </Text>
       <View className="mt-3 gap-2.5">
         {rows.map((r) => {
-          const tint = gradeColor((r.min + r.max) / 2);
+          const tint = gradeColor(TINT_CENTER[r.bucket] ?? 8);
           return (
-            <View key={r.key} className="flex-row items-center gap-3">
+            <View key={r.bucket} className="flex-row items-center gap-3">
               <Text
                 className="text-[11px] font-semibold tracking-wider"
-                style={{ width: 56, color: p.ink.muted }}
+                style={{ width: 64, color: p.ink.muted }}
               >
-                {r.key}
+                {r.bucket}
               </Text>
               <View
                 className="flex-1 overflow-hidden rounded-full"

@@ -1,79 +1,35 @@
 /**
- * Market segment analytics — PriceCharting-style data slices over the
- * collection. Bundles four reusable read-only widgets:
+ * Market segment analytics — server-driven slices of the portfolio.
  *
- *   • SetIndexes      — per-set aggregate "index" with sparkline + delta
- *   • YearDistribution — bar histogram of holdings by year
- *   • ConcentrationCard — top-N share of total portfolio value
- *   • StatsGrid       — compact 6-up KPI grid
- *
- * All widgets are pure derivations of the collection + sparkline maps
- * the parent screen already fetches — no new API calls.
+ * All widgets are purely presentational; the data is produced by
+ * `GET /v1/analytics/overview` (see `analyticsRepository`). No
+ * client-side aggregation lives here.
  */
-import React, { useMemo } from "react";
+import React from "react";
 import { Text, View } from "react-native";
-import { Sparkline } from "@/presentation/components/Sparkline";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { compactUsd } from "@/shared/format";
-import type { CollectionCard } from "@/domain";
-
-interface SparkData {
-  cardId: string;
-  points: number[];
-  deltaPct: number;
-}
+import type {
+  AnalyticsOverview,
+  AnalyticsSetIndex,
+  AnalyticsYearBucket,
+} from "@/infrastructure/repositories/analyticsRepository";
 
 /* ─── Set Indexes ───────────────────────────────────────────────────── */
 
 interface SetIndexesProps {
-  cards: CollectionCard[];
-  sparkMap: Map<string, SparkData>;
+  indexes: AnalyticsSetIndex[];
 }
 
-export function SetIndexes({ cards, sparkMap }: SetIndexesProps) {
+export function SetIndexes({ indexes }: SetIndexesProps) {
   const p = useThemedPalette();
-  const indexes = useMemo(() => {
-    const groups = new Map<string, CollectionCard[]>();
-    for (const c of cards) {
-      const list = groups.get(c.set) ?? [];
-      list.push(c);
-      groups.set(c.set, list);
-    }
-    return Array.from(groups.entries())
-      .map(([setName, items]) => {
-        const totalValue = items.reduce((s, c) => s + c.estimatedValueUsd, 0);
-        // Aggregate sparkline by summing per-card points point-wise (length-aware).
-        const len = sparkMap.get(items[0]!.id)?.points.length ?? 14;
-        const agg = new Array(len).fill(0);
-        for (const c of items) {
-          const sp = sparkMap.get(c.id);
-          if (!sp) continue;
-          for (let i = 0; i < len; i++) agg[i] += sp.points[i] ?? c.estimatedValueUsd;
-        }
-        const first = agg[0] || 1;
-        const last = agg[len - 1] || first;
-        const deltaPct = ((last - first) / first) * 100;
-        return {
-          setName,
-          count: items.length,
-          totalValue,
-          spark: agg,
-          deltaPct,
-        };
-      })
-      .sort((a, b) => b.totalValue - a.totalValue);
-  }, [cards, sparkMap]);
-
-  const grandTotal = indexes.reduce((s, x) => s + x.totalValue, 0);
-
   if (indexes.length === 0) return null;
-
   return (
     <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
       {indexes.map((idx, i) => {
-        const up = idx.deltaPct >= 0;
-        const tint = up ? p.accent.mint : p.accent.rose;
-        const sharePct = grandTotal > 0 ? (idx.totalValue / grandTotal) * 100 : 0;
+        const hasChange = idx.changePct1y != null;
+        const up = hasChange ? idx.changePct1y! >= 0 : true;
+        const tint = !hasChange ? p.ink.muted : up ? p.accent.mint : p.accent.rose;
         return (
           <View
             key={idx.setName}
@@ -85,21 +41,21 @@ export function SetIndexes({ cards, sparkMap }: SetIndexesProps) {
                   {idx.setName}
                 </Text>
                 <Text className="text-[11px] text-ink-muted">
-                  {idx.count} {idx.count === 1 ? "holding" : "holdings"} · {sharePct.toFixed(1)}%
-                  of book
+                  {idx.count} {idx.count === 1 ? "holding" : "holdings"} ·{" "}
+                  {idx.sharePct.toFixed(1)}% of book
                 </Text>
               </View>
-              <View style={{ width: 72 }}>
-                <Sparkline values={idx.spark} width={72} height={28} showBaseline={false} />
-              </View>
               <View style={{ minWidth: 84, alignItems: "flex-end" }}>
-                <Text className="text-sm font-bold text-ink">{compactUsd(idx.totalValue)}</Text>
+                <Text className="text-sm font-bold text-ink">
+                  {compactUsd(idx.totalValueUsd)}
+                </Text>
                 <Text style={{ color: tint, fontSize: 11, fontWeight: "700" }}>
-                  {up ? "▲" : "▼"} {Math.abs(idx.deltaPct).toFixed(2)}%
+                  {hasChange
+                    ? `${up ? "▲" : "▼"} ${Math.abs(idx.changePct1y!).toFixed(2)}%`
+                    : "NO DATA"}
                 </Text>
               </View>
             </View>
-            {/* Share-of-book bar */}
             <View
               className="mt-2 h-1 overflow-hidden rounded-full"
               style={{ backgroundColor: withAlpha(p.ink.dim, 0.12) }}
@@ -107,7 +63,7 @@ export function SetIndexes({ cards, sparkMap }: SetIndexesProps) {
               <View
                 style={{
                   height: "100%",
-                  width: `${Math.max(2, sharePct)}%`,
+                  width: `${Math.max(2, idx.sharePct)}%`,
                   backgroundColor: tint,
                   borderRadius: 999,
                 }}
@@ -123,29 +79,13 @@ export function SetIndexes({ cards, sparkMap }: SetIndexesProps) {
 /* ─── Year Distribution ─────────────────────────────────────────────── */
 
 interface YearDistributionProps {
-  cards: CollectionCard[];
+  buckets: AnalyticsYearBucket[];
 }
 
-export function YearDistribution({ cards }: YearDistributionProps) {
+export function YearDistribution({ buckets }: YearDistributionProps) {
   const p = useThemedPalette();
-  const buckets = useMemo(() => {
-    const counts = new Map<number, { count: number; value: number }>();
-    for (const c of cards) {
-      const decade = Math.floor(c.year / 10) * 10;
-      const cur = counts.get(decade) ?? { count: 0, value: 0 };
-      counts.set(decade, {
-        count: cur.count + 1,
-        value: cur.value + c.estimatedValueUsd,
-      });
-    }
-    return Array.from(counts.entries())
-      .map(([decade, v]) => ({ decade, ...v }))
-      .sort((a, b) => a.decade - b.decade);
-  }, [cards]);
-
   if (buckets.length === 0) return null;
-  const maxValue = Math.max(...buckets.map((b) => b.value));
-
+  const maxValue = Math.max(...buckets.map((b) => b.valueUsd));
   return (
     <View className="rounded-2xl border border-line bg-bg-elevated p-4">
       <View
@@ -153,11 +93,11 @@ export function YearDistribution({ cards }: YearDistributionProps) {
         style={{ height: 110, gap: 8 }}
       >
         {buckets.map((b) => {
-          const h = maxValue > 0 ? Math.max(6, (b.value / maxValue) * 96) : 6;
+          const h = maxValue > 0 ? Math.max(6, (b.valueUsd / maxValue) * 96) : 6;
           return (
             <View key={b.decade} className="flex-1 items-center" style={{ gap: 6 }}>
               <Text className="text-[10px] font-semibold text-ink-dim">
-                {compactUsd(b.value)}
+                {compactUsd(b.valueUsd)}
               </Text>
               <View
                 style={{
@@ -188,41 +128,24 @@ export function YearDistribution({ cards }: YearDistributionProps) {
 /* ─── Concentration Card ────────────────────────────────────────────── */
 
 interface ConcentrationCardProps {
-  cards: CollectionCard[];
+  concentration: AnalyticsOverview["concentration"];
 }
 
-export function ConcentrationCard({ cards }: ConcentrationCardProps) {
+export function ConcentrationCard({ concentration }: ConcentrationCardProps) {
   const p = useThemedPalette();
-  const stats = useMemo(() => {
-    if (cards.length === 0) return null;
-    const sorted = [...cards].sort((a, b) => b.estimatedValueUsd - a.estimatedValueUsd);
-    const total = sorted.reduce((s, c) => s + c.estimatedValueUsd, 0);
-    const top1 = sorted[0]!.estimatedValueUsd;
-    const top3 = sorted.slice(0, 3).reduce((s, c) => s + c.estimatedValueUsd, 0);
-    const top5 = sorted.slice(0, 5).reduce((s, c) => s + c.estimatedValueUsd, 0);
-    return {
-      total,
-      top1Pct: (top1 / total) * 100,
-      top3Pct: (top3 / total) * 100,
-      top5Pct: (top5 / total) * 100,
-      top1Name: sorted[0]!.title,
-    };
-  }, [cards]);
-
-  if (!stats) return null;
-
+  if (!concentration) return null;
   return (
     <View className="rounded-2xl border border-line bg-bg-elevated p-4">
       <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-ink-dim">
         Top holding
       </Text>
       <Text numberOfLines={1} className="mt-1 text-base font-semibold text-ink">
-        {stats.top1Name}
+        {concentration.top1.cardName ?? "—"}
       </Text>
       <View className="mt-3 gap-2.5">
-        <ConcentrationBar label="Top 1" pct={stats.top1Pct} tint={p.accent.amber} />
-        <ConcentrationBar label="Top 3" pct={stats.top3Pct} tint={p.accent.blue} />
-        <ConcentrationBar label="Top 5" pct={stats.top5Pct} tint={p.accent.mint} />
+        <ConcentrationBar label="Top 1" pct={concentration.top1Pct} tint={p.accent.amber} />
+        <ConcentrationBar label="Top 3" pct={concentration.top3Pct} tint={p.accent.blue} />
+        <ConcentrationBar label="Top 5" pct={concentration.top5Pct} tint={p.accent.mint} />
       </View>
     </View>
   );
@@ -258,37 +181,19 @@ function ConcentrationBar({ label, pct, tint }: { label: string; pct: number; ti
 /* ─── Stats Grid ────────────────────────────────────────────────────── */
 
 interface StatsGridProps {
-  cards: CollectionCard[];
+  stats: AnalyticsOverview["stats"];
 }
 
-export function StatsGrid({ cards }: StatsGridProps) {
-  const stats = useMemo(() => {
-    if (cards.length === 0) return null;
-    const total = cards.reduce((s, c) => s + c.estimatedValueUsd, 0);
-    const avgGrade = cards.reduce((s, c) => s + c.grade, 0) / cards.length;
-    const gemCount = cards.filter((c) => c.grade >= 9.5).length;
-    const setCount = new Set(cards.map((c) => c.set)).size;
-    const years = cards.map((c) => c.year);
-    return {
-      holdings: cards.length,
-      sets: setCount,
-      avgGrade,
-      gemRate: (gemCount / cards.length) * 100,
-      avgValue: total / cards.length,
-      vintage: Math.min(...years),
-    };
-  }, [cards]);
-
-  if (!stats) return null;
-
+export function StatsGrid({ stats }: StatsGridProps) {
+  if (stats.holdings === 0) return null;
   return (
     <View className="flex-row flex-wrap" style={{ gap: 8 }}>
       <StatCell label="Holdings" value={stats.holdings.toString()} />
-      <StatCell label="Sets" value={stats.sets.toString()} />
+      <StatCell label="Sets" value={stats.uniqueSets.toString()} />
       <StatCell label="Avg Grade" value={stats.avgGrade.toFixed(2)} />
-      <StatCell label="Gem Rate" value={`${stats.gemRate.toFixed(0)}%`} />
-      <StatCell label="Avg Value" value={compactUsd(stats.avgValue)} />
-      <StatCell label="Oldest" value={stats.vintage.toString()} />
+      <StatCell label="Gem Rate" value={`${stats.gemRatePct.toFixed(0)}%`} />
+      <StatCell label="Avg Value" value={compactUsd(stats.avgValueUsd)} />
+      <StatCell label="Oldest" value={stats.oldestYear?.toString() ?? "—"} />
     </View>
   );
 }

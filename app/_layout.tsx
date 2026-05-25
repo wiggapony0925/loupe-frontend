@@ -12,6 +12,7 @@ import { useAuth } from "@/presentation/providers/AuthProvider";
 import { BrandSplash } from "@/presentation/brand/BrandSplash";
 import { NetworkBanner } from "@/presentation/components/NetworkBanner";
 import { ErrorBoundary } from "@/presentation/components/ErrorBoundary";
+import { MinVersionGate } from "@/presentation/components/MinVersionGate";
 import { useSettings } from "@/application/stores/settingsStore";
 import { applyTheme, palette } from "@/presentation/theme/tokens";
 import { initSentry } from "@/infrastructure/observability/sentry";
@@ -62,7 +63,9 @@ export default function RootLayout() {
             <StatusBar style={scheme === "light" ? "dark" : "light"} />
             <View style={{ flex: 1 }}>
               <ErrorBoundary>
-                <RootStack />
+                <MinVersionGate>
+                  <RootStack />
+                </MinVersionGate>
               </ErrorBoundary>
               {!splashDone ? <BrandSplash onFinish={() => setSplashDone(true)} /> : null}
               <NetworkBanner />
