@@ -14,7 +14,7 @@ import {
   Zap,
 } from "lucide-react-native";
 import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
-import { HardwareStatusWidget, InitiateScanButton, useScannerConnection } from "@/presentation/features/scanner";
+import { HardwareStatusWidget, useScannerConnection } from "@/presentation/features/scanner";
 import { PortfolioChart, TodaysDeltaHero } from "@/presentation/features/analytics";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
@@ -22,7 +22,6 @@ import { Skeleton } from "@/presentation/components/Skeleton";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { ErrorState } from "@/presentation/components/ErrorState";
-import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
 import { LoupeMark } from "@/presentation/brand/LoupeMark";
 import { useApiHealth, useHomeFeed, useTopMovers } from "@/application/queries";
 import { useAuth } from "@/presentation/providers/AuthProvider";
@@ -70,6 +69,16 @@ export default function CommandCenterScreen() {
         }
       >
         <Header />
+
+        {/* Primary action sits ABOVE the fold. The whole point of the app
+            is to grade cards; burying scan at the bottom of a 12-section
+            feed (the old layout) hid the core verb. Mirrors the
+            Robinhood/Coinbase pattern of "quick action card right under
+            the greeting" before any chart or feed loads. */}
+        <View>
+          <SectionHeader eyebrow="Capture" title="Scan a card" />
+          <PhoneCaptureCard />
+        </View>
 
         <TodaysDeltaHero />
 
@@ -168,54 +177,7 @@ export default function CommandCenterScreen() {
           <TopMoversSection movers={movers} isAuthenticated={isAuthenticated} />
         </View>
 
-        <View>
-          <SectionHeader
-            eyebrow="Device"
-            title="Scanner connection"
-            trailing={
-              <Pressable
-                onPress={() => router.push("/scan/pair")}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel="Manage paired devices"
-                className="flex-row items-center gap-1"
-                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-              >
-                <Text className="text-xs font-medium text-ink-muted">Manage</Text>
-                <ArrowUpRight size={14} color={palette.ink.muted} />
-              </Pressable>
-            }
-          />
-          <HardwareStatusWidget />
-        </View>
-
-        <View>
-          <SectionHeader eyebrow="Live catalog" title="Trending today" />
-          <HotRightNowRail tcg="all" limit={12} />
-        </View>
-
-        <View>
-          <SectionHeader eyebrow="Pokémon" title="Chase rares" />
-          <HotRightNowRail tcg="pokemon" limit={12} />
-        </View>
-
-        <View>
-          <SectionHeader eyebrow="Magic" title="EDHREC favorites" />
-          <HotRightNowRail tcg="magic" limit={12} />
-        </View>
-
-        <View>
-          <SectionHeader eyebrow="Yu-Gi-Oh!" title="Newest releases" />
-          <HotRightNowRail tcg="yugioh" limit={12} />
-        </View>
-
         <SetProgressCarousel />
-
-        <View>
-          <SectionHeader eyebrow="Capture" title="Initiate forensic scan" />
-          <InitiateScanButton />
-          <PhoneCaptureCard />
-        </View>
 
         <View>
           <SectionHeader
@@ -245,6 +207,33 @@ export default function CommandCenterScreen() {
               ))}
             </ScrollView>
           )}
+        </View>
+
+        {/* Hardware scanner status pushed below the personal feed —
+            most users never own a Loupe scanner, so it's a tertiary
+            utility, not the centerpiece of the home screen. Discovery
+            content (Trending / Chase rares / Newest releases) used to
+            live here too but moved to the Search tab where it belongs:
+            home = "what's mine", search = "what's out there". */}
+        <View>
+          <SectionHeader
+            eyebrow="Device"
+            title="Scanner connection"
+            trailing={
+              <Pressable
+                onPress={() => router.push("/scan/pair")}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Manage paired devices"
+                className="flex-row items-center gap-1"
+                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+              >
+                <Text className="text-xs font-medium text-ink-muted">Manage</Text>
+                <ArrowUpRight size={14} color={palette.ink.muted} />
+              </Pressable>
+            }
+          />
+          <HardwareStatusWidget />
         </View>
       </ScrollView>
     </SafeAreaView>

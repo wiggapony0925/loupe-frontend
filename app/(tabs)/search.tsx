@@ -34,6 +34,8 @@ import { COPY } from "@/shared/copy";
 import { useCardSearch, useTrendingCards } from "@/application/queries";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
+import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
+import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { CardImage } from "@/presentation/components/CardImage";
 import { SkeletonTrendingGrid } from "@/presentation/components/Skeletons";
 import { CardTile } from "@/presentation/cards";
@@ -393,6 +395,37 @@ export default function SearchScreen() {
             {query.trim().length === 0 && !activeCategory && quickfilter === "all" ? (
               <TrendingSection tcg={selectedTcg} />
             ) : null}
+
+            {/* Discovery rails — these used to live on the Command Center
+                and pushed personal data + the scan CTA below the fold.
+                Moved here because Search is where users go to discover
+                what's HOT outside their vault. Hidden once the user
+                starts filtering, so the results stay the centerpiece.
+                Rails are TCG-aware: we only show a rail when the chip
+                is "all" or matches the rail's TCG. */}
+            {query.trim().length === 0 && !activeCategory && quickfilter === "all" ? (
+              <>
+                {selectedTcg === "all" || selectedTcg === "pokemon" ? (
+                  <View>
+                    <SectionHeader eyebrow="Pokémon" title="Chase rares" />
+                    <HotRightNowRail tcg="pokemon" limit={12} />
+                  </View>
+                ) : null}
+                {selectedTcg === "all" || selectedTcg === "yugioh" ? (
+                  <View>
+                    <SectionHeader eyebrow="Yu-Gi-Oh!" title="Newest releases" />
+                    <HotRightNowRail tcg="yugioh" limit={12} />
+                  </View>
+                ) : null}
+                {selectedTcg === "all" || selectedTcg === "magic" ? (
+                  <View>
+                    <SectionHeader eyebrow="Magic" title="EDHREC favorites" />
+                    <HotRightNowRail tcg="magic" limit={12} />
+                  </View>
+                ) : null}
+              </>
+            ) : null}
+
             {/* Quick category grid — Collectr-style */}
             <View>
               <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
