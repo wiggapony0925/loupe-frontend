@@ -25,6 +25,8 @@ export const routes = {
   analytics: () => "/analytics" as const,
   settings: () => "/settings" as const,
   notifications: () => "/notifications" as const,
+  /** Deep link to the standalone price-alert list. */
+  watchlist: () => "/watchlist" as const,
   card: (id: string) => `/card/${enc(id)}`,
   market: (id: string) => `/market/${enc(id)}`,
   scan: (id: string) => `/scan/${enc(id)}`,

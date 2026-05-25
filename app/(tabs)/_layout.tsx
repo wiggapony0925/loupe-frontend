@@ -1,8 +1,8 @@
 import React from "react";
-import { useColorScheme } from "react-native";
+import { useColorScheme, View } from "react-native";
 import { Tabs } from "expo-router";
-import { Gauge, Layers, BarChart3, Bell, Search } from "lucide-react-native";
-import { palette } from "@/presentation/theme/tokens";
+import { Gauge, Layers, BarChart3, Camera, Search } from "lucide-react-native";
+import { palette, withAlpha } from "@/presentation/theme/tokens";
 import { useSettings } from "@/application/stores/settingsStore";
 
 export default function TabsLayout() {
@@ -52,18 +52,53 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <Layers size={20} color={color} />,
         }}
       />
+      {/* Center-pinned Scan tab — primary verb of the app. Rendered as a
+          mint-tinted pill so the eye lands on it first, the same way
+          Robinhood/Cash App elevate their core action in the middle
+          slot. Replaced the old Watch tab; price alerts now live behind
+          the bell inside Notifications. */}
+      <Tabs.Screen
+        name="scan"
+        options={{
+          title: "Scan",
+          tabBarIcon: ({ focused }) => (
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: -12,
+                backgroundColor: focused
+                  ? palette.accent.mint
+                  : withAlpha(palette.accent.mint, 0.18),
+                borderWidth: 1,
+                borderColor: focused
+                  ? palette.accent.mint
+                  : withAlpha(palette.accent.mint, 0.4),
+              }}
+            >
+              <Camera
+                size={20}
+                color={focused ? palette.bg.base : palette.accent.mint}
+              />
+            </View>
+          ),
+          tabBarLabelStyle: {
+            fontSize: 10,
+            fontWeight: "700",
+            letterSpacing: 1.5,
+            textTransform: "uppercase",
+            color: palette.accent.mint,
+          },
+        }}
+      />
       <Tabs.Screen
         name="search"
         options={{
           title: "Search",
           tabBarIcon: ({ color }) => <Search size={20} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="watchlist"
-        options={{
-          title: "Watch",
-          tabBarIcon: ({ color }) => <Bell size={20} color={color} />,
         }}
       />
       <Tabs.Screen

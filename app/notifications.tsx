@@ -12,7 +12,7 @@
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   Bell,
   BellOff,
@@ -25,8 +25,10 @@ import {
 } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { WatchingList } from "@/presentation/features/watchlist/WatchingList";
 
 type Category = "all" | "scan" | "market" | "system";
+type Tab = "inbox" | "watching";
 
 type Notification = {
   id: string;
@@ -58,6 +60,12 @@ const FILTERS: { key: Category; label: string }[] = [
 
 export default function NotificationsScreen() {
   useThemedPalette();
+  // Deep-link support: a notification that says "your alert fired" can
+  // route to `/notifications?tab=watching` and land users on the price-
+  // alert list inside the same surface as the inbox.
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const initialTab: Tab = params.tab === "watching" ? "watching" : "inbox";
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [filter, setFilter] = useState<Category>("all");
 
   const visible = useMemo(
@@ -76,50 +84,122 @@ export default function NotificationsScreen() {
         onBack={() => router.back()}
         onOpenSettings={() => router.push(routes.settings())}
       />
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: 64 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Eyebrow + title — matches the Settings hero rhythm but scaled
-            down so this screen reads as an inbox, not a marketing page. */}
-        <View className="px-5 pb-3 pt-1">
-          <Text className="text-[11px] font-semibold uppercase tracking-[3px] text-ink-dim">
-            Inbox · live
+      {/* Eyebrow + title — matches the Settings hero rhythm but scaled
+          down so this screen reads as an inbox, not a marketing page. */}
+      <View className="px-5 pb-3 pt-1">
+        <Text className="text-[11px] font-semibold uppercase tracking-[3px] text-ink-dim">
+          {tab === "watching" ? "Watching · live" : "Inbox · live"}
+        </Text>
+        <View className="mt-1 flex-row items-end justify-between">
+          <Text className="text-[28px] font-bold tracking-tight text-ink">
+            Notifications
           </Text>
-          <View className="mt-1 flex-row items-end justify-between">
-            <Text className="text-[28px] font-bold tracking-tight text-ink">
-              Notifications
-            </Text>
-            {unreadCount > 0 ? (
-              <View
-                className="rounded-full px-2 py-0.5"
-                style={{ backgroundColor: withAlpha(palette.accent.mint, 0.18) }}
+          {tab === "inbox" && unreadCount > 0 ? (
+            <View
+              className="rounded-full px-2 py-0.5"
+              style={{ backgroundColor: withAlpha(palette.accent.mint, 0.18) }}
+            >
+              <Text
+                className="text-[11px] font-bold"
+                style={{ color: palette.accent.mint, letterSpacing: 0.4 }}
               >
-                <Text
-                  className="text-[11px] font-bold"
-                  style={{ color: palette.accent.mint, letterSpacing: 0.4 }}
-                >
-                  {unreadCount} NEW
-                </Text>
-              </View>
-            ) : null}
-          </View>
-          <Text className="mt-1 text-[13px] text-ink-muted">
-            Scan reports, watched-comp moves, and system updates land here.
-          </Text>
+                {unreadCount} NEW
+              </Text>
+            </View>
+          ) : null}
         </View>
+        <Text className="mt-1 text-[13px] text-ink-muted">
+          {tab === "watching"
+            ? "Every card you're tracking with a price threshold."
+            : "Scan reports, watched-comp moves, and system updates land here."}
+        </Text>
+      </View>
 
-        {/* Category filter strip — visible even in the empty state so users
-            understand the eventual shape of the feed. */}
-        <FilterStrip value={filter} onChange={setFilter} />
+      {/* Inbox vs Watching segmented control. Watch used to live as a
+          dedicated bottom tab — it was confusing next to the bell and
+          burned a slot that Scan now occupies. Folding it in here keeps
+          both surfaces one tap from anywhere via the global bell. */}
+      <TabSegment value={tab} onChange={setTab} />
 
-        {visible.length === 0 ? (
-          <EmptyState filter={filter} hasUnread={unreadCount > 0} />
-        ) : (
-          <Feed items={visible} />
-        )}
-      </ScrollView>
+      {tab === "watching" ? (
+        <View style={{ flex: 1 }}>
+          <WatchingList showHeader={false} />
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 64 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Category filter strip — visible even in the empty state so users
+              understand the eventual shape of the feed. */}
+          <FilterStrip value={filter} onChange={setFilter} />
+
+          {visible.length === 0 ? (
+            <EmptyState filter={filter} hasUnread={unreadCount > 0} />
+          ) : (
+            <Feed items={visible} />
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
+  );
+}
+
+/* ─── Tab segmented control ───────────────────────────────────────────── */
+
+function TabSegment({
+  value,
+  onChange,
+}: {
+  value: Tab;
+  onChange: (t: Tab) => void;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        marginHorizontal: 20,
+        marginBottom: 12,
+        padding: 4,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: palette.line.default,
+        backgroundColor: palette.bg.elevated,
+      }}
+    >
+      {(["inbox", "watching"] as const).map((opt) => {
+        const active = value === opt;
+        return (
+          <Pressable
+            key={opt}
+            onPress={() => onChange(opt)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            style={{
+              flex: 1,
+              paddingVertical: 8,
+              borderRadius: 8,
+              backgroundColor: active
+                ? withAlpha(palette.accent.mint, 0.16)
+                : "transparent",
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={{
+                color: active ? palette.accent.mint : palette.ink.muted,
+                fontSize: 12,
+                fontWeight: "700",
+                letterSpacing: 1,
+                textTransform: "uppercase",
+              }}
+            >
+              {opt === "inbox" ? "Inbox" : "Watching"}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 

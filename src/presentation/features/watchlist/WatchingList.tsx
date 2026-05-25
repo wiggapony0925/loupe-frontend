@@ -1,25 +1,19 @@
 /**
- * Watchlist tab — surfaces existing `price_alerts` as a first-class destination.
+ * `WatchingList` — reusable price-alert index extracted from the old
+ * Watch tab. Rendered in two places now:
  *
- * Why this exists:
- *   The backend has had `/v1/alerts` (Bell icon on card detail → `PriceAlertSheet`)
- *   for a while, but users had no way to see *all* the cards they're watching
- *   without browsing into each one. This tab is the index view: every active
- *   threshold, the card it watches, and a path back to the card detail.
+ *   1. The Notifications screen behind the bell, under a
+ *      `[Inbox | Watching]` segmented header.
+ *   2. The standalone `/watchlist` route, kept around for deep links
+ *      (e.g. push notifications that say "your $X alert fired").
  *
- * Reuses (no duplication):
- *   - `usePriceAlerts({})` for the list query (already invalidation-wired).
- *   - `useDeletePriceAlert()` for swipe-to-cancel.
- *   - `CardImage` for the thumbnail so caching is shared with vault / search.
- *   - `Skeleton` + `EmptyState` primitives so loading / empty UX matches the
- *     rest of the app.
- *
- * Triggered alerts (`triggered_at != null`) get a "Hit at $X" pill so the user
- * can act on real movement without digging into a notification feed.
+ * The Watch tab was retired in favor of a center-pinned Scan tab — the
+ * primary verb of the app deserves the slot more than a management
+ * screen most users won't configure. Behind the bell, this list still
+ * answers "what am I watching?" without burning global navigation.
  */
 import React, { useCallback } from "react";
 import { Alert, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ArrowDownRight, ArrowUpRight, Bell, Trash2 } from "lucide-react-native";
 
@@ -127,7 +121,16 @@ function WatchRow({ alert, onPress, onDelete }: RowProps) {
   );
 }
 
-export default function WatchlistScreen() {
+export interface WatchingListProps {
+  /**
+   * When true, the component renders its own header (eyebrow + count).
+   * The Notifications screen passes `false` since the segmented control
+   * already serves as the section header.
+   */
+  showHeader?: boolean;
+}
+
+export function WatchingList({ showHeader = true }: WatchingListProps) {
   const p = useThemedPalette();
   const router = useRouter();
   const alerts = usePriceAlerts({});
@@ -156,26 +159,28 @@ export default function WatchlistScreen() {
   const rows = alerts.data ?? [];
 
   return (
-    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: p.bg.base }}>
-      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
-        <Text
-          style={{
-            color: p.ink.dim,
-            fontSize: 11,
-            fontWeight: "600",
-            letterSpacing: 1.5,
-            textTransform: "uppercase",
-            marginBottom: 4,
-          }}
-        >
-          Watchlist
-        </Text>
-        <Text style={{ color: p.ink.default, fontSize: 24, fontWeight: "700" }}>
-          {rows.length > 0
-            ? `${rows.length} card${rows.length === 1 ? "" : "s"} on watch`
-            : "Quiet on the wire"}
-        </Text>
-      </View>
+    <View style={{ flex: 1 }}>
+      {showHeader ? (
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
+          <Text
+            style={{
+              color: p.ink.dim,
+              fontSize: 11,
+              fontWeight: "600",
+              letterSpacing: 1.5,
+              textTransform: "uppercase",
+              marginBottom: 4,
+            }}
+          >
+            Watchlist
+          </Text>
+          <Text style={{ color: p.ink.default, fontSize: 24, fontWeight: "700" }}>
+            {rows.length > 0
+              ? `${rows.length} card${rows.length === 1 ? "" : "s"} on watch`
+              : "Quiet on the wire"}
+          </Text>
+        </View>
+      ) : null}
 
       <FlatList
         data={alerts.isLoading ? [] : rows}
@@ -223,6 +228,6 @@ export default function WatchlistScreen() {
           />
         )}
       />
-    </SafeAreaView>
+    </View>
   );
 }
