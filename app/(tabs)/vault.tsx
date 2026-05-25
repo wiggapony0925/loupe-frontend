@@ -14,7 +14,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { routes } from "@/shared/routes";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, Grid2x2, Layers, List as ListIcon, Plus, Search, X } from "lucide-react-native";
+import { Camera, Grid2x2, Layers, List as ListIcon, Package, Plus, Search, X } from "lucide-react-native";
 import { CardThumbnail } from "@/presentation/features/collection/CardThumbnail";
 import { FilterBar } from "@/presentation/features/collection/FilterBar";
 import { PositionRow } from "@/presentation/features/collection/PositionRow";
@@ -459,14 +459,42 @@ function VaultFooterCta({ onAdd, onScan }: { onAdd: () => void; onScan: () => vo
  * share the title bar.
  */
 function VaultPageHeader() {
+  const p = useThemedPalette();
+  const router = useRouter();
   return (
-    <View>
-      <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-        Collection
-      </Text>
-      <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">
-        Vault
-      </Text>
+    <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
+      <View style={{ flex: 1 }}>
+        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+          Collection
+        </Text>
+        <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">
+          Vault
+        </Text>
+      </View>
+      {/* Sealed-vault peer destination — same collection, different shape
+          (booster boxes / ETBs / tins). Lives here rather than as its
+          own tab to keep the bottom-nav from getting cluttered. */}
+      <Pressable
+        onPress={() => router.push("/sealed")}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: p.line.default,
+          backgroundColor: p.bg.elevated,
+        }}
+      >
+        <Package size={14} color={p.ink.default} />
+        <Text
+          style={{ color: p.ink.default, fontSize: 12, fontWeight: "700" }}
+        >
+          Sealed
+        </Text>
+      </Pressable>
     </View>
   );
 }

@@ -20,3 +20,4 @@ export * from "./marketIndex";
 export * from "./canonicalCard";
 export * from "./cardResolve";
 export * from "./reports";
+export * from "./sealed";

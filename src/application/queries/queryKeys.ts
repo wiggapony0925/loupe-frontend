@@ -135,4 +135,15 @@ export const queryKeys = {
     history: (indexId: string, range: string) =>
       ["market-index", indexId, range] as const,
   },
+  sealed: {
+    all: ["sealed"] as const,
+    search: (q: string, productType: string | null) =>
+      ["sealed", "search", q, productType ?? "all"] as const,
+    item: (id: string) => ["sealed", "item", id] as const,
+  },
+  sealedHoldings: {
+    all: ["sealed-holdings"] as const,
+    list: (includeOpened: boolean) =>
+      ["sealed-holdings", "list", includeOpened] as const,
+  },
 } as const;

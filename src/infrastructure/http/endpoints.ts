@@ -95,4 +95,13 @@ export const ENDPOINTS = {
   analytics: {
     overview: `${V1}/analytics/overview`,
   },
+  sealed: {
+    search: `${V1}/sealed/search`,
+    item: (id: string) => `${V1}/sealed/${id}`,
+  },
+  sealedHoldings: {
+    mine: `${V1}/sealed-holdings`,
+    create: `${V1}/sealed-holdings`,
+    item: (id: string) => `${V1}/sealed-holdings/${id}`,
+  },
 } as const;

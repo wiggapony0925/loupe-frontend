@@ -131,6 +131,14 @@ function RootStack() {
         name="notifications"
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
+      <Stack.Screen
+        name="sealed/index"
+        options={{ presentation: "card", animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="sealed/add"
+        options={{ presentation: "card", animation: "slide_from_bottom" }}
+      />
     </Stack>
   );
 }

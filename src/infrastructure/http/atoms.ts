@@ -21,6 +21,22 @@ export type TcgKey = Tcg;
 export type ScanAngle = "front" | "back" | "top" | "bottom" | "left" | "right";
 export type GradeHouse = "psa" | "cgc" | "bgs" | "sgc" | "tag" | "loupe";
 export type RawCondition = "nm" | "lp" | "mp" | "hp" | "dmg";
+/**
+ * Sealed-product taxonomy. Mirrors `SealedProductTypeEnum` in
+ * `app/models/enums.py`. Keep in lockstep — adding values here without
+ * a matching backend enum + alembic migration will 422 on writes.
+ */
+export type SealedProductType =
+  | "booster_box"
+  | "booster_pack"
+  | "etb"
+  | "collection_box"
+  | "premium_collection"
+  | "tin"
+  | "blister"
+  | "bundle"
+  | "case"
+  | "other";
 export type ScannerTransport = "ble" | "wifi" | "offline";
 export type ScanSource = "scanner" | "phone";
 
