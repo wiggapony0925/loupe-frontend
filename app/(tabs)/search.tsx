@@ -392,24 +392,15 @@ export default function SearchScreen() {
 
         {!showResults ? (
           <>
-            {/* eBay-style idle layout. The previous version led with a
-                "What collectors are watching" trending grid + three TCG
-                discovery rails (Chase rares / Newest releases / EDHREC
-                favorites). That visual stack was off — the trending
-                grid loaded asymmetrically, the rails competed with the
-                search bar for attention, and users who came here to
-                LOOK SOMETHING UP had to scroll past four hero blocks
-                before reaching the Browse categories.
+            {/* Idle layout — organized into three clear bands so the
+                discovery surfaces stop fighting each other:
+                  1. BROWSE   → Categories grid (the entry point)
+                  2. DISCOVER → Trending + per-TCG rails
+                  3. YOUR STUFF → Recent searches + vault top picks
+                Each band has a single eyebrow so users can tell at a
+                glance which kind of content they're scanning. */}
 
-                eBay solves this by leading with category tiles and a
-                small trending list, nothing more. So we now show:
-                  1. Browse categories (the workhorse)
-                  2. Recent searches (when populated)
-                  3. Top picks from the user's vault (compact list)
-                Discovery rails still live on the Command Center's
-                Pokémon Chase rares slot — Search stays utilitarian. */}
-
-            {/* Quick category grid — Collectr/eBay-style */}
+            {/* ── BAND 1 · BROWSE ─────────────────────────────── */}
             <View>
               <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
                 Browse
@@ -483,6 +474,51 @@ export default function SearchScreen() {
                 })}
               </View>
             </View>
+
+            {/* ── BAND 2 · DISCOVER ───────────────────────────
+                The "what's hot" surface. One section eyebrow up top,
+                then the trending grid, then the per-TCG rails. Each
+                rail is gated by the active TCG chip so selecting
+                "Pokémon" narrows the band to a single rail and
+                hides the cross-TCG noise.
+
+                Wrapped in a single parent View so the bands have
+                consistent vertical rhythm — the trending grid and
+                the rails read as one cohesive "Discover" zone
+                instead of four disjoint sections. */}
+            <View style={{ gap: 24 }}>
+              <View>
+                <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+                  Discover
+                </Text>
+                <Text className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+                  What collectors are watching
+                </Text>
+              </View>
+
+              <TrendingSection tcg={selectedTcg} />
+
+              {selectedTcg === "all" || selectedTcg === "pokemon" ? (
+                <View>
+                  <SectionHeader eyebrow="Pokémon" title="Chase rares" />
+                  <HotRightNowRail tcg="pokemon" limit={12} />
+                </View>
+              ) : null}
+              {selectedTcg === "all" || selectedTcg === "yugioh" ? (
+                <View>
+                  <SectionHeader eyebrow="Yu-Gi-Oh!" title="Newest releases" />
+                  <HotRightNowRail tcg="yugioh" limit={12} />
+                </View>
+              ) : null}
+              {selectedTcg === "all" || selectedTcg === "magic" ? (
+                <View>
+                  <SectionHeader eyebrow="Magic" title="EDHREC favorites" />
+                  <HotRightNowRail tcg="magic" limit={12} />
+                </View>
+              ) : null}
+            </View>
+
+            {/* ── BAND 3 · YOUR STUFF ─────────────────────── */}
 
             {/* Recent searches */}
             {recent.length > 0 ? (
@@ -818,15 +854,10 @@ function TrendingSection({ tcg = "all" }: { tcg?: TcgChip }) {
   const cards = trending.data?.cards ?? [];
 
   return (
-    <View style={{ marginBottom: 24 }}>
-      <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-        Trending
-      </Text>
-      <Text className="mt-1 text-2xl font-semibold tracking-tight text-ink">
-        What collectors are watching
-      </Text>
-
-      <View style={{ marginTop: 16 }}>
+    <View>
+      {/* No eyebrow/title here — the parent "Discover" band renders
+          a single shared header for the entire band. */}
+      <View>
         {trending.isLoading ? (
           <SkeletonTrendingGrid count={6} />
         ) : trending.isError ? (
