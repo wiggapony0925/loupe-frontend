@@ -145,7 +145,7 @@ export function CardImage({
   if (errored || !activeUri) {
     return (
       <View style={containerStyle}>
-        <BrokenFallback />
+        <BrokenFallback alt={alt} />
       </View>
     );
   }
@@ -177,8 +177,14 @@ export function CardImage({
   );
 }
 
-function BrokenFallback() {
+function BrokenFallback({ alt }: { alt?: string }) {
   const p = useThemedPalette();
+  // Prefer the card name (alt) as the empty-state label so a missing
+  // image still tells the user *which* card they're looking at. Falls
+  // back to a generic "Unavailable" badge only when no alt is supplied
+  // (e.g. set logos, anonymous thumbnails).
+  const label = (alt ?? "").trim();
+  const hasName = label.length > 0;
   return (
     <View
       style={{
@@ -186,23 +192,41 @@ function BrokenFallback() {
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: withAlpha(p.ink.muted, 0.08),
-        gap: 6,
-        padding: 6,
+        gap: 8,
+        padding: 8,
       }}
     >
-      <ImageOff size={20} color={p.ink.dim} strokeWidth={2} />
-      <Text
-        numberOfLines={1}
-        style={{
-          color: p.ink.dim,
-          fontSize: 9,
-          fontWeight: "700",
-          letterSpacing: 0.8,
-          textTransform: "uppercase",
-        }}
-      >
-        Unavailable
-      </Text>
+      <ImageOff size={hasName ? 16 : 20} color={p.ink.dim} strokeWidth={2} />
+      {hasName ? (
+        <Text
+          numberOfLines={3}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+          style={{
+            color: p.ink.muted,
+            fontSize: 11,
+            fontWeight: "700",
+            letterSpacing: 0.2,
+            textAlign: "center",
+            lineHeight: 14,
+          }}
+        >
+          {label}
+        </Text>
+      ) : (
+        <Text
+          numberOfLines={1}
+          style={{
+            color: p.ink.dim,
+            fontSize: 9,
+            fontWeight: "700",
+            letterSpacing: 0.8,
+            textTransform: "uppercase",
+          }}
+        >
+          Unavailable
+        </Text>
+      )}
     </View>
   );
 }

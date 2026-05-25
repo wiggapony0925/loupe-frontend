@@ -12,7 +12,11 @@ export function useScannerConnection() {
   const query = useQuery({
     queryKey: ["hardware-status"],
     queryFn: fetchHardwareStatus,
-    refetchInterval: 5000,
+    // Poll once per minute. Was 5s, which produced 12 req/min/screen and
+    // hammered Cloud Run when the widget mounted on multiple tabs.
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    staleTime: 30_000,
   });
 
   useEffect(() => {
