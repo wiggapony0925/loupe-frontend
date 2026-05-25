@@ -4,7 +4,7 @@
  * without an N+1 fetch.
  */
 
-import type { DecimalString, GradeHouse, ID, ISODate } from "../atoms";
+import type { DecimalString, GradeHouse, ID, ISODate, RawCondition } from "../atoms";
 
 export interface SubgradeDetail {
   score: number;
@@ -33,6 +33,12 @@ export interface GradedCard {
   scan_job_id: ID | null;
   grade: DecimalString;
   house: GradeHouse;
+  /**
+   * Raw-card condition (PSA-style: NM/LP/MP/HP/DMG). Only meaningful when
+   * `house === "loupe"` (our slug for "raw / not slabbed"); always null
+   * for third-party slabbed grades since the slab already encodes condition.
+   */
+  condition: RawCondition | null;
   subgrades: Record<string, unknown> | null;
   estimated_value_usd: DecimalString | null;
   /** What the user paid for the card. `null` = no cost recorded. */

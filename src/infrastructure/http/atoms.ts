@@ -20,6 +20,7 @@ export type TcgKey = Tcg;
 
 export type ScanAngle = "front" | "back" | "top" | "bottom" | "left" | "right";
 export type GradeHouse = "psa" | "cgc" | "bgs" | "sgc" | "tag" | "loupe";
+export type RawCondition = "nm" | "lp" | "mp" | "hp" | "dmg";
 export type ScannerTransport = "ble" | "wifi" | "offline";
 export type ScanSource = "scanner" | "phone";
 

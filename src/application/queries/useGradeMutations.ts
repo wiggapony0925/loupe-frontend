@@ -16,7 +16,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
-import type { GradedCard, GradeHouse } from "@/infrastructure/http";
+import type { GradedCard, GradeHouse, RawCondition } from "@/infrastructure/http";
 import { queryKeys } from "./queryKeys";
 
 export interface CreateGradeInput {
@@ -27,6 +27,8 @@ export interface CreateGradeInput {
   /** Numeric grade in [0, 10]. */
   grade: number;
   house: GradeHouse;
+  /** Raw-card condition. Only meaningful when `house === "loupe"`. */
+  condition?: RawCondition | null;
   /** What the user paid (USD). Optional — null means "no cost recorded". */
   purchasePriceUsd?: number | null;
   /** Acquisition date as `YYYY-MM-DD`. */
@@ -43,6 +45,7 @@ function toCreateBody(input: CreateGradeInput): Record<string, unknown> {
   };
   if (input.cardId) body.card_id = input.cardId;
   if (input.upstreamId) body.upstream_id = input.upstreamId;
+  if (input.condition != null) body.condition = input.condition;
   if (input.purchasePriceUsd != null)
     body.purchase_price_usd = input.purchasePriceUsd;
   if (input.purchaseDate) body.purchase_date = input.purchaseDate;
@@ -76,6 +79,7 @@ export interface UpdateGradeInput {
   id: string;
   grade?: number;
   house?: GradeHouse;
+  condition?: RawCondition | null;
   purchasePriceUsd?: number | null;
   purchaseDate?: string | null;
   estimatedValueUsd?: number | null;
@@ -86,6 +90,7 @@ function toUpdateBody(input: UpdateGradeInput): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   if (input.grade !== undefined) body.grade = input.grade;
   if (input.house !== undefined) body.house = input.house;
+  if (input.condition !== undefined) body.condition = input.condition;
   if (input.purchasePriceUsd !== undefined)
     body.purchase_price_usd = input.purchasePriceUsd;
   if (input.purchaseDate !== undefined) body.purchase_date = input.purchaseDate;

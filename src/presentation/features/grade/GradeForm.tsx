@@ -32,7 +32,7 @@ import {
   useDeleteGrade,
   useUpdateGrade,
 } from "@/application/queries";
-import type { GradeHouse } from "@/infrastructure/http";
+import type { GradeHouse, RawCondition } from "@/infrastructure/http";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /** Houses surfaced in the segmented control. Order matches the rest of the app. */
@@ -43,6 +43,19 @@ const HOUSES: { id: GradeHouse; label: string }[] = [
   { id: "cgc", label: "CGC" },
   { id: "tag", label: "TAG" },
   { id: "loupe", label: "RAW" },
+];
+
+/**
+ * Condition vocabulary for RAW (ungraded) cards. Mirrors the standard
+ * PSA / TCG vocabulary so per-condition pricing maps directly. Only
+ * surfaced when the user selects `RAW` as the grading house.
+ */
+const CONDITIONS: { id: RawCondition; label: string; short: string }[] = [
+  { id: "nm", short: "NM", label: "Near Mint" },
+  { id: "lp", short: "LP", label: "Lightly Played" },
+  { id: "mp", short: "MP", label: "Moderately Played" },
+  { id: "hp", short: "HP", label: "Heavily Played" },
+  { id: "dmg", short: "DMG", label: "Damaged" },
 ];
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -61,6 +74,7 @@ export interface GradeFormCardMeta {
 export interface GradeFormInitial {
   grade?: number;
   house?: GradeHouse;
+  condition?: RawCondition | null;
   purchasePriceUsd?: number | null;
   purchaseDate?: string | null;
   estimatedValueUsd?: number | null;
@@ -119,6 +133,9 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
     initial?.grade != null ? String(initial.grade) : "",
   );
   const [house, setHouse] = useState<GradeHouse>(initial?.house ?? "psa");
+  const [condition, setCondition] = useState<RawCondition | null>(
+    initial?.condition ?? null,
+  );
   const [purchasePrice, setPurchasePrice] = useState<string>(
     initial?.purchasePriceUsd != null ? String(initial.purchasePriceUsd) : "",
   );
@@ -153,6 +170,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           upstreamId: card.upstreamId ?? null,
           grade: gradeNum,
           house,
+          condition: house === "loupe" ? condition : null,
           purchasePriceUsd: purchasePrice === "" ? null : Number(purchasePrice),
           purchaseDate: purchaseDate || null,
           estimatedValueUsd:
@@ -164,6 +182,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           id: gradeId,
           grade: gradeNum,
           house,
+          condition: house === "loupe" ? condition : null,
           purchasePriceUsd: purchasePrice === "" ? null : Number(purchasePrice),
           purchaseDate: purchaseDate || null,
           estimatedValueUsd:
@@ -324,6 +343,61 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           })}
         </View>
       </Field>
+
+      {/* Condition — RAW only. The chip vocabulary matches per-condition
+          pricing on eBay so the future "estimated value" lookup can key
+          off the same slug without a translation table. */}
+      {house === "loupe" ? (
+        <Field
+          label="Condition"
+          hint="PSA-style vocab. Drives per-condition pricing once comps are live."
+        >
+          <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+            {CONDITIONS.map((c) => {
+              const active = condition === c.id;
+              return (
+                <Pressable
+                  key={c.id}
+                  onPress={() => setCondition(active ? null : c.id)}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: active ? p.accent.mint : p.line.default,
+                    backgroundColor: active
+                      ? withAlpha(p.accent.mint, 0.15)
+                      : "transparent",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: active ? p.accent.mint : p.ink.muted,
+                      fontSize: 12,
+                      fontWeight: "700",
+                      letterSpacing: 0.4,
+                    }}
+                  >
+                    {c.short}
+                  </Text>
+                  <Text
+                    style={{
+                      color: active ? p.accent.mint : p.ink.dim,
+                      fontSize: 11,
+                      fontWeight: "500",
+                    }}
+                  >
+                    {c.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Field>
+      ) : null}
 
       {/* Purchase price */}
       <Field

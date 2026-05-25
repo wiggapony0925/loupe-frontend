@@ -1,7 +1,7 @@
 import React from "react";
 import { useColorScheme } from "react-native";
 import { Tabs } from "expo-router";
-import { Gauge, Layers, BarChart3, Search } from "lucide-react-native";
+import { Gauge, Layers, BarChart3, Bell, Search } from "lucide-react-native";
 import { palette } from "@/presentation/theme/tokens";
 import { useSettings } from "@/application/stores/settingsStore";
 
@@ -57,6 +57,13 @@ export default function TabsLayout() {
         options={{
           title: "Search",
           tabBarIcon: ({ color }) => <Search size={20} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="watchlist"
+        options={{
+          title: "Watch",
+          tabBarIcon: ({ color }) => <Bell size={20} color={color} />,
         }}
       />
       <Tabs.Screen
