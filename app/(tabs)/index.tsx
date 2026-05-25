@@ -17,6 +17,7 @@ import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRe
 import { HardwareStatusWidget, useScannerConnection } from "@/presentation/features/scanner";
 import { PortfolioChart, TodaysDeltaHero } from "@/presentation/features/analytics";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
+import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
@@ -207,6 +208,32 @@ export default function CommandCenterScreen() {
               ))}
             </ScrollView>
           )}
+        </View>
+
+        {/* Pokémon Chase rares — the single discovery rail we keep on
+            home. Pokémon is the dominant TCG for most users, and a
+            curated "what's hot right now" peek next to the personal
+            feed gives the home screen a heartbeat without re-bloating
+            it back into the old discovery dashboard. Full discovery
+            (Yu-Gi-Oh!, Magic, Trending) still lives in Search. */}
+        <View>
+          <SectionHeader
+            eyebrow="Pokémon"
+            title="Chase rares"
+            trailing={
+              <Pressable
+                onPress={() => router.push("/search")}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="See all discovery rails in Search"
+                className="flex-row items-center gap-1"
+              >
+                <Text className="text-xs font-medium text-ink-muted">More</Text>
+                <ArrowUpRight size={14} color={palette.ink.muted} />
+              </Pressable>
+            }
+          />
+          <HotRightNowRail tcg="pokemon" limit={12} />
         </View>
 
         {/* Hardware scanner status pushed below the personal feed —
