@@ -91,6 +91,11 @@ export default function TabsLayout() {
             letterSpacing: 1.5,
             textTransform: "uppercase",
             color: palette.accent.mint,
+            // The icon sits in a 44dp circle pulled up by marginTop:-12,
+            // which leaves the label too close to the camera glyph. Push
+            // it back down so it visually aligns with the neighbouring
+            // tab labels (VAULT / SEARCH) instead of crowding the icon.
+            marginTop: 6,
           },
         }}
       />

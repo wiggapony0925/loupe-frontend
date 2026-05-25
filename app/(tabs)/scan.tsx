@@ -75,16 +75,16 @@ export default function ScanTabScreen() {
         <View style={{ gap: 12 }}>
           <ModeCard
             label="Studio"
-            tagline="Guided 4-shot capture"
-            detail="Photometric tilt grades within ±0.5 of certified."
+            tagline="Grade & add to vault"
+            detail="4-shot photometric capture — ±0.5 of certified."
             tint={p.accent.mint}
             active={isStudio}
             onPress={() => setMode("studio")}
           />
           <ModeCard
             label="Quick"
-            tagline="Fast 2-shot triage"
-            detail="Front + back snap, ±1.0 estimate in seconds."
+            tagline="Identify & add to collection"
+            detail="Front + back snap — matches the catalog, adds as raw."
             tint={p.accent.blue}
             active={!isStudio}
             onPress={() => setMode("quick")}
@@ -93,7 +93,7 @@ export default function ScanTabScreen() {
 
         {/* Primary CTA — pushes into the existing camera modal. */}
         <PrimaryButton
-          label={isStudio ? "Open Studio Capture" : "Open Quick Capture"}
+          label={isStudio ? "Grade a card" : "Add a card"}
           icon={isStudio ? Camera : Zap}
           onPress={() => router.push(routes.scanPhone(mode))}
           variant={isStudio ? "mint" : "blue"}

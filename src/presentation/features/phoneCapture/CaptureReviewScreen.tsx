@@ -18,19 +18,33 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Check, RotateCcw, Sparkles } from "lucide-react-native";
+import { Check, PlusCircle, RotateCcw, Sparkles } from "lucide-react-native";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import type { OcrSuggestion, PhotometricCapture } from "@/domain";
 import { recognizeCardText } from "./imageOps";
+import type { PhoneCaptureMode } from "./captureSteps";
 
 interface CaptureReviewScreenProps {
   captures: PhotometricCapture[];
   onConfirm: (captures: PhotometricCapture[], ocr: OcrSuggestion | null) => void;
   onRetake: () => void;
+  /**
+   * Drives the confirm CTA copy + intent:
+   *   - `studio`: hand off to the forensic grading pipeline ("Grade this card").
+   *   - `quick`:  hand off to the catalog-match → add-to-vault flow
+     ("Add to collection"), Collectr-style — user wants the card
+     identified and saved as a raw holding, not graded.
+   */
+  mode?: PhoneCaptureMode;
 }
 
-export function CaptureReviewScreen({ captures, onConfirm, onRetake }: CaptureReviewScreenProps) {
+export function CaptureReviewScreen({
+  captures,
+  onConfirm,
+  onRetake,
+  mode = "studio",
+}: CaptureReviewScreenProps) {
   const p = useThemedPalette();
   const [ocr, setOcr] = useState<OcrSuggestion | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +84,14 @@ export function CaptureReviewScreen({ captures, onConfirm, onRetake }: CaptureRe
           <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
             Review captures
           </Text>
-          <Text className="text-2xl font-semibold text-ink">Confirm before grading</Text>
+          <Text className="text-2xl font-semibold text-ink">
+            {mode === "quick" ? "Confirm the card" : "Confirm before grading"}
+          </Text>
+          <Text className="text-xs text-ink-muted">
+            {mode === "quick"
+              ? "We’ll match this to the catalog and add it as a raw holding."
+              : "We’ll run a 4-axis forensic grade and add it to your vault."}
+          </Text>
         </View>
 
         <View className="flex-row flex-wrap gap-3">
@@ -135,7 +156,12 @@ export function CaptureReviewScreen({ captures, onConfirm, onRetake }: CaptureRe
         </View>
 
         <View className="gap-2">
-          <PrimaryButton label="Grade this card" icon={Check} variant="mint" onPress={submit} />
+          <PrimaryButton
+            label={mode === "quick" ? "Add to collection" : "Grade this card"}
+            icon={mode === "quick" ? PlusCircle : Check}
+            variant={mode === "quick" ? "blue" : "mint"}
+            onPress={submit}
+          />
           <PrimaryButton
             label="Retake captures"
             icon={RotateCcw}
@@ -145,7 +171,9 @@ export function CaptureReviewScreen({ captures, onConfirm, onRetake }: CaptureRe
         </View>
 
         <Pressable onPress={() => onConfirm(captures, null)} hitSlop={10} className="items-center">
-          <Text className="text-xs text-ink-dim">Skip — grade without title</Text>
+          <Text className="text-xs text-ink-dim">
+            {mode === "quick" ? "Skip — add without a title" : "Skip — grade without title"}
+          </Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
