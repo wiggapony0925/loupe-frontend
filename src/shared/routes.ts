@@ -22,6 +22,7 @@ const enc = (s: string): string => encodeURIComponent(s);
 export const routes = {
   home: () => "/" as const,
   vault: () => "/vault" as const,
+  analytics: () => "/analytics" as const,
   settings: () => "/settings" as const,
   notifications: () => "/notifications" as const,
   card: (id: string) => `/card/${enc(id)}`,

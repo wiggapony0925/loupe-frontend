@@ -15,7 +15,8 @@ import {
 } from "lucide-react-native";
 import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { HardwareStatusWidget, InitiateScanButton, useScannerConnection } from "@/presentation/features/scanner";
-import { PortfolioChart } from "@/presentation/features/analytics";
+import { PortfolioChart, TodaysDeltaHero } from "@/presentation/features/analytics";
+import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
@@ -69,6 +70,8 @@ export default function CommandCenterScreen() {
         }
       >
         <Header />
+
+        <TodaysDeltaHero />
 
         <PortfolioChart
           fallbackTotal={summary.data?.totalValueUsd ?? 0}
@@ -187,9 +190,26 @@ export default function CommandCenterScreen() {
         </View>
 
         <View>
-          <SectionHeader eyebrow="Live catalog" title="Hot right now" />
-          <HotRightNowRail />
+          <SectionHeader eyebrow="Live catalog" title="Trending today" />
+          <HotRightNowRail tcg="all" limit={12} />
         </View>
+
+        <View>
+          <SectionHeader eyebrow="Pokémon" title="Chase rares" />
+          <HotRightNowRail tcg="pokemon" limit={12} />
+        </View>
+
+        <View>
+          <SectionHeader eyebrow="Magic" title="EDHREC favorites" />
+          <HotRightNowRail tcg="magic" limit={12} />
+        </View>
+
+        <View>
+          <SectionHeader eyebrow="Yu-Gi-Oh!" title="Newest releases" />
+          <HotRightNowRail tcg="yugioh" limit={12} />
+        </View>
+
+        <SetProgressCarousel />
 
         <View>
           <SectionHeader eyebrow="Capture" title="Initiate forensic scan" />
