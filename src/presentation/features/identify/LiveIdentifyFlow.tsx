@@ -469,17 +469,51 @@ function ReticleArea({
   }, [scanning, pulse]);
 
   // Reticle hugs roughly the trading-card aspect of 2.5:3.5.
-  const tint = locked ? palette.accent.mint : "#7CFC00";
+  const tint = locked ? palette.accent.mint : withAlpha(palette.accent.mint, 0.85);
+
+  // Subtle breathing scale so the frame feels alive even before we
+  // have a lock (we don't have native edge-detection yet — this is
+  // pure perceptual feedback that the camera is doing something).
+  const breathe = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (locked) {
+      Animated.spring(breathe, {
+        toValue: 1,
+        useNativeDriver: true,
+        bounciness: 8,
+      }).start();
+      return;
+    }
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathe, {
+          toValue: 1.015,
+          duration: 1400,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(breathe, {
+          toValue: 1,
+          duration: 1400,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [locked, breathe]);
 
   return (
     <View
       pointerEvents="none"
       style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
     >
-      <View
+      <Animated.View
         style={{
-          width: "72%",
+          width: "68%",
           aspectRatio: 2.5 / 3.5,
+          transform: [{ scale: breathe }],
         }}
       >
         {(["tl", "tr", "bl", "br"] as const).map((c) => (
@@ -617,7 +651,7 @@ function ReticleArea({
             </View>
           </View>
         ) : null}
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -786,8 +820,8 @@ function BottomPanel({
 
   return (
     <LinearGradient
-      colors={["transparent", "rgba(0,0,0,0.92)"]}
-      style={{ paddingHorizontal: 14, paddingBottom: 8, paddingTop: 24, gap: 10 }}
+      colors={["transparent", "rgba(0,0,0,0.85)"]}
+      style={{ paddingHorizontal: 14, paddingBottom: 8, paddingTop: 18, gap: 8 }}
     >
       {tcgPickerOpen ? (
         <View
@@ -830,8 +864,14 @@ function BottomPanel({
           priceLoading={priceLoading}
           formatUsd={formatUsd}
           themed={themed}
-          onViewDetails={() => onPickCandidate(state.candidates[0])}
-          onAddToVault={() => onAddToVault(state.candidates[0])}
+          onViewDetails={() => {
+            const c = state.candidates[0];
+            if (c) onPickCandidate(c);
+          }}
+          onAddToVault={() => {
+            const c = state.candidates[0];
+            if (c) onAddToVault(c);
+          }}
           onRescan={onRescan}
         />
       ) : (
@@ -934,90 +974,113 @@ function ResultsStrip({
         style={{
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
-          padding: 12,
+          gap: 10,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
           borderRadius: 14,
-          backgroundColor: "rgba(120,30,30,0.85)",
+          backgroundColor: withAlpha(palette.accent.rose, 0.18),
+          borderWidth: 1,
+          borderColor: withAlpha(palette.accent.rose, 0.45),
         }}
       >
         <Text style={{ color: "#fff", fontSize: 12, flex: 1 }}>{error}</Text>
         <Pressable onPress={onRescan} hitSlop={8}>
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>Retry</Text>
+          <Text
+            style={{
+              color: palette.accent.mint,
+              fontWeight: "700",
+              fontSize: 12,
+            }}
+          >
+            Retry
+          </Text>
         </Pressable>
       </View>
     );
   }
-  if (state.candidates.length === 0) {
-    if (scanning) {
-      return (
-        <View
+
+  // Filter out very-low-confidence noise — the OCR can return a wall
+  // of ~49% near-misses while it's still settling. Only show items
+  // we're at least *somewhat* confident about; while we have nothing,
+  // render the slim "scanning" pulse instead.
+  const visible = state.candidates.filter((c) => c.confidence >= 0.5).slice(0, 8);
+
+  if (visible.length === 0) {
+    if (!scanning) return null;
+    return (
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          paddingVertical: 10,
+          paddingHorizontal: 14,
+          borderRadius: 14,
+          backgroundColor: "rgba(0,0,0,0.45)",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.06)",
+        }}
+      >
+        <ActivityIndicator size="small" color={palette.accent.mint} />
+        <Text
           style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 10,
-            paddingVertical: 14,
-            paddingHorizontal: 14,
-            borderRadius: 14,
-            backgroundColor: "rgba(0,0,0,0.55)",
+            color: "rgba(255,255,255,0.75)",
+            fontSize: 12,
+            fontWeight: "600",
           }}
         >
-          <ActivityIndicator color="#fff" />
-          <Text style={{ color: "#fff", fontSize: 13 }}>Reading card…</Text>
-        </View>
-      );
-    }
-    return null;
+          Reading card…
+        </Text>
+      </View>
+    );
   }
 
-  const visible = state.candidates.slice(0, 6);
   return (
-    <View
-      style={{
-        borderRadius: 18,
-        backgroundColor: "rgba(20,20,22,0.96)",
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.08)",
-        paddingVertical: 12,
-        paddingHorizontal: 4,
-        gap: 10,
-      }}
-    >
+    <View style={{ gap: 8 }}>
       <View
         style={{
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          paddingHorizontal: 14,
+          paddingHorizontal: 4,
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: palette.accent.mint,
+            }}
+          />
           <Text
             style={{
-              color: "rgba(255,255,255,0.55)",
-              fontSize: 10,
+              color: "rgba(255,255,255,0.85)",
+              fontSize: 11,
               fontWeight: "700",
               letterSpacing: 1.4,
             }}
           >
-            {state.locked ? "MATCHED" : "SUGGESTIONS"}
+            SUGGESTIONS
           </Text>
-          {scanning && !state.locked ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <ActivityIndicator size="small" color="rgba(255,255,255,0.45)" />
-              <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, fontWeight: "600" }}>
-                Scanning…
-              </Text>
-            </View>
-          ) : null}
         </View>
-        <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontVariant: ["tabular-nums"] }}>
-          {state.candidates.length} result{state.candidates.length === 1 ? "" : "s"}
+        <Text
+          style={{
+            color: "rgba(255,255,255,0.45)",
+            fontSize: 10,
+            fontWeight: "600",
+            fontVariant: ["tabular-nums"],
+          }}
+        >
+          {visible.length} match{visible.length === 1 ? "" : "es"}
         </Text>
       </View>
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 14, gap: 10 }}
+        contentContainerStyle={{ paddingHorizontal: 4, gap: 8 }}
       >
         {visible.map((c, idx) => (
           <CandidateTile
@@ -1041,35 +1104,22 @@ function CandidateTile({
   highlight: boolean;
   onPress: () => void;
 }) {
-  const meta = [
-    candidate.set_name,
-    candidate.number ? `#${candidate.number}` : null,
-  ]
-    .filter(Boolean)
-    .join(" \u00b7 ");
   const confidencePct = Math.round(candidate.confidence * 100);
   const accentColor =
     confidencePct >= 80
       ? palette.accent.mint
-      : confidencePct >= 60
+      : confidencePct >= 65
         ? palette.accent.amber
-        : "rgba(255,255,255,0.45)";
+        : "rgba(255,255,255,0.55)";
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Confirm ${candidate.name}`}
+      accessibilityLabel={`Confirm ${candidate.name} (${confidencePct}% confidence)`}
       style={({ pressed }) => ({
-        width: 112,
-        borderRadius: 14,
-        backgroundColor: highlight
-          ? "rgba(255,255,255,0.06)"
-          : "rgba(255,255,255,0.025)",
-        borderWidth: 1,
-        borderColor: highlight ? accentColor : "rgba(255,255,255,0.06)",
-        padding: 8,
-        gap: 8,
-        opacity: pressed ? 0.7 : 1,
+        width: 72,
+        gap: 4,
+        opacity: pressed ? 0.65 : 1,
       })}
     >
       <View
@@ -1078,9 +1128,9 @@ function CandidateTile({
           aspectRatio: 2.5 / 3.5,
           borderRadius: 8,
           overflow: "hidden",
-          backgroundColor: "#0B0B0D",
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.08)",
+          backgroundColor: "rgba(255,255,255,0.06)",
+          borderWidth: highlight ? 1.5 : 1,
+          borderColor: highlight ? accentColor : "rgba(255,255,255,0.1)",
           position: "relative",
         }}
       >
@@ -1091,68 +1141,78 @@ function CandidateTile({
             resizeMode="cover"
           />
         ) : (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Sparkles size={20} color="rgba(255,255,255,0.25)" />
+          <View
+            style={{
+              flex: 1,
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 4,
+            }}
+          >
+            <Sparkles size={16} color={withAlpha("#fff", 0.35)} />
+            <Text
+              numberOfLines={2}
+              style={{
+                color: withAlpha("#fff", 0.55),
+                fontSize: 8,
+                fontWeight: "600",
+                textAlign: "center",
+                marginTop: 2,
+              }}
+            >
+              {candidate.name}
+            </Text>
           </View>
         )}
+        {/* Confidence pill, bottom-left of the thumb */}
         <View
           style={{
             position: "absolute",
-            top: 4,
-            left: 4,
-            paddingHorizontal: 6,
+            bottom: 3,
+            left: 3,
+            right: 3,
+            paddingHorizontal: 5,
             paddingVertical: 2,
             borderRadius: 999,
-            backgroundColor: "rgba(0,0,0,0.6)",
+            backgroundColor: "rgba(0,0,0,0.7)",
             flexDirection: "row",
             alignItems: "center",
-            gap: 4,
+            justifyContent: "center",
+            gap: 3,
           }}
         >
           <View
             style={{
-              width: 5,
-              height: 5,
-              borderRadius: 3,
+              width: 4,
+              height: 4,
+              borderRadius: 2,
               backgroundColor: accentColor,
             }}
           />
           <Text
             style={{
               color: "#fff",
-              fontSize: 10,
+              fontSize: 9,
               fontVariant: ["tabular-nums"],
-              fontWeight: "700",
+              fontWeight: "800",
             }}
           >
             {confidencePct}%
           </Text>
         </View>
       </View>
-      <View style={{ gap: 2, minHeight: 30 }}>
-        <Text
-          style={{
-            color: "#fff",
-            fontSize: 12,
-            fontWeight: "600",
-            letterSpacing: -0.1,
-          }}
-          numberOfLines={1}
-        >
-          {candidate.name}
-        </Text>
-        {meta ? (
-          <Text
-            style={{
-              color: "rgba(255,255,255,0.5)",
-              fontSize: 10,
-            }}
-            numberOfLines={1}
-          >
-            {meta}
-          </Text>
-        ) : null}
-      </View>
+      <Text
+        style={{
+          color: "rgba(255,255,255,0.9)",
+          fontSize: 10,
+          fontWeight: "600",
+          letterSpacing: -0.1,
+          textAlign: "center",
+        }}
+        numberOfLines={1}
+      >
+        {candidate.name}
+      </Text>
     </Pressable>
   );
 }
