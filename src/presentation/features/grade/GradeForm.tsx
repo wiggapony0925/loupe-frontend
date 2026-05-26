@@ -14,7 +14,7 @@
  * For a true "I don't know which card this is yet" flow, send them
  * through the search screen first.
  */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -32,6 +32,7 @@ import {
   useDeleteGrade,
   useUpdateGrade,
 } from "@/application/queries";
+import { useCardMarket } from "@/application/queries/useCardMarket";
 import type { GradeHouse, RawCondition } from "@/infrastructure/http";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -145,8 +146,43 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   const [estimatedValue, setEstimatedValue] = useState<string>(
     initial?.estimatedValueUsd != null ? String(initial.estimatedValueUsd) : "",
   );
+  // Tracks whether the user has manually edited the estimated value
+  // input. While false (create flow, untouched), the field auto-syncs
+  // to the live market snapshot picked by current grade/house.
+  const estValueTouchedRef = useRef<boolean>(
+    mode === "edit" || initial?.estimatedValueUsd != null,
+  );
+  const [autoFilledFromMarket, setAutoFilledFromMarket] = useState(false);
   const [notes, setNotes] = useState<string>(initial?.notes ?? "");
   const [submitting, setSubmitting] = useState(false);
+
+  // Live market snapshot for the bound card. Only fetched on create —
+  // edit flows already have the user's chosen value persisted.
+  const marketEnabled = mode === "create" && Boolean(card.cardId);
+  const marketQ = useCardMarket(marketEnabled ? card.cardId : null);
+  const marketSummary = marketQ.data?.snapshot?.summary;
+
+  // Pick the right headline from the snapshot for the user's current
+  // grade selection. RAW → raw; high grade (>= 8) → pop_top (top tier);
+  // anything else → graded_avg. Falls back across the trio so we always
+  // surface *something* when the snapshot has any pricing.
+  const suggestedEstimate = useMemo<number | null>(() => {
+    if (!marketSummary) return null;
+    const raw = marketSummary.raw?.amount ?? null;
+    const top = marketSummary.pop_top?.amount ?? null;
+    const avg = marketSummary.graded_avg?.amount ?? null;
+    if (house === "loupe") return raw ?? avg ?? top;
+    const gNum = Number(grade);
+    if (Number.isFinite(gNum) && gNum >= 8) return top ?? avg ?? raw;
+    return avg ?? top ?? raw;
+  }, [marketSummary, house, grade]);
+
+  useEffect(() => {
+    if (estValueTouchedRef.current) return;
+    if (suggestedEstimate == null) return;
+    setEstimatedValue(suggestedEstimate.toFixed(2));
+    setAutoFilledFromMarket(true);
+  }, [suggestedEstimate]);
 
   const heldDays = useMemo(() => daysBetween(purchaseDate), [purchaseDate]);
   const dateValid = purchaseDate === "" || ISO_DATE_RE.test(purchaseDate);
@@ -476,10 +512,27 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
         </View>
       </Field>
 
-      {/* Estimated value */}
+      {/* Estimated value — auto-prefilled from the live market snapshot
+          on create. Picks raw / graded_avg / pop_top based on the
+          current grade & house, then stops syncing the moment the user
+          edits the field manually. */}
       <Field
         label="Estimated value (USD)"
-        hint="Optional — overrides the auto market estimate."
+        hint={
+          mode === "create"
+            ? marketQ.isLoading && estimatedValue === ""
+              ? "Fetching current market value…"
+              : autoFilledFromMarket && !estValueTouchedRef.current
+                ? `Auto-filled from current market ${
+                    house === "loupe"
+                      ? "(raw)"
+                      : Number(grade) >= 8
+                        ? "(top-tier comp)"
+                        : "(graded avg)"
+                  }. Edit to override.`
+                : "Edit to override the auto market estimate."
+            : "Optional — overrides the auto market estimate."
+        }
       >
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <Text
@@ -496,8 +549,14 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           </Text>
           <TextInput
             value={estimatedValue}
-            onChangeText={(t) => setEstimatedValue(clampCurrency(t))}
-            placeholder="0.00"
+            onChangeText={(t) => {
+              estValueTouchedRef.current = true;
+              setAutoFilledFromMarket(false);
+              setEstimatedValue(clampCurrency(t));
+            }}
+            placeholder={
+              marketQ.isLoading && mode === "create" ? "Loading…" : "0.00"
+            }
             placeholderTextColor={p.ink.dim}
             keyboardType="decimal-pad"
             inputMode="decimal"
