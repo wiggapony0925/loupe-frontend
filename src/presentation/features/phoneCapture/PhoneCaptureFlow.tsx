@@ -7,7 +7,7 @@
  * to the existing scan-job pipeline.
  */
 import React, { useEffect } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
 import { CameraView } from "expo-camera";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -228,6 +228,10 @@ function BottomBar({ ctrl }: { ctrl: PhoneCaptureHook }) {
 }
 
 function PermissionGate({ ctrl, onCancel }: { ctrl: PhoneCaptureHook; onCancel: () => void }) {
+  // If the OS won't ask again (previous deny), requestPermission() is a
+  // silent no-op — route the user to Settings instead so the gate isn't
+  // a dead end.
+  const mustOpenSettings = ctrl.permission ? !ctrl.permission.canAskAgain : false;
   return (
     <SafeAreaView className="flex-1 bg-bg" edges={["top", "bottom"]}>
       <View className="flex-1 items-center justify-center gap-6 px-6">
@@ -235,16 +239,26 @@ function PermissionGate({ ctrl, onCancel }: { ctrl: PhoneCaptureHook; onCancel: 
         <View className="items-center gap-2">
           <Text className="text-xl font-semibold text-ink">Camera access needed</Text>
           <Text className="text-center text-sm text-ink-muted">
-            Loupe uses your camera to capture cards for forensic grading. Photos stay on-device
-            until you submit a scan.
+            {mustOpenSettings
+              ? "Camera access was denied. Open Settings → Loupe and enable Camera, then come back."
+              : "Loupe uses your camera to capture cards for forensic grading. Photos stay on-device until you submit a scan."}
           </Text>
         </View>
         <View className="w-full gap-2">
           <PrimaryButton
-            label="Allow camera"
+            label={mustOpenSettings ? "Open Settings" : "Allow camera"}
             icon={Camera}
             variant="mint"
-            onPress={() => ctrl.requestPermission()}
+            onPress={async () => {
+              if (mustOpenSettings) {
+                Linking.openSettings().catch(() => {});
+                return;
+              }
+              const next = await ctrl.requestPermission();
+              if (!next.granted && !next.canAskAgain) {
+                Linking.openSettings().catch(() => {});
+              }
+            }}
           />
           <PrimaryButton label="Cancel" variant="ghost" onPress={onCancel} />
         </View>

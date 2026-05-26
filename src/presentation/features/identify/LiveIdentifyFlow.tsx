@@ -28,6 +28,7 @@ import {
   Animated,
   Easing,
   Image,
+  Linking,
   Pressable,
   ScrollView,
   Text,
@@ -261,6 +262,12 @@ export function LiveIdentifyFlow({
     return <CenterMessage label="Initializing camera…" />;
   }
   if (!permission.granted) {
+    // If iOS/Android has revoked the "ask again" right (user previously
+    // hit Deny, or Simulator was reset), calling requestPermission()
+    // silently no-ops — the OS prompt never appears. We need to send
+    // them to Settings instead. The button label flips so they know
+    // what tap does.
+    const mustOpenSettings = !permission.canAskAgain;
     return (
       <SafeAreaView
         edges={["top", "bottom"]}
@@ -268,13 +275,24 @@ export function LiveIdentifyFlow({
       >
         <Text className="text-2xl font-semibold text-ink">Camera access</Text>
         <Text className="mt-2 text-sm text-ink-muted">
-          Loupe needs the camera to identify cards. Grant access to continue.
+          {mustOpenSettings
+            ? "Camera access was denied. Open Settings → Loupe and enable Camera, then come back."
+            : "Loupe needs the camera to identify cards. Grant access to continue."}
         </Text>
         <View style={{ height: 24 }} />
         <PrimaryButton
-          label="Allow camera"
-          onPress={() => {
-            requestPermission();
+          label={mustOpenSettings ? "Open Settings" : "Allow camera"}
+          onPress={async () => {
+            if (mustOpenSettings) {
+              Linking.openSettings().catch(() => {});
+              return;
+            }
+            const next = await requestPermission();
+            // If the OS still won't ask (user denied in the dialog),
+            // bounce them to Settings on the next tap.
+            if (!next.granted && !next.canAskAgain) {
+              Linking.openSettings().catch(() => {});
+            }
           }}
         />
         <View style={{ height: 12 }} />
