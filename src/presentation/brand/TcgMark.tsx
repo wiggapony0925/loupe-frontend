@@ -5,7 +5,7 @@ import type { CardSet } from "@/domain";
 import { getBrandLogo, type BrandKey } from "@/shared/brandAssets";
 
 interface TcgMarkProps {
-  set: CardSet | "All";
+  set: CardSet | "All" | string;
   size?: number;
   /** Stroke + accent color. Defaults to currentColor-equivalent black. */
   color?: string;
@@ -13,21 +13,23 @@ interface TcgMarkProps {
   background?: string;
 }
 
-/** Map vault `CardSet` enum → brand-registry key (shared with Search). */
-function brandKeyForSet(set: CardSet | "All"): BrandKey {
-  switch (set) {
-    case "Pokemon Base Set":
-      return "pokemon";
-    case "2026 World Cup Goals":
-      return "soccer";
-    case "Topps Chrome 2025":
-      return "topps";
-    case "Magic Alpha":
-      return "magic";
-    case "All":
-    default:
-      return "all";
-  }
+/**
+ * Map any vault set name → brand-registry key. Substring-based so it
+ * works on real seeded names like "Pokemon Base Set", "Yu-Gi-Oh! LOB",
+ * "One Piece OP-01", "Disney Lorcana – The First Chapter", etc.
+ */
+function brandKeyForSet(set: CardSet | "All" | string): BrandKey {
+  if (set === "All") return "all";
+  const s = String(set).toLowerCase();
+  if (/yu-?gi-?oh/.test(s)) return "yugioh";
+  if (/one\s?piece/.test(s)) return "onepiece";
+  if (/lorcana/.test(s)) return "lorcana";
+  if (/pok[eé]mon|pokemon/.test(s)) return "pokemon";
+  if (/magic|mtg/.test(s)) return "magic";
+  if (/topps|chrome|bowman/.test(s)) return "topps";
+  if (/world cup|soccer|f[uú]tbol|fifa/.test(s)) return "soccer";
+  if (/panini|prizm|select|donruss|nfl|nba|mlb/.test(s)) return "sports";
+  return "all";
 }
 
 /**
@@ -37,7 +39,8 @@ function brandKeyForSet(set: CardSet | "All"): BrandKey {
  * the SVG glyph is used as fallback only.
  */
 export function TcgMark({ set, size = 16, color = "#0B0F14", background = "#FFFFFF" }: TcgMarkProps) {
-  const logo = getBrandLogo(brandKeyForSet(set));
+  const key = brandKeyForSet(set);
+  const logo = getBrandLogo(key);
   if (logo) {
     return (
       <View
@@ -57,16 +60,24 @@ export function TcgMark({ set, size = 16, color = "#0B0F14", background = "#FFFF
     );
   }
 
-  switch (set) {
-    case "Pokemon Base Set":
+  switch (key) {
+    case "pokemon":
       return <PokeballMark size={size} color={color} background={background} />;
-    case "2026 World Cup Goals":
+    case "soccer":
       return <SoccerMark size={size} color={color} background={background} />;
-    case "Topps Chrome 2025":
+    case "topps":
       return <BaseballMark size={size} color={color} background={background} />;
-    case "Magic Alpha":
+    case "magic":
       return <ManaMark size={size} color={color} background={background} />;
-    case "All":
+    case "yugioh":
+      return <EyeMark size={size} color={color} background={background} />;
+    case "onepiece":
+      return <CompassMark size={size} color={color} background={background} />;
+    case "lorcana":
+      return <CastleMark size={size} color={color} background={background} />;
+    case "sports":
+      return <TrophyMark size={size} color={color} background={background} />;
+    case "all":
     default:
       return <GridMark size={size} color={color} />;
   }
@@ -158,18 +169,101 @@ function GridMark({ size, color }: { size: number; color: string }) {
   );
 }
 
+/** Generic mystical-eye glyph evoking ancient-Egyptian iconography. */
+function EyeMark({ size, color, background }: { size: number; color: string; background: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      {/* almond outline */}
+      <Path
+        d="M2.5 12 C 6 6, 18 6, 21.5 12 C 18 18, 6 18, 2.5 12 Z"
+        fill={background}
+        stroke={color}
+        strokeWidth="1.4"
+      />
+      {/* iris */}
+      <Circle cx="12" cy="12" r="3.2" fill={color} />
+      {/* pupil highlight */}
+      <Circle cx="13" cy="11" r="0.9" fill={background} />
+      {/* tail flourish */}
+      <Path d="M12 15.2 L11.4 18.2" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Compass rose — evokes seafaring adventure without copying any logo. */
+function CompassMark({ size, color, background }: { size: number; color: string; background: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle cx="12" cy="12" r="10" fill={background} stroke={color} strokeWidth="1.4" />
+      {/* N/S needle (filled) */}
+      <Polygon points="12,3.5 13.6,12 12,20.5 10.4,12" fill={color} />
+      {/* E/W needle (outline) */}
+      <Polygon points="3.5,12 12,13.4 20.5,12 12,10.6" fill="none" stroke={color} strokeWidth="1.1" />
+      <Circle cx="12" cy="12" r="1.2" fill={background} stroke={color} strokeWidth="1" />
+    </Svg>
+  );
+}
+
+/** Castle silhouette — generic fairy-tale tower, no Disney IP. */
+function CastleMark({ size, color, background }: { size: number; color: string; background: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle cx="12" cy="12" r="10" fill={background} stroke={color} strokeWidth="1.2" />
+      {/* central spire */}
+      <Path d="M11 6.5 L12 4.5 L13 6.5 L13 9 L11 9 Z" fill={color} />
+      {/* battlements */}
+      <Path
+        d="M6 11 h2 v-2 h2 v2 h2 v-2 h2 v2 h2 v-2 h2 v2 v6 H6 Z"
+        fill={color}
+      />
+      {/* door */}
+      <Path d="M11 17 h2 v-2.6 a1 1 0 0 0 -2 0 Z" fill={background} />
+    </Svg>
+  );
+}
+
+/** Trophy cup — generic sports accolade. */
+function TrophyMark({ size, color, background }: { size: number; color: string; background: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      {/* cup body */}
+      <Path
+        d="M8 4 h8 v4 a4 4 0 0 1 -8 0 Z"
+        fill={color}
+      />
+      {/* handles */}
+      <Path d="M8 5.5 H5.5 a1.5 1.5 0 0 0 0 3 H8" fill="none" stroke={color} strokeWidth="1.3" />
+      <Path d="M16 5.5 H18.5 a1.5 1.5 0 0 1 0 3 H16" fill="none" stroke={color} strokeWidth="1.3" />
+      {/* stem + base */}
+      <Path d="M11 11 h2 v4 h-2 z" fill={color} />
+      <Path d="M7 19 h10 v1.5 H7 z M9 16.5 h6 v2.5 H9 z" fill={color} />
+      {/* highlight star */}
+      <Circle cx="12" cy="6.5" r="1.1" fill={background} />
+    </Svg>
+  );
+}
+
 /** Short display label for chip text (the set name is verbose). */
-export function tcgShortLabel(set: CardSet | "All"): string {
-  switch (set) {
-    case "Pokemon Base Set":
+export function tcgShortLabel(set: CardSet | "All" | string): string {
+  const key = brandKeyForSet(set);
+  switch (key) {
+    case "pokemon":
       return "Pokémon";
-    case "2026 World Cup Goals":
+    case "soccer":
       return "Soccer";
-    case "Topps Chrome 2025":
+    case "topps":
       return "Topps";
-    case "Magic Alpha":
+    case "magic":
       return "Magic";
-    case "All":
+    case "yugioh":
+      return "Yu-Gi-Oh!";
+    case "onepiece":
+      return "One Piece";
+    case "lorcana":
+      return "Lorcana";
+    case "sports":
+      return "Sports";
+    case "all":
     default:
       return "All";
   }

@@ -9,22 +9,17 @@ const GRADES = [1, 7, 8, 9, 10] as const;
 
 /** Brand-evocative accent colours used to tint each TCG chip. */
 function tcgTint(set: CardSet | "All" | string): string {
-  switch (set) {
-    case "Pokemon Base Set":
-      return "#FFCB05"; // pikachu yellow
-    case "2026 World Cup Goals":
-      return "#00B16A"; // pitch green
-    case "Topps Chrome 2025":
-      return "#E2231A"; // baseball red
-    case "Magic Alpha":
-      return "#7E5BEF"; // arcane purple
-    case "All":
-      return "#7AA2FF"; // neutral blue
-    default:
-      // Unknown set name from the user's actual vault — use the neutral
-      // brand blue so the chip still reads as on-brand rather than gray.
-      return "#7AA2FF";
-  }
+  if (set === "All") return "#7AA2FF";
+  const s = String(set).toLowerCase();
+  if (/yu-?gi-?oh/.test(s)) return "#A347D6"; // arcane violet
+  if (/one\s?piece/.test(s)) return "#FF6B35"; // straw-hat orange
+  if (/lorcana/.test(s)) return "#C8A24A"; // enchanted gold
+  if (/pok[eé]mon|pokemon/.test(s)) return "#FFCB05"; // pikachu yellow
+  if (/magic|mtg/.test(s)) return "#7E5BEF"; // arcane purple
+  if (/topps|chrome|bowman/.test(s)) return "#E2231A"; // baseball red
+  if (/world cup|soccer|f[uú]tbol|fifa/.test(s)) return "#00B16A"; // pitch green
+  if (/panini|prizm|select|donruss|nfl|nba|mlb/.test(s)) return "#1F6FEB"; // court blue
+  return "#7AA2FF";
 }
 
 interface FilterBarProps {

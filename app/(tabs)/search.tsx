@@ -271,7 +271,7 @@ export default function SearchScreen() {
             </Pressable>
           ) : null}
           <Pressable
-            onPress={() => router.push(routes.scanPhone("quick"))}
+            onPress={() => router.push(routes.scanIdentify())}
             hitSlop={8}
             className="h-8 w-8 items-center justify-center rounded-full"
             style={{ backgroundColor: withAlpha(p.accent.mint, 0.14) }}

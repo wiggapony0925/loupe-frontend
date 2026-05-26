@@ -9,3 +9,4 @@ export * as authRepository from "./authRepository";
 export * as scanRepository from "./scanRepository";
 export * as marketRepository from "./marketRepository";
 export * as forensicRepository from "./forensicRepository";
+export * as identifyRepository from "./identifyRepository";

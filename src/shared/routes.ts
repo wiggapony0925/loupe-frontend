@@ -33,6 +33,14 @@ export const routes = {
   scanPhone: (mode?: ScanPhoneMode) =>
     mode ? `/scan/phone?mode=${mode}` : "/scan/phone",
   /**
+   * Live PriceCharting-style identification viewfinder. Continuous
+   * OCR loop with a candidate carousel pinned to the bottom. `tcg`
+   * pre-selects a TCG hint when the user launched from a filtered
+   * surface (e.g. the Pokémon search facet).
+   */
+  scanIdentify: (tcg?: "pokemon" | "magic" | "yugioh") =>
+    tcg ? `/scan/identify?tcg=${tcg}` : "/scan/identify",
+  /**
    * Add a card to the user's vault without scanning.
    *
    * Pre-fills the form with a catalog card when `cardId` (resolved

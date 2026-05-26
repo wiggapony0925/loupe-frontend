@@ -25,6 +25,7 @@ import {
   Camera,
   Layers,
   PlusCircle,
+  ScanLine,
   Smartphone,
   Sparkles,
   Zap,
@@ -66,6 +67,51 @@ export default function ScanTabScreen() {
             Pick a capture mode, then we'll guide you frame-by-frame.
           </Text>
         </View>
+
+        {/* Live identify — hero CTA. Point the camera and the catalog
+            match streams in like Google Lens / PriceCharting. Sits
+            above the grading modes because "what IS this card?" is the
+            most common first question, not "grade it". */}
+        <Pressable
+          onPress={() => router.push(routes.scanIdentify())}
+          accessibilityRole="button"
+          accessibilityLabel="Live identify a card"
+          style={({ pressed }) => ({
+            borderRadius: 18,
+            padding: 18,
+            backgroundColor: withAlpha(p.accent.mint, 0.12),
+            borderWidth: 1,
+            borderColor: withAlpha(p.accent.mint, 0.45),
+            opacity: pressed ? 0.85 : 1,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 14,
+          })}
+        >
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: withAlpha(p.accent.mint, 0.25),
+            }}
+          >
+            <ScanLine size={22} color={p.accent.mint} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+              Instant · live OCR
+            </Text>
+            <Text className="mt-0.5 text-base font-semibold text-ink">
+              Identify a card
+            </Text>
+            <Text className="mt-0.5 text-xs text-ink-muted">
+              Hold the phone over the card — matches stream in.
+            </Text>
+          </View>
+        </Pressable>
 
         {/* Mode toggle — same Studio/Quick semantics as the home card
             so the muscle memory transfers. We render it as a tall pill
