@@ -47,8 +47,8 @@ expo-env.d.ts
 # @end expo-cli
 
 # Fetched TCG set artwork — 20MB+ of PNGs from public APIs (Pokémon TCG / Scryfall).
-# Regenerate locally with `node scripts/fetch-set-logos.mjs`. The generated
-# TypeScript registry (`src/shared/setLogos.generated.ts`) is also produced
-# from this manifest and is excluded so the repo doesn't carry derived data.
+# Regenerate locally with `node scripts/fetch-set-logos.mjs`. The artwork itself
+# stays out of git; the generated registry (src/shared/setLogos.generated.ts)
+# IS tracked so EAS Build / CI can resolve `@/shared/setLogos.generated`
+# without re-running the fetch step.
 assets/sets/
-src/shared/setLogos.generated.ts

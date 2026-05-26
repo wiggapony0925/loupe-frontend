@@ -15,6 +15,8 @@
     "android": "npm run kill && expo start --android",
     "web": "npm run kill && expo start --web",
     "prebuild": "expo prebuild",
+    "generate:set-logos": "node scripts/generate-set-logo-registry.mjs",
+    "eas-build-pre-install": "node scripts/generate-set-logo-registry.mjs || true",
     "doctor": "npx expo-doctor",
     "fix-deps": "npx expo install --fix -- --legacy-peer-deps",
     "typecheck": "tsc --noEmit",
