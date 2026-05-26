@@ -3,6 +3,10 @@
  *
  * Reads `EXPO_PUBLIC_API_URL` at bundle time, defaults to localhost:8000.
  *
+ * Optional fallback retries are disabled by default. To enable, set both:
+ *   EXPO_PUBLIC_ENABLE_API_FALLBACK=true
+ *   EXPO_PUBLIC_API_URL_FALLBACK=http://localhost:8000
+ *
  * All `/v1/*` responses ship the universal envelope
  *   { data, meta, pagination, error }
  * (see loupe-backend/CONTRACT.md §2). `apiFetch` auto-unwraps to `data`;
@@ -16,8 +20,12 @@ import type { Envelope, ErrorDetail } from "./envelope";
 const env = (process.env ?? {}) as Record<string, string | undefined>;
 
 const PRIMARY_API_BASE: string = env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
+const ENABLE_API_FALLBACK: boolean =
+  (env.EXPO_PUBLIC_ENABLE_API_FALLBACK ?? "false").toLowerCase() === "true";
 const FALLBACK_API_BASE: string =
-  env.EXPO_PUBLIC_API_URL_FALLBACK ?? "http://localhost:8000";
+  ENABLE_API_FALLBACK && env.EXPO_PUBLIC_API_URL_FALLBACK
+    ? env.EXPO_PUBLIC_API_URL_FALLBACK
+    : "";
 
 // Mutable so we can sticky-switch after a successful fallback.
 let activeApiBase: string = PRIMARY_API_BASE;
