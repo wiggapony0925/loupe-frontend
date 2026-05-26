@@ -52,6 +52,10 @@ import { QueryState } from "@/presentation/components/QueryState";
 import { PriceAlertSheet } from "@/presentation/features/alerts/PriceAlertSheet";
 import { EbaySoldListingsPanel } from "@/presentation/features/market/EbaySoldListingsPanel";
 import {
+  GradeSummaryPills,
+  MarketplaceChipsRow,
+} from "@/presentation/features/cardDetail/CardDetailSections";
+import {
   SkeletonCardDetailPage,
   SkeletonCompsList,
   SkeletonListingsRail,
@@ -128,6 +132,9 @@ export default function CardDetailScreen() {
 
   const [range, setRange] = useState<RangeKey>("1Y");
   const [house, setHouse] = useState<HouseId | "all">("all");
+  const [selectedGradeLabel, setSelectedGradeLabel] = useState<string | null>(
+    null,
+  );
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
 
@@ -342,10 +349,20 @@ export default function CardDetailScreen() {
                 />
               </View>
 
+              {/* Marketplace chips — cheapest live price per provider */}
+              <MarketplaceChipsRow cardId={cardId} />
+
               {/* 7. Section header */}
               <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
                 Graded Prices
               </Text>
+
+              {/* Price-by-grade pivot pills */}
+              <GradeSummaryPills
+                cardId={cardId}
+                value={selectedGradeLabel}
+                onChange={setSelectedGradeLabel}
+              />
 
               {/* 8. House filter chips */}
               <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>

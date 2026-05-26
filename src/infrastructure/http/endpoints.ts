@@ -45,6 +45,8 @@ export const ENDPOINTS = {
     market: (id: string) => `${V1}/cards/${id}/market`,
     listings: (id: string) => `${V1}/cards/${id}/listings`,
     comps: (id: string) => `${V1}/cards/${id}/comps`,
+    gradeSummary: (id: string) => `${V1}/cards/${id}/grade-summary`,
+    marketplacePrices: (id: string) => `${V1}/cards/${id}/marketplace-prices`,
     canonical: (id: string) => `${V1}/cards/${id}/canonical`,
     resolve: `${V1}/cards/resolve`,
   },

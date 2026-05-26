@@ -103,3 +103,50 @@ export interface CompsResponseWire {
   filters: CompsFiltersWire;
   comps: SoldCompWire[];
 }
+
+// ─── Per-grade price summary ───────────────────────────────────────────
+
+/** Last-sale entry inside a grade-summary row. */
+export interface GradeSummaryLastSaleWire {
+  amount: number;
+  currency: string;
+  sold_at: string;
+  url: string | null;
+}
+
+/** Mirrors `app/services/market/grade_summary_service.py`. */
+export interface GradeSummaryRowWire {
+  grade: string; // "UNGRADED" | "PSA 10" | "CGC 9.5" | ...
+  house: string | null;
+  currency: string;
+  last_sale: GradeSummaryLastSaleWire | null;
+  median_recent: number | null;
+  sales_count: number;
+  delta_amount: number | null;
+  delta_pct: number | null;
+}
+
+export interface GradeSummaryResponseWire {
+  card_id: string;
+  window_days: number;
+  grades: GradeSummaryRowWire[];
+}
+
+// ─── Per-marketplace lowest active price ───────────────────────────────
+
+/** Mirrors `app/services/market/marketplace_prices_service.py`. */
+export interface MarketplacePriceRowWire {
+  source: string;
+  label: string;
+  price: Money;
+  url: string | null;
+  image_url: string | null;
+  is_auction: boolean;
+  search_url: string | null;
+}
+
+export interface MarketplacePricesResponseWire {
+  card_id: string;
+  query: string;
+  providers: MarketplacePriceRowWire[];
+}

@@ -41,6 +41,10 @@ export const queryKeys = {
     market: (id: string) => ["cards", "market", id] as const,
     listings: (id: string, limit: number) =>
       ["cards", "listings", id, limit] as const,
+    gradeSummary: (id: string, windowDays: number) =>
+      ["cards", "grade-summary", id, windowDays] as const,
+    marketplacePrices: (id: string, limit: number) =>
+      ["cards", "marketplace-prices", id, limit] as const,
     sparklines: () => ["cards", "sparklines"] as const,
     comps: (
       id: string,

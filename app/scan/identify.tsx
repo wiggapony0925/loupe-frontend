@@ -2,9 +2,11 @@
  * `/scan/identify` — live card identification (PriceCharting-style).
  *
  * Mounts the streaming OCR viewfinder. When the user picks a candidate
- * we deep-link into `gradeNew` with the resolved catalog metadata so
- * they can save the card to their vault, matching the rest of the
- * scan flows' "snap → confirm → save" pattern.
+ * we deep-link into the unified `/card/{id}` detail page (price by
+ * grade, lowest live price per marketplace, recent sold comps). From
+ * there an "Add to vault" CTA bridges to `gradeNew`. If we couldn't
+ * resolve a catalog id we fall back to the legacy gradeNew flow so the
+ * user still has a way to save what they captured.
  */
 import React from "react";
 import { router, useLocalSearchParams } from "expo-router";
@@ -33,12 +35,15 @@ export default function IdentifyScanScreen() {
         else router.replace("/");
       }}
       onConfirm={(candidate) => {
-        // Drop the user into the existing add-to-vault form with the
-        // resolved catalog id pre-filled. They can adjust grade/cost
-        // basis from there.
+        const cardId = candidate.card_id ?? null;
+        if (cardId) {
+          router.replace(routes.card(cardId));
+          return;
+        }
+        // Fallback: unresolved → straight to add-to-vault with whatever
+        // identity hints we have.
         router.replace(
           routes.gradeNew({
-            cardId: candidate.card_id ?? undefined,
             upstreamId: candidate.upstream_id ?? undefined,
             cardName: candidate.name,
             cardImage: candidate.image_url ?? undefined,
@@ -49,3 +54,4 @@ export default function IdentifyScanScreen() {
     />
   );
 }
+
