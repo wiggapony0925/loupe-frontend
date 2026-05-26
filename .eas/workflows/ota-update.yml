@@ -1,0 +1,20 @@
+name: OTA update (JS-only changes)
+
+# Companion to publish-ios.yml. On every push to main, ship an OTA bundle
+# to the production channel so existing TestFlight installs receive the
+# JS/TS changes within minutes (no rebuild needed). The full native build
+# workflow still runs in parallel; if the fingerprint is unchanged the
+# build is a no-op and the OTA is what users actually receive.
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  update:
+    name: EAS Update -> production channel
+    type: update
+    params:
+      branch: production
+      message: ${{ github.event.head_commit.message }}
+      platform: all

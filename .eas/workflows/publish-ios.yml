@@ -1,0 +1,25 @@
+name: Publish iOS (TestFlight)
+
+# Runs on every push to main. Builds the iOS app on EAS, then auto-submits
+# the artifact to App Store Connect / TestFlight. Apple credentials, ASC
+# app metadata, and the buildNumber counter are managed by EAS — nothing
+# else needs to run locally.
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build_ios:
+    name: Build iOS production
+    type: build
+    params:
+      platform: ios
+      profile: production
+
+  submit_ios:
+    name: Submit to TestFlight
+    needs: [build_ios]
+    type: submit
+    params:
+      build_id: ${{ needs.build_ios.outputs.build_id }}
