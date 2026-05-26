@@ -121,24 +121,21 @@ function CardOverlay({ tilt }: { tilt: "flat" | "top" | "bottom" }) {
         : undefined;
 
   return (
-    <View pointerEvents="none" className="items-center justify-center" style={{ flex: 1 }}>
+    <View
+      pointerEvents="none"
+      className="items-center justify-center"
+      style={{ flex: 1 }}
+    >
       <View
         style={[
           {
             width: "78%",
             aspectRatio: aspect,
-            borderRadius: 18,
-            borderWidth: 2,
-            borderColor: "rgba(0,245,155,0.85)",
-            shadowColor: palette.accent.mint,
-            shadowOpacity: 0.6,
-            shadowRadius: 12,
           },
           tiltStyle,
         ]}
       >
-        {/* Corner marks */}
-        {(["tl", "tr", "bl", "br"] as const).map((corner) => (
+        {((["tl", "tr", "bl", "br"]) as const).map((corner) => (
           <View key={corner} style={cornerMarkStyle(corner)} />
         ))}
       </View>
@@ -277,20 +274,52 @@ function CenterMessage({ label }: { label: string }) {
 }
 
 function cornerMarkStyle(corner: "tl" | "tr" | "bl" | "br") {
+  // Apple-style brackets: bigger L-shapes, white, no glow.
+  const SIZE = 28;
+  const THICK = 3;
+  const RADIUS = 4;
   const base = {
     position: "absolute" as const,
-    width: 18,
-    height: 18,
-    borderColor: palette.accent.mint,
+    width: SIZE,
+    height: SIZE,
+    borderColor: "#fff",
   };
   switch (corner) {
     case "tl":
-      return { ...base, top: -2, left: -2, borderTopWidth: 3, borderLeftWidth: 3 };
+      return {
+        ...base,
+        top: -1,
+        left: -1,
+        borderTopWidth: THICK,
+        borderLeftWidth: THICK,
+        borderTopLeftRadius: RADIUS,
+      };
     case "tr":
-      return { ...base, top: -2, right: -2, borderTopWidth: 3, borderRightWidth: 3 };
+      return {
+        ...base,
+        top: -1,
+        right: -1,
+        borderTopWidth: THICK,
+        borderRightWidth: THICK,
+        borderTopRightRadius: RADIUS,
+      };
     case "bl":
-      return { ...base, bottom: -2, left: -2, borderBottomWidth: 3, borderLeftWidth: 3 };
+      return {
+        ...base,
+        bottom: -1,
+        left: -1,
+        borderBottomWidth: THICK,
+        borderLeftWidth: THICK,
+        borderBottomLeftRadius: RADIUS,
+      };
     case "br":
-      return { ...base, bottom: -2, right: -2, borderBottomWidth: 3, borderRightWidth: 3 };
+      return {
+        ...base,
+        bottom: -1,
+        right: -1,
+        borderBottomWidth: THICK,
+        borderRightWidth: THICK,
+        borderBottomRightRadius: RADIUS,
+      };
   }
 }
