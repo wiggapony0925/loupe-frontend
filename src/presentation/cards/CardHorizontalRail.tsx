@@ -4,10 +4,17 @@
  * Use for "Hot right now", "Recently graded", "Top movers" rails. First
  * three tiles get `priority="normal"`; the rest are `"low"` so the
  * decoder isn't saturated on launch.
+ *
+ * Implementation note: this used FlashList horizontal, but FlashList v2
+ * dropped `estimatedItemSize` and the auto-sizing path was stretching
+ * tiles to fill the parent (which is why the Yu-Gi-Oh! rail surfaced
+ * two huge cards while the Magic rail rendered three small ones with
+ * identical props). For short rails (≤24 items) a plain ScrollView
+ * gives predictable per-item width and the loss of virtualization is
+ * negligible.
  */
-import React, { useCallback } from "react";
-import { Text, View } from "react-native";
-import { FlashList, type ListRenderItem } from "@shopify/flash-list";
+import React from "react";
+import { ScrollView, Text, View } from "react-native";
 import { CardTile } from "./CardTile";
 import { TILE_WIDTH, type CardWire, type CardTileSize } from "./types";
 
@@ -27,37 +34,13 @@ export function CardHorizontalRail({
   cards,
   tileSize = "md",
   showPrice = false,
-  showTrend = false,
+  showTrend: _showTrend = false,
   title,
   onCardPress,
   gap = 12,
   snap = false,
 }: CardHorizontalRailProps) {
-  const keyExtractor = useCallback((c: CardWire) => c.id, []);
-
-  const renderItem: ListRenderItem<CardWire> = useCallback(
-    ({ item, index }) => {
-      const priority = index < 3 ? "normal" : "low";
-      const trend = showTrend
-        ? // synthesize a trend from pricing_summary if available, else null
-          item.pricing_summary?.market?.amount != null
-          ? null
-          : null
-        : null;
-      return (
-        <CardTile
-          card={item}
-          size={tileSize}
-          width={TILE_WIDTH[tileSize]}
-          showPrice={showPrice}
-          trend={trend}
-          priority={priority}
-          onPress={onCardPress ? () => onCardPress(item) : undefined}
-        />
-      );
-    },
-    [tileSize, showPrice, showTrend, onCardPress],
-  );
+  const tileWidth = TILE_WIDTH[tileSize];
 
   return (
     <View>
@@ -66,17 +49,25 @@ export function CardHorizontalRail({
           {title}
         </Text>
       ) : null}
-      <FlashList
-        data={cards}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
+      <ScrollView
         horizontal
-        ItemSeparatorComponent={() => <View style={{ width: gap }} />}
         showsHorizontalScrollIndicator={false}
-        snapToInterval={snap ? TILE_WIDTH[tileSize] + gap : undefined}
+        contentContainerStyle={{ gap, paddingRight: 4 }}
+        snapToInterval={snap ? tileWidth + gap : undefined}
         decelerationRate={snap ? "fast" : "normal"}
-        contentContainerStyle={{ paddingRight: 4 }}
-      />
+      >
+        {cards.map((item, index) => (
+          <CardTile
+            key={item.id}
+            card={item}
+            size={tileSize}
+            width={tileWidth}
+            showPrice={showPrice}
+            priority={index < 3 ? "normal" : "low"}
+            onPress={onCardPress ? () => onCardPress(item) : undefined}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 }

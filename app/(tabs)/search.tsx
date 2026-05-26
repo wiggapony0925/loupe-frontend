@@ -38,7 +38,7 @@ import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail"
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { CardImage } from "@/presentation/components/CardImage";
 import { SkeletonTrendingGrid } from "@/presentation/components/Skeletons";
-import { CardTile } from "@/presentation/cards";
+import { CardTile, CardHorizontalRail } from "@/presentation/cards";
 import { pickCardImageUrl, pickCardBlurhash } from "@/shared/cardImage";
 import type { CardSearchResult, TcgKey } from "@/infrastructure/http";
 import { compactUsd } from "@/shared/format";
@@ -476,16 +476,16 @@ export default function SearchScreen() {
             </View>
 
             {/* ── BAND 2 · DISCOVER ───────────────────────────
-                The "what's hot" surface. One section eyebrow up top,
-                then the trending grid, then the per-TCG rails. Each
-                rail is gated by the active TCG chip so selecting
-                "Pokémon" narrows the band to a single rail and
-                hides the cross-TCG noise.
+                Single header up top, then a stack of horizontal rails
+                that each follow the same template:
 
-                Wrapped in a single parent View so the bands have
-                consistent vertical rhythm — the trending grid and
-                the rails read as one cohesive "Discover" zone
-                instead of four disjoint sections. */}
+                  [TCG eyebrow]
+                  [Rail title]
+                  [Horizontal card rail @ tileSize=md, w/ price]
+
+                Each rail is gated by the active TCG chip so selecting
+                "Pokémon" hides the other-TCG rails and narrows the
+                band to a single focused list. */}
             <View style={{ gap: 24 }}>
               <View>
                 <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
@@ -496,22 +496,28 @@ export default function SearchScreen() {
                 </Text>
               </View>
 
-              <TrendingSection tcg={selectedTcg} />
+              <View style={{ gap: 8 }}>
+                <SectionHeader
+                  eyebrow={selectedTcg === "all" ? "All TCGs" : TCG_CHIPS.find((c) => c.key === selectedTcg)?.label ?? "Trending"}
+                  title="Trending now"
+                />
+                <TrendingSection tcg={selectedTcg} />
+              </View>
 
               {selectedTcg === "all" || selectedTcg === "pokemon" ? (
-                <View>
+                <View style={{ gap: 8 }}>
                   <SectionHeader eyebrow="Pokémon" title="Chase rares" />
                   <HotRightNowRail tcg="pokemon" limit={12} />
                 </View>
               ) : null}
               {selectedTcg === "all" || selectedTcg === "yugioh" ? (
-                <View>
+                <View style={{ gap: 8 }}>
                   <SectionHeader eyebrow="Yu-Gi-Oh!" title="Newest releases" />
                   <HotRightNowRail tcg="yugioh" limit={12} />
                 </View>
               ) : null}
               {selectedTcg === "all" || selectedTcg === "magic" ? (
-                <View>
+                <View style={{ gap: 8 }}>
                   <SectionHeader eyebrow="Magic" title="EDHREC favorites" />
                   <HotRightNowRail tcg="magic" limit={12} />
                 </View>
@@ -849,57 +855,51 @@ function LiveResultRow({ card, bordered }: { card: CardSearchResult; bordered: b
 }
 
 // ── Trending section (empty-state default) ────────────────────────────
+// Renders as a horizontal rail (not a wrap-grid) so the entire Discover
+// band has consistent vertical rhythm — every rail in the band uses the
+// same tile size and scroll affordance. Previously this was a 2-column
+// wrap grid which broke the "rail stack" visual pattern below it.
 function TrendingSection({ tcg = "all" }: { tcg?: TcgChip }) {
-  const trending = useTrendingCards({ tcg, limit: 24 });
+  const trending = useTrendingCards({ tcg, limit: 12 });
   const cards = trending.data?.cards ?? [];
 
-  return (
-    <View>
-      {/* No eyebrow/title here — the parent "Discover" band renders
-          a single shared header for the entire band. */}
-      <View>
-        {trending.isLoading ? (
-          <SkeletonTrendingGrid count={6} />
-        ) : trending.isError ? (
-          <ErrorState
-            title={COPY.searchError.title}
-            message={COPY.searchError.message}
-          />
-        ) : cards.length === 0 ? (
-          <EmptyState title="No trending cards right now" message="" />
-        ) : (
-          <View
-            style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              columnGap: 12,
-              rowGap: 16,
-            }}
-          >
-            {cards.map((card, idx) => (
-              // Cell geometry mirrors SkeletonTrendingGrid exactly
-              // (flexBasis 47% + flexGrow 1) so the loading state and
-              // the loaded state are visually identical and the grid
-              // doesn't shift when data arrives.
-              <View
-                key={card.id}
-                style={{ flexBasis: "47%", flexGrow: 1 }}
-              >
-                <CardTile
-                  card={card}
-                  size="md"
-                  showName
-                  showSet
-                  showPrice={false}
-                  priority={idx < 4 ? "normal" : "low"}
-                />
-              </View>
-            ))}
+  if (trending.isLoading) {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 12, paddingRight: 4 }}
+      >
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} style={{ width: 120, gap: 6 }}>
+            <View
+              style={{
+                width: 120,
+                height: 168,
+                borderRadius: 12,
+                backgroundColor: "rgba(120,120,120,0.12)",
+              }}
+            />
           </View>
-        )}
-      </View>
-    </View>
-  );
+        ))}
+      </ScrollView>
+    );
+  }
+
+  if (trending.isError) {
+    return (
+      <ErrorState
+        title={COPY.searchError.title}
+        message={COPY.searchError.message}
+      />
+    );
+  }
+
+  if (cards.length === 0) {
+    return <EmptyState title="No trending cards right now" message="" />;
+  }
+
+  return <CardHorizontalRail cards={cards} tileSize="md" showPrice />;
 }
 
 function TrendingTile(_: {
