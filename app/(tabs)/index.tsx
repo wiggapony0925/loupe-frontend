@@ -187,6 +187,15 @@ export default function CommandCenterScreen() {
           />
           {feed.isLoading ? (
             <RecentRailSkeleton />
+          ) : recent.length === 0 ? (
+            <EmptyState
+              compact
+              icon={Camera}
+              title="No recent scans"
+              message="Scan a card to start your vault."
+              secondaryActionLabel="Scan a card"
+              onSecondaryAction={() => router.push("/scan")}
+            />
           ) : (
             <ScrollView
               horizontal

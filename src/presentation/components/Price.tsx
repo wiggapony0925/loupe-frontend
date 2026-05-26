@@ -51,7 +51,7 @@ interface PriceProps extends Omit<TextProps, "children"> {
 export function Price({ usd, compact, style, ...rest }: PriceProps) {
   const { format } = useMoney();
   return (
-    <Text {...rest} style={style}>
+    <Text {...rest} style={[{ fontVariant: ["tabular-nums"] }, style]}>
       {format(usd, { compact })}
     </Text>
   );

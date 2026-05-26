@@ -146,6 +146,8 @@ function HoldingRow({ holding, onDelete }: RowProps) {
       <Pressable
         onPress={onDelete}
         hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Delete sealed item"
         style={{ padding: 6, borderRadius: 8 }}
       >
         <Trash2 size={16} color={p.ink.dim} />
@@ -206,6 +208,8 @@ export default function MySealedScreen() {
         <Pressable
           onPress={() => router.back()}
           hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
           style={{ padding: 8 }}
         >
           <ChevronLeft size={22} color={p.ink.default} />

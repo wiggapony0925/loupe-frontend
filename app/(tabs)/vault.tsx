@@ -405,7 +405,7 @@ function VaultSearchBar() {
 function VaultFooterCta({ onAdd, onScan }: { onAdd: () => void; onScan: () => void }) {
   const p = useThemedPalette();
   return (
-    <View style={{ paddingHorizontal: 14, paddingTop: 24, paddingBottom: 8, gap: 10 }}>
+    <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8, gap: 10 }}>
       <Pressable
         onPress={onScan}
         accessibilityRole="button"

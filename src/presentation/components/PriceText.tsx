@@ -31,7 +31,7 @@ export function PriceText({
   return (
     <Text
       numberOfLines={1}
-      style={[{ color, fontSize: size, fontWeight: "700" }, style]}
+      style={[{ color, fontSize: size, fontWeight: "700", fontVariant: ["tabular-nums"] }, style]}
       {...rest}
     >
       {amount !== null && amount !== undefined ? compactUsd(amount) : fallback}

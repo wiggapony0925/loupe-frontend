@@ -17,6 +17,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -264,15 +266,22 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={{ padding: 20, paddingBottom: 96, gap: 20 }}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
     >
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 96, gap: 20 }}
+        keyboardShouldPersistTaps="handled"
+      >
       {/* Header */}
       <View className="flex-row items-center justify-between">
         <Pressable
           onPress={() => router.back()}
           hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
           className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
         >
           <ChevronLeft size={18} color={p.ink.default} />
@@ -284,6 +293,8 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           <Pressable
             onPress={onDelete}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Delete holding"
             className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
           >
             <Trash2 size={16} color={p.accent.rose} />
@@ -597,6 +608,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
         />
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

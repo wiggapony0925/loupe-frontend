@@ -145,10 +145,15 @@ export function CurrencyPickerSheet({
                 placeholderTextColor={p.ink.dim}
                 style={{ flex: 1, color: p.ink.default, fontSize: 14 }}
                 autoCorrect={false}
-                autoCapitalize="characters"
+                autoCapitalize="none"
               />
               {query.length > 0 ? (
-                <Pressable onPress={() => setQuery("")} hitSlop={6}>
+                <Pressable
+                  onPress={() => setQuery("")}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search"
+                >
                   <X size={14} color={p.ink.muted} />
                 </Pressable>
               ) : null}

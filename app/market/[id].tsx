@@ -128,6 +128,8 @@ export default function MarketDetailScreen() {
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
           hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
           className="h-9 w-9 items-center justify-center rounded-full"
           style={{ backgroundColor: withAlpha(p.ink.dim, 0.08) }}
         >
@@ -140,6 +142,8 @@ export default function MarketDetailScreen() {
           <Pressable
             onPress={() => setWatching((w) => !w)}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={watching ? "Remove from watchlist" : "Add to watchlist"}
             className="h-9 w-9 items-center justify-center rounded-full"
             style={{
               backgroundColor: watching
@@ -155,6 +159,8 @@ export default function MarketDetailScreen() {
           </Pressable>
           <Pressable
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Set price alert"
             className="h-9 w-9 items-center justify-center rounded-full"
             style={{ backgroundColor: withAlpha(p.ink.dim, 0.08) }}
           >

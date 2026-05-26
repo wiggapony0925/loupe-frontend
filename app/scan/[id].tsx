@@ -24,6 +24,8 @@ export default function ScanDetailScreen() {
         <Pressable
           onPress={() => router.back()}
           hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
           className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
         >
           <ChevronLeft size={18} color={palette.ink.default} />

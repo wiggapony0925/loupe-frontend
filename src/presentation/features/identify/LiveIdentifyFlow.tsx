@@ -30,6 +30,7 @@ import {
   Image,
   Linking,
   Pressable,
+  ScrollView,
   Text,
   View,
 } from "react-native";
@@ -968,7 +969,7 @@ function ResultsStrip({
     return null;
   }
 
-  const visible = state.candidates.slice(0, 4);
+  const visible = state.candidates.slice(0, 6);
   return (
     <View
       style={{
@@ -976,9 +977,9 @@ function ResultsStrip({
         backgroundColor: "rgba(20,20,22,0.96)",
         borderWidth: 1,
         borderColor: "rgba(255,255,255,0.08)",
-        paddingVertical: 10,
-        paddingHorizontal: 10,
-        gap: 4,
+        paddingVertical: 12,
+        paddingHorizontal: 4,
+        gap: 10,
       }}
     >
       <View
@@ -986,37 +987,52 @@ function ResultsStrip({
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          paddingHorizontal: 4,
-          paddingBottom: 6,
+          paddingHorizontal: 14,
         }}
       >
-        <Text
-          style={{
-            color: "rgba(255,255,255,0.5)",
-            fontSize: 10,
-            fontWeight: "700",
-            letterSpacing: 1.4,
-          }}
-        >
-          {state.locked ? "MATCHED" : "SUGGESTIONS"}
-        </Text>
-        <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 10 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.55)",
+              fontSize: 10,
+              fontWeight: "700",
+              letterSpacing: 1.4,
+            }}
+          >
+            {state.locked ? "MATCHED" : "SUGGESTIONS"}
+          </Text>
+          {scanning && !state.locked ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <ActivityIndicator size="small" color="rgba(255,255,255,0.45)" />
+              <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, fontWeight: "600" }}>
+                Scanning…
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontVariant: ["tabular-nums"] }}>
           {state.candidates.length} result{state.candidates.length === 1 ? "" : "s"}
         </Text>
       </View>
-      {visible.map((c, idx) => (
-        <CandidateCard
-          key={`${c.upstream_id ?? c.card_id ?? "c"}-${idx}`}
-          candidate={c}
-          highlight={idx === 0}
-          onPress={() => onPickCandidate(c)}
-        />
-      ))}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 14, gap: 10 }}
+      >
+        {visible.map((c, idx) => (
+          <CandidateTile
+            key={`${c.upstream_id ?? c.card_id ?? "c"}-${idx}`}
+            candidate={c}
+            highlight={idx === 0}
+            onPress={() => onPickCandidate(c)}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 }
 
-function CandidateCard({
+function CandidateTile({
   candidate,
   highlight,
   onPress,
@@ -1030,35 +1046,42 @@ function CandidateCard({
     candidate.number ? `#${candidate.number}` : null,
   ]
     .filter(Boolean)
-    .join("  \u00b7  ");
+    .join(" \u00b7 ");
   const confidencePct = Math.round(candidate.confidence * 100);
+  const accentColor =
+    confidencePct >= 80
+      ? palette.accent.mint
+      : confidencePct >= 60
+        ? palette.accent.amber
+        : "rgba(255,255,255,0.45)";
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Confirm ${candidate.name}`}
       style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingVertical: 8,
-        paddingHorizontal: 6,
-        borderRadius: 12,
+        width: 112,
+        borderRadius: 14,
         backgroundColor: highlight
-          ? "rgba(255,255,255,0.04)"
-          : "transparent",
+          ? "rgba(255,255,255,0.06)"
+          : "rgba(255,255,255,0.025)",
+        borderWidth: 1,
+        borderColor: highlight ? accentColor : "rgba(255,255,255,0.06)",
+        padding: 8,
+        gap: 8,
         opacity: pressed ? 0.7 : 1,
       })}
     >
       <View
         style={{
-          width: 44,
+          width: "100%",
           aspectRatio: 2.5 / 3.5,
-          borderRadius: 5,
+          borderRadius: 8,
           overflow: "hidden",
           backgroundColor: "#0B0B0D",
           borderWidth: 1,
           borderColor: "rgba(255,255,255,0.08)",
+          position: "relative",
         }}
       >
         {candidate.image_url ? (
@@ -1067,13 +1090,50 @@ function CandidateCard({
             style={{ width: "100%", height: "100%" }}
             resizeMode="cover"
           />
-        ) : null}
+        ) : (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <Sparkles size={20} color="rgba(255,255,255,0.25)" />
+          </View>
+        )}
+        <View
+          style={{
+            position: "absolute",
+            top: 4,
+            left: 4,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 999,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <View
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: 3,
+              backgroundColor: accentColor,
+            }}
+          />
+          <Text
+            style={{
+              color: "#fff",
+              fontSize: 10,
+              fontVariant: ["tabular-nums"],
+              fontWeight: "700",
+            }}
+          >
+            {confidencePct}%
+          </Text>
+        </View>
       </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
+      <View style={{ gap: 2, minHeight: 30 }}>
         <Text
           style={{
             color: "#fff",
-            fontSize: 15,
+            fontSize: 12,
             fontWeight: "600",
             letterSpacing: -0.1,
           }}
@@ -1084,49 +1144,14 @@ function CandidateCard({
         {meta ? (
           <Text
             style={{
-              marginTop: 2,
               color: "rgba(255,255,255,0.5)",
-              fontSize: 12,
+              fontSize: 10,
             }}
             numberOfLines={1}
           >
             {meta}
           </Text>
         ) : null}
-      </View>
-      <View style={{ alignItems: "flex-end", gap: 4 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-          }}
-        >
-          <View
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              backgroundColor:
-                confidencePct >= 80
-                  ? palette.accent.mint
-                  : confidencePct >= 60
-                    ? palette.accent.amber
-                    : "rgba(255,255,255,0.35)",
-            }}
-          />
-          <Text
-            style={{
-              color: "rgba(255,255,255,0.7)",
-              fontSize: 11,
-              fontVariant: ["tabular-nums"],
-              fontWeight: "600",
-            }}
-          >
-            {confidencePct}%
-          </Text>
-        </View>
-        <ChevronRight size={14} color="rgba(255,255,255,0.35)" />
       </View>
     </Pressable>
   );

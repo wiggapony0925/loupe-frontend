@@ -32,6 +32,8 @@ export default function CompareScreen() {
         <Pressable
           onPress={() => router.back()}
           hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
           className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
         >
           <ChevronLeft size={18} color={palette.ink.default} />

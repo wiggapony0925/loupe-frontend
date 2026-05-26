@@ -15,6 +15,8 @@ import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   Text,
   TextInput,
@@ -116,6 +118,11 @@ export default function AddSealedScreen() {
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: p.bg.base }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
+      >
       <View
         style={{
           flexDirection: "row",
@@ -124,7 +131,13 @@ export default function AddSealedScreen() {
           paddingTop: 4,
         }}
       >
-        <Pressable onPress={() => router.back()} hitSlop={10} style={{ padding: 8 }}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          style={{ padding: 8 }}
+        >
           <ChevronLeft size={22} color={p.ink.default} />
         </Pressable>
         <Text
@@ -142,6 +155,8 @@ export default function AddSealedScreen() {
           onPress={onSubmit}
           disabled={!canSubmit || createMut.isPending}
           hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Save sealed item"
           style={{
             padding: 8,
             opacity: canSubmit && !createMut.isPending ? 1 : 0.3,
@@ -189,7 +204,12 @@ export default function AddSealedScreen() {
                   }}
                 />
                 {q.length > 0 ? (
-                  <Pressable onPress={() => setQ("")} hitSlop={8}>
+                  <Pressable
+                    onPress={() => setQ("")}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear search"
+                  >
                     <X size={16} color={p.ink.dim} />
                   </Pressable>
                 ) : null}
@@ -285,6 +305,7 @@ export default function AddSealedScreen() {
           )
         }
       />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -368,7 +389,13 @@ function SelectedProductCard({
           {PRODUCT_LABEL[product.product_type]}
         </Text>
       </View>
-      <Pressable onPress={onClear} hitSlop={10} style={{ padding: 6 }}>
+      <Pressable
+        onPress={onClear}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Clear selected product"
+        style={{ padding: 6 }}
+      >
         <X size={16} color={p.ink.dim} />
       </Pressable>
     </View>

@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Constants from "expo-constants";
@@ -106,6 +107,23 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
 function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   const { user, signOut } = useAuth();
   const version = Constants.expoConfig?.version ?? "0.1.0";
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+  }, []);
+  const onCopyAccountId = async () => {
+    const id = user?.id;
+    if (!id) return;
+    try {
+      await Clipboard.setStringAsync(id);
+      setCopied(true);
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 1600);
+    } catch {
+      Alert.alert("Account ID", id);
+    }
+  };
 
   const displayName =
     user?.display_name?.trim() || user?.email?.split("@")[0] || "operator";
@@ -191,16 +209,19 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           {user?.email ?? "Signed out"}
         </Text>
         <Pressable
-          onPress={() => Alert.alert("Account ID", user?.id ?? "—")}
+          onPress={onCopyAccountId}
           hitSlop={6}
+          disabled={!user?.id}
+          accessibilityRole="button"
+          accessibilityLabel={copied ? "Account ID copied" : "Copy account ID"}
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-          className="mt-2"
+          className="mt-2 flex-row items-center"
         >
           <Text
             className="text-[13px] font-semibold text-ink"
             style={{ textDecorationLine: "underline" }}
           >
-            Show account ID
+            {copied ? "Copied account ID" : "Copy account ID"}
           </Text>
         </Pressable>
 
