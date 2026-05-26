@@ -50,6 +50,13 @@ export interface IdentifyResponse {
   ocr_full_text: string;
   latency_ms: number;
   cost_usd: number;
+  /**
+   * Server signalled the paid OCR budget is exhausted. Re-run OCR
+   * on-device (Apple Vision / ML Kit via `identifyCardFromText`) and
+   * resubmit the extracted text to `/v1/cards/identify/text`.
+   */
+  fallback_required?: boolean;
+  fallback_reason?: string | null;
 }
 
 /**
@@ -94,5 +101,27 @@ export async function submitIdentifyFeedback(
   await apiFetch(`/v1/cards/identify/${encodeURIComponent(identificationId)}/feedback`, {
     method: "POST",
     json: payload,
+  });
+}
+
+/**
+ * Budget fallback: when `identifyCard()` returns `fallback_required=true`,
+ * the client runs OCR on-device (Apple Vision / ML Kit) and POSTs the
+ * extracted text here. No paid Vision call is made server-side, so
+ * `cost_usd` will always be 0.
+ */
+export async function identifyCardFromText(
+  text: string,
+  tcgHint: IdentifyTcgHint = null,
+  options: { clientProvider?: string; ocrConfidence?: number } = {},
+): Promise<IdentifyResponse> {
+  return apiFetch<IdentifyResponse>("/v1/cards/identify/text", {
+    method: "POST",
+    json: {
+      text,
+      tcg: tcgHint ?? undefined,
+      client_provider: options.clientProvider ?? "client_fallback",
+      ocr_confidence: options.ocrConfidence ?? 0,
+    },
   });
 }

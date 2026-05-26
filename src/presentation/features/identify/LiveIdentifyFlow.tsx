@@ -55,11 +55,16 @@ import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import {
   identifyCard,
+  identifyCardFromText,
   submitIdentifyFeedback,
   type IdentifyCandidate,
   type IdentifyResponse,
   type IdentifyTcgHint,
 } from "@/infrastructure/repositories/identifyRepository";
+import {
+  isOnDeviceOcrAvailable,
+  recognizeTextOnDevice,
+} from "@/infrastructure/ocr/onDeviceOcr";
 
 const CAPTURE_LONG_EDGE = 1200;
 const CAPTURE_QUALITY = 0.6;
@@ -153,8 +158,33 @@ export function LiveIdentifyFlow({
             )
           : photo;
 
-      const res: IdentifyResponse = await identifyCard(processed.uri, tcgHint);
+      let res: IdentifyResponse = await identifyCard(processed.uri, tcgHint);
       if (cancelledRef.current) return;
+
+      // Server signalled the monthly Vision budget is exhausted. Run
+      // OCR on-device (Apple Vision / ML Kit) and resubmit the parsed
+      // text to /v1/cards/identify/text. Falls back to the empty
+      // response when the native module isn't linked (Expo Go).
+      if (res.fallback_required) {
+        if (isOnDeviceOcrAvailable()) {
+          const ocr = await recognizeTextOnDevice(processed.uri);
+          if (cancelledRef.current) return;
+          if (ocr.text.length > 0) {
+            res = await identifyCardFromText(ocr.text, tcgHint, {
+              clientProvider: "mlkit",
+              ocrConfidence: ocr.confidence,
+            });
+            if (cancelledRef.current) return;
+          } else {
+            setError("On-device OCR found no text. Try better lighting.");
+          }
+        } else {
+          setError(
+            res.fallback_reason ??
+              "Scanner over monthly budget. Try again later.",
+          );
+        }
+      }
       // Light haptic on every accepted frame so the user knows it's alive,
       // success haptic only the first time we cross the lock threshold.
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
