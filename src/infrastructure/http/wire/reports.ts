@@ -9,9 +9,11 @@
  */
 
 import type { ID, ISODate } from "../atoms";
+import type { components } from "./__generated__";
 
-export type ReportPeriod = "monthly" | "yearly";
-export type ReportStatus = "pending" | "ready" | "failed";
+/** Sourced from OpenAPI codegen so wire + backend enums never drift. */
+export type ReportPeriod = components["schemas"]["ReportPeriodEnum"];
+export type ReportStatus = components["schemas"]["ReportStatusEnum"];
 
 export interface UserReportWire {
   id: ID;

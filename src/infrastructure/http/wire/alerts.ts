@@ -12,8 +12,11 @@
  */
 
 import type { DecimalString, ID, ISODate } from "../atoms";
+import type { components } from "./__generated__";
 
-export type PriceAlertCondition = "above" | "below";
+/** Sourced from OpenAPI codegen so wire + backend enums never drift. */
+export type PriceAlertCondition =
+  components["schemas"]["PriceAlertCondition"];
 
 export interface PriceAlertWire {
   id: ID;
