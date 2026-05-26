@@ -68,56 +68,11 @@ export default function ScanTabScreen() {
           </Text>
         </View>
 
-        {/* Live identify — hero CTA. Point the camera and the catalog
-            match streams in like Google Lens / PriceCharting. Sits
-            above the grading modes because "what IS this card?" is the
-            most common first question, not "grade it". */}
-        <Pressable
-          onPress={() => router.push(routes.scanIdentify())}
-          accessibilityRole="button"
-          accessibilityLabel="Live identify a card"
-          style={({ pressed }) => ({
-            borderRadius: 18,
-            padding: 18,
-            backgroundColor: withAlpha(p.accent.mint, 0.12),
-            borderWidth: 1,
-            borderColor: withAlpha(p.accent.mint, 0.45),
-            opacity: pressed ? 0.85 : 1,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 14,
-          })}
-        >
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: withAlpha(p.accent.mint, 0.25),
-            }}
-          >
-            <ScanLine size={22} color={p.accent.mint} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-              Instant · live OCR
-            </Text>
-            <Text className="mt-0.5 text-base font-semibold text-ink">
-              Identify a card
-            </Text>
-            <Text className="mt-0.5 text-xs text-ink-muted">
-              Hold the phone over the card — matches stream in.
-            </Text>
-          </View>
-        </Pressable>
-
         {/* Mode toggle — same Studio/Quick semantics as the home card
-            so the muscle memory transfers. We render it as a tall pill
-            stack here (one tap each) instead of the compact segmented
-            chip on home, because this whole screen is dedicated to the
-            choice. */}
+            so the muscle memory transfers. Quick now routes to the
+            live-identify viewfinder (TCGplayer / Collectr-style),
+            which is the same surface the standalone hero used to
+            push — we collapsed the duplicate. */}
         <View style={{ gap: 12 }}>
           <ModeCard
             label="Studio"
@@ -129,21 +84,25 @@ export default function ScanTabScreen() {
           />
           <ModeCard
             label="Quick"
-            tagline="Identify & add to collection"
-            detail="Front + back snap — matches the catalog, adds as raw."
+            tagline="Identify & price in seconds"
+            detail="Hold the phone over the card — live OCR streams matches like Google Lens."
             tint={p.accent.blue}
             active={!isStudio}
             onPress={() => setMode("quick")}
           />
         </View>
 
-        {/* Primary CTA — pushes into the existing camera modal. */}
+        {/* Primary CTA — Quick goes to the live-identify viewfinder
+            (TCGplayer / Collectr-style streaming matches). Studio still
+            opens the 4-shot photometric pipeline. */}
         <PrimaryButton
-          label={isStudio ? "Grade a card" : "Add a card"}
+          label={isStudio ? "Grade a card" : "Quick scan"}
           icon={isStudio ? Camera : Zap}
-          onPress={() => router.push(routes.scanPhone(mode))}
+          onPress={() =>
+            router.push(isStudio ? routes.scanPhone("studio") : routes.scanIdentify())
+          }
           variant={isStudio ? "mint" : "blue"}
-          accessibilityLabel={`Start ${mode} phone capture`}
+          accessibilityLabel={isStudio ? "Start studio capture" : "Open quick scan"}
         />
 
         {/* Secondary paths — sometimes the user already knows what card

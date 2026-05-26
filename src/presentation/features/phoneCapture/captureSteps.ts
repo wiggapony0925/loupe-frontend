@@ -54,16 +54,8 @@ export const QUICK_STEPS: PhoneCaptureStep[] = [
     side: "front",
     flash: false,
     tilt: "flat",
-    label: "Front",
-    instruction: "Center the card front. Even lighting, no glare.",
-  },
-  {
-    index: 3,
-    side: "back",
-    flash: false,
-    tilt: "flat",
-    label: "Back",
-    instruction: "Flip and recenter. Tap shutter.",
+    label: "Scan",
+    instruction: "Hold the card steady — auto-capture when locked.",
   },
 ];
 

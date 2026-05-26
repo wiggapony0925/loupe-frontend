@@ -6,11 +6,20 @@
  * frame, calls `onComplete(captures)` so the parent can hand the captures
  * to the existing scan-job pipeline.
  */
-import React, { useEffect } from "react";
-import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Linking,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 import { CameraView } from "expo-camera";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
 import { Camera, RotateCcw, X } from "lucide-react-native";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { palette } from "@/presentation/theme/tokens";
@@ -24,14 +33,64 @@ interface PhoneCaptureFlowProps {
   onCancel: () => void;
 }
 
+// Quick-mode lock-on timing. We don't have on-device card-edge
+// detection in the phone preview, so we simulate "locking on" by
+// giving the user a steady arming window (haptic ticks + bracket
+// pulse) and then auto-firing the shutter. Tapping the shutter
+// manually still works at any time.
+const LOCKON_MS = 1800;
+const LOCKON_TICK_MS = 450;
+
 export function PhoneCaptureFlow({ mode, onComplete, onCancel }: PhoneCaptureFlowProps) {
   const ctrl = usePhoneCapture(mode);
+  const [locking, setLocking] = useState(false);
 
   useEffect(() => {
     if (ctrl.done && ctrl.captures.length === ctrl.steps.length) {
       onComplete(ctrl.captures);
     }
   }, [ctrl.done, ctrl.captures, ctrl.steps.length, onComplete]);
+
+  // Quick-mode auto-capture: as soon as a step is active and we're
+  // not busy / done, start a short lock-on with haptic ticks, then
+  // fire the shutter. Tearing down resets cleanly between steps and
+  // on unmount.
+  useEffect(() => {
+    if (mode !== "quick") return;
+    if (!ctrl.permission?.granted) return;
+    if (ctrl.busy || ctrl.done) return;
+    if (!ctrl.currentStep) return;
+
+    let cancelled = false;
+    setLocking(true);
+    const ticks: ReturnType<typeof setTimeout>[] = [];
+    for (let t = 0; t < LOCKON_MS; t += LOCKON_TICK_MS) {
+      ticks.push(
+        setTimeout(() => {
+          if (!cancelled) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          }
+        }, t),
+      );
+    }
+    const fire = setTimeout(() => {
+      if (!cancelled) {
+        setLocking(false);
+        ctrl.capture();
+      }
+    }, LOCKON_MS);
+
+    return () => {
+      cancelled = true;
+      ticks.forEach(clearTimeout);
+      clearTimeout(fire);
+      setLocking(false);
+    };
+    // We intentionally exclude `ctrl.capture` from deps — it's a
+    // stable callback whose identity changes on every state update,
+    // which would restart the lock-on loop mid-countdown.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, ctrl.permission?.granted, ctrl.busy, ctrl.done, ctrl.currentIndex]);
 
   if (!ctrl.permission) {
     return <CenterMessage label="Initializing camera…" />;
@@ -51,66 +110,119 @@ export function PhoneCaptureFlow({ mode, onComplete, onCancel }: PhoneCaptureFlo
         flash={step?.flash ? "on" : "off"}
         autofocus="on"
       >
-        <SafeAreaView style={{ flex: 1, justifyContent: "space-between" }}>
-          <TopBar ctrl={ctrl} onCancel={onCancel} />
-          <CardOverlay tilt={step?.tilt ?? "flat"} />
+        <SafeAreaView
+          style={{ flex: 1, justifyContent: "space-between" }}
+          pointerEvents="box-none"
+        >
+          <TopBar ctrl={ctrl} />
+          <CardOverlay tilt={step?.tilt ?? "flat"} locking={locking} />
           <BottomBar ctrl={ctrl} />
         </SafeAreaView>
       </CameraView>
+
+      {/*
+        Close button is rendered at the screen root (outside the
+        gradient + SafeArea layout) and given a generous hit area so
+        it can't be eaten by the camera surface or a gradient layer.
+      */}
+      <CloseButton onCancel={onCancel} />
     </View>
+  );
+}
+
+function CloseButton({ onCancel }: { onCancel: () => void }) {
+  return (
+    <SafeAreaView
+      pointerEvents="box-none"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        elevation: 50,
+      }}
+      edges={["top"]}
+    >
+      <View pointerEvents="box-none" style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            onCancel();
+          }}
+          hitSlop={20}
+          accessibilityLabel="Close camera"
+          accessibilityRole="button"
+          style={({ pressed }) => ({
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: pressed ? "rgba(0,0,0,0.75)" : "rgba(0,0,0,0.55)",
+          })}
+        >
+          <X size={22} color="#fff" />
+        </Pressable>
+      </View>
+    </SafeAreaView>
   );
 }
 
 // ─────────────── Subviews ───────────────
 
-function TopBar({ ctrl, onCancel }: { ctrl: PhoneCaptureHook; onCancel: () => void }) {
+function TopBar({ ctrl }: { ctrl: PhoneCaptureHook }) {
+  // The close button lives at the screen root (see <CloseButton/>)
+  // so the gradient + SafeArea inside the camera surface can't eat
+  // the tap. We let touches fall through the gradient as well.
+  const showSteps = ctrl.steps.length > 1;
   return (
     <LinearGradient
+      pointerEvents="box-none"
       colors={["rgba(0,0,0,0.7)", "transparent"]}
-      style={{ paddingHorizontal: 20, paddingVertical: 16 }}
+      style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 }}
     >
-      <View className="flex-row items-center justify-between">
-        <Pressable
-          onPress={onCancel}
-          hitSlop={12}
-          accessibilityLabel="Cancel capture"
-          className="h-9 w-9 items-center justify-center rounded-full bg-white/10"
-        >
-          <X size={18} color="#fff" />
-        </Pressable>
-        <View className="items-center">
-          <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-white/60">
-            {ctrl.mode === "studio" ? "Studio Grade" : "Quick Grade"}
-          </Text>
+      <View pointerEvents="box-none" className="items-center" style={{ paddingLeft: 60 }}>
+        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-white/60">
+          {ctrl.mode === "studio" ? "Studio Grade" : "Quick Scan"}
+        </Text>
+        {showSteps ? (
           <Text className="mt-0.5 text-sm font-semibold text-white">
             Step {Math.min(ctrl.currentIndex + 1, ctrl.steps.length)} of {ctrl.steps.length}
           </Text>
+        ) : null}
+      </View>
+      {showSteps ? (
+        <View pointerEvents="none" className="mt-3 flex-row justify-center gap-1.5">
+          {ctrl.steps.map((s, i) => (
+            <View
+              key={s.index}
+              style={{
+                width: 22,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor:
+                  i < ctrl.currentIndex
+                    ? palette.accent.mint
+                    : i === ctrl.currentIndex
+                      ? "#fff"
+                      : "rgba(255,255,255,0.25)",
+              }}
+            />
+          ))}
         </View>
-        <View style={{ width: 36 }} />
-      </View>
-      <View className="mt-3 flex-row justify-center gap-1.5">
-        {ctrl.steps.map((s, i) => (
-          <View
-            key={s.index}
-            style={{
-              width: 22,
-              height: 4,
-              borderRadius: 2,
-              backgroundColor:
-                i < ctrl.currentIndex
-                  ? palette.accent.mint
-                  : i === ctrl.currentIndex
-                    ? "#fff"
-                    : "rgba(255,255,255,0.25)",
-            }}
-          />
-        ))}
-      </View>
+      ) : null}
     </LinearGradient>
   );
 }
 
-function CardOverlay({ tilt }: { tilt: "flat" | "top" | "bottom" }) {
+function CardOverlay({
+  tilt,
+  locking,
+}: {
+  tilt: "flat" | "top" | "bottom";
+  locking?: boolean;
+}) {
   // Approximate trading-card aspect (2.5 × 3.5 in → 0.714).
   const aspect = 2.5 / 3.5;
   const tiltStyle =
@@ -120,25 +232,56 @@ function CardOverlay({ tilt }: { tilt: "flat" | "top" | "bottom" }) {
         ? { transform: [{ perspective: 800 }, { rotateX: "12deg" as const }] }
         : undefined;
 
+  // Pulse the brackets while we're "locking on" so the user gets a
+  // visible cue the camera is actively trying to capture.
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!locking) {
+      pulse.stopAnimation();
+      pulse.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [locking, pulse]);
+
+  const opacity = locking
+    ? pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] })
+    : 1;
+  const bracketColor = locking ? palette.accent.mint : "#fff";
+
   return (
-    <View
-      pointerEvents="none"
-      className="items-center justify-center"
-      style={{ flex: 1 }}
-    >
-      <View
+    <View pointerEvents="none" className="items-center justify-center" style={{ flex: 1 }}>
+      <Animated.View
         style={[
           {
             width: "78%",
             aspectRatio: aspect,
+            opacity,
           },
           tiltStyle,
         ]}
       >
         {((["tl", "tr", "bl", "br"]) as const).map((corner) => (
-          <View key={corner} style={cornerMarkStyle(corner)} />
+          <View key={corner} style={cornerMarkStyle(corner, bracketColor)} />
         ))}
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -273,8 +416,9 @@ function CenterMessage({ label }: { label: string }) {
   );
 }
 
-function cornerMarkStyle(corner: "tl" | "tr" | "bl" | "br") {
-  // Apple-style brackets: bigger L-shapes, white, no glow.
+function cornerMarkStyle(corner: "tl" | "tr" | "bl" | "br", color: string = "#fff") {
+  // Apple-style brackets: bigger L-shapes, no glow. Color is driven
+  // by the lock-on state so they turn mint while the camera is arming.
   const SIZE = 28;
   const THICK = 3;
   const RADIUS = 4;
@@ -282,7 +426,7 @@ function cornerMarkStyle(corner: "tl" | "tr" | "bl" | "br") {
     position: "absolute" as const,
     width: SIZE,
     height: SIZE,
-    borderColor: "#fff",
+    borderColor: color,
   };
   switch (corner) {
     case "tl":

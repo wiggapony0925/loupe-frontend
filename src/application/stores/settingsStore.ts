@@ -33,7 +33,7 @@ interface SettingsState {
 }
 
 const DEFAULTS = {
-  themeMode: "dark" as ThemeMode,
+  themeMode: "light" as ThemeMode,
   currency: "USD" as Currency,
   hapticsEnabled: true,
   autoOcr: true,
@@ -62,6 +62,18 @@ export const useSettings = create<SettingsState>()(
     {
       name: "loupe.settings.v1",
       storage: createJSONStorage(() => AsyncStorage),
+      // Bump when changing DEFAULTS in a way existing users should
+      // adopt. v2 forced the theme default to "light" — older clients
+      // that had the previous "dark" default get migrated unless they
+      // explicitly picked a theme.
+      version: 2,
+      migrate: (persisted: unknown, fromVersion) => {
+        const prev = (persisted ?? {}) as Partial<SettingsState>;
+        if (fromVersion < 2) {
+          return { ...prev, themeMode: "light" as ThemeMode };
+        }
+        return prev as SettingsState;
+      },
     },
   ),
 );

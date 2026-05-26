@@ -30,10 +30,21 @@ export default function TabsLayout() {
           height: 84,
           paddingTop: 8,
         },
+        // Give each tab item a bit more horizontal breathing room and
+        // keep its label on a single line so longer titles
+        // (COMMAND, ANALYTICS) never get truncated with an ellipsis on
+        // narrower devices.
+        tabBarItemStyle: {
+          paddingHorizontal: 2,
+        },
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: "600",
-          letterSpacing: 1.5,
+          // Previously 1.5 — combined with uppercase this pushed labels
+          // like "ANALYTICS" past the tab width on smaller phones and
+          // they rendered as "ANALYTI…". 0.5 keeps the spacious feel
+          // without overflowing.
+          letterSpacing: 0.5,
           textTransform: "uppercase",
         },
       }}
@@ -88,7 +99,7 @@ export default function TabsLayout() {
           tabBarLabelStyle: {
             fontSize: 10,
             fontWeight: "700",
-            letterSpacing: 1.5,
+            letterSpacing: 0.5,
             textTransform: "uppercase",
             color: palette.accent.mint,
             // The icon sits in a 44dp circle pulled up by marginTop:-12,

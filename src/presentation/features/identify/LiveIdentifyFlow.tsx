@@ -45,8 +45,11 @@ import {
   Infinity as InfinityIcon,
   Pause,
   Play,
+  Plus,
+  RotateCcw,
   ScanBarcode,
   Search,
+  Sparkles,
   X,
   Zap,
   ZapOff,
@@ -54,6 +57,8 @@ import {
 
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
+import { useCompactUsd } from "@/shared/format";
 import {
   identifyCard,
   identifyCardFromText,
@@ -84,8 +89,17 @@ const TCG_OPTIONS: { key: IdentifyTcgHint; label: string }[] = [
 
 interface LiveIdentifyFlowProps {
   onClose: () => void;
-  /** Called when the user picks a candidate. Receives the matched card. */
+  /** Called when the user picks a candidate (→ card detail). */
   onConfirm?: (
+    candidate: IdentifyCandidate,
+    identificationId: string,
+  ) => void;
+  /**
+   * Called when the user taps "Add to vault" on the locked result
+   * sheet. Distinct from `onConfirm` (which deep-links into the card
+   * detail page) so the host route can fork into the grade/add flow.
+   */
+  onAddToVault?: (
     candidate: IdentifyCandidate,
     identificationId: string,
   ) => void;
@@ -113,9 +127,11 @@ const EMPTY_STATE: IdentifyState = {
 export function LiveIdentifyFlow({
   onClose,
   onConfirm,
+  onAddToVault,
   initialTcg = null,
 }: LiveIdentifyFlowProps) {
   const p = useThemedPalette();
+  const formatUsd = useCompactUsd();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const inflightRef = useRef(false);
@@ -257,6 +273,32 @@ export function LiveIdentifyFlow({
     setPaused(false);
   }, []);
 
+  const handleAddToVault = useCallback(
+    (candidate: IdentifyCandidate) => {
+      const id = state.identificationId;
+      Haptics.selectionAsync().catch(() => {});
+      if (id) {
+        submitIdentifyFeedback(id, {
+          correct: true,
+          chosen_card_id: candidate.card_id,
+        }).catch(() => {});
+      }
+      onAddToVault?.(candidate, id ?? "");
+    },
+    [state.identificationId, onAddToVault],
+  );
+
+  // ─── Live price for the locked candidate ────────────────
+  // Once we've locked onto a top candidate with a resolved catalog
+  // id, fetch its raw market price so the floating chip + result
+  // sheet can show a live number (TCGplayer / PriceCharting style).
+  // `useCardMarket` is gated by truthy id, so this stays a no-op for
+  // anonymous / unresolved candidates.
+  const topCandidate = state.candidates[0] ?? null;
+  const lockedCardId = state.locked ? topCandidate?.card_id ?? null : null;
+  const market = useCardMarket(lockedCardId ?? undefined);
+  const marketPriceUsd = market.data?.snapshot.summary.raw?.amount ?? null;
+
   // ─── Permission gates ────────────────────────────────────────────
   if (!permission) {
     return <CenterMessage label="Initializing camera…" />;
@@ -319,6 +361,9 @@ export function LiveIdentifyFlow({
             locked={state.locked}
             confidence={state.topConfidence}
             paused={paused}
+            marketPriceUsd={marketPriceUsd}
+            formatUsd={formatUsd}
+            priceLoading={state.locked && !!lockedCardId && market.isLoading}
           />
 
           <SideControls
@@ -339,9 +384,14 @@ export function LiveIdentifyFlow({
               setTcgPickerOpen(false);
             }}
             onPickCandidate={handlePick}
+            onAddToVault={handleAddToVault}
             onRescan={handleRescan}
             onManualCapture={captureOnce}
             scanning={scanning}
+            marketPriceUsd={marketPriceUsd}
+            priceLoading={state.locked && !!lockedCardId && market.isLoading}
+            formatUsd={formatUsd}
+            palette={p}
           />
         </SafeAreaView>
       </CameraView>
@@ -379,11 +429,17 @@ function ReticleArea({
   locked,
   confidence,
   paused,
+  marketPriceUsd,
+  priceLoading,
+  formatUsd,
 }: {
   scanning: boolean;
   locked: boolean;
   confidence: number;
   paused: boolean;
+  marketPriceUsd: number | null;
+  priceLoading: boolean;
+  formatUsd: (v: number) => string;
 }) {
   const pulse = useRef(new Animated.Value(0.6)).current;
   useEffect(() => {
@@ -428,6 +484,89 @@ function ReticleArea({
         {(["tl", "tr", "bl", "br"] as const).map((c) => (
           <CornerBracket key={c} corner={c} color={tint} />
         ))}
+
+        {/* Floating price chip — TCGplayer / Collectr style. Hovers
+            just above the top edge of the card once we've locked on
+            and the market endpoint has returned a raw price. Shows a
+            quiet "Pricing…" pulse while the request is in flight. */}
+        {locked && (priceLoading || marketPriceUsd != null) ? (
+          <View
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: -46,
+              alignItems: "center",
+            }}
+          >
+            <View
+              style={{
+                paddingHorizontal: 18,
+                paddingVertical: 9,
+                borderRadius: 999,
+                backgroundColor: "#fff",
+                shadowColor: "#000",
+                shadowOpacity: 0.35,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 8,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              {marketPriceUsd != null ? (
+                <>
+                  <View
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: palette.accent.mint,
+                    }}
+                  />
+                  <Text
+                    style={{
+                      color: "#0B0B0D",
+                      fontWeight: "800",
+                      fontSize: 17,
+                      letterSpacing: -0.3,
+                      fontVariant: ["tabular-nums"],
+                    }}
+                  >
+                    {formatUsd(marketPriceUsd)}
+                  </Text>
+                  <Text
+                    style={{
+                      color: "rgba(0,0,0,0.45)",
+                      fontSize: 10,
+                      fontWeight: "700",
+                      letterSpacing: 1.2,
+                      marginLeft: 2,
+                    }}
+                  >
+                    RAW
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <ActivityIndicator size="small" color="#0B0B0D" />
+                  <Text
+                    style={{
+                      color: "rgba(0,0,0,0.55)",
+                      fontSize: 12,
+                      fontWeight: "700",
+                      letterSpacing: 1.2,
+                    }}
+                  >
+                    PRICING…
+                  </Text>
+                </>
+              )}
+            </View>
+          </View>
+        ) : null}
+
         {/* Hold Steady chip — only while we're actively waiting on a
             response and don't yet have a lock. */}
         {scanning && !locked && !paused ? (
@@ -614,9 +753,14 @@ function BottomPanel({
   onOpenTcgPicker,
   onPickTcg,
   onPickCandidate,
+  onAddToVault,
   onRescan,
   onManualCapture,
   scanning,
+  marketPriceUsd,
+  priceLoading,
+  formatUsd,
+  palette: themed,
 }: {
   state: IdentifyState;
   error: string | null;
@@ -625,9 +769,14 @@ function BottomPanel({
   onOpenTcgPicker: () => void;
   onPickTcg: (t: IdentifyTcgHint) => void;
   onPickCandidate: (c: IdentifyCandidate) => void;
+  onAddToVault: (c: IdentifyCandidate) => void;
   onRescan: () => void;
   onManualCapture: () => void;
   scanning: boolean;
+  marketPriceUsd: number | null;
+  priceLoading: boolean;
+  formatUsd: (v: number) => string;
+  palette: ReturnType<typeof useThemedPalette>;
 }) {
   const tcgLabel = useMemo(
     () => TCG_OPTIONS.find((o) => o.key === tcgHint)?.label ?? "Auto-detect",
@@ -672,13 +821,27 @@ function BottomPanel({
         </View>
       ) : null}
 
-      <ResultsStrip
-        state={state}
-        error={error}
-        scanning={scanning}
-        onPickCandidate={onPickCandidate}
-        onRescan={onRescan}
-      />
+      {state.locked && state.candidates[0] ? (
+        <LockedResultSheet
+          candidate={state.candidates[0]}
+          confidence={state.topConfidence}
+          marketPriceUsd={marketPriceUsd}
+          priceLoading={priceLoading}
+          formatUsd={formatUsd}
+          themed={themed}
+          onViewDetails={() => onPickCandidate(state.candidates[0])}
+          onAddToVault={() => onAddToVault(state.candidates[0])}
+          onRescan={onRescan}
+        />
+      ) : (
+        <ResultsStrip
+          state={state}
+          error={error}
+          scanning={scanning}
+          onPickCandidate={onPickCandidate}
+          onRescan={onRescan}
+        />
+      )}
 
       <View
         className="flex-row items-center justify-between"
@@ -974,6 +1137,250 @@ function CenterMessage({ label }: { label: string }) {
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#000" }}>
       <ActivityIndicator color="#fff" />
       <Text style={{ color: "#fff", marginTop: 12, fontSize: 13 }}>{label}</Text>
+    </View>
+  );
+}
+
+// ─────────────── Locked-state hero result sheet ───────────────
+// Once auto-capture locks on a high-confidence match we trade the
+// thin candidate strip for a full-width "matched card" sheet, à la
+// TCGplayer / Collectr: card thumbnail on the left, name + set +
+// market price on the right, three CTAs underneath.
+
+function LockedResultSheet({
+  candidate,
+  confidence,
+  marketPriceUsd,
+  priceLoading,
+  formatUsd,
+  themed,
+  onViewDetails,
+  onAddToVault,
+  onRescan,
+}: {
+  candidate: IdentifyCandidate;
+  confidence: number;
+  marketPriceUsd: number | null;
+  priceLoading: boolean;
+  formatUsd: (v: number) => string;
+  themed: ReturnType<typeof useThemedPalette>;
+  onViewDetails: () => void;
+  onAddToVault: () => void;
+  onRescan: () => void;
+}) {
+  const confidencePct = Math.round(confidence * 100);
+  const setMeta = [candidate.set_name, candidate.number ? `#${candidate.number}` : null]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <View
+      style={{
+        backgroundColor: "rgba(15,15,17,0.96)",
+        borderRadius: 22,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: withAlpha(palette.accent.mint, 0.18),
+        gap: 14,
+      }}
+    >
+      <View style={{ flexDirection: "row", gap: 14 }}>
+        {/* Card thumbnail */}
+        <View
+          style={{
+            width: 86,
+            aspectRatio: 2.5 / 3.5,
+            borderRadius: 10,
+            overflow: "hidden",
+            backgroundColor: "rgba(255,255,255,0.06)",
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+          }}
+        >
+          {candidate.image_url ? (
+            <Image
+              source={{ uri: candidate.image_url }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Sparkles size={20} color={withAlpha("#fff", 0.5)} />
+            </View>
+          )}
+        </View>
+
+        {/* Identity + price */}
+        <View style={{ flex: 1, justifyContent: "space-between" }}>
+          <View style={{ gap: 4 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <View
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 4,
+                  backgroundColor: palette.accent.mint,
+                }}
+              />
+              <Text
+                style={{
+                  color: palette.accent.mint,
+                  fontSize: 10,
+                  fontWeight: "800",
+                  letterSpacing: 1.4,
+                }}
+              >
+                MATCH · {confidencePct}%
+              </Text>
+            </View>
+            <Text
+              numberOfLines={2}
+              style={{
+                color: "#fff",
+                fontSize: 17,
+                fontWeight: "700",
+                letterSpacing: -0.3,
+                lineHeight: 21,
+              }}
+            >
+              {candidate.name}
+            </Text>
+            {setMeta ? (
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: "rgba(255,255,255,0.62)",
+                  fontSize: 12,
+                  fontWeight: "500",
+                }}
+              >
+                {setMeta}
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={{ marginTop: 8 }}>
+            <Text
+              style={{
+                color: "rgba(255,255,255,0.48)",
+                fontSize: 10,
+                fontWeight: "700",
+                letterSpacing: 1.2,
+              }}
+            >
+              MARKET PRICE
+            </Text>
+            {marketPriceUsd != null ? (
+              <Text
+                style={{
+                  color: palette.accent.mint,
+                  fontSize: 24,
+                  fontWeight: "800",
+                  letterSpacing: -0.6,
+                  fontVariant: ["tabular-nums"],
+                  marginTop: 2,
+                }}
+              >
+                {formatUsd(marketPriceUsd)}
+              </Text>
+            ) : priceLoading ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+                <ActivityIndicator size="small" color={palette.accent.mint} />
+                <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 13 }}>
+                  Fetching latest sales…
+                </Text>
+              </View>
+            ) : (
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.55)",
+                  fontSize: 14,
+                  fontWeight: "600",
+                  marginTop: 2,
+                }}
+              >
+                No recent sales
+              </Text>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* Action row */}
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <Pressable
+          onPress={onViewDetails}
+          accessibilityRole="button"
+          accessibilityLabel="View card details"
+          style={({ pressed }) => ({
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            paddingVertical: 12,
+            borderRadius: 14,
+            backgroundColor: palette.accent.mint,
+            opacity: pressed ? 0.85 : 1,
+          })}
+        >
+          <Text style={{ color: "#08110D", fontWeight: "800", fontSize: 14 }}>
+            View details
+          </Text>
+          <ChevronRight size={16} color="#08110D" />
+        </Pressable>
+        <Pressable
+          onPress={onAddToVault}
+          accessibilityRole="button"
+          accessibilityLabel="Add to vault"
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: withAlpha("#fff", 0.18),
+            backgroundColor: "rgba(255,255,255,0.04)",
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Plus size={16} color="#fff" />
+          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Vault</Text>
+        </Pressable>
+      </View>
+
+      <Pressable
+        onPress={onRescan}
+        accessibilityRole="button"
+        accessibilityLabel="Scan another card"
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+          opacity: pressed ? 0.5 : 1,
+        })}
+      >
+        <RotateCcw size={13} color={withAlpha("#fff", 0.6)} />
+        <Text style={{ color: withAlpha("#fff", 0.65), fontSize: 12, fontWeight: "600" }}>
+          Not it? Scan again
+        </Text>
+      </Pressable>
     </View>
   );
 }

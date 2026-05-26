@@ -191,7 +191,8 @@ export default function CommandCenterScreen() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 10, paddingRight: 4 }}
+              style={{ marginHorizontal: -20 }}
+              contentContainerStyle={{ gap: 10, paddingHorizontal: 20 }}
             >
               {recent.map((c) => (
                 <RecentChip key={c.gradeId} card={c} />

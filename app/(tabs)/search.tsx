@@ -442,8 +442,6 @@ export default function SearchScreen() {
               >
                 {CATEGORIES.map((cat) => {
                   const count = cards.filter(cat.match).length;
-                  const logo = getBrandLogo(cat.key);
-                  const marquee = MARQUEE_SETS[cat.key];
                   return (
                     <Pressable
                       key={cat.key}
@@ -469,28 +467,17 @@ export default function SearchScreen() {
                           borderBottomColor: withAlpha(cat.tint, 0.18),
                         }}
                       >
-                        {marquee ? (
-                          <SetLogo
-                            set={marquee.set}
-                            tcg={marquee.tcg}
-                            variant={marquee.variant}
-                            size={marquee.variant === "logo" ? 88 : 44}
-                            color={cat.tint}
-                          />
-                        ) : logo ? (
-                          <Image
-                            source={logo}
-                            style={{ width: 76, height: 52 }}
-                            resizeMode="contain"
-                          />
-                        ) : (
-                          <TcgMark
-                            set={cat.key}
-                            size={40}
-                            color={cat.tint}
-                            background="transparent"
-                          />
-                        )}
+                        {/* Unified glyph treatment — every category tile
+                            uses the same TcgMark at the same size so the
+                            rail reads as a consistent grid instead of a
+                            mismatched collage of full wordmarks vs tiny
+                            symbols. */}
+                        <TcgMark
+                          set={cat.key}
+                          size={56}
+                          color={cat.tint}
+                          background="transparent"
+                        />
                       </View>
                       {/* Label strip — clean type, brand color reduced
                           to a 6px accent dot. */}
@@ -925,7 +912,8 @@ function TrendingSection({ tcg = "all" }: { tcg?: TcgChip }) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 12, paddingRight: 4 }}
+        style={{ marginHorizontal: -20 }}
+        contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}
       >
         {[0, 1, 2, 3].map((i) => (
           <View key={i} style={{ width: 120, gap: 6 }}>
@@ -956,7 +944,7 @@ function TrendingSection({ tcg = "all" }: { tcg?: TcgChip }) {
     return <EmptyState title="No trending cards right now" message="" />;
   }
 
-  return <CardHorizontalRail cards={cards} tileSize="md" showPrice />;
+  return <CardHorizontalRail cards={cards} tileSize="md" showPrice edgeBleed={20} />;
 }
 
 function TrendingTile(_: {

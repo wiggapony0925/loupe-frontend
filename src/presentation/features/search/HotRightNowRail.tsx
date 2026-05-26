@@ -21,9 +21,18 @@ import type { TcgKey } from "@/infrastructure/http";
 export function HotRightNowRail({
   tcg = "all",
   limit = 8,
+  edgeBleed = 20,
 }: {
   tcg?: TcgKey | "all";
   limit?: number;
+  /**
+   * Horizontal padding of the parent screen container, in dp. The rail
+   * uses a matching negative margin so it scrolls edge-to-edge while
+   * tiles still start aligned with surrounding section text. Defaults
+   * to 20 (the value used by `(tabs)/index.tsx` and `(tabs)/search.tsx`).
+   * Pass `0` to opt out when rendering inside an unpadded container.
+   */
+  edgeBleed?: number;
 }) {
   const q = useTrendingCards({ tcg, limit });
   const results = (q.data?.cards ?? []).slice(0, limit);
@@ -37,7 +46,12 @@ export function HotRightNowRail({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 12, paddingRight: 4 }}
+          style={edgeBleed > 0 ? { marginHorizontal: -edgeBleed } : undefined}
+          contentContainerStyle={{
+            gap: 12,
+            paddingLeft: edgeBleed > 0 ? edgeBleed : 0,
+            paddingRight: edgeBleed > 0 ? edgeBleed : 4,
+          }}
         >
           {[0, 1, 2].map((i) => (
             <View key={i} style={{ width: 120 }}>
@@ -51,7 +65,7 @@ export function HotRightNowRail({
       errorMessage="Live catalog unavailable"
       onRetry={() => void q.refetch()}
     >
-      <CardHorizontalRail cards={results} tileSize="md" showPrice />
+      <CardHorizontalRail cards={results} tileSize="md" showPrice edgeBleed={edgeBleed} />
     </QueryState>
   );
 }

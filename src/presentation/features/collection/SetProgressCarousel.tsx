@@ -24,9 +24,16 @@ import {
 import { compactUsd } from "@/shared/format";
 import type { SetProgressWire } from "@/infrastructure/http";
 
-const TILE_W = 180;
+const TILE_W = 188;
 const RING_SIZE = 64;
 const RING_STROKE = 6;
+// Horizontal padding applied by the parent screen `<ScrollView>` (see
+// `app/(tabs)/index.tsx`). The rail uses a negative margin equal to
+// this value so it bleeds edge-to-edge — tiles still start aligned
+// with the section header at 20dp, but scrolling content clips at the
+// phone edge instead of inside the parent padding, which is what gave
+// the old rail the "stops short / overflows weirdly" look.
+const SCREEN_EDGE = 20;
 
 function ringTint(percent: number): string {
   if (percent >= 75) return palette.accent.mint;
@@ -53,9 +60,16 @@ export function SetProgressCarousel() {
     <View style={{ gap: 12 }}>
       <SectionHeader eyebrow="Progress" title="Sets" />
       {isLoading ? (
-        <View style={{ flexDirection: "row", gap: 12, paddingHorizontal: 14 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 12,
+            marginHorizontal: -SCREEN_EDGE,
+            paddingHorizontal: SCREEN_EDGE,
+          }}
+        >
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} width={TILE_W} height={196} radius={14} />
+            <Skeleton key={i} width={TILE_W} height={228} radius={14} />
           ))}
         </View>
       ) : (
@@ -64,7 +78,8 @@ export function SetProgressCarousel() {
           keyExtractor={(s) => s.setId}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 14 }}
+          style={{ marginHorizontal: -SCREEN_EDGE }}
+          contentContainerStyle={{ paddingHorizontal: SCREEN_EDGE }}
           ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
           renderItem={({ item }) => <SetProgressTile item={item} bgElev={p.bg.elevated} line={p.line.default} inkDim={p.ink.dim} ink={p.ink.default} />}
         />
@@ -101,20 +116,25 @@ function SetProgressTile({
     >
       {/* Set artwork hero — Robinhood-style: large logo breathing on a
           near-neutral surface, no chunky tinted fill. Keeps the tile
-          feeling premium instead of toy-like. */}
+          feeling premium instead of toy-like.
+
+          Bumped the panel height (96 → 128) and the SetLogo size
+          (80 → 112) so the brand mark actually fills the hero area
+          instead of floating tiny in the middle of a mostly-empty
+          card. */}
       <View
         style={{
-          height: 64,
+          height: 128,
           alignItems: "center",
           justifyContent: "center",
-          paddingHorizontal: 12,
+          paddingHorizontal: 16,
         }}
       >
         <SetLogo
           set={item.setName}
           tcg={item.tcg as "pokemon" | "magic" | "yugioh"}
           variant="logo"
-          size={48}
+          size={112}
         />
       </View>
       {/* Divider — hairline, brand-neutral. */}

@@ -93,7 +93,18 @@ function CardTileImpl({
       style={({ pressed }) => [
         fluid
           ? { width: "100%", opacity: pressed ? 0.85 : 1, gap: 4 }
-          : { width: tileWidth, opacity: pressed ? 0.85 : 1, gap: 4 },
+          : {
+              width: tileWidth,
+              // Hard-clip any descendant that tries to render past the
+              // tile bounds. Without this, a long single-word card name
+              // (e.g. Yu-Gi-Oh's "Reincarnation of the Unchained…") can
+              // visually overflow the Text box on iOS and bleed into
+              // the next tile in the rail, which is the bug the user
+              // saw in "Newest releases".
+              overflow: "hidden",
+              opacity: pressed ? 0.85 : 1,
+              gap: 4,
+            },
         style,
       ]}
     >
@@ -114,6 +125,11 @@ function CardTileImpl({
           numberOfLines={2}
           ellipsizeMode="tail"
           style={{
+            // Explicit width in fixed-tile mode so the OS text engine
+            // wraps/ellipsizes against the tile bounds rather than the
+            // intrinsic content width (which is what was letting long
+            // names render on a single line past the tile edge).
+            width: fluid ? undefined : tileWidth,
             height: NAME_HEIGHT,
             lineHeight: NAME_LINE_HEIGHT,
             // Extra breathing room between the artwork and the title.
@@ -130,7 +146,11 @@ function CardTileImpl({
       {showSetResolved ? (
         <Text
           numberOfLines={1}
-          style={{ height: SUBTITLE_HEIGHT, lineHeight: SUBTITLE_HEIGHT }}
+          style={{
+            width: fluid ? undefined : tileWidth,
+            height: SUBTITLE_HEIGHT,
+            lineHeight: SUBTITLE_HEIGHT,
+          }}
           className="text-[10px] text-ink-muted"
         >
           {[card.set_name, card.year].filter(Boolean).join(" · ") || "—"}

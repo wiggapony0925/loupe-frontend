@@ -28,6 +28,17 @@ export interface CardHorizontalRailProps {
   /** Inter-tile gap (dp). Defaults to 12. */
   gap?: number;
   snap?: boolean;
+  /**
+   * Horizontal padding the parent screen applies to its content box
+   * (e.g. 20dp from the home/search ScrollView). When > 0, the rail
+   * uses a negative outer margin equal to this value plus matching
+   * `paddingHorizontal` on the content container so tiles still start
+   * aligned with the section header but the scroll track extends to
+   * the actual phone edge. This is the standard App Store / Netflix
+   * "edge bleed" pattern — without it, scrolling content stops short
+   * inside the parent padding and looks like it's overflowing weirdly.
+   */
+  edgeBleed?: number;
 }
 
 export function CardHorizontalRail({
@@ -39,6 +50,7 @@ export function CardHorizontalRail({
   onCardPress,
   gap = 12,
   snap = false,
+  edgeBleed = 0,
 }: CardHorizontalRailProps) {
   const tileWidth = TILE_WIDTH[tileSize];
 
@@ -52,7 +64,12 @@ export function CardHorizontalRail({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap, paddingRight: 4 }}
+        style={edgeBleed > 0 ? { marginHorizontal: -edgeBleed } : undefined}
+        contentContainerStyle={{
+          gap,
+          paddingLeft: edgeBleed > 0 ? edgeBleed : 0,
+          paddingRight: edgeBleed > 0 ? edgeBleed : 4,
+        }}
         snapToInterval={snap ? tileWidth + gap : undefined}
         decelerationRate={snap ? "fast" : "normal"}
       >

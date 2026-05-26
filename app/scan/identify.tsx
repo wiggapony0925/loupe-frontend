@@ -51,6 +51,17 @@ export default function IdentifyScanScreen() {
           }),
         );
       }}
+      onAddToVault={(candidate) => {
+        router.replace(
+          routes.gradeNew({
+            cardId: candidate.card_id ?? undefined,
+            upstreamId: candidate.upstream_id ?? undefined,
+            cardName: candidate.name,
+            cardImage: candidate.image_url ?? undefined,
+            cardSet: candidate.set_name ?? undefined,
+          }),
+        );
+      }}
     />
   );
 }
