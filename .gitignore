@@ -46,9 +46,7 @@ Thumbs.db
 expo-env.d.ts
 # @end expo-cli
 
-# Fetched TCG set artwork — 20MB+ of PNGs from public APIs (Pokémon TCG / Scryfall).
-# Regenerate locally with `node scripts/fetch-set-logos.mjs`. The artwork itself
-# stays out of git; the generated registry (src/shared/setLogos.generated.ts)
-# IS tracked so EAS Build / CI can resolve `@/shared/setLogos.generated`
-# without re-running the fetch step.
-assets/sets/
+# Fetched TCG set artwork (Pokémon TCG / Scryfall). ~21MB across ~350 PNGs.
+# Tracked in git so EAS Build / CI bundling can resolve the require() paths in
+# src/shared/setLogos.generated.ts without hitting external APIs server-side.
+# To refresh: `node scripts/fetch-set-logos.mjs && node scripts/generate-set-logo-registry.mjs`
