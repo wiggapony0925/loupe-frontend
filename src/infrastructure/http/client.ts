@@ -1,7 +1,15 @@
 /**
  * Envelope-aware fetch wrapper for loupe-backend `/v1`.
  *
- * Reads `EXPO_PUBLIC_API_URL` at bundle time, defaults to localhost:8000.
+ * Base URL resolution (in order):
+ *   1. `EXPO_PUBLIC_API_URL` env var (bundle time) — set via `.env` locally
+ *      and via `eas env:create production` for EAS builds.
+ *   2. Hard-coded `PRODUCTION_API_BASE` constant below — guarantees that
+ *      release builds (`__DEV__ === false`) always have a working URL even
+ *      if the env var was lost during the build pipeline. This is what
+ *      prevents `TypeError: Network request failed` from misconfigurations.
+ *   3. `http://localhost:8000` — only in dev builds (`__DEV__`) when no
+ *      env var is set (Metro dev server on a simulator).
  *
  * Optional fallback retries are disabled by default. To enable, set both:
  *   EXPO_PUBLIC_ENABLE_API_FALLBACK=true
@@ -19,13 +27,47 @@ import type { Envelope, ErrorDetail } from "./envelope";
 
 const env = (process.env ?? {}) as Record<string, string | undefined>;
 
-const PRIMARY_API_BASE: string = env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
+/**
+ * The canonical Cloud Run URL for the production backend. Baked into the
+ * bundle so release builds work even if the EAS env var is missing.
+ * Update this constant if the Cloud Run service URL ever changes.
+ */
+const PRODUCTION_API_BASE = "https://loupe-api-714615078104.us-central1.run.app";
+
+function resolveApiBase(): string {
+  const fromEnv = env.EXPO_PUBLIC_API_URL?.trim();
+  if (fromEnv) return fromEnv;
+  // No env var. In a release/TestFlight build, always use the hard-coded
+  // production URL — never silently fall back to localhost (which is the
+  // failure mode that caused the original `Network request failed` cascade
+  // on TestFlight: build had no env var, defaulted to localhost, device
+  // had nothing listening on 8000).
+  if (typeof __DEV__ !== "undefined" && __DEV__) {
+    return "http://localhost:8000";
+  }
+  return PRODUCTION_API_BASE;
+}
+
+const PRIMARY_API_BASE: string = resolveApiBase();
 const ENABLE_API_FALLBACK: boolean =
   (env.EXPO_PUBLIC_ENABLE_API_FALLBACK ?? "false").toLowerCase() === "true";
 const FALLBACK_API_BASE: string =
   ENABLE_API_FALLBACK && env.EXPO_PUBLIC_API_URL_FALLBACK
     ? env.EXPO_PUBLIC_API_URL_FALLBACK
     : "";
+
+// Loud startup log so any TestFlight build can be diagnosed by reading the
+// device console: connect device to Mac, open Console.app, filter on
+// `[apiFetch]`. Shows up exactly once per app launch.
+// eslint-disable-next-line no-console
+console.log(
+  "[apiFetch] init base=",
+  PRIMARY_API_BASE,
+  "envProvided=",
+  Boolean(env.EXPO_PUBLIC_API_URL),
+  "dev=",
+  typeof __DEV__ !== "undefined" && __DEV__,
+);
 
 // Mutable so we can sticky-switch after a successful fallback.
 let activeApiBase: string = PRIMARY_API_BASE;
