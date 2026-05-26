@@ -13,7 +13,7 @@ import { FlashList } from "@shopify/flash-list";
 import Svg, { Circle } from "react-native-svg";
 
 import { useSetProgress } from "@/application/queries/useSetProgress";
-import { CardImage } from "@/presentation/components/CardImage";
+import { SetLogo } from "@/presentation/brand/SetLogo";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import {
@@ -55,7 +55,7 @@ export function SetProgressCarousel() {
       {isLoading ? (
         <View style={{ flexDirection: "row", gap: 12, paddingHorizontal: 14 }}>
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} width={TILE_W} height={132} radius={14} />
+            <Skeleton key={i} width={TILE_W} height={196} radius={14} />
           ))}
         </View>
       ) : (
@@ -96,32 +96,50 @@ function SetProgressTile({
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: line,
         backgroundColor: bgElev,
-        padding: 12,
-        gap: 10,
+        overflow: "hidden",
       }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <ProgressRing percent={item.percent} />
-        <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={{ color: ink, fontSize: 13, fontWeight: "600" }}>
-            {item.setName}
+      {/* Set artwork hero — Robinhood-style: large logo breathing on a
+          near-neutral surface, no chunky tinted fill. Keeps the tile
+          feeling premium instead of toy-like. */}
+      <View
+        style={{
+          height: 64,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 12,
+        }}
+      >
+        <SetLogo
+          set={item.setName}
+          tcg={item.tcg as "pokemon" | "magic" | "yugioh"}
+          variant="logo"
+          size={48}
+        />
+      </View>
+      {/* Divider — hairline, brand-neutral. */}
+      <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: line }} />
+      <View style={{ padding: 12, gap: 10 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <ProgressRing percent={item.percent} />
+          <View style={{ flex: 1 }}>
+            <Text numberOfLines={1} style={{ color: ink, fontSize: 13, fontWeight: "600" }}>
+              {item.setName}
+            </Text>
+            <Text style={{ color: inkDim, fontSize: 11, marginTop: 2 }}>
+              {item.owned} / {item.total}
+            </Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text style={{ color: inkDim, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5 }}>
+            {item.tcg}
           </Text>
-          <Text style={{ color: inkDim, fontSize: 11, marginTop: 2 }}>
-            {item.owned} / {item.total}
+          <Text style={{ color: ink, fontSize: 12, fontWeight: "600" }}>
+            {compactUsd(item.estimatedValueUsd)}
           </Text>
         </View>
       </View>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Text style={{ color: inkDim, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5 }}>
-          {item.tcg}
-        </Text>
-        <Text style={{ color: ink, fontSize: 12, fontWeight: "600" }}>
-          {compactUsd(item.estimatedValueUsd)}
-        </Text>
-      </View>
-      {item.imageUrl ? (
-        <CardImage uri={item.imageUrl} width={36} height={36} rounded={6} showSkeleton={false} contentFit="contain" />
-      ) : null}
     </Pressable>
   );
 }

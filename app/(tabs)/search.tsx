@@ -15,6 +15,7 @@ import {
   Keyboard,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -43,6 +44,8 @@ import { pickCardImageUrl, pickCardBlurhash } from "@/shared/cardImage";
 import type { CardSearchResult, TcgKey } from "@/infrastructure/http";
 import { compactUsd } from "@/shared/format";
 import { getBrandLogo } from "@/shared/brandAssets";
+import { TcgMark } from "@/presentation/brand/TcgMark";
+import { SetLogo } from "@/presentation/brand/SetLogo";
 import { gradeColor, palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /** All TCG facets supported by the chip row, in render order. */
@@ -126,6 +129,21 @@ const CATEGORIES: Category[] = [
     match: (c) => /world cup|topps|chrome|panini|prizm|bowman/i.test(c.set),
   },
 ];
+
+/**
+ * Marquee set per franchise category — used to give the category tile a
+ * real, licensed-source set logo via `<SetLogo>` (Pokémon PNGs from the
+ * Pokémon TCG API, Magic mana symbols from Scryfall). The tile remains
+ * a *franchise* entry point; the set art is purely decorative shorthand.
+ * Categories without a public-API logo source fall through to `TcgMark`.
+ */
+const MARQUEE_SETS: Partial<Record<string, { tcg: "pokemon" | "magic" | "yugioh"; set: string; variant: "logo" | "symbol" }>> = {
+  // Picked for visual clarity at tile size, not recency:
+  //   • base1 — original Pokémon Base Set logo (iconic wordmark)
+  //   • lea   — Magic Alpha mana symbol (cleanest "M" silhouette)
+  pokemon: { tcg: "pokemon", set: "base1", variant: "logo" },
+  magic: { tcg: "magic", set: "lea", variant: "symbol" },
+};
 
 const QUICK_FILTERS: { key: Quickfilter; label: string }[] = [
   { key: "all", label: "All" },
@@ -408,71 +426,110 @@ export default function SearchScreen() {
               <Text className="mt-1 text-2xl font-semibold tracking-tight text-ink">
                 Categories
               </Text>
-              <View className="mt-4 flex-row flex-wrap" style={{ gap: 12 }}>
+              {/* Horizontal rail of fixed-width tiles. The previous
+                  2-up grid relied on `flex-wrap` + percentage width,
+                  which collapses unpredictably in RN once `gap` is
+                  involved — labels were truncating to "M…" / "Y…"
+                  and the "cards" count was stacking vertically. A
+                  rail guarantees every tile gets the same generous
+                  width (148px) regardless of label length, and adds
+                  horizontal scroll so we never run out of room as
+                  more franchises are added. */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 10, paddingTop: 16, paddingRight: 8 }}
+              >
                 {CATEGORIES.map((cat) => {
                   const count = cards.filter(cat.match).length;
                   const logo = getBrandLogo(cat.key);
+                  const marquee = MARQUEE_SETS[cat.key];
                   return (
                     <Pressable
                       key={cat.key}
                       onPress={() => setActiveCategory(cat.key)}
                       style={({ pressed }) => ({
-                        flexBasis: "47%",
-                        flexGrow: 1,
-                        height: 110,
-                        opacity: pressed ? 0.85 : 1,
+                        width: 148,
+                        opacity: pressed ? 0.9 : 1,
+                        transform: pressed ? [{ scale: 0.985 }] : undefined,
                       })}
-                      className="overflow-hidden rounded-2xl border border-line bg-bg-elevated p-4"
+                      className="overflow-hidden rounded-2xl border border-line bg-bg-elevated"
                     >
-                      {logo ? (
-                        <View
-                          style={{
-                            alignSelf: "flex-start",
-                            width: 36,
-                            height: 36,
-                            borderRadius: 8,
-                            backgroundColor: withAlpha(cat.tint, 0.14),
-                            alignItems: "center",
-                            justifyContent: "center",
-                            overflow: "hidden",
-                          }}
-                        >
+                      {/* Hero panel — translucent wash of brand color
+                          over the elevated surface; logo carries the
+                          brand, no garish fill. */}
+                      <View
+                        style={{
+                          height: 96,
+                          backgroundColor: withAlpha(cat.tint, 0.05),
+                          alignItems: "center",
+                          justifyContent: "center",
+                          paddingHorizontal: 12,
+                          borderBottomWidth: StyleSheet.hairlineWidth,
+                          borderBottomColor: withAlpha(cat.tint, 0.18),
+                        }}
+                      >
+                        {marquee ? (
+                          <SetLogo
+                            set={marquee.set}
+                            tcg={marquee.tcg}
+                            variant={marquee.variant}
+                            size={marquee.variant === "logo" ? 88 : 44}
+                            color={cat.tint}
+                          />
+                        ) : logo ? (
                           <Image
                             source={logo}
-                            style={{ width: 28, height: 28 }}
+                            style={{ width: 76, height: 52 }}
                             resizeMode="contain"
                           />
-                        </View>
-                      ) : (
+                        ) : (
+                          <TcgMark
+                            set={cat.key}
+                            size={40}
+                            color={cat.tint}
+                            background="transparent"
+                          />
+                        )}
+                      </View>
+                      {/* Label strip — clean type, brand color reduced
+                          to a 6px accent dot. */}
+                      <View
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 12,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
                         <View
                           style={{
-                            alignSelf: "flex-start",
-                            paddingHorizontal: 8,
-                            paddingVertical: 4,
-                            borderRadius: 6,
-                            backgroundColor: withAlpha(cat.tint, 0.18),
+                            width: 6,
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: cat.tint,
                           }}
-                        >
+                        />
+                        <View style={{ flex: 1, minWidth: 0 }}>
                           <Text
-                            style={{
-                              color: cat.tint,
-                              fontSize: 10,
-                              fontWeight: "800",
-                              letterSpacing: 1,
-                            }}
+                            numberOfLines={1}
+                            className="text-[14px] font-semibold text-ink"
                           >
-                            {cat.mono}
+                            {cat.label}
+                          </Text>
+                          <Text
+                            numberOfLines={1}
+                            className="mt-0.5 text-[11px] text-ink-dim"
+                          >
+                            {count} {count === 1 ? "card" : "cards"}
                           </Text>
                         </View>
-                      )}
-                      <Text className="mt-2 text-base font-bold text-ink">{cat.label}</Text>
-                      <Text className="mt-0.5 text-[11px] text-ink-muted">
-                        {count} {count === 1 ? "card" : "cards"} in vault
-                      </Text>
+                      </View>
                     </Pressable>
                   );
                 })}
-              </View>
+              </ScrollView>
             </View>
 
             {/* ── BAND 2 · DISCOVER ───────────────────────────

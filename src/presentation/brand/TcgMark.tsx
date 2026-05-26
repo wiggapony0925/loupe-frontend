@@ -16,11 +16,18 @@ interface TcgMarkProps {
 /**
  * Map any vault set name → brand-registry key. Substring-based so it
  * works on real seeded names like "Pokemon Base Set", "Yu-Gi-Oh! LOB",
- * "One Piece OP-01", "Disney Lorcana – The First Chapter", etc.
+ * "One Piece OP-01", "Disney Lorcana – The First Chapter", etc. Also
+ * accepts a bare BrandKey ("pokemon", "sports", …) so call sites that
+ * already know the brand can skip the regex step.
  */
 function brandKeyForSet(set: CardSet | "All" | string): BrandKey {
   if (set === "All") return "all";
-  const s = String(set).toLowerCase();
+  const s = String(set).toLowerCase().trim();
+  // Fast path: already a canonical brand key.
+  const exact: ReadonlySet<BrandKey> = new Set([
+    "pokemon", "magic", "yugioh", "onepiece", "lorcana", "sports", "topps", "soccer", "all",
+  ]);
+  if (exact.has(s as BrandKey)) return s as BrandKey;
   if (/yu-?gi-?oh/.test(s)) return "yugioh";
   if (/one\s?piece/.test(s)) return "onepiece";
   if (/lorcana/.test(s)) return "lorcana";
