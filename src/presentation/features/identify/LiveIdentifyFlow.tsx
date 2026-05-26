@@ -30,7 +30,6 @@ import {
   Image,
   Linking,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from "react-native";
@@ -41,6 +40,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import {
   ChevronDown,
+  ChevronRight,
   HelpCircle,
   Infinity as InfinityIcon,
   Pause,
@@ -805,32 +805,50 @@ function ResultsStrip({
     return null;
   }
 
-  const top = state.candidates[0];
-  const rest = state.candidates.length - 1;
+  const visible = state.candidates.slice(0, 4);
   return (
-    <View style={{ gap: 8 }}>
-      <View style={{ paddingHorizontal: 4 }}>
-        <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
-          {state.locked ? "Top match" : "Best guess"}
-          {state.primarySource ? ` · via ${state.primarySource}` : ""}
+    <View
+      style={{
+        borderRadius: 18,
+        backgroundColor: "rgba(20,20,22,0.96)",
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.08)",
+        paddingVertical: 10,
+        paddingHorizontal: 10,
+        gap: 4,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 4,
+          paddingBottom: 6,
+        }}
+      >
+        <Text
+          style={{
+            color: "rgba(255,255,255,0.5)",
+            fontSize: 10,
+            fontWeight: "700",
+            letterSpacing: 1.4,
+          }}
+        >
+          {state.locked ? "MATCHED" : "SUGGESTIONS"}
+        </Text>
+        <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 10 }}>
+          {state.candidates.length} result{state.candidates.length === 1 ? "" : "s"}
         </Text>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 4 }}>
-          {state.candidates.slice(0, 5).map((c, idx) => (
-            <CandidateCard
-              key={`${c.upstream_id ?? c.card_id ?? "c"}-${idx}`}
-              candidate={c}
-              highlight={idx === 0}
-              moreCount={idx === 0 ? rest : 0}
-              onPress={() => onPickCandidate(c)}
-            />
-          ))}
-        </View>
-      </ScrollView>
-      <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 10, paddingHorizontal: 4 }}>
-        Tap a card to confirm. We'll use that to improve matches.
-      </Text>
+      {visible.map((c, idx) => (
+        <CandidateCard
+          key={`${c.upstream_id ?? c.card_id ?? "c"}-${idx}`}
+          candidate={c}
+          highlight={idx === 0}
+          onPress={() => onPickCandidate(c)}
+        />
+      ))}
     </View>
   );
 }
@@ -838,42 +856,46 @@ function ResultsStrip({
 function CandidateCard({
   candidate,
   highlight,
-  moreCount,
   onPress,
 }: {
   candidate: IdentifyCandidate;
   highlight: boolean;
-  moreCount: number;
   onPress: () => void;
 }) {
-  const label = [candidate.set_name, candidate.tcg ? capitalize(candidate.tcg) : null]
+  const meta = [
+    candidate.set_name,
+    candidate.number ? `#${candidate.number}` : null,
+  ]
     .filter(Boolean)
-    .join(" · ");
+    .join("  \u00b7  ");
+  const confidencePct = Math.round(candidate.confidence * 100);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Confirm ${candidate.name}`}
       style={({ pressed }) => ({
-        width: 300,
         flexDirection: "row",
         alignItems: "center",
-        gap: 10,
-        padding: 10,
-        borderRadius: 14,
-        backgroundColor: "rgba(28,28,30,0.92)",
-        borderWidth: highlight ? 1 : 0,
-        borderColor: withAlpha(palette.accent.mint, 0.45),
-        opacity: pressed ? 0.85 : 1,
+        gap: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 6,
+        borderRadius: 12,
+        backgroundColor: highlight
+          ? "rgba(255,255,255,0.04)"
+          : "transparent",
+        opacity: pressed ? 0.7 : 1,
       })}
     >
       <View
         style={{
           width: 44,
           aspectRatio: 2.5 / 3.5,
-          borderRadius: 6,
+          borderRadius: 5,
           overflow: "hidden",
           backgroundColor: "#0B0B0D",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.08)",
         }}
       >
         {candidate.image_url ? (
@@ -884,46 +906,64 @@ function CandidateCard({
           />
         ) : null}
       </View>
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-          <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }} numberOfLines={1}>
-            {candidate.name}
-          </Text>
-          {candidate.number ? (
-            <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>
-              #{candidate.number}
-            </Text>
-          ) : null}
-        </View>
-        {label ? (
-          <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 11 }} numberOfLines={1}>
-            {label}
-          </Text>
-        ) : null}
-        <View
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text
           style={{
-            marginTop: 4,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
+            color: "#fff",
+            fontSize: 15,
+            fontWeight: "600",
+            letterSpacing: -0.1,
           }}
+          numberOfLines={1}
         >
+          {candidate.name}
+        </Text>
+        {meta ? (
           <Text
             style={{
-              color: palette.accent.mint,
+              marginTop: 2,
+              color: "rgba(255,255,255,0.5)",
+              fontSize: 12,
+            }}
+            numberOfLines={1}
+          >
+            {meta}
+          </Text>
+        ) : null}
+      </View>
+      <View style={{ alignItems: "flex-end", gap: 4 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
+          <View
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor:
+                confidencePct >= 80
+                  ? palette.accent.mint
+                  : confidencePct >= 60
+                    ? palette.accent.amber
+                    : "rgba(255,255,255,0.35)",
+            }}
+          />
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.7)",
               fontSize: 11,
-              fontWeight: "700",
-              letterSpacing: 0.6,
+              fontVariant: ["tabular-nums"],
+              fontWeight: "600",
             }}
           >
-            {(candidate.confidence * 100).toFixed(0)}% match
+            {confidencePct}%
           </Text>
-          {moreCount > 0 ? (
-            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 10 }}>
-              {moreCount} more
-            </Text>
-          ) : null}
         </View>
+        <ChevronRight size={14} color="rgba(255,255,255,0.35)" />
       </View>
     </Pressable>
   );
@@ -936,8 +976,4 @@ function CenterMessage({ label }: { label: string }) {
       <Text style={{ color: "#fff", marginTop: 12, fontSize: 13 }}>{label}</Text>
     </View>
   );
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
