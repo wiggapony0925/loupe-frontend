@@ -71,16 +71,6 @@ export default function CommandCenterScreen() {
       >
         <Header />
 
-        {/* Primary action sits ABOVE the fold. The whole point of the app
-            is to grade cards; burying scan at the bottom of a 12-section
-            feed (the old layout) hid the core verb. Mirrors the
-            Robinhood/Coinbase pattern of "quick action card right under
-            the greeting" before any chart or feed loads. */}
-        <View>
-          <SectionHeader eyebrow="Capture" title="Scan a card" />
-          <PhoneCaptureCard />
-        </View>
-
         <TodaysDeltaHero />
 
         <PortfolioChart
@@ -261,6 +251,17 @@ export default function CommandCenterScreen() {
             }
           />
           <HardwareStatusWidget />
+        </View>
+
+        {/* Phone capture sits directly below the hardware section so the
+            two capture surfaces live together: "use the scanner you
+            have" (hardware) and "use the camera you already own"
+            (phone). Per user request — easier to find both capture
+            options grouped at the bottom of the feed than splitting
+            them across the top and bottom of the page. */}
+        <View>
+          <SectionHeader eyebrow="Capture" title="Scan a card" />
+          <PhoneCaptureCard />
         </View>
       </ScrollView>
     </SafeAreaView>
