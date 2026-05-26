@@ -30,7 +30,6 @@ import {
   Image,
   Linking,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from "react-native";
@@ -42,15 +41,12 @@ import * as Haptics from "expo-haptics";
 import {
   ChevronDown,
   ChevronRight,
-  HelpCircle,
-  Infinity as InfinityIcon,
-  Pause,
-  Play,
   Plus,
   RotateCcw,
-  ScanBarcode,
   Search,
   Sparkles,
+  Pause,
+  Play,
   X,
   Zap,
   ZapOff,
@@ -73,12 +69,19 @@ import {
   recognizeTextOnDevice,
 } from "@/infrastructure/ocr/onDeviceOcr";
 
-const CAPTURE_LONG_EDGE = 1200;
-const CAPTURE_QUALITY = 0.6;
+const CAPTURE_LONG_EDGE = 1100;
+const CAPTURE_QUALITY = 0.5;
 /** Min gap between identify calls. Keeps the device cool + bill low. */
-const CAPTURE_INTERVAL_MS = 1400;
+const CAPTURE_INTERVAL_MS = 900;
 /** Confidence at which we fire the success haptic + freeze the carousel. */
 const LOCK_CONFIDENCE = 0.7;
+/**
+ * Consecutive frames returning zero high-confidence (>=0.5) candidates
+ * before we surface the "can't find a match" fallback CTA. Tuned to
+ * roughly 4–5 seconds of camera time so we don't flash the empty-state
+ * card the instant a user lifts the phone.
+ */
+const NO_MATCH_THRESHOLD = 4;
 
 /** TCG hints surfaced as a chevron pill in the bottom bar. */
 const TCG_OPTIONS: { key: IdentifyTcgHint; label: string }[] = [
@@ -104,6 +107,11 @@ interface LiveIdentifyFlowProps {
     candidate: IdentifyCandidate,
     identificationId: string,
   ) => void;
+  /**
+   * Called when the user taps the "Search manually" escape hatch on the
+   * no-match state. Host route should push to the catalog search screen.
+   */
+  onManualSearch?: () => void;
   /** Initial TCG hint (e.g. when launched from a TCG-filtered search). */
   initialTcg?: IdentifyTcgHint;
 }
@@ -115,6 +123,13 @@ interface IdentifyState {
   primarySource: string | null;
   /** Set true the first time confidence crosses LOCK_CONFIDENCE. */
   locked: boolean;
+  /**
+   * Count of consecutive identify responses that returned no candidate
+   * with confidence >= 0.5. When this crosses NO_MATCH_THRESHOLD the
+   * bottom panel swaps the "Reading card…" pulse for an actionable
+   * "can't find a match" card with a manual-search escape hatch.
+   */
+  emptyAttempts: number;
 }
 
 const EMPTY_STATE: IdentifyState = {
@@ -123,12 +138,14 @@ const EMPTY_STATE: IdentifyState = {
   topConfidence: 0,
   primarySource: null,
   locked: false,
+  emptyAttempts: 0,
 };
 
 export function LiveIdentifyFlow({
   onClose,
   onConfirm,
   onAddToVault,
+  onManualSearch,
   initialTcg = null,
 }: LiveIdentifyFlowProps) {
   const p = useThemedPalette();
@@ -159,8 +176,11 @@ export function LiveIdentifyFlow({
     setScanning(true);
     setError(null);
     try {
+      // quality=0.5 (vs 1.0) cuts the iOS encode step ~3x without any
+      // perceptible loss for OCR \u2014 we resize to 1100px long-edge below
+      // anyway, so a higher source quality is wasted bytes and latency.
       const photo = await camera.takePictureAsync({
-        quality: 1,
+        quality: 0.5,
         skipProcessing: true,
         exif: false,
       });
@@ -203,12 +223,13 @@ export function LiveIdentifyFlow({
           );
         }
       }
-      // Light haptic on every accepted frame so the user knows it's alive,
-      // success haptic only the first time we cross the lock threshold.
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      // Success haptic only when we cross the lock threshold \u2014 the
+      // previous per-frame light tick was constant background noise on
+      // a loop that fires every ~900ms.
       setState((prev) => {
         const top = res.candidates[0]?.confidence ?? 0;
         const justLocked = !prev.locked && top >= LOCK_CONFIDENCE;
+        const hasUsefulMatch = res.candidates.some((c) => c.confidence >= 0.5);
         if (justLocked) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
             () => {},
@@ -220,6 +241,7 @@ export function LiveIdentifyFlow({
           topConfidence: top,
           primarySource: res.primary_source,
           locked: prev.locked || justLocked,
+          emptyAttempts: hasUsefulMatch ? 0 : prev.emptyAttempts + 1,
         };
       });
     } catch (e) {
@@ -355,7 +377,13 @@ export function LiveIdentifyFlow({
         autofocus="on"
       >
         <SafeAreaView style={{ flex: 1, justifyContent: "space-between" }}>
-          <TopBar onClose={onClose} />
+          <TopBar
+            onClose={onClose}
+            flashOn={flashOn}
+            paused={paused}
+            onToggleFlash={() => setFlashOn((v) => !v)}
+            onTogglePause={() => setPaused((v) => !v)}
+          />
 
           <ReticleArea
             scanning={scanning && !paused}
@@ -365,13 +393,6 @@ export function LiveIdentifyFlow({
             marketPriceUsd={marketPriceUsd}
             formatUsd={formatUsd}
             priceLoading={state.locked && !!lockedCardId && market.isLoading}
-          />
-
-          <SideControls
-            paused={paused}
-            flashOn={flashOn}
-            onTogglePause={() => setPaused((v) => !v)}
-            onToggleFlash={() => setFlashOn((v) => !v)}
           />
 
           <BottomPanel
@@ -388,6 +409,7 @@ export function LiveIdentifyFlow({
             onAddToVault={handleAddToVault}
             onRescan={handleRescan}
             onManualCapture={captureOnce}
+            onManualSearch={onManualSearch}
             scanning={scanning}
             marketPriceUsd={marketPriceUsd}
             priceLoading={state.locked && !!lockedCardId && market.isLoading}
@@ -402,24 +424,82 @@ export function LiveIdentifyFlow({
 
 // ────────────────────────── Subviews ──────────────────────────
 
-function TopBar({ onClose }: { onClose: () => void }) {
+function TopBar({
+  onClose,
+  flashOn,
+  paused,
+  onToggleFlash,
+  onTogglePause,
+}: {
+  onClose: () => void;
+  flashOn: boolean;
+  paused: boolean;
+  onToggleFlash: () => void;
+  onTogglePause: () => void;
+}) {
   return (
     <LinearGradient
-      colors={["rgba(0,0,0,0.75)", "transparent"]}
-      style={{ paddingHorizontal: 20, paddingVertical: 14 }}
+      colors={["rgba(0,0,0,0.78)", "transparent"]}
+      style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 22 }}
     >
       <View className="flex-row items-center justify-between">
-        <View style={{ width: 36 }} />
-        <Text className="text-base font-semibold text-white">Scan Card or Comic</Text>
         <Pressable
           onPress={onClose}
           hitSlop={12}
           accessibilityLabel="Close scanner"
           className="h-9 w-9 items-center justify-center rounded-full"
-          style={{ backgroundColor: "rgba(255,255,255,0.18)" }}
+          style={{ backgroundColor: "rgba(255,255,255,0.14)" }}
         >
           <X size={18} color="#fff" />
         </Pressable>
+
+        <Text
+          style={{
+            color: "#fff",
+            fontSize: 15,
+            fontWeight: "700",
+            letterSpacing: -0.2,
+          }}
+        >
+          Scan a card
+        </Text>
+
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            onPress={onTogglePause}
+            hitSlop={10}
+            accessibilityLabel={paused ? "Resume scanning" : "Pause scanning"}
+            className="h-9 w-9 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: paused
+                ? "rgba(255,255,255,0.95)"
+                : "rgba(255,255,255,0.14)",
+            }}
+          >
+            {paused ? (
+              <Play size={16} color="#000" />
+            ) : (
+              <Pause size={16} color="#fff" />
+            )}
+          </Pressable>
+          <Pressable
+            onPress={onToggleFlash}
+            hitSlop={10}
+            accessibilityLabel={flashOn ? "Turn flash off" : "Turn flash on"}
+            className="h-9 w-9 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: flashOn
+                ? palette.accent.amber
+                : "rgba(255,255,255,0.14)",
+            }}
+          >
+            {flashOn ? (
+              <Zap size={16} color="#000" />
+            ) : (
+              <ZapOff size={16} color="#fff" />
+            )}
+          </Pressable>
+        </View>
       </View>
     </LinearGradient>
   );
@@ -700,86 +780,6 @@ function CornerBracket({
   }
 }
 
-function SideControls({
-  paused,
-  flashOn,
-  onTogglePause,
-  onToggleFlash,
-}: {
-  paused: boolean;
-  flashOn: boolean;
-  onTogglePause: () => void;
-  onToggleFlash: () => void;
-}) {
-  return (
-    <View
-      pointerEvents="box-none"
-      style={{
-        position: "absolute",
-        right: 16,
-        top: "30%",
-        gap: 12,
-        alignItems: "center",
-      }}
-    >
-      <CircleControl
-        accessibilityLabel="Help"
-        onPress={() => {}}
-        icon={<HelpCircle size={20} color="#fff" />}
-        muted
-      />
-      <CircleControl
-        accessibilityLabel={paused ? "Resume scanning" : "Pause scanning"}
-        onPress={onTogglePause}
-        icon={paused ? <Play size={20} color="#000" /> : <Pause size={20} color="#000" />}
-      />
-      <CircleControl
-        accessibilityLabel="Continuous mode"
-        onPress={() => {}}
-        icon={<InfinityIcon size={20} color="#000" />}
-      />
-      <CircleControl
-        accessibilityLabel={flashOn ? "Turn flash off" : "Turn flash on"}
-        onPress={onToggleFlash}
-        icon={flashOn ? <Zap size={20} color="#fff" /> : <ZapOff size={20} color="#fff" />}
-        muted
-      />
-    </View>
-  );
-}
-
-function CircleControl({
-  icon,
-  onPress,
-  accessibilityLabel,
-  muted = false,
-}: {
-  icon: React.ReactNode;
-  onPress: () => void;
-  accessibilityLabel: string;
-  muted?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={8}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      style={({ pressed }) => ({
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: muted ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.95)",
-        opacity: pressed ? 0.75 : 1,
-      })}
-    >
-      {icon}
-    </Pressable>
-  );
-}
-
 function BottomPanel({
   state,
   error,
@@ -791,6 +791,7 @@ function BottomPanel({
   onAddToVault,
   onRescan,
   onManualCapture,
+  onManualSearch,
   scanning,
   marketPriceUsd,
   priceLoading,
@@ -807,6 +808,7 @@ function BottomPanel({
   onAddToVault: (c: IdentifyCandidate) => void;
   onRescan: () => void;
   onManualCapture: () => void;
+  onManualSearch?: () => void;
   scanning: boolean;
   marketPriceUsd: number | null;
   priceLoading: boolean;
@@ -820,8 +822,8 @@ function BottomPanel({
 
   return (
     <LinearGradient
-      colors={["transparent", "rgba(0,0,0,0.85)"]}
-      style={{ paddingHorizontal: 14, paddingBottom: 8, paddingTop: 18, gap: 8 }}
+      colors={["transparent", "rgba(0,0,0,0.92)"]}
+      style={{ paddingHorizontal: 14, paddingBottom: 10, paddingTop: 28, gap: 10 }}
     >
       {tcgPickerOpen ? (
         <View
@@ -875,12 +877,13 @@ function BottomPanel({
           onRescan={onRescan}
         />
       ) : (
-        <ResultsStrip
+        <ResultArea
           state={state}
           error={error}
           scanning={scanning}
           onPickCandidate={onPickCandidate}
           onRescan={onRescan}
+          onManualSearch={onManualSearch}
         />
       )}
 
@@ -898,13 +901,13 @@ function BottomPanel({
             alignItems: "center",
             gap: 4,
             paddingHorizontal: 14,
-            paddingVertical: 8,
+            paddingVertical: 9,
             borderRadius: 999,
-            backgroundColor: "#fff",
+            backgroundColor: "rgba(255,255,255,0.95)",
             opacity: pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ color: "#000", fontWeight: "600", fontSize: 13 }}>{tcgLabel}</Text>
+          <Text style={{ color: "#000", fontWeight: "700", fontSize: 13 }}>{tcgLabel}</Text>
           <ChevronDown size={14} color="#000" />
         </Pressable>
 
@@ -913,60 +916,75 @@ function BottomPanel({
           onPress={onManualCapture}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Capture frame"
+          accessibilityLabel="Capture frame now"
           style={({ pressed }) => ({
-            width: 64,
-            height: 64,
-            borderRadius: 32,
+            width: 66,
+            height: 66,
+            borderRadius: 33,
             borderWidth: 4,
-            borderColor: "#fff",
+            borderColor: "rgba(255,255,255,0.95)",
             alignItems: "center",
             justifyContent: "center",
-            opacity: pressed ? 0.7 : 1,
+            opacity: pressed ? 0.65 : 1,
           })}
         >
-          <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: "#fff" }} />
+          <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#fff" }} />
         </Pressable>
 
-        {/* Search / barcode segmented toggle (visual parity with reference). */}
-        <View
-          style={{
+        {/* Manual search escape hatch — replaces the inert search/barcode
+            segmented control. When no match arrives the user can jump
+            straight to the catalog search screen. */}
+        <Pressable
+          onPress={onManualSearch}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Search the catalog manually"
+          disabled={!onManualSearch}
+          style={({ pressed }) => ({
             flexDirection: "row",
-            backgroundColor: "rgba(60,60,67,0.6)",
-            borderRadius: 12,
-            overflow: "hidden",
-          }}
+            alignItems: "center",
+            gap: 6,
+            paddingHorizontal: 12,
+            paddingVertical: 9,
+            borderRadius: 999,
+            backgroundColor: "rgba(255,255,255,0.14)",
+            opacity: pressed ? 0.7 : onManualSearch ? 1 : 0.4,
+          })}
         >
-          <View style={{ padding: 8 }}>
-            <Search size={18} color="#fff" />
-          </View>
-          <View
-            style={{
-              width: 1,
-              backgroundColor: "rgba(255,255,255,0.2)",
-            }}
-          />
-          <View style={{ padding: 8 }}>
-            <ScanBarcode size={18} color="#fff" />
-          </View>
-        </View>
+          <Search size={15} color="#fff" />
+          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>Search</Text>
+        </Pressable>
       </View>
     </LinearGradient>
   );
 }
 
-function ResultsStrip({
+/**
+ * Bottom card that swaps between four states while the loop is hunting:
+ *
+ *   • error          — last identify call threw
+ *   • no-match       — `emptyAttempts >= NO_MATCH_THRESHOLD` → show a
+ *                      manual-search escape hatch
+ *   • reading        — scanning, no useful candidates yet
+ *   • preview-match  — at least one >= 0.5 candidate, not yet locked.
+ *                      Shows the top candidate as a single Collectr-style
+ *                      card with a "Tap to confirm" CTA and a chevron
+ *                      to alt matches.
+ */
+function ResultArea({
   state,
   error,
   scanning,
   onPickCandidate,
   onRescan,
+  onManualSearch,
 }: {
   state: IdentifyState;
   error: string | null;
   scanning: boolean;
   onPickCandidate: (c: IdentifyCandidate) => void;
   onRescan: () => void;
+  onManualSearch?: () => void;
 }) {
   if (error) {
     return (
@@ -976,19 +994,21 @@ function ResultsStrip({
           alignItems: "center",
           gap: 10,
           paddingHorizontal: 14,
-          paddingVertical: 10,
-          borderRadius: 14,
-          backgroundColor: withAlpha(palette.accent.rose, 0.18),
+          paddingVertical: 12,
+          borderRadius: 16,
+          backgroundColor: withAlpha(palette.accent.rose, 0.16),
           borderWidth: 1,
-          borderColor: withAlpha(palette.accent.rose, 0.45),
+          borderColor: withAlpha(palette.accent.rose, 0.4),
         }}
       >
-        <Text style={{ color: "#fff", fontSize: 12, flex: 1 }}>{error}</Text>
+        <Text style={{ color: "#fff", fontSize: 12, flex: 1, fontWeight: "600" }}>
+          {error}
+        </Text>
         <Pressable onPress={onRescan} hitSlop={8}>
           <Text
             style={{
               color: palette.accent.mint,
-              fontWeight: "700",
+              fontWeight: "800",
               fontSize: 12,
             }}
           >
@@ -999,53 +1019,125 @@ function ResultsStrip({
     );
   }
 
-  // Filter out very-low-confidence noise — the OCR can return a wall
-  // of ~49% near-misses while it's still settling. Only show items
-  // we're at least *somewhat* confident about; while we have nothing,
-  // render the slim "scanning" pulse instead.
-  const visible = state.candidates.filter((c) => c.confidence >= 0.5).slice(0, 8);
+  const visible = state.candidates.filter((c) => c.confidence >= 0.5);
+  const top = visible[0];
+  const alts = visible.length - 1;
 
-  if (visible.length === 0) {
-    if (!scanning) return null;
-    return (
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 10,
-          paddingVertical: 10,
-          paddingHorizontal: 14,
-          borderRadius: 14,
-          backgroundColor: "rgba(0,0,0,0.45)",
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.06)",
-        }}
-      >
-        <ActivityIndicator size="small" color={palette.accent.mint} />
-        <Text
-          style={{
-            color: "rgba(255,255,255,0.75)",
-            fontSize: 12,
-            fontWeight: "600",
-          }}
-        >
-          Reading card…
-        </Text>
-      </View>
-    );
+  if (!top) {
+    // No useful candidates yet. Show the no-match escape hatch once
+    // we've burned NO_MATCH_THRESHOLD frames on nothing; otherwise a
+    // quiet "reading" pulse so the camera surface stays focused.
+    if (state.emptyAttempts >= NO_MATCH_THRESHOLD) {
+      return <NoMatchCard onManualSearch={onManualSearch} onRescan={onRescan} />;
+    }
+    if (!scanning && state.emptyAttempts === 0) {
+      // Permission granted but we haven't fired our first request yet.
+      return <HintPill label="Center the card in the frame" />;
+    }
+    return <HintPill label="Reading card…" pulse />;
   }
 
   return (
-    <View style={{ gap: 8 }}>
+    <PreviewMatchCard candidate={top} alts={alts} onConfirm={() => onPickCandidate(top)} />
+  );
+}
+
+function HintPill({ label, pulse = false }: { label: string; pulse?: boolean }) {
+  return (
+    <View
+      style={{
+        alignSelf: "center",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 9,
+        borderRadius: 999,
+        backgroundColor: "rgba(0,0,0,0.55)",
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.08)",
+      }}
+    >
+      {pulse ? (
+        <ActivityIndicator size="small" color={palette.accent.mint} />
+      ) : (
+        <View
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: palette.accent.mint,
+          }}
+        />
+      )}
+      <Text style={{ color: "rgba(255,255,255,0.88)", fontSize: 12, fontWeight: "600" }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * The Collectr-style preview card. Single result, big thumbnail on the
+ * left, name + set + confidence on the right. Tap anywhere on the card
+ * to confirm and open card detail. A chevron in the corner hints that
+ * more matches exist; the user can also keep moving the camera and the
+ * card will update live as confidence climbs.
+ */
+function PreviewMatchCard({
+  candidate,
+  alts,
+  onConfirm,
+}: {
+  candidate: IdentifyCandidate;
+  alts: number;
+  onConfirm: () => void;
+}) {
+  const confidencePct = Math.round(candidate.confidence * 100);
+  const setMeta = [candidate.set_name, candidate.number ? `#${candidate.number}` : null]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <Pressable
+      onPress={onConfirm}
+      accessibilityRole="button"
+      accessibilityLabel={`Tap to confirm match: ${candidate.name}`}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        padding: 12,
+        borderRadius: 18,
+        backgroundColor: "rgba(15,15,17,0.94)",
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.08)",
+        opacity: pressed ? 0.85 : 1,
+      })}
+    >
       <View
         style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingHorizontal: 4,
+          width: 54,
+          aspectRatio: 2.5 / 3.5,
+          borderRadius: 8,
+          overflow: "hidden",
+          backgroundColor: "rgba(255,255,255,0.06)",
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        {candidate.image_url ? (
+          <Image
+            source={{ uri: candidate.image_url }}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <Sparkles size={16} color={withAlpha("#fff", 0.4)} />
+          </View>
+        )}
+      </View>
+
+      <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <View
             style={{
               width: 6,
@@ -1056,164 +1148,119 @@ function ResultsStrip({
           />
           <Text
             style={{
-              color: "rgba(255,255,255,0.85)",
-              fontSize: 11,
-              fontWeight: "700",
-              letterSpacing: 1.4,
+              color: palette.accent.mint,
+              fontSize: 10,
+              fontWeight: "800",
+              letterSpacing: 1.3,
             }}
           >
-            SUGGESTIONS
+            {confidencePct}% MATCH · TAP TO CONFIRM
           </Text>
         </View>
         <Text
-          style={{
-            color: "rgba(255,255,255,0.45)",
-            fontSize: 10,
-            fontWeight: "600",
-            fontVariant: ["tabular-nums"],
-          }}
+          numberOfLines={1}
+          style={{ color: "#fff", fontSize: 15, fontWeight: "700", letterSpacing: -0.2 }}
         >
-          {visible.length} match{visible.length === 1 ? "" : "es"}
+          {candidate.name}
         </Text>
+        {setMeta ? (
+          <Text
+            numberOfLines={1}
+            style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: "500" }}
+          >
+            {setMeta}
+          </Text>
+        ) : null}
+        {alts > 0 ? (
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.45)",
+              fontSize: 10,
+              fontWeight: "600",
+              marginTop: 2,
+            }}
+          >
+            +{alts} other match{alts === 1 ? "" : "es"}
+          </Text>
+        ) : null}
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 4, gap: 8 }}
-      >
-        {visible.map((c, idx) => (
-          <CandidateTile
-            key={`${c.upstream_id ?? c.card_id ?? "c"}-${idx}`}
-            candidate={c}
-            highlight={idx === 0}
-            onPress={() => onPickCandidate(c)}
-          />
-        ))}
-      </ScrollView>
-    </View>
+      <ChevronRight size={18} color="rgba(255,255,255,0.55)" />
+    </Pressable>
   );
 }
 
-function CandidateTile({
-  candidate,
-  highlight,
-  onPress,
+function NoMatchCard({
+  onManualSearch,
+  onRescan,
 }: {
-  candidate: IdentifyCandidate;
-  highlight: boolean;
-  onPress: () => void;
+  onManualSearch?: () => void;
+  onRescan: () => void;
 }) {
-  const confidencePct = Math.round(candidate.confidence * 100);
-  const accentColor =
-    confidencePct >= 80
-      ? palette.accent.mint
-      : confidencePct >= 65
-        ? palette.accent.amber
-        : "rgba(255,255,255,0.55)";
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Confirm ${candidate.name} (${confidencePct}% confidence)`}
-      style={({ pressed }) => ({
-        width: 72,
-        gap: 4,
-        opacity: pressed ? 0.65 : 1,
-      })}
+    <View
+      style={{
+        padding: 14,
+        borderRadius: 18,
+        backgroundColor: "rgba(15,15,17,0.94)",
+        borderWidth: 1,
+        borderColor: withAlpha(palette.accent.amber, 0.35),
+        gap: 10,
+      }}
     >
-      <View
-        style={{
-          width: "100%",
-          aspectRatio: 2.5 / 3.5,
-          borderRadius: 8,
-          overflow: "hidden",
-          backgroundColor: "rgba(255,255,255,0.06)",
-          borderWidth: highlight ? 1.5 : 1,
-          borderColor: highlight ? accentColor : "rgba(255,255,255,0.1)",
-          position: "relative",
-        }}
-      >
-        {candidate.image_url ? (
-          <Image
-            source={{ uri: candidate.image_url }}
-            style={{ width: "100%", height: "100%" }}
-            resizeMode="cover"
-          />
-        ) : (
-          <View
-            style={{
+      <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>
+        Can't read this one
+      </Text>
+      <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, lineHeight: 17 }}>
+        Try moving closer, flattening the card against a dark surface, or turning
+        on the flash. If you already know what it is, search the catalog by name.
+      </Text>
+      <View style={{ flexDirection: "row", gap: 8, marginTop: 2 }}>
+        {onManualSearch ? (
+          <Pressable
+            onPress={onManualSearch}
+            accessibilityRole="button"
+            accessibilityLabel="Search the catalog manually"
+            style={({ pressed }) => ({
               flex: 1,
+              flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
-              padding: 4,
-            }}
+              gap: 6,
+              paddingVertical: 10,
+              borderRadius: 12,
+              backgroundColor: palette.accent.mint,
+              opacity: pressed ? 0.8 : 1,
+            })}
           >
-            <Sparkles size={16} color={withAlpha("#fff", 0.35)} />
-            <Text
-              numberOfLines={2}
-              style={{
-                color: withAlpha("#fff", 0.55),
-                fontSize: 8,
-                fontWeight: "600",
-                textAlign: "center",
-                marginTop: 2,
-              }}
-            >
-              {candidate.name}
+            <Search size={14} color="#08110D" />
+            <Text style={{ color: "#08110D", fontWeight: "800", fontSize: 13 }}>
+              Search catalog
             </Text>
-          </View>
-        )}
-        {/* Confidence pill, bottom-left of the thumb */}
-        <View
-          style={{
-            position: "absolute",
-            bottom: 3,
-            left: 3,
-            right: 3,
-            paddingHorizontal: 5,
-            paddingVertical: 2,
-            borderRadius: 999,
-            backgroundColor: "rgba(0,0,0,0.7)",
+          </Pressable>
+        ) : null}
+        <Pressable
+          onPress={onRescan}
+          accessibilityRole="button"
+          accessibilityLabel="Reset and try scanning again"
+          style={({ pressed }) => ({
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
-            gap: 3,
-          }}
+            gap: 6,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.15)",
+            opacity: pressed ? 0.7 : 1,
+          })}
         >
-          <View
-            style={{
-              width: 4,
-              height: 4,
-              borderRadius: 2,
-              backgroundColor: accentColor,
-            }}
-          />
-          <Text
-            style={{
-              color: "#fff",
-              fontSize: 9,
-              fontVariant: ["tabular-nums"],
-              fontWeight: "800",
-            }}
-          >
-            {confidencePct}%
-          </Text>
-        </View>
+          <RotateCcw size={13} color="#fff" />
+          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Retry</Text>
+        </Pressable>
       </View>
-      <Text
-        style={{
-          color: "rgba(255,255,255,0.9)",
-          fontSize: 10,
-          fontWeight: "600",
-          letterSpacing: -0.1,
-          textAlign: "center",
-        }}
-        numberOfLines={1}
-      >
-        {candidate.name}
-      </Text>
-    </Pressable>
+    </View>
   );
 }
 

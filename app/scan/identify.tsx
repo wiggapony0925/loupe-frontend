@@ -62,6 +62,7 @@ export default function IdentifyScanScreen() {
           }),
         );
       }}
+      onManualSearch={() => router.replace("/search")}
     />
   );
 }
