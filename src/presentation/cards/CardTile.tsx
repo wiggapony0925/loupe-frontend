@@ -68,12 +68,14 @@ function CardTileImpl({
   // grid screenshot). Heights match the skeleton primitive (12 / 10).
   //
   // Name uses a 2-line clamp because real-world TCG names blow past
-  // 120dp easily (e.g. Yu-Gi-Oh's "Unchained Malevolent Magistrate
-  // Kamura" or Magic's "Jolrael, Mwonvuli Recluse" run 35+ chars).
-  // A single line forced ellipsis to fire after ~10 chars and looked
-  // worse than wrapping. Two lines with tail-ellipsis is the
-  // shopping-app standard (Amazon / eBay / Collectr all do this).
-  const NAME_LINE_HEIGHT = 16;
+  // 120dp easily (e.g. Yu-Gi-Oh's "Destiny HERO - Dreadnought Servant"
+  // or Magic's "Jolrael, Mwonvuli Recluse" run 35+ chars). Two lines
+  // with tail-ellipsis is the shopping-app standard.
+  //
+  // 15dp line-height (was 16) leaves a touch more vertical air between
+  // the name and the subtitle while still clamping at exactly two
+  // lines. Total reserved height stays the same visual rhythm.
+  const NAME_LINE_HEIGHT = 15;
   const NAME_HEIGHT = NAME_LINE_HEIGHT * 2;
   const SUBTITLE_HEIGHT = 14;
   const PRICE_ROW_HEIGHT = 18;
@@ -90,8 +92,8 @@ function CardTileImpl({
       accessibilityLabel={card.name}
       style={({ pressed }) => [
         fluid
-          ? { width: "100%", opacity: pressed ? 0.85 : 1, gap: 6 }
-          : { width: tileWidth, opacity: pressed ? 0.85 : 1, gap: 6 },
+          ? { width: "100%", opacity: pressed ? 0.85 : 1, gap: 4 }
+          : { width: tileWidth, opacity: pressed ? 0.85 : 1, gap: 4 },
         style,
       ]}
     >
@@ -111,7 +113,15 @@ function CardTileImpl({
         <Text
           numberOfLines={2}
           ellipsizeMode="tail"
-          style={{ height: NAME_HEIGHT, lineHeight: NAME_LINE_HEIGHT }}
+          style={{
+            height: NAME_HEIGHT,
+            lineHeight: NAME_LINE_HEIGHT,
+            // Extra breathing room between the artwork and the title.
+            // The parent `gap` only handles inter-text spacing; the
+            // image→name transition reads better with a dedicated
+            // 10dp gap so the name doesn't feel glued to the card.
+            marginTop: 6,
+          }}
           className="text-[12px] font-semibold text-ink"
         >
           {card.name}
