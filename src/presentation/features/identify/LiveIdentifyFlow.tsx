@@ -27,6 +27,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  type GestureResponderEvent,
   Image,
   Linking,
   Pressable,
@@ -157,6 +158,22 @@ export function LiveIdentifyFlow({
 
   const [paused, setPaused] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
+  // expo-camera on iOS doesn't re-focus when the subject changes. We
+  // briefly toggle the `autofocus` prop off→on to force the AF loop
+  // to re-run; the tap-to-focus handler in ReticleArea drives this.
+  const [autofocusOn, setAutofocusOn] = useState(true);
+  const refocusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refocus = useCallback(() => {
+    if (refocusTimer.current) clearTimeout(refocusTimer.current);
+    setAutofocusOn(false);
+    refocusTimer.current = setTimeout(() => setAutofocusOn(true), 80);
+  }, []);
+  useEffect(
+    () => () => {
+      if (refocusTimer.current) clearTimeout(refocusTimer.current);
+    },
+    [],
+  );
   const [tcgHint, setTcgHint] = useState<IdentifyTcgHint>(initialTcg);
   const [tcgPickerOpen, setTcgPickerOpen] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -374,7 +391,7 @@ export function LiveIdentifyFlow({
         style={{ flex: 1 }}
         facing="back"
         flash={flashOn ? "on" : "off"}
-        autofocus="on"
+        autofocus={autofocusOn ? "on" : "off"}
       >
         <SafeAreaView style={{ flex: 1, justifyContent: "space-between" }}>
           <TopBar
@@ -388,11 +405,12 @@ export function LiveIdentifyFlow({
           <ReticleArea
             scanning={scanning && !paused}
             locked={state.locked}
-            confidence={state.topConfidence}
+            hasMatch={state.candidates.some((c) => c.confidence >= 0.5)}
             paused={paused}
             marketPriceUsd={marketPriceUsd}
             formatUsd={formatUsd}
             priceLoading={state.locked && !!lockedCardId && market.isLoading}
+            onTapFocus={refocus}
           />
 
           <BottomPanel
@@ -508,19 +526,21 @@ function TopBar({
 function ReticleArea({
   scanning,
   locked,
-  confidence,
+  hasMatch,
   paused,
   marketPriceUsd,
   priceLoading,
   formatUsd,
+  onTapFocus,
 }: {
   scanning: boolean;
   locked: boolean;
-  confidence: number;
+  hasMatch: boolean;
   paused: boolean;
   marketPriceUsd: number | null;
   priceLoading: boolean;
   formatUsd: (v: number) => string;
+  onTapFocus: (point: { x: number; y: number }) => void;
 }) {
   const pulse = useRef(new Animated.Value(0.6)).current;
   useEffect(() => {
@@ -548,8 +568,15 @@ function ReticleArea({
     return () => anim.stop();
   }, [scanning, pulse]);
 
-  // Reticle hugs roughly the trading-card aspect of 2.5:3.5.
-  const tint = locked ? palette.accent.mint : withAlpha(palette.accent.mint, 0.85);
+  // Reticle hugs roughly the trading-card aspect of 2.5:3.5. The
+  // tint reacts to detection so the user gets feedback even before we
+  // commit to a lock: dim mint while hunting, bright mint the moment
+  // we have a candidate ≥ 0.5, locked-mint when we commit.
+  const tint = locked
+    ? palette.accent.mint
+    : hasMatch
+      ? palette.accent.mint
+      : withAlpha(palette.accent.mint, 0.55);
 
   // Subtle breathing scale so the frame feels alive even before we
   // have a lock (we don't have native edge-detection yet — this is
@@ -584,20 +611,43 @@ function ReticleArea({
     return () => anim.stop();
   }, [locked, breathe]);
 
+  // Tap-to-focus ripple. expo-camera on iOS does not refocus when the
+  // subject changes — we hand the tap coordinate to the parent which
+  // toggles the `autofocus` prop to force a refocus pass.
+  const [focusRing, setFocusRing] = useState<{ x: number; y: number; key: number } | null>(null);
+  const focusRingAnim = useRef(new Animated.Value(0)).current;
+  const handleTap = useCallback(
+    (e: GestureResponderEvent) => {
+      const { locationX, locationY } = e.nativeEvent;
+      const key = Date.now();
+      setFocusRing({ x: locationX, y: locationY, key });
+      onTapFocus({ x: locationX, y: locationY });
+      focusRingAnim.setValue(0);
+      Animated.timing(focusRingAnim, {
+        toValue: 1,
+        duration: 550,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start(() => setFocusRing((f) => (f && f.key === key ? null : f)));
+    },
+    [onTapFocus, focusRingAnim],
+  );
+
   return (
-    <View
-      pointerEvents="none"
+    <Pressable
+      onPress={handleTap}
       style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
     >
       <Animated.View
+        pointerEvents="none"
         style={{
-          width: "68%",
+          width: "72%",
           aspectRatio: 2.5 / 3.5,
           transform: [{ scale: breathe }],
         }}
       >
         {(["tl", "tr", "bl", "br"] as const).map((c) => (
-          <CornerBracket key={c} corner={c} color={tint} />
+          <CornerBracket key={c} corner={c} color={tint} bold={hasMatch || locked} />
         ))}
 
         {/* Floating price chip — TCGplayer / Collectr style. Hovers
@@ -682,69 +732,65 @@ function ReticleArea({
           </View>
         ) : null}
 
-        {/* Hold Steady chip — only while we're actively waiting on a
-            response and don't yet have a lock. */}
-        {scanning && !locked && !paused ? (
-          <View
+        {/* Subtle scan beam — only while hunting. Replaces the old
+            "Hold Steady" pill (which duplicated the bottom status). */}
+        {scanning && !locked && !paused && !hasMatch ? (
+          <Animated.View
+            pointerEvents="none"
             style={{
               position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: -42,
-              alignItems: "center",
+              left: 8,
+              right: 8,
+              top: "50%",
+              height: 2,
+              borderRadius: 2,
+              backgroundColor: withAlpha(palette.accent.mint, 0.7),
+              opacity: pulse,
             }}
-          >
-            <Animated.View
-              style={{
-                opacity: pulse,
-                paddingHorizontal: 14,
-                paddingVertical: 6,
-                borderRadius: 999,
-                backgroundColor: "rgba(0,80,40,0.85)",
-              }}
-            >
-              <Text className="text-xs font-semibold text-white">Hold Steady…</Text>
-            </Animated.View>
-          </View>
-        ) : null}
-        {locked ? (
-          <View
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: -42,
-              alignItems: "center",
-            }}
-          >
-            <View
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 5,
-                borderRadius: 999,
-                backgroundColor: withAlpha(palette.accent.mint, 0.85),
-              }}
-            >
-              <Text className="text-[11px] font-semibold text-black">
-                Match · {(confidence * 100).toFixed(0)}%
-              </Text>
-            </View>
-          </View>
+          />
         ) : null}
       </Animated.View>
-    </View>
+
+      {/* Tap-to-focus ring. */}
+      {focusRing ? (
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: focusRing.x - 32,
+            top: focusRing.y - 32,
+            width: 64,
+            height: 64,
+            borderRadius: 32,
+            borderWidth: 1.5,
+            borderColor: palette.accent.amber,
+            opacity: focusRingAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+            transform: [
+              {
+                scale: focusRingAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1.3, 0.85],
+                }),
+              },
+            ],
+          }}
+        />
+      ) : null}
+    </Pressable>
   );
 }
 
 function CornerBracket({
   corner,
   color,
+  bold,
 }: {
   corner: "tl" | "tr" | "bl" | "br";
   color: string;
+  bold?: boolean;
 }) {
-  const SIZE = 26;
-  const THICK = 4;
+  const SIZE = bold ? 32 : 26;
+  const THICK = bold ? 5 : 4;
   const base = { position: "absolute" as const, width: SIZE, height: SIZE };
   const horiz = { position: "absolute" as const, height: THICK, width: SIZE, backgroundColor: color };
   const vert = { position: "absolute" as const, width: THICK, height: SIZE, backgroundColor: color };
@@ -823,7 +869,7 @@ function BottomPanel({
   return (
     <LinearGradient
       colors={["transparent", "rgba(0,0,0,0.92)"]}
-      style={{ paddingHorizontal: 14, paddingBottom: 10, paddingTop: 28, gap: 10 }}
+      style={{ paddingHorizontal: 14, paddingBottom: 8, paddingTop: 14, gap: 10 }}
     >
       {tcgPickerOpen ? (
         <View
