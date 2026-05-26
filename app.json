@@ -19,7 +19,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.loupe.client"
+      "bundleIdentifier": "app.loupe.client",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "app.loupe.client",
@@ -27,7 +30,6 @@
         "backgroundColor": "#121214"
       },
       "permissions": [
-        "android.permission.CAMERA",
         "android.permission.CAMERA"
       ]
     },
@@ -45,7 +47,15 @@
       ],
       "expo-sharing",
       "@sentry/react-native",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.0"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
