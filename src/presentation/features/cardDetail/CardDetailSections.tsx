@@ -11,8 +11,8 @@ import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { ExternalLink, TrendingDown, TrendingUp } from "lucide-react-native";
 import { Price } from "@/presentation/components/Price";
 import { useThemedPalette } from "@/presentation/theme/tokens";
-import { useCardGradeSummary } from "@/application/queries/useCardGradeSummary";
-import { useCardMarketplacePrices } from "@/application/queries/useCardMarketplacePrices";
+import { useCardGradeSummary } from "@/application/queries/collection/useCardGradeSummary";
+import { useCardMarketplacePrices } from "@/application/queries/catalog/useCardMarketplacePrices";
 
 // ─────────────────────────────────────────────────────────────────────
 // MarketplaceChipsRow

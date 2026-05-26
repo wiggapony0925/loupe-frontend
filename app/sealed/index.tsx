@@ -27,7 +27,7 @@ import { ChevronLeft, Package, Plus, Trash2 } from "lucide-react-native";
 import {
   useDeleteSealedHolding,
   useMySealedHoldings,
-} from "@/application/queries/useSealed";
+} from "@/application/queries/collection/useSealed";
 import type { SealedHoldingWire, SealedProductType } from "@/infrastructure/http";
 import { CardImage } from "@/presentation/components/CardImage";
 import { EmptyState } from "@/presentation/components/EmptyState";

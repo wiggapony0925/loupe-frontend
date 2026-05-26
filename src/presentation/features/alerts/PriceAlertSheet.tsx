@@ -27,7 +27,7 @@ import {
   useCreatePriceAlert,
   useDeletePriceAlert,
   usePriceAlerts,
-} from "@/application/queries/usePriceAlerts";
+} from "@/application/queries/alerts/usePriceAlerts";
 import {
   palette,
   useThemedPalette,

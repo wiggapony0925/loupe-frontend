@@ -8,7 +8,7 @@ import React from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
-import { useMyGrades } from "@/application/queries/useMyGrades";
+import { useMyGrades } from "@/application/queries/collection/useMyGrades";
 import { GradeForm } from "@/presentation/features/grade/GradeForm";
 import type { GradedCard } from "@/infrastructure/http";
 import { palette } from "@/presentation/theme/tokens";

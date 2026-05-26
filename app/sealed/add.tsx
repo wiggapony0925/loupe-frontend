@@ -27,7 +27,7 @@ import { Check, ChevronLeft, Search, X } from "lucide-react-native";
 import {
   useCreateSealedHolding,
   useSealedSearch,
-} from "@/application/queries/useSealed";
+} from "@/application/queries/collection/useSealed";
 import type {
   SealedHoldingCreateWire,
   SealedProductType,

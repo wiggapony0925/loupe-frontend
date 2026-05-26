@@ -5,7 +5,7 @@
 import React from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/application/queries/queryClient";
-import { ApiProvider } from "@/api";
+import { ApiProvider } from "@/presentation/providers/ApiProvider";
 import { ThemeProvider } from "@/presentation/theme/ThemeProvider";
 import { AuthProvider } from "@/presentation/providers/AuthProvider";
 

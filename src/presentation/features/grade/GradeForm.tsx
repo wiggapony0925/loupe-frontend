@@ -32,7 +32,7 @@ import {
   useDeleteGrade,
   useUpdateGrade,
 } from "@/application/queries";
-import { useCardMarket } from "@/application/queries/useCardMarket";
+import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
 import type { GradeHouse, RawCondition } from "@/infrastructure/http";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 

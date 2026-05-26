@@ -7,7 +7,7 @@
 import React from "react";
 import { View, Text } from "react-native";
 import { useThemedPalette } from "@/presentation/theme/tokens";
-import { useProvidersStatus } from "@/application/queries/useProvidersStatus";
+import { useProvidersStatus } from "@/application/queries/ops/useProvidersStatus";
 
 const PROVIDER_LABEL: Record<string, string> = {
   ebay: "eBay",

@@ -17,7 +17,7 @@ import { Alert, FlatList, Pressable, RefreshControl, Text, View } from "react-na
 import { useRouter } from "expo-router";
 import { ArrowDownRight, ArrowUpRight, Bell, Trash2 } from "lucide-react-native";
 
-import { useDeletePriceAlert, usePriceAlerts } from "@/application/queries/usePriceAlerts";
+import { useDeletePriceAlert, usePriceAlerts } from "@/application/queries/alerts/usePriceAlerts";
 import type { PriceAlertWire } from "@/infrastructure/http";
 import { CardImage } from "@/presentation/components/CardImage";
 import { EmptyState } from "@/presentation/components/EmptyState";

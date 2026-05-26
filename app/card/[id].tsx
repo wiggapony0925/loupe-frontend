@@ -36,11 +36,11 @@ import {
   ChevronUp,
   Heart,
 } from "lucide-react-native";
-import { useCard } from "@/application/queries/useCard";
-import { useCardMarket } from "@/application/queries/useCardMarket";
-import { useCardListings } from "@/application/queries/useCardListings";
-import { useCardComps } from "@/application/queries/useCardComps";
-import { useMyGrades } from "@/application/queries/useMyGrades";
+import { useCard } from "@/application/queries/catalog/useCard";
+import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
+import { useCardListings } from "@/application/queries/catalog/useCardListings";
+import { useCardComps } from "@/application/queries/catalog/useCardComps";
+import { useMyGrades } from "@/application/queries/collection/useMyGrades";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import type { GradedCard } from "@/infrastructure/http";
 import { routes } from "@/shared/routes";

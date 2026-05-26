@@ -12,7 +12,7 @@
  */
 import React from "react";
 import { ScrollView, View } from "react-native";
-import { useTrendingCards } from "@/application/queries/useTrendingCards";
+import { useTrendingCards } from "@/application/queries/catalog/useTrendingCards";
 import { CardHorizontalRail } from "@/presentation/cards";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { QueryState } from "@/presentation/components/QueryState";

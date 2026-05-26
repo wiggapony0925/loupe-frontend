@@ -53,7 +53,7 @@ import {
   type MarketRange,
   type MarketSource,
 } from "@/infrastructure/repositories/marketRepository";
-import { useMyGrades } from "@/application/queries/useMyGrades";
+import { useMyGrades } from "@/application/queries/collection/useMyGrades";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import type { GradedCard } from "@/infrastructure/http";

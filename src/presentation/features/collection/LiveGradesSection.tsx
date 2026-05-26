@@ -12,7 +12,7 @@ import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { routes } from "@/shared/routes";
 import type { GradedCard } from "@/infrastructure/http";
-import { useMyGrades } from "@/application/queries/useMyGrades";
+import { useMyGrades } from "@/application/queries/collection/useMyGrades";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { QueryState } from "@/presentation/components/QueryState";
 import { Skeleton } from "@/presentation/components/Skeleton";
