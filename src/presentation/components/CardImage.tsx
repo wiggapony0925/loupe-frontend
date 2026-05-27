@@ -4,11 +4,16 @@
  * Wraps `expo-image` with:
  *   • themed shimmer skeleton while loading (suppressed when a blurhash
  *     placeholder is provided; the blurhash IS the skeleton)
- *   • one-shot fallback to a secondary URL on first error OR on timeout
- *     (expo-image on iOS can hang indefinitely on slow third-party CDNs;
- *     a hard client-side timeout converts the hang into a real onError
- *     so the fallback URL / broken-state branch actually runs)
- *   • themed `ImageOff` broken-card fallback when both fail
+ *   • per-URL automatic retry with ~600ms backoff before giving up
+ *     (most "image failed" events in the wild are transient — NSURLSession
+ *     flake, a momentary 5xx from pokemontcg.io / scryfall, a brief Wi-Fi
+ *     hiccup — and disappear on a single retry)
+ *   • one-shot fallback to a secondary URL on persistent error OR on
+ *     timeout (expo-image on iOS can hang indefinitely on slow third-party
+ *     CDNs; a hard client-side timeout converts the hang into a real
+ *     onError so the retry / fallback / broken-state branches actually run)
+ *   • themed `ImageOff` broken-card fallback only after BOTH urls have
+ *     each been retried once
  *   • memory + disk cache, 250ms cross-fade, normal contentFit
  *   • `priority` pass-through for FlatList virtualization
  *     (off-screen items → "low", visible → "normal", hero → "high")
@@ -31,6 +36,12 @@ const TINY_TRANSPARENT_PIXEL =
 // generous enough for cold-cache 3G but tight enough that a hung
 // NSURLSession request doesn't sit on screen as a skeleton forever.
 const DEFAULT_LOAD_TIMEOUT_MS = 12_000;
+
+// One automatic retry per URL before swapping to the fallback or showing
+// the broken state. Most "image failed" events are transient (NSURLSession
+// flake, a momentary 5xx, a brief Wi-Fi blip); a single retry recovers
+// them silently. Kept short so the user never sees a perceptible delay.
+const RETRY_BACKOFF_MS = 600;
 
 // Dev-only: dedupe slow-load warnings so a single hot URL (e.g. the
 // trending Charizard rendered in 6 different rails) only emits once
@@ -77,6 +88,12 @@ export function CardImage({
   const [loading, setLoading] = useState<boolean>(Boolean(uri));
   const [errored, setErrored] = useState<boolean>(!uri);
   const [triedFallback, setTriedFallback] = useState<boolean>(false);
+  // Bumped on retry to force expo-image to re-attempt the same URL
+  // (it otherwise treats an unchanged source as already-loaded and
+  // won't refire onLoad/onError).
+  const [retryNonce, setRetryNonce] = useState<number>(0);
+  // Track which URL has already burned its one retry, so we don't loop.
+  const retriedUrlRef = React.useRef<string | null>(null);
   const loadedRef = React.useRef<boolean>(false);
 
   // Reset internal state when caller swaps the URI (e.g., list recycling).
@@ -85,6 +102,8 @@ export function CardImage({
     setLoading(Boolean(uri));
     setErrored(!uri);
     setTriedFallback(false);
+    setRetryNonce(0);
+    retriedUrlRef.current = null;
     loadedRef.current = false;
   }, [uri]);
 
@@ -95,13 +114,29 @@ export function CardImage({
   }, []);
 
   const onError = useCallback(() => {
+    // 1) First failure on this URL → schedule a single retry. Most
+    //    image errors are transient (CDN blip, NSURLSession flake) and
+    //    recover silently on the next attempt.
+    if (activeUri && retriedUrlRef.current !== activeUri) {
+      retriedUrlRef.current = activeUri;
+      setTimeout(() => {
+        if (loadedRef.current) return;
+        setLoading(true);
+        setRetryNonce((n) => n + 1);
+      }, RETRY_BACKOFF_MS);
+      return;
+    }
+    // 2) Retry also failed → swap to the fallback URL (if any) and
+    //    let it have its own one retry.
     if (!triedFallback && fallbackUri && fallbackUri !== activeUri) {
       setTriedFallback(true);
       setActiveUri(fallbackUri);
+      retriedUrlRef.current = null;
       setLoading(true);
       loadedRef.current = false;
       return;
     }
+    // 3) Both URLs exhausted → broken state.
     setLoading(false);
     setErrored(true);
     // 10% sample so we get signal without noise.
@@ -167,7 +202,14 @@ export function CardImage({
         transition={250}
         cachePolicy="memory-disk"
         priority={priority}
-        recyclingKey={recyclingKey}
+        // Include the retry nonce so a re-attempt on the same URL
+        // forces expo-image to refire load/error (otherwise it short-
+        // circuits as "same source, already errored").
+        recyclingKey={
+          recyclingKey
+            ? `${recyclingKey}:${retryNonce}`
+            : `${activeUri}:${retryNonce}`
+        }
         accessibilityLabel={alt}
         onLoad={onLoad}
         onError={onError}
