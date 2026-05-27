@@ -15,10 +15,58 @@
  */
 import { Image } from "expo-image";
 import type { CardSearchResult, ImageSet } from "@/infrastructure/http";
+import { getApiBaseUrl } from "@/infrastructure/http/client";
 
 export type ImageVariant = "thumb" | "small" | "normal" | "large" | "hero";
 
 type CardLike = Pick<CardSearchResult, "image_url" | "images" | "attributes">;
+
+// ---------------------------------------------------------------------------
+// Backend image proxy
+// ---------------------------------------------------------------------------
+// When EXPO_PUBLIC_IMAGE_PROXY=1 (or "true"), every upstream card image
+// URL is routed through our backend's /v1/img endpoint. The backend has
+// a stable network path to the upstream CDNs (pokemontcg.io, scryfall,
+// ygoprodeck) and serves bytes with `Cache-Control: immutable, 30d` so
+// expo-image's disk cache holds them forever. This eliminates the
+// flaky-third-party-CDN class of image failures on cellular networks.
+//
+// Off by default so a misconfigured backend doesn't break image loading;
+// turn it on after verifying the proxy is healthy in your environment.
+const env = (process.env ?? {}) as Record<string, string | undefined>;
+const IMAGE_PROXY_ENABLED =
+  env.EXPO_PUBLIC_IMAGE_PROXY === "1" ||
+  env.EXPO_PUBLIC_IMAGE_PROXY === "true";
+
+// Upstream hosts the backend's /v1/img is willing to proxy. Keeping this
+// list aligned with the backend allowlist means we never bother rewriting
+// URLs the backend would reject — we just pass them through unchanged.
+const PROXIED_HOSTS = new Set<string>([
+  "images.pokemontcg.io",
+  "assets.pokemontcg.io",
+  "cards.scryfall.io",
+  "c1.scryfall.com",
+  "c2.scryfall.com",
+  "images.ygoprodeck.com",
+  "storage.googleapis.com",
+  "tcgplayer-cdn.tcgplayer.com",
+  "product-images.tcgplayer.com",
+]);
+
+function maybeProxy(url: string | undefined): string | undefined {
+  if (!url || !IMAGE_PROXY_ENABLED) return url;
+  // Already proxied (defensive — avoid double-wrapping).
+  if (url.includes("/v1/img?")) return url;
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return url;
+  }
+  if (!PROXIED_HOSTS.has(host)) return url;
+  const base = getApiBaseUrl().replace(/\/+$/, "");
+  return `${base}/v1/img?u=${encodeURIComponent(url)}`;
+}
 
 function pickFromSet(
   images: ImageSet | null | undefined,
@@ -47,7 +95,7 @@ export function pickCardImageUrl(
 ): string | undefined {
   if (!card) return undefined;
   const fromSet = pickFromSet(card.images, variant);
-  return fromSet ?? card.image_url ?? undefined;
+  return maybeProxy(fromSet ?? card.image_url ?? undefined);
 }
 
 /**
