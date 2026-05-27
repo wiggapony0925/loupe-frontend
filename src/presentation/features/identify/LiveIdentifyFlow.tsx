@@ -30,6 +30,8 @@ import {
   type GestureResponderEvent,
   Image,
   Linking,
+  Modal,
+  Platform,
   Pressable,
   Text,
   View,
@@ -40,6 +42,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import {
+  Check,
   ChevronDown,
   ChevronRight,
   Plus,
@@ -69,20 +72,50 @@ import {
   isOnDeviceOcrAvailable,
   recognizeTextOnDevice,
 } from "@/infrastructure/ocr/onDeviceOcr";
+import { cardDetector } from "@/infrastructure/native";
+import {
+  lookupCardByHash,
+  rememberCardHash,
+} from "@/infrastructure/cache/cardHashCache";
 
-const CAPTURE_LONG_EDGE = 1100;
-const CAPTURE_QUALITY = 0.5;
-/** Min gap between identify calls. Keeps the device cool + bill low. */
-const CAPTURE_INTERVAL_MS = 900;
+const CAPTURE_LONG_EDGE = 900;
+const CAPTURE_QUALITY = 0.42;
+/**
+ * Min gap between identify calls. Keeps the device cool + bill low.
+ * Tuned to ~450ms (vs the previous 900ms) because the server-side
+ * Vision+rerank round-trip is consistently ~120–200ms when warm —
+ * the previous interval meant the user perceived the carousel as
+ * frozen between frames. We still gate on `inflightRef` so we never
+ * stack requests, and capture / encode / upload are now pipelined so
+ * the next frame starts as soon as the previous response lands.
+ */
+const CAPTURE_INTERVAL_MS = 450;
 /** Confidence at which we fire the success haptic + freeze the carousel. */
 const LOCK_CONFIDENCE = 0.7;
 /**
  * Consecutive frames returning zero high-confidence (>=0.5) candidates
- * before we surface the "can't find a match" fallback CTA. Tuned to
- * roughly 4–5 seconds of camera time so we don't flash the empty-state
- * card the instant a user lifts the phone.
+ * before we surface the "can't find a match" fallback CTA. At the
+ * tightened CAPTURE_INTERVAL_MS (450ms) this works out to ~1.5–2s of
+ * camera time before the user gets actionable guidance, instead of the
+ * old ~4–5s where the screen looked frozen.
  */
-const NO_MATCH_THRESHOLD = 4;
+const NO_MATCH_THRESHOLD = 3;
+
+// ── Native card-detector thresholds ─────────────────────────────────
+// These are deliberately conservative: a single bad frame should never
+// block identify, but a stretch of obvious blur / glare should suppress
+// network calls to save battery + spend. Numbers calibrated against the
+// scores returned by the iOS Vision/CoreImage pipeline in
+// `LoupeScannerBridgeModule.swift` — `blurScore` is a Laplacian-variance
+// log mapping and `glareScore` is a bright-pixel fraction.
+const BLUR_REJECT = 0.55;
+const GLARE_REJECT = 0.6;
+/** Crop the detected card before upload only when quality is solid. */
+const CROP_BLUR_LIMIT = 0.45;
+const CROP_GLARE_LIMIT = 0.5;
+/** Long-edge for the perspective-corrected card upload (px). */
+const CROP_LONG_EDGE = 720;
+const CROP_JPEG_QUALITY = 0.7;
 
 /** TCG hints surfaced as a chevron pill in the bottom bar. */
 const TCG_OPTIONS: { key: IdentifyTcgHint; label: string }[] = [
@@ -153,7 +186,19 @@ export function LiveIdentifyFlow({
   const formatUsd = useCompactUsd();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
-  const inflightRef = useRef(false);
+  /**
+   * The capture loop has two distinct stages with very different
+   * runtimes — the camera-bound capture+encode (~50–120ms) and the
+   * network-bound identify call (~120–250ms warm, much longer cold).
+   * Holding a single lock across both stages serialises the whole
+   * pipeline and leaves the camera idle for half the cycle. Splitting
+   * them lets the next shutter fire as soon as the current frame's
+   * bytes are off-device, overlapping encode/upload with the next
+   * capture for roughly a 2x effective frame rate at the same backend
+   * load.
+   */
+  const captureBusyRef = useRef(false);
+  const networkBusyRef = useRef(false);
   const cancelledRef = useRef(false);
 
   const [paused, setPaused] = useState(false);
@@ -179,31 +224,138 @@ export function LiveIdentifyFlow({
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<IdentifyState>(EMPTY_STATE);
+  /**
+   * Per-frame guidance from the native card detector ("Hold steady",
+   * "Reduce glare", …). `null` when no actionable hint is needed or
+   * when the native module isn't linked (Expo Go falls through to the
+   * legacy full-frame upload path — see `cardDetector.isAvailable`).
+   * Updated on every camera frame, so we keep this in a ref-backed
+   * state to avoid re-rendering the whole flow if the label doesn't
+   * change.
+   */
+  const [detectorHint, setDetectorHint] = useState<string | null>(null);
+  const detectorHintRef = useRef<string | null>(null);
+  const updateDetectorHint = useCallback((next: string | null) => {
+    if (detectorHintRef.current === next) return;
+    detectorHintRef.current = next;
+    setDetectorHint(next);
+  }, []);
 
   // ─── Capture loop ────────────────────────────────────────────────
   // We deliberately drive the loop from a ref-guarded setTimeout chain
   // instead of setInterval — interval would happily stack calls when a
   // request takes longer than the cadence, melting both phone and
   // backend.
+  // Two-stage pipeline. The camera-bound capture+encode (~50-120ms)
+  // and the network-bound identify call (~120-250ms warm, much longer
+  // cold) get separate locks so a frame's shutter can fire while the
+  // previous frame is still uploading. This roughly doubles the
+  // effective frame rate at the same backend load. We still cap
+  // network concurrency at 1 so we never stack identify requests.
+  const runIdentify = useCallback(
+    async (uri: string, providedHash: string | null = null) => {
+      if (networkBusyRef.current) return;
+      networkBusyRef.current = true;
+      setScanning(true);
+      try {
+        let res: IdentifyResponse = await identifyCard(uri, tcgHint);
+        if (cancelledRef.current) return;
+        if (res.fallback_required) {
+          if (isOnDeviceOcrAvailable()) {
+            const ocr = await recognizeTextOnDevice(uri);
+            if (cancelledRef.current) return;
+            if (ocr.text.length > 0) {
+              res = await identifyCardFromText(ocr.text, tcgHint, {
+                clientProvider: "mlkit",
+                ocrConfidence: ocr.confidence,
+              });
+              if (cancelledRef.current) return;
+            } else {
+              setError("On-device OCR found no text. Try better lighting.");
+            }
+          } else {
+            setError(
+              res.fallback_reason ?? "Scanner over monthly budget. Try again later.",
+            );
+          }
+        }
+        setState((prev) => {
+          const top = res.candidates[0]?.confidence ?? 0;
+          const justLocked = !prev.locked && top >= LOCK_CONFIDENCE;
+          const hasUsefulMatch = res.candidates.some((c) => c.confidence >= 0.5);
+          if (justLocked) {
+            Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success,
+            ).catch(() => {});
+          }
+          return {
+            candidates: res.candidates,
+            identificationId: res.identification_id,
+            topConfidence: top,
+            primarySource: res.primary_source,
+            locked: prev.locked || justLocked,
+            emptyAttempts: hasUsefulMatch ? 0 : prev.emptyAttempts + 1,
+          };
+        });
+        // ── On-device cache write ───────────────────────────────────
+        // Only remember high-confidence answers — caching a low-conf
+        // guess would teach the scanner the wrong card. We hash the
+        // exact URI we just uploaded so subsequent frames of the same
+        // card (which dHash to within a few bits) short-circuit on the
+        // way in. Fire-and-forget; hash failure is non-fatal.
+        const topCandidate = res.candidates[0];
+        const topConfidence = topCandidate?.confidence ?? 0;
+        if (
+          providedHash &&
+          topCandidate &&
+          topConfidence >= LOCK_CONFIDENCE
+        ) {
+          rememberCardHash(providedHash, topCandidate, topConfidence).catch(() => {});
+        } else if (
+          !providedHash &&
+          cardDetector.capabilities.hash &&
+          topCandidate &&
+          topConfidence >= LOCK_CONFIDENCE
+        ) {
+          cardDetector
+            .hash(uri)
+            .then((h) => {
+              if (h) return rememberCardHash(h, topCandidate, topConfidence);
+              return undefined;
+            })
+            .catch(() => {});
+        }
+      } catch (e) {
+        if (cancelledRef.current) return;
+        const msg = e instanceof Error ? e.message : "Identification failed";
+        setError(msg);
+      } finally {
+        networkBusyRef.current = false;
+        if (!cancelledRef.current) setScanning(false);
+      }
+    },
+    [tcgHint],
+  );
+
   const captureOnce = useCallback(async () => {
-    if (cancelledRef.current || inflightRef.current) return;
+    if (cancelledRef.current || captureBusyRef.current) return;
     const camera = cameraRef.current;
     if (!camera) return;
-    inflightRef.current = true;
-    setScanning(true);
+    captureBusyRef.current = true;
     setError(null);
     try {
-      // quality=0.5 (vs 1.0) cuts the iOS encode step ~3x without any
-      // perceptible loss for OCR \u2014 we resize to 1100px long-edge below
-      // anyway, so a higher source quality is wasted bytes and latency.
       const photo = await camera.takePictureAsync({
-        quality: 0.5,
+        quality: CAPTURE_QUALITY,
         skipProcessing: true,
         exif: false,
       });
-      if (!photo || cancelledRef.current) return;
+      if (!photo || cancelledRef.current) {
+        captureBusyRef.current = false;
+        return;
+      }
       const longEdge = Math.max(photo.width, photo.height);
-      const scale = longEdge > CAPTURE_LONG_EDGE ? CAPTURE_LONG_EDGE / longEdge : 1;
+      const scale =
+        longEdge > CAPTURE_LONG_EDGE ? CAPTURE_LONG_EDGE / longEdge : 1;
       const processed =
         scale < 1
           ? await manipulateAsync(
@@ -212,64 +364,120 @@ export function LiveIdentifyFlow({
               { compress: CAPTURE_QUALITY, format: SaveFormat.JPEG },
             )
           : photo;
-
-      let res: IdentifyResponse = await identifyCard(processed.uri, tcgHint);
+      // Release the camera lock immediately so the next shutter can
+      // start firing in parallel with this frame's network identify.
+      captureBusyRef.current = false;
       if (cancelledRef.current) return;
 
-      // Server signalled the monthly Vision budget is exhausted. Run
-      // OCR on-device (Apple Vision / ML Kit) and resubmit the parsed
-      // text to /v1/cards/identify/text. Falls back to the empty
-      // response when the native module isn't linked (Expo Go).
-      if (res.fallback_required) {
-        if (isOnDeviceOcrAvailable()) {
-          const ocr = await recognizeTextOnDevice(processed.uri);
-          if (cancelledRef.current) return;
-          if (ocr.text.length > 0) {
-            res = await identifyCardFromText(ocr.text, tcgHint, {
-              clientProvider: "mlkit",
-              ocrConfidence: ocr.confidence,
-            });
-            if (cancelledRef.current) return;
-          } else {
-            setError("On-device OCR found no text. Try better lighting.");
-          }
+      // ── Native card detector ──────────────────────────────────────
+      // On dev/prod builds this runs Vision + a Laplacian-variance blur
+      // check + a glare estimator in ~10-20ms. We use it for two things:
+      //   1. Suppress identify calls on obviously bad frames (battery + $).
+      //   2. Perspective-crop the card so we upload ~30KB instead of
+      //      ~200KB, which makes the round-trip dramatically faster on
+      //      slow networks.
+      // In Expo Go (no native module) `analyzeFrame` returns the inert
+      // NO_RESULT sentinel and we fall through to the legacy full-frame
+      // upload path with no hint shown.
+      let uploadUri = processed.uri;
+      let cropUri: string | null = null;
+      if (cardDetector.capabilities.analyze) {
+        const report = await cardDetector.analyzeFrame(processed.uri);
+        if (cancelledRef.current) return;
+        if (!report.corners) {
+          // Don't yell at the user immediately — first 1-2 frames
+          // often miss while they're framing. The capture loop fires
+          // every CAPTURE_INTERVAL_MS so this self-corrects fast.
+          updateDetectorHint("Position card in the frame");
+        } else if (report.blurScore > BLUR_REJECT) {
+          updateDetectorHint("Hold steady");
+          return; // Skip identify; next frame in CAPTURE_INTERVAL_MS.
+        } else if (report.glareScore > GLARE_REJECT) {
+          updateDetectorHint("Reduce glare / tilt the card");
+          return;
         } else {
-          setError(
-            res.fallback_reason ??
-              "Scanner over monthly budget. Try again later.",
-          );
+          updateDetectorHint(null);
+          if (
+            report.blurScore < CROP_BLUR_LIMIT &&
+            report.glareScore < CROP_GLARE_LIMIT
+          ) {
+            try {
+              const crop = await cardDetector.crop(
+                processed.uri,
+                report.corners,
+                CROP_LONG_EDGE,
+                CROP_JPEG_QUALITY,
+              );
+              if (cancelledRef.current) return;
+              if (crop.uri && crop.bytes > 0) {
+                uploadUri = crop.uri;
+                cropUri = crop.uri;
+              }
+            } catch {
+              // Crop failure is non-fatal — fall through to full frame.
+            }
+          }
         }
       }
-      // Success haptic only when we cross the lock threshold \u2014 the
-      // previous per-frame light tick was constant background noise on
-      // a loop that fires every ~900ms.
-      setState((prev) => {
-        const top = res.candidates[0]?.confidence ?? 0;
-        const justLocked = !prev.locked && top >= LOCK_CONFIDENCE;
-        const hasUsefulMatch = res.candidates.some((c) => c.confidence >= 0.5);
-        if (justLocked) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
-            () => {},
-          );
+
+      // ── On-device pHash cache short-circuit ───────────────────────
+      // We prefer to hash the perspective-corrected crop (cleaner
+      // signal, ignores the desk background). On platforms without
+      // rectangle detection (Android today) we fall back to hashing
+      // the raw downscaled frame — noisier, but still useful since the
+      // user typically holds the phone in roughly the same position
+      // across consecutive frames of the same card.
+      let frameHash: string | null = null;
+      const hashInputUri = cropUri ?? processed.uri;
+      if (cardDetector.capabilities.hash) {
+        frameHash = await cardDetector.hash(hashInputUri);
+        if (cancelledRef.current) return;
+        if (frameHash) {
+          const cached = await lookupCardByHash(frameHash);
+          if (cancelledRef.current) return;
+          if (cached) {
+            // Apply the cached answer instantly. We mark the source as
+            // "phash" so the candidate's UI badge reflects that it came
+            // from the local cache rather than a live network result.
+            const cachedCandidate: IdentifyCandidate = {
+              ...cached.candidate,
+              confidence: Math.max(cached.candidate.confidence, cached.confidence),
+              source: "phash",
+            };
+            Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success,
+            ).catch(() => {});
+            setState((prev) => ({
+              candidates: [cachedCandidate],
+              // No real identification_id — cache hits aren't backend
+              // events, so we deliberately leave this null. The picker
+              // handler skips feedback POSTs when id is null.
+              identificationId: null,
+              topConfidence: cachedCandidate.confidence,
+              primarySource: "cache",
+              locked: true,
+              emptyAttempts: 0,
+            }));
+            // Bump LRU timestamp on the cache entry.
+            rememberCardHash(frameHash, cachedCandidate, cachedCandidate.confidence).catch(
+              () => {},
+            );
+            return;
+          }
         }
-        return {
-          candidates: res.candidates,
-          identificationId: res.identification_id,
-          topConfidence: top,
-          primarySource: res.primary_source,
-          locked: prev.locked || justLocked,
-          emptyAttempts: hasUsefulMatch ? 0 : prev.emptyAttempts + 1,
-        };
-      });
+      }
+
+      // Fire-and-forget; network concurrency is gated by networkBusyRef.
+      // If a previous identify is still in flight we drop this frame
+      // (the next is only ~CAPTURE_INTERVAL_MS away).
+      runIdentify(uploadUri, frameHash).catch(() => {});
     } catch (e) {
+      captureBusyRef.current = false;
       if (cancelledRef.current) return;
-      const msg = e instanceof Error ? e.message : "Identification failed";
+      const msg = e instanceof Error ? e.message : "Capture failed";
       setError(msg);
-    } finally {
-      inflightRef.current = false;
-      if (!cancelledRef.current) setScanning(false);
     }
-  }, [tcgHint]);
+  }, [runIdentify, updateDetectorHint]);
 
   useEffect(() => {
     cancelledRef.current = false;
@@ -416,9 +624,11 @@ export function LiveIdentifyFlow({
           <BottomPanel
             state={state}
             error={error}
+            detectorHint={detectorHint}
             tcgHint={tcgHint}
             tcgPickerOpen={tcgPickerOpen}
             onOpenTcgPicker={() => setTcgPickerOpen((v) => !v)}
+            onCloseTcgPicker={() => setTcgPickerOpen(false)}
             onPickTcg={(t) => {
               setTcgHint(t);
               setTcgPickerOpen(false);
@@ -829,9 +1039,11 @@ function CornerBracket({
 function BottomPanel({
   state,
   error,
+  detectorHint,
   tcgHint,
   tcgPickerOpen,
   onOpenTcgPicker,
+  onCloseTcgPicker,
   onPickTcg,
   onPickCandidate,
   onAddToVault,
@@ -846,9 +1058,11 @@ function BottomPanel({
 }: {
   state: IdentifyState;
   error: string | null;
+  detectorHint: string | null;
   tcgHint: IdentifyTcgHint;
   tcgPickerOpen: boolean;
   onOpenTcgPicker: () => void;
+  onCloseTcgPicker: () => void;
   onPickTcg: (t: IdentifyTcgHint) => void;
   onPickCandidate: (c: IdentifyCandidate) => void;
   onAddToVault: (c: IdentifyCandidate) => void;
@@ -871,38 +1085,12 @@ function BottomPanel({
       colors={["transparent", "rgba(0,0,0,0.92)"]}
       style={{ paddingHorizontal: 14, paddingBottom: 8, paddingTop: 14, gap: 10 }}
     >
-      {tcgPickerOpen ? (
-        <View
-          style={{
-            backgroundColor: "rgba(20,20,22,0.96)",
-            borderRadius: 14,
-            paddingVertical: 6,
-            marginBottom: 4,
-          }}
-        >
-          {TCG_OPTIONS.map((o) => (
-            <Pressable
-              key={String(o.key)}
-              onPress={() => onPickTcg(o.key)}
-              style={({ pressed }) => ({
-                paddingVertical: 10,
-                paddingHorizontal: 16,
-                opacity: pressed ? 0.6 : 1,
-              })}
-            >
-              <Text
-                style={{
-                  color: o.key === tcgHint ? palette.accent.mint : "#fff",
-                  fontWeight: o.key === tcgHint ? "700" : "500",
-                  fontSize: 14,
-                }}
-              >
-                {o.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
+      <TcgPickerSheet
+        visible={tcgPickerOpen}
+        selected={tcgHint}
+        onSelect={(t) => onPickTcg(t)}
+        onClose={onCloseTcgPicker}
+      />
 
       {state.locked && state.candidates[0] ? (
         <LockedResultSheet
@@ -926,6 +1114,7 @@ function BottomPanel({
         <ResultArea
           state={state}
           error={error}
+          detectorHint={detectorHint}
           scanning={scanning}
           onPickCandidate={onPickCandidate}
           onRescan={onRescan}
@@ -1020,6 +1209,7 @@ function BottomPanel({
 function ResultArea({
   state,
   error,
+  detectorHint,
   scanning,
   onPickCandidate,
   onRescan,
@@ -1027,6 +1217,7 @@ function ResultArea({
 }: {
   state: IdentifyState;
   error: string | null;
+  detectorHint: string | null;
   scanning: boolean;
   onPickCandidate: (c: IdentifyCandidate) => void;
   onRescan: () => void;
@@ -1070,6 +1261,13 @@ function ResultArea({
   const alts = visible.length - 1;
 
   if (!top) {
+    // Surface live detector guidance ("Hold steady" / "Reduce glare")
+    // first — it's more actionable than the generic reading pulse, and
+    // it only fires when the native module is linked AND has a clear
+    // opinion on the current frame.
+    if (detectorHint) {
+      return <HintPill label={detectorHint} />;
+    }
     // No useful candidates yet. Show the no-match escape hatch once
     // we've burned NO_MATCH_THRESHOLD frames on nothing; otherwise a
     // quiet "reading" pulse so the camera surface stays focused.
@@ -1316,6 +1514,168 @@ function CenterMessage({ label }: { label: string }) {
       <ActivityIndicator color="#fff" />
       <Text style={{ color: "#fff", marginTop: 12, fontSize: 13 }}>{label}</Text>
     </View>
+  );
+}
+
+// ─────────────── TCG hint picker (bottom sheet) ───────────────
+// Replaces the previous inline pill list, which looked cramped sitting
+// inside the gradient and competed with the candidate carousel for
+// real-estate. The new sheet rides on top of the camera surface via a
+// transparent Modal — iOS gets the native pageSheet detents (grabber +
+// swipe-to-dismiss), Android gets a rounded bottom sheet with a scrim.
+
+function TcgPickerSheet({
+  visible,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  selected: IdentifyTcgHint;
+  onSelect: (t: IdentifyTcgHint) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      onRequestClose={onClose}
+      animationType="slide"
+      transparent
+      statusBarTranslucent
+    >
+      <Pressable
+        onPress={onClose}
+        accessibilityLabel="Dismiss picker"
+        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" }}
+      >
+        {/* Stop propagation: tapping inside the sheet shouldn't dismiss. */}
+        <Pressable onPress={() => {}}>
+          <SafeAreaView
+            edges={["bottom"]}
+            style={{
+              backgroundColor: "#0F0F11",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              paddingTop: 10,
+              paddingBottom: Platform.OS === "ios" ? 8 : 16,
+              borderTopWidth: 1,
+              borderColor: "rgba(255,255,255,0.06)",
+            }}
+          >
+            {/* Drag handle */}
+            <View style={{ alignItems: "center", paddingBottom: 6 }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: "rgba(255,255,255,0.22)",
+                }}
+              />
+            </View>
+
+            <View style={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10 }}>
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.55)",
+                  fontSize: 10,
+                  fontWeight: "700",
+                  letterSpacing: 2.4,
+                  textTransform: "uppercase",
+                }}
+              >
+                Game
+              </Text>
+              <Text
+                style={{
+                  color: "#fff",
+                  fontSize: 20,
+                  fontWeight: "800",
+                  letterSpacing: -0.4,
+                  marginTop: 4,
+                }}
+              >
+                Identify cards from…
+              </Text>
+            </View>
+
+            <View style={{ paddingHorizontal: 12, paddingBottom: 6 }}>
+              {TCG_OPTIONS.map((o) => {
+                const active = o.key === selected;
+                return (
+                  <Pressable
+                    key={String(o.key)}
+                    onPress={() => onSelect(o.key)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    style={({ pressed }) => ({
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      marginVertical: 2,
+                      borderRadius: 14,
+                      backgroundColor: active
+                        ? withAlpha(palette.accent.mint, 0.14)
+                        : pressed
+                          ? "rgba(255,255,255,0.04)"
+                          : "transparent",
+                      borderWidth: 1,
+                      borderColor: active
+                        ? withAlpha(palette.accent.mint, 0.4)
+                        : "rgba(255,255,255,0.05)",
+                    })}
+                  >
+                    <View
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: active
+                          ? palette.accent.mint
+                          : "rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      {active ? (
+                        <Check size={16} color="#0B0B0D" strokeWidth={3} />
+                      ) : (
+                        <Sparkles size={14} color="rgba(255,255,255,0.55)" />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          color: "#fff",
+                          fontSize: 15,
+                          fontWeight: active ? "700" : "600",
+                          letterSpacing: -0.2,
+                        }}
+                      >
+                        {o.label}
+                      </Text>
+                      {o.key === null ? (
+                        <Text
+                          style={{
+                            color: "rgba(255,255,255,0.5)",
+                            fontSize: 11,
+                            marginTop: 2,
+                          }}
+                        >
+                          Let Loupe decide from the frame
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </SafeAreaView>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 

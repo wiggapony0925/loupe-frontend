@@ -1,6 +1,8 @@
 import { NativeModule, requireOptionalNativeModule } from "expo";
 import {
   CapturedFrame,
+  CardFrameAnalysis,
+  CroppedCard,
   HapticPattern,
   ImageQualityReport,
   LoupeScannerBridgeModuleEvents,
@@ -20,8 +22,19 @@ declare class LoupeScannerBridgeModule extends NativeModule<LoupeScannerBridgeMo
   // Capture
   captureFrame(lightIndex: number): Promise<CapturedFrame>;
 
-  // On-device quality gate
+  // On-device quality gate (legacy 4-field response)
   checkImageQuality(uri: string): Promise<ImageQualityReport>;
+
+  // Live card detector (iOS Vision + CoreImage)
+  analyzeCardFrame(uri: string): Promise<CardFrameAnalysis>;
+  cropCardPerspective(
+    uri: string,
+    corners: number[],
+    outputLongEdge: number,
+    jpegQuality: number,
+  ): Promise<CroppedCard>;
+  /** dHash over a 9×8 grayscale downsample. Returns 16-char hex. */
+  computePerceptualHash(uri: string): Promise<string>;
 
   // Haptics
   triggerHaptic(pattern: HapticPattern): void;

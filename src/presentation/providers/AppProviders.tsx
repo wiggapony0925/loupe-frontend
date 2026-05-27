@@ -13,6 +13,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/application/queries/queryClient";
 import { ApiProvider } from "@/presentation/providers/ApiProvider";
 import { AuthProvider } from "@/presentation/providers/AuthProvider";
+import { useAppStateRefresh } from "@/presentation/providers/useAppStateRefresh";
 
 interface Props {
   children: React.ReactNode;
@@ -22,8 +23,20 @@ export function AppProviders({ children }: Props) {
   return (
     <QueryClientProvider client={queryClient}>
       <ApiProvider>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <AppStateBridge>{children}</AppStateBridge>
+        </AuthProvider>
       </ApiProvider>
     </QueryClientProvider>
   );
+}
+
+/**
+ * Tiny inner component that exists purely to host the `useAppStateRefresh`
+ * hook beneath both the QueryClient and Auth providers — the hook needs
+ * both `useQueryClient()` and `useAuth()` in scope.
+ */
+function AppStateBridge({ children }: { children: React.ReactNode }) {
+  useAppStateRefresh();
+  return <>{children}</>;
 }

@@ -55,6 +55,15 @@ interface AuthContextValue {
   signInWithGoogle: () => Promise<void>;
   signOut: () => void;
   setToken: (token: string | null) => void;
+  /**
+   * Proactively rotate the access token using the stored refresh
+   * token. Safe to call on app foreground / cold open so the next
+   * authenticated request doesn't burn a 401 → /auth/refresh round
+   * trip on a freshly-warm Cloud Run container. No-ops (returns the
+   * current token) when no refresh token is available or when the
+   * exchange fails (failure path also signs the user out).
+   */
+  refreshNow: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -100,17 +109,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [persistTokens],
   );
 
-  // Register the refresh-on-401 handler exactly once. The client module
-  // will call this whenever an authenticated request comes back 401; we
-  // exchange the stored refresh token for a fresh pair, or sign the user
-  // out if the refresh itself is rejected.
-  useEffect(() => {
-    setRefreshHandler(async () => {
-      const rt = refreshTokenRef.current;
-      if (!rt) return null;
+  // Single implementation shared between the 401-handler path and the
+  // proactive foreground-refresh path (`refreshNow`). De-duped with a
+  // module-level promise so multiple callers triggering at the same
+  // moment (e.g. AppState foreground + an in-flight 401) collapse to a
+  // single network call.
+  const inflightRefresh = React.useRef<Promise<string | null> | null>(null);
+  const doRefresh = useCallback(async (): Promise<string | null> => {
+    if (inflightRefresh.current) return inflightRefresh.current;
+    const rt = refreshTokenRef.current;
+    if (!rt) return null;
+    const job = (async () => {
       try {
         const pair = await refreshSessionApi({ refresh_token: rt });
-        // Update both tokens (backend rotates the refresh token too).
         setTokenState(pair.access_token);
         setAuthToken(pair.access_token);
         refreshTokenRef.current = pair.refresh_token;
@@ -126,12 +137,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await persistTokens(null);
         setUser(null);
         return null;
+      } finally {
+        inflightRefresh.current = null;
       }
-    });
+    })();
+    inflightRefresh.current = job;
+    return job;
+  }, [persistTokens]);
+
+  // Register the refresh-on-401 handler exactly once. The client module
+  // will call this whenever an authenticated request comes back 401.
+  useEffect(() => {
+    setRefreshHandler(doRefresh);
     return () => {
       setRefreshHandler(null);
     };
-  }, [persistTokens]);
+  }, [doRefresh]);
 
   // Hydrate token + user on mount.
   useEffect(() => {
@@ -240,6 +261,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithGoogle,
       signOut,
       setToken,
+      refreshNow: doRefresh,
     }),
     [
       token,
@@ -252,6 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithGoogle,
       signOut,
       setToken,
+      doRefresh,
     ],
   );
 

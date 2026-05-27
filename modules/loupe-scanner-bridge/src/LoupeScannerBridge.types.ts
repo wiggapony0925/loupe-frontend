@@ -29,6 +29,35 @@ export type ImageQualityReport = {
   aspectOk: boolean;
 };
 
+/**
+ * Per-frame card detection + quality report returned by the live
+ * detector running on the iOS Vision framework. Cheap enough to call
+ * on every camera frame (~10-20ms on an iPhone 12+).
+ *
+ * `corners`, when present, is the detected card quadrilateral in
+ * **original image pixel coordinates** (top-left origin), ordered:
+ * `[tlX, tlY, trX, trY, brX, brY, blX, blY]`. `null` means Vision
+ * couldn't lock onto a card-shaped rectangle in this frame.
+ */
+export type CardFrameAnalysis = {
+  corners: number[] | null;
+  /** Vision's confidence in the detected rectangle, [0,1]. */
+  confidence: number;
+  blurScore: number;
+  glareScore: number;
+  alignmentOk: boolean;
+  aspectOk: boolean;
+  imageWidth: number;
+  imageHeight: number;
+};
+
+export type CroppedCard = {
+  uri: string;
+  width: number;
+  height: number;
+  bytes: number;
+};
+
 export type HapticPattern = "tick" | "success" | "warning" | "failure";
 
 // ───── Native event payloads ─────

@@ -3,3 +3,4 @@
  * — never from `modules/loupe-scanner-bridge` directly.
  */
 export * from "./scannerBridge";
+export * from "./cardDetector";
