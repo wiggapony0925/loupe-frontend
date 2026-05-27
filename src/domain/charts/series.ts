@@ -5,9 +5,10 @@
  * Every function here is deterministic, side-effect free, and trivially
  * unit-testable from plain Node (no React Native runtime needed).
  */
+import type { PricePoint } from "@/domain/market";
+
 import type {
   DeltaResult,
-  PricePoint,
   SeriesDirection,
 } from "./types";
 

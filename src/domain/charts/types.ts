@@ -4,10 +4,12 @@
  * Pure data shapes shared by every chart in the app. UI components &
  * TanStack hooks import from here; this file imports from nothing
  * else inside the app (only TS types).
+ *
+ * Note: ``PricePoint`` lives in ``@/domain/market`` — import it from
+ * there directly. We don't re-export it here to keep barrel exports
+ * conflict-free (see ``src/domain/index.ts``).
  */
 import type { PricePoint } from "@/domain/market";
-
-export type { PricePoint };
 
 /** Timeframe vocabulary the API speaks for portfolio history. */
 export type PortfolioTimeframe =

@@ -8,17 +8,11 @@
 
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
-import type { MeResponse } from "@/infrastructure/http";
+import type { MeResponse, TokenPair } from "@/infrastructure/http";
 
-export type { MeResponse };
-
-export interface TokenPair {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
-  user: MeResponse;
-}
+// Canonical homes for these types live in @/infrastructure/http/wire/identity.
+// Importers should pull from there directly; we intentionally do NOT re-export
+// here to avoid duplicate-export collisions in the infrastructure barrel.
 
 export interface AppleSignInRequest {
   identity_token: string;
