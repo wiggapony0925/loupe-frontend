@@ -73,3 +73,44 @@ export function captureMessage(message: string, level: "info" | "warning" | "err
     /* swallow */
   }
 }
+
+/**
+ * Capture an HTTP failure surfaced by the `apiFetch` wrapper. Skips
+ * 401s (auth failures are user-recoverable noise) and aborts. Tags the
+ * event with HTTP status / endpoint / request-id for fast triage in
+ * Sentry's UI.
+ */
+export function captureApiError(
+  err: unknown,
+  context: {
+    path: string;
+    method: string;
+    status?: number;
+    code?: string;
+    requestId?: string;
+  },
+): void {
+  if (!sentry) return;
+  // Don't pollute Sentry with auth-required signals — the UI already
+  // handles them via the refresh flow / re-login prompt.
+  if (context.status === 401) return;
+  // AbortError is intentional cancellation (e.g. screen unmount).
+  if (err instanceof Error && err.name === "AbortError") return;
+  try {
+    sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+      tags: {
+        source: "apiFetch",
+        endpoint: context.path,
+        method: context.method,
+        http_status: context.status?.toString() ?? "unknown",
+        error_code: context.code ?? "unknown",
+      },
+      extra: {
+        requestId: context.requestId,
+      },
+    });
+  } catch {
+    /* swallow */
+  }
+}
+

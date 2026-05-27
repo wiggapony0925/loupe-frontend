@@ -24,6 +24,7 @@
  */
 
 import type { Envelope, ErrorDetail } from "./envelope";
+import { captureApiError } from "@/infrastructure/observability/sentry";
 
 const env = (process.env ?? {}) as Record<string, string | undefined>;
 
@@ -272,7 +273,13 @@ export async function apiFetchEnvelope<T = unknown>(
     }
   }
   if (!res) {
-    throw lastErr ?? new Error("apiFetch: no response and no error captured");
+    const transportErr = lastErr ?? new Error("apiFetch: no response and no error captured");
+    captureApiError(transportErr, {
+      path,
+      method: rest.method ?? "GET",
+      code: "network.unreachable",
+    });
+    throw transportErr;
   }
   if (usedBase !== activeApiBase) {
     if (__DEV__) {
@@ -336,7 +343,7 @@ export async function apiFetchEnvelope<T = unknown>(
       details: parsed,
     };
     const err: ErrorDetail = isEnvelope(parsed) && parsed.error ? parsed.error : fb;
-    throw new ApiError(path, {
+    const apiErr = new ApiError(path, {
       code: err.code,
       message: err.message,
       status: err.status ?? res.status,
@@ -345,6 +352,14 @@ export async function apiFetchEnvelope<T = unknown>(
       requestId:
         (isEnvelope(parsed) ? parsed.meta?.request_id : undefined) ?? requestIdHeader,
     });
+    captureApiError(apiErr, {
+      path,
+      method: rest.method ?? "GET",
+      status: apiErr.status,
+      code: apiErr.code,
+      requestId: apiErr.requestId,
+    });
+    throw apiErr;
   }
 
   if (isEnvelope(parsed)) {
@@ -379,12 +394,19 @@ export async function apiFetch<T = unknown>(
   if (init.schema) {
     const result = init.schema.safeParse(raw);
     if (!result.success) {
-      throw new ApiError(path, {
+      const schemaErr = new ApiError(path, {
         code: "schema.invalid",
         message: "Response failed runtime validation",
         status: 200,
         details: result.error,
       });
+      captureApiError(schemaErr, {
+        path,
+        method: init.method ?? "GET",
+        status: 200,
+        code: "schema.invalid",
+      });
+      throw schemaErr;
     }
     return result.data as T;
   }
