@@ -32,6 +32,7 @@ import {
   Plus,
 } from "lucide-react-native";
 import { useCard } from "@/application/queries/catalog/useCard";
+import { useCanonicalCard } from "@/application/queries/catalog/useCanonicalCard";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
 import { useMyGrades } from "@/application/queries/collection/useMyGrades";
 import { useAuth } from "@/presentation/providers/AuthProvider";
@@ -43,7 +44,7 @@ import { Price } from "@/presentation/components/Price";
 import { QueryState } from "@/presentation/components/QueryState";
 import { PriceAlertSheet } from "@/presentation/features/alerts/PriceAlertSheet";
 import { EbaySoldListingsPanel } from "@/presentation/features/market/EbaySoldListingsPanel";
-import { PokedexPanel } from "@/presentation/features/pokedex/PokedexPanel";
+import { CardAttributesPanel } from "@/presentation/features/cardAttributes/CardAttributesPanel";
 import {
   GradeSummaryPills,
   MarketplaceChipsRow,
@@ -96,6 +97,7 @@ export default function CardDetailScreen() {
   const cardId = id ?? "";
   const cardQ = useCard(cardId);
   const marketQ = useCardMarket(cardId);
+  const canonicalQ = useCanonicalCard(cardId);
   const p = useThemedPalette();
   const { isAuthenticated } = useAuth();
   const myGradesQ = useMyGrades<GradedCard[]>();
@@ -392,11 +394,11 @@ export default function CardDetailScreen() {
               <RecentCompsSection cardId={cardId} />
               <EbaySoldListingsPanel cardId={cardId} cardName={card?.name ?? null} />
 
-              {/* Pokédex flavor — renders only for Pokémon cards where
-                  PokéAPI recognises the species. */}
-              {card?.tcg === "pokemon" ? (
-                <PokedexPanel cardName={card.name} />
-              ) : null}
+              {/* Per-game attribute panel — Pokédex / MTG oracle / YGO stats.
+                  Driven by the canonical card document; renders nothing for
+                  TCGs without a registered panel or when attributes are
+                  missing. See `CardAttributesPanel` for the registry. */}
+              <CardAttributesPanel canonical={canonicalQ.data} />
 
               {/* 10. Collapsible card details */}
               <Pressable

@@ -34,6 +34,7 @@ export const queryKeys = {
   cards: {
     all: ["cards"] as const,
     item: (id: string) => ["cards", "item", id] as const,
+    canonical: (id: string) => ["cards", "canonical", id] as const,
     search: (tcg: TcgOrAll, q: string, limit: number) =>
       ["cards", "search", tcg, q, limit] as const,
     trending: (tcg: TcgOrAll, limit: number) =>
