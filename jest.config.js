@@ -20,6 +20,15 @@ const moduleNameMapper = {
   ],
 };
 
+// `babel-preset-expo` rewrites `process.env.EXPO_PUBLIC_*` reads into
+// an import of `expo/virtual/env`, which ships as ESM and isn't
+// transformed by the node-env `domain` project. Stub it for that
+// project so pure unit tests don't pull in the Expo runtime.
+const domainModuleNameMapper = {
+  ...moduleNameMapper,
+  "^expo/virtual/env$": path.join(__dirname, "src/shared/test/expoEnvStub.js"),
+};
+
 /** @type {import('jest').Config} */
 module.exports = {
   projects: [
@@ -33,7 +42,7 @@ module.exports = {
         ],
       },
       moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
-      moduleNameMapper,
+      moduleNameMapper: domainModuleNameMapper,
       testMatch: [
         "<rootDir>/src/domain/**/__tests__/**/*.test.ts",
         "<rootDir>/src/shared/**/__tests__/**/*.test.ts",

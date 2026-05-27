@@ -150,4 +150,18 @@ export const queryKeys = {
     list: (includeOpened: boolean) =>
       ["sealed-holdings", "list", includeOpened] as const,
   },
+  // Third-party APIs — distinct prefix so we never accidentally
+  // invalidate them when wiping our backend caches.
+  pokemonTcg: {
+    all: ["pokemon-tcg"] as const,
+    card: (id: string) => ["pokemon-tcg", "card", id] as const,
+    sets: () => ["pokemon-tcg", "sets"] as const,
+    search: (q: string, page: number) =>
+      ["pokemon-tcg", "search", q, page] as const,
+  },
+  pokeApi: {
+    all: ["pokeapi"] as const,
+    pokemon: (slug: string) => ["pokeapi", "pokemon", slug] as const,
+    species: (slug: string) => ["pokeapi", "species", slug] as const,
+  },
 } as const;

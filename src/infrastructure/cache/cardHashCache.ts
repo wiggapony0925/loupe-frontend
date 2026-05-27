@@ -24,6 +24,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import type { IdentifyCandidate } from "@/infrastructure/repositories/identifyRepository";
+import { lookupStaticPhash } from "./staticPhashIndex";
 
 const STORAGE_KEY = "loupe.cardHashCache.v1";
 const MAX_ENTRIES = 200;
@@ -137,31 +138,67 @@ export interface CacheHit {
  */
 export async function lookupCardByHash(hash: string): Promise<CacheHit | null> {
   if (!hash || hash.length !== 16) return null;
-  await ensureLoaded();
-  if (entries.length === 0) return null;
 
-  let best: CachedIdentification | null = null;
-  let bestDist = MATCH_DISTANCE + 1;
-  for (const e of entries) {
-    const d = hammingDistance(hash, e.hash);
-    if (d < bestDist) {
-      bestDist = d;
-      best = e;
-      if (d === 0) break; // Can't beat an exact match.
+  // 1. Per-user LRU first — captures recent feedback / freshly-confirmed
+  //    cards, including non-Pokémon TCGs the static manifest doesn't
+  //    cover.
+  await ensureLoaded();
+  if (entries.length > 0) {
+    let best: CachedIdentification | null = null;
+    let bestDist = MATCH_DISTANCE + 1;
+    for (const e of entries) {
+      const d = hammingDistance(hash, e.hash);
+      if (d < bestDist) {
+        bestDist = d;
+        best = e;
+        if (d === 0) break; // Can't beat an exact match.
+      }
+    }
+    if (best && bestDist <= MATCH_DISTANCE) {
+      best.lastSeenAt = Date.now();
+      best.hits += 1;
+      scheduleFlush();
+      return {
+        candidate: best.candidate,
+        hash: best.hash,
+        distance: bestDist,
+        confidence: best.confidence,
+        cachedHits: best.hits,
+      };
     }
   }
-  if (!best || bestDist > MATCH_DISTANCE) return null;
 
-  best.lastSeenAt = Date.now();
-  best.hits += 1;
-  scheduleFlush();
-  return {
-    candidate: best.candidate,
-    hash: best.hash,
-    distance: bestDist,
-    confidence: best.confidence,
-    cachedHits: best.hits,
-  };
+  // 2. Fall back to the bundled static manifest of every published
+  //    Pokémon TCG card. Synthesise an IdentifyCandidate-shaped
+  //    response so the UI doesn't have to special-case the source.
+  const staticHit = lookupStaticPhash(hash);
+  if (staticHit) {
+    const e = staticHit.entry;
+    // Calibrate confidence on Hamming distance: 0 → 0.97, 3 → 0.88.
+    const confidence = Math.max(0.85, 0.97 - staticHit.distance * 0.03);
+    const candidate: IdentifyCandidate = {
+      card_id: null,
+      upstream_id: `pokemontcg:${e.cardId}`,
+      name: e.name,
+      set_name: e.setName,
+      set_code: e.setId,
+      number: e.number,
+      image_url: e.imageUrl,
+      tcg: "pokemon",
+      confidence,
+      source: "phash",
+      breakdown: { phash_static: 1 - staticHit.distance / 64 },
+    };
+    return {
+      candidate,
+      hash: staticHit.hash,
+      distance: staticHit.distance,
+      confidence,
+      cachedHits: 0,
+    };
+  }
+
+  return null;
 }
 
 /**

@@ -59,6 +59,10 @@ import {
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
+import {
+  extractMarketPriceUsd,
+  usePokemonTcgCard,
+} from "@/application/queries/pokemonTcg/usePokemonTcg";
 import { useCompactUsd } from "@/shared/format";
 import {
   identifyCard,
@@ -545,7 +549,20 @@ export function LiveIdentifyFlow({
   const topCandidate = state.candidates[0] ?? null;
   const lockedCardId = state.locked ? topCandidate?.card_id ?? null : null;
   const market = useCardMarket(lockedCardId ?? undefined);
-  const marketPriceUsd = market.data?.snapshot.summary.raw?.amount ?? null;
+  const ourMarketPriceUsd = market.data?.snapshot.summary.raw?.amount ?? null;
+
+  // Fallback to the public Pokémon TCG API when our backend has no
+  // resolved card_id (cache hits, unmatched cards) but we still have
+  // an `upstream_id` like `pokemontcg:base1-4`. Free tier covers this
+  // by ~20x with an API key. Hook silently no-ops for non-Pokémon
+  // candidates, so this is safe to call unconditionally on lock.
+  const lockedUpstreamId = state.locked ? topCandidate?.upstream_id ?? null : null;
+  const pokemonTcg = usePokemonTcgCard(lockedUpstreamId);
+  const fallbackMarketPriceUsd = extractMarketPriceUsd(pokemonTcg.data);
+
+  const marketPriceUsd = ourMarketPriceUsd ?? fallbackMarketPriceUsd;
+  const priceLoading =
+    (market.isLoading || pokemonTcg.isLoading) && marketPriceUsd == null;
 
   // ─── Permission gates ────────────────────────────────────────────
   if (!permission) {
@@ -617,7 +634,7 @@ export function LiveIdentifyFlow({
             paused={paused}
             marketPriceUsd={marketPriceUsd}
             formatUsd={formatUsd}
-            priceLoading={state.locked && !!lockedCardId && market.isLoading}
+            priceLoading={priceLoading}
             onTapFocus={refocus}
           />
 
@@ -640,7 +657,7 @@ export function LiveIdentifyFlow({
             onManualSearch={onManualSearch}
             scanning={scanning}
             marketPriceUsd={marketPriceUsd}
-            priceLoading={state.locked && !!lockedCardId && market.isLoading}
+            priceLoading={priceLoading}
             formatUsd={formatUsd}
             palette={p}
           />

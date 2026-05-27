@@ -43,6 +43,7 @@ import { Price } from "@/presentation/components/Price";
 import { QueryState } from "@/presentation/components/QueryState";
 import { PriceAlertSheet } from "@/presentation/features/alerts/PriceAlertSheet";
 import { EbaySoldListingsPanel } from "@/presentation/features/market/EbaySoldListingsPanel";
+import { PokedexPanel } from "@/presentation/features/pokedex/PokedexPanel";
 import {
   GradeSummaryPills,
   MarketplaceChipsRow,
@@ -390,6 +391,12 @@ export default function CardDetailScreen() {
               <LiveListingsSection cardId={cardId} />
               <RecentCompsSection cardId={cardId} />
               <EbaySoldListingsPanel cardId={cardId} cardName={card?.name ?? null} />
+
+              {/* Pokédex flavor — renders only for Pokémon cards where
+                  PokéAPI recognises the species. */}
+              {card?.tcg === "pokemon" ? (
+                <PokedexPanel cardName={card.name} />
+              ) : null}
 
               {/* 10. Collapsible card details */}
               <Pressable
