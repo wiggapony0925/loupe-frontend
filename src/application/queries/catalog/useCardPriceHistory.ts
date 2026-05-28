@@ -12,7 +12,7 @@ import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type { PriceHistoryWire } from "@/infrastructure/http";
 import { queryKeys } from "../queryKeys";
 
-export type PriceHistoryRange = "7d" | "30d" | "90d" | "180d" | "1y";
+export type PriceHistoryRange = "7d" | "30d" | "90d" | "180d" | "1y" | "all";
 
 export interface UseCardPriceHistoryOptions {
   id: string | null | undefined;

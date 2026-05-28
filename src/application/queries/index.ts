@@ -48,6 +48,12 @@ export type {
   CreateGradeInput,
   UpdateGradeInput,
 } from "./collection/useGradeMutations";
+export {
+  useAddToWatchlist,
+  useIsWatching,
+  useRemoveFromWatchlist,
+  useWatchlist,
+} from "./collection/useWatchlist";
 
 // scans
 export { useMyScans } from "./scans/useMyScans";

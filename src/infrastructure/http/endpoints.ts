@@ -73,6 +73,11 @@ export const ENDPOINTS = {
     create: `${V1}/alerts`,
     item: (id: string) => `${V1}/alerts/${id}`,
   },
+  watchlist: {
+    list: `${V1}/watchlist`,
+    add: `${V1}/watchlist`,
+    item: (cardId: string) => `${V1}/watchlist/${cardId}`,
+  },
   reports: {
     list: `${V1}/reports`,
     upcoming: `${V1}/reports/upcoming`,

@@ -1,11 +1,46 @@
 import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import type { CardSet } from "@/domain";
-import { useVaultFilters } from "@/application/stores/vaultStore";
+import { useVaultFilters, type VaultType } from "@/application/stores/vaultStore";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { TcgMark, tcgShortLabel } from "@/presentation/brand/TcgMark";
 
 const GRADES = [1, 7, 8, 9, 10] as const;
+
+/**
+ * Type / grading-house filter. Mirrors the backend `GradeHouseEnum` plus
+ * an explicit "Raw" bucket — raw cards are stored as `house=loupe`
+ * with a non-null `condition`, so the hook splits them out client-side.
+ */
+const TYPES: { key: VaultType; label: string }[] = [
+  { key: "All", label: "All" },
+  { key: "loupe", label: "Loupe" },
+  { key: "raw", label: "Raw" },
+  { key: "psa", label: "PSA" },
+  { key: "bgs", label: "BGS" },
+  { key: "cgc", label: "CGC" },
+  { key: "sgc", label: "SGC" },
+];
+
+/** Per-type accent so the chip row reads as a quick legend. */
+function typeTint(t: VaultType, p: ReturnType<typeof useThemedPalette>): string {
+  switch (t) {
+    case "loupe":
+      return p.accent.mint;
+    case "raw":
+      return p.accent.amber;
+    case "psa":
+      return p.accent.blue;
+    case "bgs":
+      return p.accent.purple;
+    case "cgc":
+      return p.accent.rose;
+    case "sgc":
+      return p.accent.blue;
+    default:
+      return p.accent.blue;
+  }
+}
 
 /** Brand-evocative accent colours used to tint each TCG chip. */
 function tcgTint(set: CardSet | "All" | string): string {
@@ -33,7 +68,7 @@ interface FilterBarProps {
 }
 
 export function FilterBar({ availableSets }: FilterBarProps) {
-  const { set, minGrade, setSet, setMinGrade } = useVaultFilters();
+  const { set, minGrade, type, setSet, setMinGrade, setType } = useVaultFilters();
 
   // Only show the Category row when there's a real choice to make.
   // One owned set means the chip would only ever say "All / <thatSet>" —
@@ -55,6 +90,17 @@ export function FilterBar({ availableSets }: FilterBarProps) {
           ))}
         </FilterRow>
       ) : null}
+      <FilterRow label="Type">
+        {TYPES.map((t) => (
+          <TypeChip
+            key={t.key}
+            type={t.key}
+            label={t.label}
+            active={type === t.key}
+            onPress={() => setType(t.key)}
+          />
+        ))}
+      </FilterRow>
       <FilterRow label="Min Grade">
         {GRADES.map((g) => (
           <Chip
@@ -155,6 +201,58 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
       <Text
         className="text-xs font-semibold"
         style={{ color: active ? p.accent.blue : p.ink.muted }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Compact pill for the Type filter. Each grading-house gets its own
+ * accent so the row reads as a quick visual legend — and a tiny color
+ * dot reinforces the mapping even when the chip is inactive.
+ */
+function TypeChip({
+  type,
+  label,
+  active,
+  onPress,
+}: {
+  type: VaultType;
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const p = useThemedPalette();
+  const tint = typeTint(type, p);
+  const isAll = type === "All";
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`${label} type filter`}
+      className="flex-row items-center gap-2 rounded-full border px-3.5 py-1.5"
+      style={({ pressed }) => ({
+        borderColor: active ? withAlpha(tint, 0.55) : p.line.default,
+        backgroundColor: active ? withAlpha(tint, 0.14) : p.bg.elevated,
+        opacity: pressed ? 0.75 : 1,
+      })}
+    >
+      {!isAll ? (
+        <View
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: tint,
+          }}
+        />
+      ) : null}
+      <Text
+        className="text-xs font-semibold"
+        style={{ color: active ? tint : p.ink.muted }}
       >
         {label}
       </Text>

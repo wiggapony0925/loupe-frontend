@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import { prefetchCardImages } from "@/shared/cardImage";
@@ -27,6 +27,10 @@ export function useCardSearch({ q, tcg = "all", limit = 20, enabled = true }: Op
       }),
     enabled: isEnabled,
     staleTime: 60_000,
+    // Keep showing the previous query's results while the next one loads
+    // so the rail doesn't flash an empty skeleton on every keystroke. This
+    // is the single biggest perceived-latency win for live search.
+    placeholderData: keepPreviousData,
   });
 
   // Warm the disk cache for thumbnails as soon as results land so

@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
+import { CheckCircle2 } from "lucide-react-native";
 import { router } from "expo-router";
 import { routes } from "@/shared/routes";
 import type { CollectionCard } from "@/domain";
@@ -17,6 +18,15 @@ interface CardThumbnailProps {
    * tile renders a "×N" badge so duplicates pop in the grid.
    */
   copies?: number;
+  /**
+   * Override the default tap behaviour (navigate to card detail).
+   * Used by the Vault's multi-select mode to toggle selection instead.
+   */
+  onPress?: () => void;
+  /** Long-press handler. Used to enter Vault selection mode. */
+  onLongPress?: () => void;
+  /** When true, render the tile in its selected state (mint ring + check). */
+  selected?: boolean;
 }
 
 // Reserved heights so every tile in the grid is identical regardless of
@@ -38,7 +48,7 @@ function formatDelta(delta: number): { label: string; up: boolean; valid: boolea
   return { label: `${up ? "+" : ""}${(delta * 100).toFixed(2)}%`, up, valid: true };
 }
 
-export function CardThumbnail({ card, spark, copies = 1 }: CardThumbnailProps) {
+export function CardThumbnail({ card, spark, copies = 1, onPress, onLongPress, selected }: CardThumbnailProps) {
   const p = useThemedPalette();
   const tint = gradeColor(card.grade);
   const hasDuplicates = copies > 1;
@@ -53,15 +63,23 @@ export function CardThumbnail({ card, spark, copies = 1 }: CardThumbnailProps) {
 
   return (
     <Pressable
-      onPress={() => router.push(routes.card(card.cardId))}
+      onPress={onPress ?? (() => router.push(routes.card(card.cardId)))}
+      onLongPress={onLongPress}
+      delayLongPress={280}
       accessibilityRole="button"
+      accessibilityState={{ selected: !!selected }}
       accessibilityLabel={
         hasDuplicates
           ? `${card.title}, grade ${card.grade.toFixed(1)}, ${delta.label}, ${copies} copies owned`
           : `${card.title}, grade ${card.grade.toFixed(1)}, ${delta.label}`
       }
-      className="flex-1 overflow-hidden rounded-2xl border border-line bg-bg-elevated"
-      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+      className="flex-1 overflow-hidden rounded-2xl"
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.85 : 1,
+        borderWidth: selected ? 2 : 1,
+        borderColor: selected ? p.accent.mint : p.line.default,
+        backgroundColor: p.bg.elevated,
+      })}
     >
       {/* Art — 5:7 card aspect with floating chips */}
       <View className="aspect-[5/7] w-full bg-bg-sunken">
@@ -126,9 +144,26 @@ export function CardThumbnail({ card, spark, copies = 1 }: CardThumbnailProps) {
             </View>
           </View>
         ) : null}
+        {/* Selected overlay — mint scrim + checkmark so it reads as a
+            staged action, not just a passive highlight. */}
+        {selected ? (
+          <View
+            className="absolute inset-0 items-center justify-center"
+            style={{ backgroundColor: withAlpha(p.accent.mint, 0.22) }}
+            pointerEvents="none"
+          >
+            <View
+              style={{
+                borderRadius: 999,
+                backgroundColor: p.bg.elevated,
+                padding: 2,
+              }}
+            >
+              <CheckCircle2 size={32} color={p.accent.mint} strokeWidth={2.5} />
+            </View>
+          </View>
+        ) : null}
       </View>
-
-      {/* Meta block — fixed heights so every tile aligns */}
       <View className="px-3 pb-3 pt-2.5">
         <Text
           numberOfLines={1}

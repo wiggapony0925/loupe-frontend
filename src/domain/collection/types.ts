@@ -35,6 +35,14 @@ export interface CollectionCard {
    * third-party slab the user self-reported.
    */
   house: string;
+  /**
+   * PSA-style raw condition (`nm | lp | mp | hp | dmg`). Only present
+   * when the card is *raw* (ungraded) — i.e. recorded with
+   * `house === 'loupe'` but without subgrades. `null`/`undefined` for
+   * everything we evaluated ourselves or that's been slabbed by a
+   * third-party house.
+   */
+  condition?: "nm" | "lp" | "mp" | "hp" | "dmg" | null;
   estimatedValueUsd: number;
   thumbnailUri: string;
   /** ISO timestamp when the card was last scanned. */

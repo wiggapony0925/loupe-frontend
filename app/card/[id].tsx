@@ -27,6 +27,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronUp,
+  Expand,
   Heart,
   Pencil,
   Plus,
@@ -35,12 +36,17 @@ import { useCard } from "@/application/queries/catalog/useCard";
 import { useCanonicalCard } from "@/application/queries/catalog/useCanonicalCard";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
 import { useMyGrades } from "@/application/queries/collection/useMyGrades";
+import {
+  useAddToWatchlist,
+  useIsWatching,
+  useRemoveFromWatchlist,
+} from "@/application/queries/collection/useWatchlist";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import type { GradedCard } from "@/infrastructure/http";
 import { routes } from "@/shared/routes";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { CardImage } from "@/presentation/components/CardImage";
-import { Price } from "@/presentation/components/Price";
+import { Card3DModal } from "@/presentation/components/Card3DModal";
 import { QueryState } from "@/presentation/components/QueryState";
 import { PriceAlertSheet } from "@/presentation/features/alerts/PriceAlertSheet";
 import { EbaySoldListingsPanel } from "@/presentation/features/market/EbaySoldListingsPanel";
@@ -50,7 +56,6 @@ import {
   MarketplaceChipsRow,
 } from "@/presentation/features/cardDetail/CardDetailSections";
 import {
-  BigPrice,
   CardDetailsBlock,
   GradeRow,
   HOUSE_LABEL,
@@ -59,36 +64,32 @@ import {
   IconBtn,
   LiveListingsSection,
   RecentCompsSection,
-  Sparkline,
   StatTile,
   flattenHouses,
   houseColor,
 } from "@/presentation/features/cardDetail/CardDetailParts";
+import {
+  InteractiveCardChart,
+  type CardRangeKey,
+} from "@/presentation/features/cardDetail/InteractiveCardChart";
+import {
+  CardCostBasisStrip,
+  CardMarketSignals,
+  CardQuickStats,
+} from "@/presentation/features/cardDetail/CardInsights";
+import {
+  CardActiveAlerts,
+  RelatedCardsRail,
+  SetProgressForCard,
+} from "@/presentation/features/cardDetail/CardRelatedSections";
 import { SkeletonCardDetailPage } from "@/presentation/components/Skeletons";
 import { DataSourcesFooter } from "@/presentation/components/DataSourcesFooter";
 import { pickCardBlurhash, pickCardImageUrl } from "@/shared/cardImage";
+import { inferBackVariant } from "@/shared/cardBacks";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-import type {
-  HouseGradeRowWire,
-  HouseId,
-  MarketSnapshotWire,
-  PriceHistoryWire,
-} from "@/infrastructure/http";
+import type { HouseId } from "@/infrastructure/http";
 
-// ── Range chips → backend history keys ────────────────────────────────
-type RangeKey = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
-
-const RANGE_TO_HISTORY: Record<RangeKey, keyof MarketSnapshotWire["history"] | null> = {
-  "1D": null, // not available yet
-  "1W": null,
-  "1M": "30d",
-  "3M": "90d",
-  YTD: "1y",
-  "1Y": "1y",
-  ALL: "all",
-};
-
-const RANGE_KEYS: RangeKey[] = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
+// ── Range type lives in InteractiveCardChart now ────────────────────
 
 // ─────────────────────────────────────────────────────────────────────
 
@@ -101,18 +102,43 @@ export default function CardDetailScreen() {
   const p = useThemedPalette();
   const { isAuthenticated } = useAuth();
   const myGradesQ = useMyGrades<GradedCard[]>();
-  const ownedGrade = useMemo(
-    () => (myGradesQ.data ?? []).find((g) => g.card_id === cardId) ?? null,
+  const isWatching = useIsWatching(cardId);
+  const addWatch = useAddToWatchlist();
+  const removeWatch = useRemoveFromWatchlist();
+  const toggleWatch = () => {
+    if (!cardId) return;
+    if (isWatching) {
+      removeWatch.mutate(cardId);
+    } else {
+      addWatch.mutate(cardId);
+    }
+  };
+  const ownedGrades = useMemo(
+    () => (myGradesQ.data ?? []).filter((g) => g.card_id === cardId),
     [myGradesQ.data, cardId],
   );
+  const ownedGrade = ownedGrades[0] ?? null;
+  const ownedCount = ownedGrades.length;
 
-  const [range, setRange] = useState<RangeKey>("1Y");
+  const [range, setRange] = useState<CardRangeKey>("1Y");
   const [house, setHouse] = useState<HouseId | "all">("all");
   const [selectedGradeLabel, setSelectedGradeLabel] = useState<string | null>(
     null,
   );
+  /**
+   * When a `GradeRow` is tapped the chart scales to that (house, grade)
+   * tier via the backend's drift × multiplier math. `null` = raw market.
+   */
+  const [chartFilter, setChartFilter] = useState<{
+    house: string;
+    grade: string;
+    label: string;
+  } | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
+  // Tapping the hero art opens a full-screen 3D-tilt preview (Card3DModal).
+  // Lives on the detail screen so re-renders elsewhere don't reset it.
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const card = cardQ.data;
   const snapshot = marketQ.data?.snapshot;
@@ -121,11 +147,6 @@ export default function CardDetailScreen() {
 
   const imageUrl = pickCardImageUrl(card, "large");
   const blurhash = pickCardBlurhash(card);
-
-  const historyKey = RANGE_TO_HISTORY[range];
-  const historySeries: PriceHistoryWire | undefined = historyKey
-    ? snapshot?.history?.[historyKey]
-    : undefined;
 
   const rows = useMemo(
     () => flattenHouses(snapshot?.houses ?? [], house),
@@ -149,8 +170,15 @@ export default function CardDetailScreen() {
           Market
         </Text>
         <View className="flex-row gap-2">
-          <IconBtn label="Save to watchlist">
-            <Heart size={16} color={p.ink.muted} />
+          <IconBtn
+            label={isWatching ? "Remove from watchlist" : "Save to watchlist"}
+            onPress={toggleWatch}
+          >
+            <Heart
+              size={16}
+              color={isWatching ? p.accent.rose : p.ink.muted}
+              fill={isWatching ? p.accent.rose : "transparent"}
+            />
           </IconBtn>
           <IconBtn label="Set price alert" onPress={() => setAlertOpen(true)}>
             <Bell size={16} color={p.ink.muted} />
@@ -159,7 +187,12 @@ export default function CardDetailScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 64, gap: 24 }}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 12,
+          paddingBottom: 64,
+          gap: 20,
+        }}
         showsVerticalScrollIndicator={false}
       >
         <QueryState
@@ -179,17 +212,49 @@ export default function CardDetailScreen() {
             <>
               {/* 2. Hero strip */}
               <View style={{ flexDirection: "row", gap: 16 }}>
-                <CardImage
-                  uri={imageUrl}
-                  blurhash={blurhash}
-                  width={120}
-                  height={168}
-                  rounded={14}
-                  contentFit="contain"
-                  priority="high"
-                  recyclingKey={card.id}
-                  alt={card.name}
-                />
+                <Pressable
+                  onPress={() => setPreviewOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open 3D preview of ${card.name}`}
+                  hitSlop={6}
+                  style={({ pressed }) => ({
+                    transform: [{ scale: pressed ? 0.97 : 1 }],
+                    position: "relative",
+                  })}
+                >
+                  <CardImage
+                    uri={imageUrl}
+                    blurhash={blurhash}
+                    width={120}
+                    height={168}
+                    rounded={14}
+                    contentFit="contain"
+                    priority="high"
+                    recyclingKey={card.id}
+                    alt={card.name}
+                  />
+                  {/* Expand affordance — small icon pill in the top-right
+                      so the user knows tapping the art opens a bigger,
+                      tilt-enabled preview rather than navigating away. */}
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      right: 6,
+                      width: 26,
+                      height: 26,
+                      borderRadius: 999,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "rgba(0,0,0,0.55)",
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.22)",
+                    }}
+                  >
+                    <Expand size={13} color="#fff" strokeWidth={2.5} />
+                  </View>
+                </Pressable>
                 <View style={{ flex: 1, justifyContent: "center", gap: 6 }}>
                   <Text
                     className="text-xl font-semibold text-ink"
@@ -205,42 +270,32 @@ export default function CardDetailScreen() {
                       .filter(Boolean)
                       .join(" · ") || "—"}
                   </Text>
-                  <View
+                  <Text
                     style={{
-                      alignSelf: "flex-start",
-                      paddingHorizontal: 10,
-                      paddingVertical: 3,
-                      borderRadius: 999,
-                      backgroundColor: withAlpha(p.accent.mint, 0.14),
-                      marginTop: 4,
+                      color: p.ink.dim,
+                      fontSize: 10,
+                      fontWeight: "800",
+                      letterSpacing: 2,
+                      marginTop: 6,
                     }}
                   >
-                    <Text
-                      style={{
-                        color: p.accent.mint,
-                        fontSize: 10,
-                        fontWeight: "800",
-                        letterSpacing: 1,
-                      }}
-                    >
-                      {(card.tcg ?? "—").toString().toUpperCase()}
-                    </Text>
-                  </View>
+                    {(card.tcg ?? "—").toString().toUpperCase()}
+                  </Text>
                 </View>
               </View>
 
-              {/* Add to vault / Edit holding CTA */}
+              {/* Add to collection CTA — always the primary green action
+                  so users can add another copy (different grade / house).
+                  When the card is already owned we surface a tappable
+                  subtitle pointing at "Manage" to edit the existing
+                  holding(s). */}
               {isAuthenticated ? (
-                <PrimaryButton
-                  label={
-                    ownedGrade ? "Edit holding" : "Add to collection"
-                  }
-                  icon={ownedGrade ? Pencil : Plus}
-                  variant={ownedGrade ? "ghost" : "mint"}
-                  onPress={() => {
-                    if (ownedGrade) {
-                      router.push(routes.gradeEdit(ownedGrade.id));
-                    } else {
+                <View style={{ gap: 8 }}>
+                  <PrimaryButton
+                    label="Add to collection"
+                    icon={Plus}
+                    variant="mint"
+                    onPress={() => {
                       router.push(
                         routes.gradeNew({
                           cardId,
@@ -250,64 +305,122 @@ export default function CardDetailScreen() {
                           cardYear: card.year ?? undefined,
                         }),
                       );
-                    }
-                  }}
-                />
-              ) : null}
-
-              {/* 3. Big price */}
-              <BigPrice
-                amount={snapshot?.summary.pop_top?.amount ?? null}
-                changePct={snapshot?.summary.change_pct_1y ?? null}
-                subLabel="PSA 10 · last 12 months"
-              />
-
-              {/* 4. Sparkline */}
-              <Sparkline
-                points={historySeries?.points.map((pt) => pt.price) ?? []}
-                changePct={historySeries?.summary?.change_pct ?? null}
-                disabled={historyKey === null}
-              />
-
-              {/* 5. Range chips */}
-              <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
-                {RANGE_KEYS.map((k) => {
-                  const active = range === k;
-                  const disabled = RANGE_TO_HISTORY[k] === null;
-                  return (
+                    }}
+                  />
+                  {ownedCount > 0 ? (
                     <Pressable
-                      key={k}
-                      disabled={disabled}
-                      onPress={() => setRange(k)}
+                      onPress={() => {
+                        if (ownedGrade) {
+                          router.push(routes.gradeEdit(ownedGrade.id));
+                        }
+                      }}
+                      hitSlop={8}
                       style={{
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        borderColor: active ? p.accent.mint : p.line.default,
-                        backgroundColor: active
-                          ? withAlpha(p.accent.mint, 0.15)
-                          : "transparent",
-                        opacity: disabled ? 0.35 : 1,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
                       }}
                     >
+                      <Pencil size={11} color={p.ink.muted} />
                       <Text
                         style={{
-                          color: active ? p.accent.mint : p.ink.muted,
-                          fontSize: 10,
-                          fontWeight: "800",
-                          letterSpacing: 0.6,
+                          color: p.ink.muted,
+                          fontSize: 12,
+                          fontWeight: "600",
                         }}
                       >
-                        {k}
+                        You have {ownedCount} already in the vault
+                      </Text>
+                      <Text
+                        style={{
+                          color: p.accent.mint,
+                          fontSize: 12,
+                          fontWeight: "700",
+                        }}
+                      >
+                        Manage
                       </Text>
                     </Pressable>
-                  );
-                })}
-              </View>
+                  ) : null}
+                </View>
+              ) : null}
 
-              {/* 6. Three-up tiles */}
-              <View style={{ flexDirection: "row", gap: 10 }}>
+              {/* 3. (BigPrice removed — chart hero already shows live
+                  $/Δ, Robinhood-style.) */}
+
+              {/* 4. Interactive chart + range pills */}
+              {chartFilter ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    alignSelf: "flex-start",
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: p.line.default,
+                    backgroundColor: withAlpha(p.accent.mint, 0.12),
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: p.ink.default,
+                      fontSize: 11,
+                      fontWeight: "700",
+                      letterSpacing: 0.6,
+                    }}
+                  >
+                    Showing {chartFilter.label}
+                  </Text>
+                  <Pressable
+                    onPress={() => setChartFilter(null)}
+                    hitSlop={8}
+                  >
+                    <Text
+                      style={{
+                        color: p.ink.muted,
+                        fontSize: 11,
+                        fontWeight: "700",
+                      }}
+                    >
+                      Clear ×
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
+              <InteractiveCardChart
+                history={snapshot?.history}
+                range={range}
+                onRangeChange={setRange}
+                fallbackAmount={snapshot?.summary.pop_top?.amount ?? null}
+                cardId={cardId}
+                houseFilter={chartFilter?.house}
+                gradeFilter={chartFilter?.grade}
+                bleedX={20}
+              />
+
+              {/* 4b. Market signals row (52w hi/lo, trend, arbitrage,
+                  auctions) — renders nothing when no signals fire. */}
+              <CardMarketSignals snapshot={snapshot} cardId={cardId} />
+
+              {/* 4c. Owned-card P/L vs purchase price. */}
+              <CardCostBasisStrip
+                ownedGrade={ownedGrade}
+                marketAmount={snapshot?.summary.pop_top?.amount ?? null}
+              />
+
+              {/* 5. Quick-stats row (spread, volatility, liquidity,
+                  last-sale freshness). */}
+              <CardQuickStats snapshot={snapshot} cardId={cardId} />
+
+              {/* Active alerts the user has on this card. */}
+              <CardActiveAlerts cardId={cardId} />
+
+              {/* 6. Three-up flat strip (Robinhood Open·High·Low style) */}
+              <View style={{ flexDirection: "row", marginHorizontal: -12 }}>
                 <StatTile
                   label="Raw"
                   amount={snapshot?.summary.raw?.amount ?? null}
@@ -315,6 +428,7 @@ export default function CardDetailScreen() {
                 <StatTile
                   label="Graded Avg"
                   amount={snapshot?.summary.graded_avg?.amount ?? null}
+                  showDivider
                 />
                 <StatTile
                   label="Population"
@@ -324,6 +438,7 @@ export default function CardDetailScreen() {
                       ? snapshot.summary.pop_total.toLocaleString()
                       : "—"
                   }
+                  showDivider
                 />
               </View>
 
@@ -342,8 +457,16 @@ export default function CardDetailScreen() {
                 onChange={setSelectedGradeLabel}
               />
 
-              {/* 8. House filter chips */}
-              <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+              {/* 8. House filter tabs (Robinhood-style underline) */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 18,
+                  flexWrap: "wrap",
+                  borderBottomWidth: 1,
+                  borderBottomColor: withAlpha(p.line.default, 0.6),
+                }}
+              >
                 <HouseChip
                   id="all"
                   label="ALL"
@@ -362,30 +485,41 @@ export default function CardDetailScreen() {
                 ))}
               </View>
 
-              {/* 9. House × grade rows */}
-              <View
-                style={{
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: p.line.default,
-                  backgroundColor: p.bg.elevated,
-                  overflow: "hidden",
-                }}
-              >
+              {/* 9. House × grade rows — flat, hairlines only */}
+              <View>
                 {rows.length === 0 ? (
-                  <View style={{ padding: 16, alignItems: "center" }}>
+                  <View style={{ paddingVertical: 16, alignItems: "center" }}>
                     <Text className="text-[12px] text-ink-muted">
                       No graded comps yet
                     </Text>
                   </View>
                 ) : (
-                  rows.map((r, i) => (
-                    <GradeRow
-                      key={`${r.house}-${r.grade_label}-${i}`}
-                      row={r}
-                      isLast={i === rows.length - 1}
-                    />
-                  ))
+                  rows.map((r, i) => {
+                    const isActive =
+                      chartFilter?.house === r.house &&
+                      chartFilter?.grade === r.grade_label;
+                    return (
+                      <GradeRow
+                        key={`${r.house}-${r.grade_label}-${i}`}
+                        row={r}
+                        isLast={i === rows.length - 1}
+                        active={isActive}
+                        onPress={() => {
+                          if (isActive) {
+                            setChartFilter(null);
+                          } else {
+                            const houseLabel =
+                              HOUSE_LABEL[r.house] ?? r.house.toUpperCase();
+                            setChartFilter({
+                              house: r.house,
+                              grade: r.grade_label,
+                              label: `${houseLabel} ${r.grade_label}`,
+                            });
+                          }
+                        }}
+                      />
+                    );
+                  })
                 )}
               </View>
 
@@ -394,25 +528,32 @@ export default function CardDetailScreen() {
               <RecentCompsSection cardId={cardId} />
               <EbaySoldListingsPanel cardId={cardId} cardName={card?.name ?? null} />
 
+              {/* Set-completion progress for this card's set. */}
+              <SetProgressForCard setId={card.set?.id ?? null} />
+
+              {/* Other prints of this card (same name, other sets). */}
+              <RelatedCardsRail
+                cardId={cardId}
+                cardName={card.name}
+                tcg={card.tcg}
+              />
+
               {/* Per-game attribute panel — Pokédex / MTG oracle / YGO stats.
                   Driven by the canonical card document; renders nothing for
                   TCGs without a registered panel or when attributes are
                   missing. See `CardAttributesPanel` for the registry. */}
               <CardAttributesPanel canonical={canonicalQ.data} />
 
-              {/* 10. Collapsible card details */}
+              {/* 10. Collapsible card details — flat header */}
               <Pressable
                 onPress={() => setDetailsOpen((v) => !v)}
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  paddingVertical: 12,
-                  paddingHorizontal: 14,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: p.line.default,
-                  backgroundColor: p.bg.elevated,
+                  paddingVertical: 14,
+                  borderTopWidth: 1,
+                  borderTopColor: withAlpha(p.line.default, 0.6),
                 }}
               >
                 <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
@@ -436,6 +577,16 @@ export default function CardDetailScreen() {
         currentPriceUsd={snapshot?.summary.pop_top?.amount ?? null}
         visible={alertOpen}
         onClose={() => setAlertOpen(false)}
+      />
+      <Card3DModal
+        visible={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        imageUri={imageUrl}
+        blurhash={blurhash}
+        title={card?.name}
+        subtitle={card?.set_name ?? undefined}
+        recyclingKey={card?.id}
+        backVariant={inferBackVariant(card ?? null)}
       />
     </SafeAreaView>
   );

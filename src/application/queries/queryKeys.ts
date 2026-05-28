@@ -119,6 +119,10 @@ export const queryKeys = {
     all: ["alerts"] as const,
     list: (pending: boolean) => ["alerts", "list", pending] as const,
   },
+  watchlist: {
+    all: ["watchlist"] as const,
+    list: () => ["watchlist", "list"] as const,
+  },
   reports: {
     all: ["reports"] as const,
     list: () => ["reports", "list"] as const,

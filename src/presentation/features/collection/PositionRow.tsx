@@ -12,6 +12,7 @@
  */
 import React from "react";
 import { Animated, Pressable, Text, View } from "react-native";
+import { CheckCircle2, Circle, TrendingDown, TrendingUp } from "lucide-react-native";
 import { router } from "expo-router";
 import { routes } from "@/shared/routes";
 import { CardImage } from "@/presentation/components/CardImage";
@@ -31,17 +32,29 @@ interface PositionRowProps {
    * Defaults to 1 (no badge).
    */
   copies?: number;
+  /**
+   * Override the default tap behaviour (navigate to card detail).
+   * Used by the Vault's multi-select mode to toggle selection instead.
+   */
+  onPress?: () => void;
+  /** Long-press handler. Used to enter Vault selection mode. */
+  onLongPress?: () => void;
+  /** When true, render the row in its selected state (check + tint). */
+  selected?: boolean;
 }
 
 /** Horizontal padding for the row — vault.tsx uses this to align separators. */
 export const POSITION_ROW_INDENT = 14;
-const ART_W = 40;
-const ART_H = 54;
-const SPARK_W = 52;
-const SPARK_H = 22;
-const PILL_MIN_W = 76;
+// Bigger thumbnail than the original 40×54 — brings the row closer to
+// Collectr's trending tile size where the art carries its own weight
+// rather than feeling like a list icon.
+const ART_W = 52;
+const ART_H = 72;
+const SPARK_W = 56;
+const SPARK_H = 24;
+const PILL_MIN_W = 84;
 
-export function PositionRow({ card, spark, copies = 1 }: PositionRowProps) {
+export function PositionRow({ card, spark, copies = 1, onPress, onLongPress, selected }: PositionRowProps) {
   const p = useThemedPalette();
   const tint = gradeColor(card.grade);
   const hasDuplicates = copies > 1;
@@ -94,10 +107,13 @@ export function PositionRow({ card, spark, copies = 1 }: PositionRowProps) {
 
   return (
     <Pressable
-      onPress={() => router.push(routes.card(card.cardId))}
+      onPress={onPress ?? (() => router.push(routes.card(card.cardId)))}
+      onLongPress={onLongPress}
+      delayLongPress={280}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       accessibilityRole="button"
+      accessibilityState={{ selected: !!selected }}
       accessibilityLabel={
         hasDuplicates
           ? `${card.title}, grade ${card.grade.toFixed(1)}, ${copies} copies owned`
@@ -112,10 +128,26 @@ export function PositionRow({ card, spark, copies = 1 }: PositionRowProps) {
             alignItems: "center",
             paddingVertical: 12,
             paddingHorizontal: POSITION_ROW_INDENT,
-            backgroundColor: pressed ? withAlpha(p.ink.dim, 0.06) : "transparent",
+            backgroundColor: selected
+              ? withAlpha(p.accent.mint, 0.12)
+              : pressed
+                ? withAlpha(p.ink.dim, 0.06)
+                : "transparent",
             transform: [{ scale }],
           }}
         >
+          {/* Selection checkbox — only rendered while the parent screen
+              is in select mode (it passes `selected` as a boolean rather
+              than leaving it undefined). */}
+          {selected !== undefined ? (
+            <View style={{ marginRight: 10 }}>
+              {selected ? (
+                <CheckCircle2 size={22} color={p.accent.mint} strokeWidth={2.5} />
+              ) : (
+                <Circle size={22} color={p.ink.dim} strokeWidth={2} />
+              )}
+            </View>
+          ) : null}
           {/* Art */}
           <View
             style={{
@@ -235,14 +267,24 @@ export function PositionRow({ card, spark, copies = 1 }: PositionRowProps) {
           <View style={{ alignItems: "flex-end" }}>
             <View
               style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
                 paddingHorizontal: 10,
                 paddingVertical: 6,
                 borderRadius: 8,
                 backgroundColor: pillBg,
                 minWidth: PILL_MIN_W,
-                alignItems: "center",
+                justifyContent: "center",
               }}
             >
+              {/* Direction glyph — mirrors Collectr's trending tiles
+                  where each price carries a tiny up/down marker. */}
+              {direction === "up" ? (
+                <TrendingUp size={11} color="#fff" strokeWidth={2.75} />
+              ) : direction === "down" ? (
+                <TrendingDown size={11} color="#fff" strokeWidth={2.75} />
+              ) : null}
               <Price
                 usd={card.estimatedValueUsd}
                 compact

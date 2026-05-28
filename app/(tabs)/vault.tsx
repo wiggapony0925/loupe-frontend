@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -13,17 +14,34 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { routes } from "@/shared/routes";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, Grid2x2, Layers, List as ListIcon, Package, Plus, Search, X } from "lucide-react-native";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Camera,
+  Grid2x2,
+  Layers,
+  List as ListIcon,
+  Package,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react-native";
 import { CardThumbnail } from "@/presentation/features/collection/CardThumbnail";
 import { FilterBar } from "@/presentation/features/collection/FilterBar";
 import { PositionRow } from "@/presentation/features/collection/PositionRow";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { useFilteredCollection } from "@/presentation/features/collection/useFilteredCollection";
-import { useVaultFilters } from "@/application/stores/vaultStore";
-import { fetchCardSparklines, type CardSparkline } from "@/infrastructure/repositories/forensicRepository";
+import { useVaultFilters, useVaultSelection } from "@/application/stores";
+import {
+  deleteGradedCard,
+  fetchCardSparklines,
+  type CardSparkline,
+} from "@/infrastructure/repositories/forensicRepository";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { EmptyState } from "@/presentation/components/EmptyState";
+import { useMoney } from "@/presentation/components/Price";
 import { COPY } from "@/shared/copy";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
@@ -34,9 +52,69 @@ export default function VaultScreen() {
   const p = useThemedPalette();
   const router = useRouter();
   const qc = useQueryClient();
-  const { cards, isLoading, isFetching, copiesByCardId, uniqueCount, loupeGradedCount, availableSets } =
-    useFilteredCollection();
+  const {
+    cards,
+    isLoading,
+    isFetching,
+    copiesByCardId,
+    uniqueCount,
+    loupeGradedCount,
+    availableSets,
+    summary,
+  } = useFilteredCollection();
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+
+  // Multi-select state lives in its own store so filter / search
+  // re-renders don't disturb it (and vice versa). The vault page is
+  // the only screen that drives it.
+  const selectionMode = useVaultSelection((s) => s.mode === "select");
+  const selectedIds = useVaultSelection((s) => s.selected);
+  const beginSelectionWith = useVaultSelection((s) => s.beginWith);
+  const toggleSelection = useVaultSelection((s) => s.toggle);
+  const clearSelection = useVaultSelection((s) => s.clear);
+
+  // Bulk-delete fans out one DELETE per selected grade id. Backend has
+  // no batch endpoint yet — if/when it ships we can swap this in
+  // place. Promise.allSettled so a single 404 doesn't strand the rest.
+  const deleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const results = await Promise.allSettled(ids.map(deleteGradedCard));
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed > 0) throw new Error(`${failed} card(s) could not be removed.`);
+    },
+    onSettled: () => {
+      // Refresh both the list and any cached summary / sparkline data
+      // so the hero, pills, and tiles all reflect the smaller vault.
+      qc.invalidateQueries({ queryKey: queryKeys.collection.all });
+      qc.invalidateQueries({ queryKey: queryKeys.cards.sparklines() });
+    },
+  });
+
+  const confirmAndDelete = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      const noun = ids.length === 1 ? "card" : "cards";
+      Alert.alert(
+        `Remove ${ids.length} ${noun}?`,
+        "They'll be removed from your vault. This can't be undone from the app.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: () => {
+              deleteMutation.mutate(ids, {
+                onSuccess: () => clearSelection(),
+                onError: (err) =>
+                  Alert.alert("Couldn't remove cards", String((err as Error).message ?? err)),
+              });
+            },
+          },
+        ],
+      );
+    },
+    [deleteMutation, clearSelection],
+  );
 
   // Pair each holding with its sparkline + delta. Same query Analytics uses,
   // so the React Query cache is shared at no extra cost.
@@ -50,10 +128,20 @@ export default function VaultScreen() {
     [sparks.data],
   );
 
-  // Adaptive column count for grid mode: phones get 2 columns, tablets 3-4.
+  // Adaptive column count for grid mode. On phones we always want 2
+  // columns — relying on `screenWidth / 180` was flaky during the first
+  // measurement pass (it could resolve to < 360 px before the safe-area
+  // settled, falling back to a 1-column grid that ballooned each 5:7
+  // tile to fill the entire screen). Tablets keep the proportional
+  // formula but clamp to 4.
   const { width: screenWidth } = useWindowDimensions();
+  const isTablet = screenWidth >= 768;
   const numColumns =
-    viewMode === "list" ? 1 : Math.max(2, Math.min(4, Math.floor(screenWidth / 180)));
+    viewMode === "list"
+      ? 1
+      : isTablet
+        ? Math.max(2, Math.min(4, Math.floor(screenWidth / 220)))
+        : 2;
 
   const stats = useMemo(() => {
     const value = cards.reduce((s, c) => s + c.estimatedValueUsd, 0);
@@ -111,63 +199,121 @@ export default function VaultScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isFetching}
-            onRefresh={onRefresh}
+            // Disable pull-to-refresh while selecting so a stray drag
+            // doesn't kick off a network round-trip mid-selection.
+            onRefresh={selectionMode ? () => {} : onRefresh}
+            enabled={!selectionMode}
             tintColor={palette.accent.mint}
           />
         }
         ListHeaderComponent={
           <View className="gap-5 pb-4" style={{ paddingHorizontal: headerPadX }}>
-            {/* Page anchor — every other tab (Command, Analytics, Search)
-                has a clear top-of-screen identity. Vault was the only one
-                without, which read as a missing nav bar. Eyebrow + title
-                pattern matches Analytics for visual consistency. */}
-            <VaultPageHeader />
+            {/* Page anchor — swaps to a selection toolbar when the
+                user is staging cards for bulk delete so the header
+                action cluster doesn't compete for tap targets. */}
+            {selectionMode ? (
+              <VaultSelectionBar
+                count={selectedIds.size}
+                onCancel={clearSelection}
+                onDelete={() => confirmAndDelete(Array.from(selectedIds))}
+                busy={deleteMutation.isPending}
+              />
+            ) : (
+              <VaultPageHeader
+                onAdd={() => router.push(routes.gradeNew())}
+                onScan={() => router.push(routes.scanPhone())}
+              />
+            )}
             {isLoading ? (
               <VaultHeaderSkeleton />
             ) : (
               <>
                 {/* Order rationale, top to bottom:
-                      1. Pills  — headline answer to "what's in my vault?"
-                      2. Sets   — discovery rail (what's missing from binders)
-                      3. Search / Filter / View toggle — control cluster
+                      1. Hero   — Robinhood-style portfolio value + P/L
+                      2. Pills  — Holdings / Avg grade / Loupe-graded
+                      3. Sets   — discovery rail (what's missing from binders)
+                      4. Search / Filter / View toggle — control cluster
                          grouped directly above the list they act on. */}
+                <PortfolioHero
+                  totalValueUsd={summary?.totalValueUsd ?? stats.value}
+                  pnlUsd={summary?.unrealizedPnlUsd ?? null}
+                  pnlPct={summary?.unrealizedPnlPct ?? null}
+                />
                 <PortfolioPills stats={stats} />
                 <SetProgressCarousel />
                 <VaultSearchBar />
                 <FilterBar availableSets={availableSets} />
-                <ViewModeToggle value={viewMode} onChange={setViewMode} />
+                <VaultListChrome
+                  count={cards.length}
+                  viewMode={viewMode}
+                  onChange={setViewMode}
+                />
               </>
             )}
           </View>
         }
         renderItem={({ item, index }) => {
           const copies = copiesByCardId.get(item.cardId) ?? 1;
+          const isSelected = selectedIds.has(item.id);
+          // When in selection mode a tap toggles membership; otherwise
+          // we fall back to the row/tile's built-in navigate behaviour
+          // by leaving `onPress` undefined.
+          const onPress = selectionMode
+            ? () => toggleSelection(item.id)
+            : undefined;
+          const onLongPress = selectionMode
+            ? () => toggleSelection(item.id)
+            : () => beginSelectionWith(item.id);
+          // `selected` is only forwarded while in selection mode so the
+          // checkbox / overlay are hidden during normal browsing.
+          const selectedProp = selectionMode ? isSelected : undefined;
           // Staggered fade-in — each row enters ~40ms after the one
           // above it for a Robinhood-style cascade. Only the first
           // dozen are staggered so a long list doesn't queue a 2-second
           // animation chain when the user scrolls back into view.
           const delay = Math.min(index, 12) * 40;
           return (
-            <Animated.View entering={FadeInDown.delay(delay).duration(260)}>
+            <Animated.View
+              entering={FadeInDown.delay(delay).duration(260)}
+              // In grid mode each item gets `flex: 1` of the row's
+              // remaining space. We also cap the tile width so an
+              // unexpected single-column layout can't balloon a 5:7
+              // card to fill the whole screen.
+              style={
+                viewMode === "grid"
+                  ? { flex: 1, maxWidth: 240 }
+                  : undefined
+              }
+            >
               {viewMode === "list" ? (
-                <PositionRow card={item} spark={sparkMap.get(item.cardId)} copies={copies} />
+                <PositionRow
+                  card={item}
+                  spark={sparkMap.get(item.cardId)}
+                  copies={copies}
+                  onPress={onPress}
+                  onLongPress={onLongPress}
+                  selected={selectedProp}
+                />
               ) : (
-                <CardThumbnail card={item} spark={sparkMap.get(item.cardId)} copies={copies} />
+                <CardThumbnail
+                  card={item}
+                  spark={sparkMap.get(item.cardId)}
+                  copies={copies}
+                  onPress={onPress}
+                  onLongPress={onLongPress}
+                  selected={selectedProp}
+                />
               )}
             </Animated.View>
           );
         }}
         ListFooterComponent={
-          // Once the user has scrolled past their last card the most
-          // useful next move is adding another one. We keep the empty
-          // state's CTA so this is *only* rendered when there's content
-          // above it — otherwise the buttons would stack.
-          !isLoading && cards.length > 0 ? (
-            <VaultFooterCta
-              onAdd={() => router.push(routes.gradeNew())}
-              onScan={() => router.push(routes.scanPhone())}
-            />
-          ) : null
+          // Footer CTAs used to live here, but the primary actions (Scan
+          // / Add manually) are now lifted into VaultPageHeader so they
+          // — like Robinhood's deposit shortcut — stay reachable without
+          // scrolling. We leave a small spacer so the last row doesn't
+          // hug the tab bar.
+          !isLoading && cards.length > 0 ? <View style={{ height: 24 }} /> : null
         }
         ListEmptyComponent={
           isLoading ? (
@@ -292,19 +438,23 @@ function ViewModeToggle({
 }) {
   const p = useThemedPalette();
   const options: { key: ViewMode; Icon: typeof ListIcon; label: string }[] = [
-    { key: "list", Icon: ListIcon, label: "List" },
-    { key: "grid", Icon: Grid2x2, label: "Grid" },
+    { key: "list", Icon: ListIcon, label: "List view" },
+    { key: "grid", Icon: Grid2x2, label: "Grid view" },
   ];
+  // Segmented control. We tried text+icon (overflowed) and tinted
+  // icon-only (active state was invisible against the track). This
+  // version uses the classic iOS treatment: an inset track with a
+  // raised "thumb" pill that contrasts hard against it via the
+  // surface color + a shadow. There's no ambiguity about which side
+  // is selected.
+  const CELL = 34;
   return (
     <View
       style={{
-        alignSelf: "flex-start",
         flexDirection: "row",
         padding: 3,
         borderRadius: 999,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: p.line.default,
-        backgroundColor: p.bg.elevated,
+        backgroundColor: withAlpha(p.ink.muted, 0.14),
       }}
     >
       {options.map((opt) => {
@@ -315,26 +465,65 @@ function ViewModeToggle({
             onPress={() => onChange(opt.key)}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
-            accessibilityLabel={`${opt.label} view`}
-            hitSlop={8}
+            accessibilityLabel={opt.label}
+            hitSlop={4}
             style={({ pressed }) => ({
+              width: CELL,
+              height: CELL,
               alignItems: "center",
               justifyContent: "center",
-              width: 32,
-              height: 28,
               borderRadius: 999,
-              backgroundColor: active ? p.accent.mint : "transparent",
-              opacity: pressed ? 0.75 : 1,
+              backgroundColor: active ? p.bg.elevated : "transparent",
+              shadowColor: active ? "#000" : "transparent",
+              shadowOpacity: active ? 0.18 : 0,
+              shadowRadius: active ? 4 : 0,
+              shadowOffset: { width: 0, height: 1 },
+              elevation: active ? 2 : 0,
+              opacity: pressed ? 0.85 : 1,
             })}
           >
             <opt.Icon
-              size={15}
-              color={active ? "#fff" : p.ink.muted}
-              strokeWidth={2.25}
+              size={16}
+              color={active ? p.ink.default : withAlpha(p.ink.muted, 0.85)}
+              strokeWidth={active ? 2.6 : 2.1}
             />
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+/**
+ * Thin chrome row immediately above the holdings list: shows the live
+ * filtered count on the left, the layout toggle on the right. Reads as
+ * a section header for the list below — Robinhood does the same with
+ * its "Stocks · Crypto" / sort-control row.
+ */
+function VaultListChrome({
+  count,
+  viewMode,
+  onChange,
+}: {
+  count: number;
+  viewMode: ViewMode;
+  onChange: (m: ViewMode) => void;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingTop: 4,
+      }}
+    >
+      <Text
+        className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim"
+      >
+        {count === 1 ? "1 Holding" : `${count} Holdings`}
+      </Text>
+      <ViewModeToggle value={viewMode} onChange={onChange} />
     </View>
   );
 }
@@ -396,56 +585,84 @@ function VaultSearchBar() {
 }
 
 /**
- * End-of-list call to action. The user has just scrolled past their
- * last holding; the most useful next move is adding another card. We
- * expose both entry points so the choice is explicit (scan = Loupe-graded
- * with subgrades, add = self-reported third-party slab) instead of
- * burying one behind a menu.
+ * Replaces `VaultPageHeader` while the user is staging cards for bulk
+ * delete. Reads as a "selection mode" affordance the way iOS Mail's
+ * trash bar does — Cancel exits without action, the destructive button
+ * is colour-coded rose and shows a live count so the user can't
+ * accidentally fire off a delete on the wrong number of cards.
  */
-function VaultFooterCta({ onAdd, onScan }: { onAdd: () => void; onScan: () => void }) {
+function VaultSelectionBar({
+  count,
+  onCancel,
+  onDelete,
+  busy,
+}: {
+  count: number;
+  onCancel: () => void;
+  onDelete: () => void;
+  busy: boolean;
+}) {
   const p = useThemedPalette();
+  const canDelete = count > 0 && !busy;
   return (
-    <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8, gap: 10 }}>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        minHeight: 56,
+      }}
+    >
       <Pressable
-        onPress={onScan}
+        onPress={onCancel}
         accessibilityRole="button"
-        accessibilityLabel="Scan a new card with Loupe"
+        accessibilityLabel="Cancel selection"
+        hitSlop={6}
         style={({ pressed }) => ({
-          flexDirection: "row",
+          width: 36,
+          height: 36,
           alignItems: "center",
           justifyContent: "center",
-          gap: 8,
-          paddingVertical: 14,
-          borderRadius: 12,
-          backgroundColor: p.accent.mint,
-          opacity: pressed ? 0.85 : 1,
-        })}
-      >
-        <Camera size={16} color="#fff" strokeWidth={2.5} />
-        <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14, letterSpacing: 0.2 }}>
-          Scan a new card
-        </Text>
-      </Pressable>
-      <Pressable
-        onPress={onAdd}
-        accessibilityRole="button"
-        accessibilityLabel="Add a card without scanning"
-        style={({ pressed }) => ({
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          paddingVertical: 12,
-          borderRadius: 12,
-          borderWidth: StyleSheet.hairlineWidth,
+          borderRadius: 999,
+          borderWidth: 1,
           borderColor: p.line.default,
           backgroundColor: p.bg.elevated,
           opacity: pressed ? 0.75 : 1,
         })}
       >
-        <Plus size={15} color={p.ink.muted} strokeWidth={2.25} />
-        <Text style={{ color: p.ink.muted, fontWeight: "600", fontSize: 13 }}>
-          Add a card manually
+        <X size={18} color={p.ink.default} strokeWidth={2.5} />
+      </Pressable>
+      <View style={{ flex: 1 }}>
+        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+          Selecting
+        </Text>
+        <Text
+          className="mt-1 text-2xl font-semibold tracking-tight text-ink"
+          style={{ fontVariant: ["tabular-nums"] }}
+        >
+          {count === 1 ? "1 card" : `${count} cards`}
+        </Text>
+      </View>
+      <Pressable
+        onPress={canDelete ? onDelete : undefined}
+        disabled={!canDelete}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !canDelete }}
+        accessibilityLabel={`Remove ${count} card${count === 1 ? "" : "s"} from vault`}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          paddingHorizontal: 14,
+          height: 36,
+          borderRadius: 999,
+          backgroundColor: canDelete ? p.accent.rose : withAlpha(p.accent.rose, 0.35),
+          opacity: pressed ? 0.85 : 1,
+        })}
+      >
+        <Trash2 size={15} color="#fff" strokeWidth={2.5} />
+        <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
+          {busy ? "Removing…" : "Remove"}
         </Text>
       </Pressable>
     </View>
@@ -457,12 +674,23 @@ function VaultFooterCta({ onAdd, onScan }: { onAdd: () => void; onScan: () => vo
  * eyebrow + display-title pattern so the four tabs feel like one app:
  * Command has a brand bar, Search has its input, Analytics and Vault
  * share the title bar.
+ *
+ * The right-hand action cluster (Add · Scan · Sealed) replaces the old
+ * end-of-list CTA — Robinhood keeps "Deposit" pinned at the top of
+ * the portfolio for the same reason: the action shouldn't be gated
+ * behind a scroll.
  */
-function VaultPageHeader() {
+function VaultPageHeader({
+  onAdd,
+  onScan,
+}: {
+  onAdd: () => void;
+  onScan: () => void;
+}) {
   const p = useThemedPalette();
   const router = useRouter();
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
+    <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
       <View style={{ flex: 1 }}>
         <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
           Collection
@@ -471,22 +699,64 @@ function VaultPageHeader() {
           Vault
         </Text>
       </View>
+      {/* Add a card manually — small mint-tinted icon pill. Same target
+          size as Sealed so the row reads as a balanced action cluster. */}
+      <Pressable
+        onPress={onAdd}
+        accessibilityRole="button"
+        accessibilityLabel="Add a card manually"
+        hitSlop={6}
+        style={({ pressed }) => ({
+          width: 36,
+          height: 36,
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: withAlpha(p.accent.mint, 0.45),
+          backgroundColor: withAlpha(p.accent.mint, 0.14),
+          opacity: pressed ? 0.75 : 1,
+        })}
+      >
+        <Plus size={18} color={p.accent.mint} strokeWidth={2.5} />
+      </Pressable>
+      {/* Scan — the high-value primary path. Same icon pill shape. */}
+      <Pressable
+        onPress={onScan}
+        accessibilityRole="button"
+        accessibilityLabel="Scan a new card"
+        hitSlop={6}
+        style={({ pressed }) => ({
+          width: 36,
+          height: 36,
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 999,
+          backgroundColor: p.accent.mint,
+          opacity: pressed ? 0.85 : 1,
+        })}
+      >
+        <Camera size={17} color="#fff" strokeWidth={2.5} />
+      </Pressable>
       {/* Sealed-vault peer destination — same collection, different shape
           (booster boxes / ETBs / tins). Lives here rather than as its
           own tab to keep the bottom-nav from getting cluttered. */}
       <Pressable
         onPress={() => router.push("/sealed")}
-        style={{
+        accessibilityRole="button"
+        accessibilityLabel="Open sealed vault"
+        style={({ pressed }) => ({
           flexDirection: "row",
           alignItems: "center",
           gap: 6,
           paddingHorizontal: 12,
-          paddingVertical: 8,
+          height: 36,
           borderRadius: 999,
           borderWidth: 1,
           borderColor: p.line.default,
           backgroundColor: p.bg.elevated,
-        }}
+          opacity: pressed ? 0.75 : 1,
+        })}
       >
         <Package size={14} color={p.ink.default} />
         <Text
@@ -500,6 +770,77 @@ function VaultPageHeader() {
 }
 
 /**
+ * Robinhood-style portfolio hero. Big tabular total at the top with a
+ * colored ± delta chip directly below — green when up, rose when down,
+ * dim/grey when we don't know cost basis yet. Total value comes from
+ * the unfiltered summary endpoint so the headline stays stable even
+ * while the user is filtering the list below.
+ */
+function PortfolioHero({
+  totalValueUsd,
+  pnlUsd,
+  pnlPct,
+}: {
+  totalValueUsd: number;
+  pnlUsd: number | null;
+  pnlPct: number | null;
+}) {
+  const p = useThemedPalette();
+  const { format } = useMoney();
+  const hasPnl = pnlUsd != null && pnlPct != null;
+  const up = hasPnl && (pnlUsd as number) >= 0;
+  const tint = !hasPnl ? p.ink.dim : up ? p.accent.mint : p.accent.rose;
+  const DeltaIcon = up ? ArrowUpRight : ArrowDownRight;
+  return (
+    <View>
+      <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+        Portfolio Value
+      </Text>
+      <Text
+        className="mt-1 text-4xl font-bold tracking-tight text-ink"
+        style={{ fontVariant: ["tabular-nums"], letterSpacing: -0.8 }}
+      >
+        {format(totalValueUsd, { compact: false })}
+      </Text>
+      {hasPnl ? (
+        <View
+          style={{
+            marginTop: 8,
+            alignSelf: "flex-start",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingVertical: 4,
+            paddingLeft: 6,
+            paddingRight: 10,
+            borderRadius: 999,
+            backgroundColor: withAlpha(tint, 0.14),
+          }}
+        >
+          <DeltaIcon size={14} color={tint} strokeWidth={2.75} />
+          <Text
+            style={{
+              color: tint,
+              fontWeight: "700",
+              fontSize: 12,
+              fontVariant: ["tabular-nums"],
+            }}
+          >
+            {up ? "+" : ""}
+            {format(pnlUsd as number, { compact: false })} ({up ? "+" : ""}
+            {(pnlPct as number).toFixed(2)}%)
+          </Text>
+        </View>
+      ) : (
+        <Text className="mt-2 text-[11px] font-semibold uppercase tracking-[2px] text-ink-dim">
+          Set a cost basis to track P/L
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/**
  * Loading state for everything in the page header *except* the title
  * (which has no dynamic content and renders immediately). Layout mirrors
  * the real header 1:1 so the page doesn't jump on first paint.
@@ -508,6 +849,12 @@ function VaultHeaderSkeleton() {
   const p = useThemedPalette();
   return (
     <View style={{ gap: 20 }}>
+      {/* Hero — big value placeholder + delta chip. */}
+      <View style={{ gap: 8 }}>
+        <Skeleton width={120} height={9} />
+        <Skeleton width="65%" height={34} />
+        <Skeleton width={160} height={20} radius={999} />
+      </View>
       {/* Pills row — three equal-width stat cards. */}
       <View style={{ flexDirection: "row", gap: 8 }}>
         {[0, 1, 2].map((i) => (

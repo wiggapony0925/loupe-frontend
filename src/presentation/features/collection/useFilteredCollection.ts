@@ -26,7 +26,7 @@ import type { CardSet } from "@/domain";
 const DEBOUNCE_MS = 250;
 
 export function useFilteredCollection() {
-  const { set, minGrade, query: searchTerm } = useVaultFilters();
+  const { set, minGrade, type, query: searchTerm } = useVaultFilters();
   const setSet = useVaultFilters((s) => s.setSet);
 
   // Debounce the free-text query so every keystroke doesn't fire a new
@@ -38,17 +38,28 @@ export function useFilteredCollection() {
     return () => clearTimeout(t);
   }, [searchTerm]);
 
+  // Map the Type filter to a backend `house` slug. "Raw" and "Loupe" both
+  // live under `house=loupe` server-side — we narrow client-side using the
+  // row's `condition` column (see post-fetch refinement below).
+  const serverHouse =
+    type === "All"
+      ? undefined
+      : type === "raw" || type === "loupe"
+        ? "loupe"
+        : type;
+
   const params = useMemo(
     () => ({
       q: debouncedQuery.trim() || undefined,
       set: set === "All" ? undefined : (set as string),
+      house: serverHouse,
       // The Vault grade slider's "show everything" sentinel is 1 — sending
       // min_grade=1 to the backend would still match every grade ≥ 1,
       // which is correct but a wasted predicate. Drop it.
       minGrade: minGrade > 1 ? minGrade : undefined,
       sort: "recent" as const,
     }),
-    [debouncedQuery, set, minGrade],
+    [debouncedQuery, set, serverHouse, minGrade],
   );
 
   const query = useQuery({
@@ -70,13 +81,24 @@ export function useFilteredCollection() {
   // copy is hidden by the active filter. Backend `copies_owned` is
   // already correct for each row; we leave the local map as a
   // best-effort fallback for any UI that wants O(1) lookup.
+  // Apply the Raw/Loupe client-side refinement on top of whatever the
+  // backend returned. The server can't tell raw apart from a Loupe-graded
+  // slab (both have `house=loupe`); the `condition` column is the
+  // discriminator.
+  const cards = useMemo(() => {
+    const rows = query.data ?? [];
+    if (type === "raw") return rows.filter((c) => c.condition != null);
+    if (type === "loupe") return rows.filter((c) => c.condition == null);
+    return rows;
+  }, [query.data, type]);
+
   const copiesByCardId = useMemo(() => {
     const map = new Map<string, number>();
-    for (const c of query.data ?? []) {
+    for (const c of cards) {
       map.set(c.cardId, (map.get(c.cardId) ?? 0) + 1);
     }
     return map;
-  }, [query.data]);
+  }, [cards]);
 
   /** Total unique catalog cards owned across the whole vault. */
   const uniqueCount =
@@ -112,10 +134,12 @@ export function useFilteredCollection() {
 
   return {
     ...query,
-    cards: query.data ?? [],
+    cards,
     copiesByCardId,
     uniqueCount,
     loupeGradedCount,
     availableSets,
+    /** Whole-vault aggregates (value, P/L, etc.). May be undefined while loading. */
+    summary: summaryQuery.data,
   };
 }

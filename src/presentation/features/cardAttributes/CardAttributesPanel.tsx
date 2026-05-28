@@ -22,6 +22,7 @@ import type { ReactElement } from "react";
 import type { CanonicalCard } from "@/infrastructure/http/wire/canonicalCard";
 
 import { PokedexPanel } from "../pokedex/PokedexPanel";
+import { GenericAttributesPanel } from "./GenericAttributesPanel";
 import { MtgOraclePanel } from "./MtgOraclePanel";
 import { YugiohStatsPanel } from "./YugiohStatsPanel";
 
@@ -35,6 +36,12 @@ type PanelComponent = (props: PanelProps) => ReactElement | null;
  * empty, and error states. They MUST return `null` when there's no
  * meaningful content so the parent layout doesn't render an empty
  * card.
+ *
+ * Unknown TCGs (Lorcana, One Piece, anything new) fall through to
+ * `GenericAttributesPanel`, which renders every primitive key on
+ * `canonical.attributes` as a labelled row. That way any provider
+ * data lands in the UI immediately without waiting for a bespoke
+ * panel build.
  */
 const PANEL_REGISTRY: Readonly<Record<string, PanelComponent>> = {
   pokemon: ({ canonical }) => <PokedexPanel cardName={canonical.identity.name} />,
@@ -48,7 +55,6 @@ export function CardAttributesPanel({
   canonical: CanonicalCard | null | undefined;
 }) {
   if (!canonical) return null;
-  const Panel = PANEL_REGISTRY[canonical.identity.tcg];
-  if (!Panel) return null;
+  const Panel = PANEL_REGISTRY[canonical.identity.tcg] ?? GenericAttributesPanel;
   return <Panel canonical={canonical} />;
 }

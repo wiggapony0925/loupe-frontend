@@ -29,6 +29,8 @@ interface GradedCardWire {
   scan_job_id: string | null;
   grade: string; // Decimal as string
   house: string;
+  /** `nm | lp | mp | hp | dmg`; non-null only for raw/ungraded rows. */
+  condition: string | null;
   subgrades: Record<string, unknown> | null;
   estimated_value_usd: string | null;
   fingerprint_hash: string | null;
@@ -81,6 +83,7 @@ function toCollectionCard(g: GradedCardWire): CollectionCard {
     year: g.card_year ?? 0,
     grade: Number(g.grade),
     house: g.house,
+    condition: (g.condition ?? null) as CollectionCard["condition"],
     estimatedValueUsd: g.estimated_value_usd ? Number(g.estimated_value_usd) : 0,
     thumbnailUri: g.card_image_url ?? "",
     scannedAt: g.graded_at,
@@ -211,6 +214,18 @@ export async function fetchCollectionSummary(): Promise<CollectionSummary> {
   return apiFetch<PortfolioSummaryWire>("/v1/grades/summary", {
     schema: PortfolioSummarySchema,
   });
+}
+
+/**
+ * Soft-delete a graded card from the user's vault. Backend returns 204
+ * with an empty body; we resolve to void on success and let `apiFetch`'s
+ * standard error handling bubble up otherwise.
+ *
+ * `gradeId` is the row id of the `graded_cards` entry (not the canonical
+ * card id) — i.e. `CollectionCard.id`, not `CollectionCard.cardId`.
+ */
+export async function deleteGradedCard(gradeId: string): Promise<void> {
+  await apiFetch<void>(`/v1/grades/${gradeId}`, { method: "DELETE" });
 }
 
 export async function fetchReport(_id: string): Promise<ForensicReport> {

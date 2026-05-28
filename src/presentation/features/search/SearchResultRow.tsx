@@ -20,12 +20,15 @@ interface SearchResultRowProps {
   bordered?: boolean;
   /** Priority hint for expo-image — off-screen rows should pass "low". */
   priority?: "low" | "normal" | "high";
+  /** Fires *before* navigation so callers can persist analytics / recents. */
+  onPressCapture?: () => void;
 }
 
 export function SearchResultRow({
   card,
   bordered = false,
   priority = "low",
+  onPressCapture,
 }: SearchResultRowProps) {
   const p = useThemedPalette();
   const market = card.pricing_summary?.market?.amount ?? null;
@@ -33,7 +36,10 @@ export function SearchResultRow({
   const normal = pickCardImageUrl(card, "normal");
   return (
     <Pressable
-      onPress={() => router.push(routes.card(card.id))}
+      onPress={() => {
+        onPressCapture?.();
+        router.push(routes.card(card.id));
+      }}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
     >

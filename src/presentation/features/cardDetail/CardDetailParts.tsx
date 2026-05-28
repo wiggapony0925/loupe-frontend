@@ -237,31 +237,58 @@ export function StatTile({
   label,
   amount,
   text,
+  showDivider = false,
 }: {
   label: string;
   amount: number | null;
   text?: string;
+  /** Render a thin vertical hairline on the left edge (Robinhood-style strip). */
+  showDivider?: boolean;
 }) {
   const p = useThemedPalette();
   return (
     <View
       style={{
         flex: 1,
-        padding: 12,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: p.line.default,
-        backgroundColor: p.bg.elevated,
+        paddingVertical: 4,
+        paddingHorizontal: 12,
         gap: 4,
+        borderLeftWidth: showDivider ? 1 : 0,
+        borderLeftColor: withAlpha(p.line.default, 0.6),
       }}
     >
-      <Text className="text-[10px] uppercase tracking-wider text-ink-dim">
+      <Text
+        style={{
+          color: p.ink.dim,
+          fontSize: 10,
+          fontWeight: "700",
+          letterSpacing: 1,
+          textTransform: "uppercase",
+        }}
+      >
         {label}
       </Text>
       {amount !== null ? (
-        <Price usd={amount} className="text-base font-semibold text-ink" />
+        <Price
+          usd={amount}
+          style={{
+            color: p.ink.default,
+            fontSize: 15,
+            fontWeight: "600",
+            fontVariant: ["tabular-nums"],
+          }}
+        />
       ) : (
-        <Text className="text-base font-semibold text-ink">{text ?? "—"}</Text>
+        <Text
+          style={{
+            color: p.ink.default,
+            fontSize: 15,
+            fontWeight: "600",
+            fontVariant: ["tabular-nums"],
+          }}
+        >
+          {text ?? "—"}
+        </Text>
       )}
     </View>
   );
@@ -281,25 +308,28 @@ export function HouseChip({
   onPress: () => void;
 }) {
   const p = useThemedPalette();
+  // Robinhood-style underline tab — monochrome text, 2px accent
+  // underline when active. House `color` (when provided) tints only
+  // the underline so the row stays visually quiet.
   const accent = color ?? p.ink.default;
   return (
     <Pressable
       onPress={onPress}
+      hitSlop={6}
       style={{
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: active ? accent : p.line.default,
-        backgroundColor: active ? withAlpha(accent, 0.16) : "transparent",
+        paddingHorizontal: 4,
+        paddingTop: 6,
+        paddingBottom: 8,
+        borderBottomWidth: 2,
+        borderBottomColor: active ? accent : "transparent",
       }}
       accessibilityLabel={`Filter by ${id}`}
     >
       <Text
         style={{
-          color: active ? accent : p.ink.muted,
-          fontSize: 10,
-          fontWeight: "800",
+          color: active ? p.ink.default : p.ink.muted,
+          fontSize: 11,
+          fontWeight: active ? "800" : "700",
           letterSpacing: 0.6,
         }}
       >
@@ -312,16 +342,22 @@ export function HouseChip({
 export function GradeRow({
   row,
   isLast,
+  onPress,
+  active = false,
 }: {
   row: HouseGradeRowWire;
   isLast: boolean;
+  onPress?: () => void;
+  active?: boolean;
 }) {
   const p = useThemedPalette();
   const accent = houseColor(row.house, p);
   const positive = row.change_pct >= 0;
   const changeColor = positive ? p.accent.mint : p.accent.rose;
+  const Wrapper = onPress ? Pressable : View;
   return (
-    <View
+    <Wrapper
+      onPress={onPress}
       style={{
         flexDirection: "row",
         alignItems: "center",
@@ -330,24 +366,33 @@ export function GradeRow({
         gap: 10,
         borderBottomWidth: isLast ? 0 : 1,
         borderBottomColor: p.line.default,
+        backgroundColor: active ? withAlpha(accent, 0.10) : "transparent",
       }}
     >
+      {/* Tiny house dot + monochrome label — Robinhood keeps row
+          chrome quiet so values dominate the eye. */}
       <View
         style={{
-          paddingHorizontal: 10,
-          paddingVertical: 4,
-          borderRadius: 999,
-          backgroundColor: withAlpha(accent, 0.18),
-          minWidth: 56,
+          flexDirection: "row",
           alignItems: "center",
+          gap: 8,
+          minWidth: 84,
         }}
       >
+        <View
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: accent,
+          }}
+        />
         <Text
           style={{
-            color: accent,
-            fontSize: 10,
-            fontWeight: "800",
-            letterSpacing: 0.6,
+            color: p.ink.default,
+            fontSize: 12,
+            fontWeight: "700",
+            letterSpacing: 0.4,
           }}
         >
           {HOUSE_LABEL[row.house] ?? row.house.toUpperCase()} {row.grade_label}
@@ -378,7 +423,7 @@ export function GradeRow({
         {row.change_pct.toFixed(1)}%
       </Text>
       <Price usd={row.market.amount} className="text-sm font-semibold text-ink" />
-    </View>
+    </Wrapper>
   );
 }
 

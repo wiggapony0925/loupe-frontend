@@ -31,6 +31,10 @@ jest.mock(
   "@/presentation/features/cardAttributes/YugiohStatsPanel",
   () => ({ YugiohStatsPanel: () => null }),
 );
+jest.mock(
+  "@/presentation/features/cardAttributes/GenericAttributesPanel",
+  () => ({ GenericAttributesPanel: () => null }),
+);
 
 function makeCanonical(tcg: string): CanonicalCard {
   return {
@@ -78,11 +82,19 @@ describe("CardAttributesPanel", () => {
     expect(tree.toJSON()).toBeNull();
   });
 
-  it("renders null for an unsupported tcg", () => {
-    const tree = renderer.create(
-      <CardAttributesPanel canonical={makeCanonical("onepiece")} />,
-    );
-    expect(tree.toJSON()).toBeNull();
+  it("falls back to the generic panel for an unknown tcg", () => {
+    // Mocked generic panel returns null but should be invoked without
+    // throwing. Lorcana / One Piece / future TCGs flow through here.
+    expect(() =>
+      renderer.create(
+        <CardAttributesPanel canonical={makeCanonical("onepiece")} />,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      renderer.create(
+        <CardAttributesPanel canonical={makeCanonical("lorcana")} />,
+      ),
+    ).not.toThrow();
   });
 
   it("dispatches to a registered panel for a supported tcg", () => {

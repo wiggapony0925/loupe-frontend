@@ -13,12 +13,16 @@
  * answers "what am I watching?" without burning global navigation.
  */
 import React, { useCallback } from "react";
-import { Alert, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { Alert, FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowDownRight, ArrowUpRight, Bell, Trash2 } from "lucide-react-native";
+import { ArrowDownRight, ArrowUpRight, Bell, Heart, Trash2 } from "lucide-react-native";
 
 import { useDeletePriceAlert, usePriceAlerts } from "@/application/queries/alerts/usePriceAlerts";
-import type { PriceAlertWire } from "@/infrastructure/http";
+import {
+  useRemoveFromWatchlist,
+  useWatchlist,
+} from "@/application/queries/collection/useWatchlist";
+import type { PriceAlertWire, WatchlistItemWire } from "@/infrastructure/http";
 import { CardImage } from "@/presentation/components/CardImage";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { Skeleton } from "@/presentation/components/Skeleton";
@@ -121,6 +125,81 @@ function WatchRow({ alert, onPress, onDelete }: RowProps) {
   );
 }
 
+function PinnedCardsRail({
+  items,
+  onPress,
+  onUnpin,
+}: {
+  items: WatchlistItemWire[];
+  onPress: (cardId: string) => void;
+  onUnpin: (item: WatchlistItemWire) => void;
+}) {
+  const p = useThemedPalette();
+  if (items.length === 0) return null;
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          paddingHorizontal: 6,
+          marginBottom: 8,
+        }}
+      >
+        <Heart size={12} color={p.accent.rose} fill={p.accent.rose} />
+        <Text
+          style={{
+            color: p.ink.dim,
+            fontSize: 11,
+            fontWeight: "600",
+            letterSpacing: 1.2,
+            textTransform: "uppercase",
+          }}
+        >
+          Pinned · {items.length}
+        </Text>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 10, paddingHorizontal: 6 }}
+      >
+        {items.map((item) => (
+          <Pressable
+            key={item.id}
+            onPress={() => onPress(item.card_id)}
+            onLongPress={() => onUnpin(item)}
+            style={{ width: 84 }}
+          >
+            <CardImage
+              uri={item.card_image_url}
+              style={{
+                width: 84,
+                height: 116,
+                borderRadius: 8,
+                backgroundColor: p.bg.elevated,
+              }}
+            />
+            <Text
+              numberOfLines={2}
+              style={{
+                color: p.ink.default,
+                fontSize: 11,
+                fontWeight: "600",
+                marginTop: 6,
+                lineHeight: 14,
+              }}
+            >
+              {item.card_name ?? "Unknown"}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 export interface WatchingListProps {
   /**
    * When true, the component renders its own header (eyebrow + count).
@@ -135,6 +214,29 @@ export function WatchingList({ showHeader = true }: WatchingListProps) {
   const router = useRouter();
   const alerts = usePriceAlerts({});
   const deleteMut = useDeletePriceAlert();
+  const watchlist = useWatchlist();
+  const unpinMut = useRemoveFromWatchlist();
+  const pinned = watchlist.data ?? [];
+
+  const onUnpin = useCallback(
+    (item: WatchlistItemWire) => {
+      Alert.alert(
+        "Unpin card?",
+        `Remove ${item.card_name ?? "this card"} from your watchlist?`,
+        [
+          { text: "Keep", style: "cancel" },
+          {
+            text: "Unpin",
+            style: "destructive",
+            onPress: () => {
+              void unpinMut.mutateAsync(item.card_id);
+            },
+          },
+        ],
+      );
+    },
+    [unpinMut],
+  );
 
   const onDelete = useCallback(
     (alert: PriceAlertWire) => {
@@ -190,10 +292,23 @@ export function WatchingList({ showHeader = true }: WatchingListProps) {
           paddingBottom: 48,
           gap: 8,
         }}
+        ListHeaderComponent={
+          <PinnedCardsRail
+            items={pinned}
+            onPress={(cardId) => router.push(routes.card(cardId))}
+            onUnpin={onUnpin}
+          />
+        }
         refreshControl={
           <RefreshControl
-            refreshing={alerts.isFetching && !alerts.isLoading}
-            onRefresh={() => void alerts.refetch()}
+            refreshing={
+              (alerts.isFetching && !alerts.isLoading) ||
+              (watchlist.isFetching && !watchlist.isLoading)
+            }
+            onRefresh={() => {
+              void alerts.refetch();
+              void watchlist.refetch();
+            }}
             tintColor={p.ink.muted}
           />
         }

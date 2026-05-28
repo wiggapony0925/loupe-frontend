@@ -32,13 +32,14 @@ import { Sparkline } from "@/presentation/components/Sparkline";
 import { ErrorState } from "@/presentation/components/ErrorState";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { COPY } from "@/shared/copy";
+import { useRecentSearches } from "@/application/stores/recentSearchesStore";
 import { useCardSearch, useTrendingCards } from "@/application/queries";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { CardImage } from "@/presentation/components/CardImage";
-import { SkeletonTrendingGrid } from "@/presentation/components/Skeletons";
+import { SkeletonTrendingGrid, SkeletonSearchResults } from "@/presentation/components/Skeletons";
 import { CardTile, CardHorizontalRail } from "@/presentation/cards";
 import { pickCardImageUrl, pickCardBlurhash } from "@/shared/cardImage";
 import type { CardSearchResult, TcgKey } from "@/infrastructure/http";
@@ -158,7 +159,11 @@ export default function SearchScreen() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [quickfilter, setQuickfilter] = useState<Quickfilter>("all");
   const [selectedTcg, setSelectedTcg] = useState<TcgChip>("all");
-  const [recent, setRecent] = useState<string[]>([]);
+  const recent = useRecentSearches((s) => s.items);
+  const pushRecent = useRecentSearches((s) => s.push);
+  const clearRecent = useRecentSearches((s) => s.clear);
+  const removeRecent = useRecentSearches((s) => s.remove);
+  const [inputFocused, setInputFocused] = useState(false);
 
   const collection = useQuery({ queryKey: queryKeys.collection.list(), queryFn: () => fetchCollection() });
   const sparks = useQuery({
@@ -231,10 +236,10 @@ export default function SearchScreen() {
   const showResults = query.trim().length > 0 || activeCategory !== null || quickfilter !== "all";
 
   // ── Live backend catalog search ────────────────────────────────────────────
-  // Debounce the input by 300ms; map the active category to a backend `tcg`
+  // Debounce the input by 200ms; map the active category to a backend `tcg`
   // facet (unsupported facets fall through as "all"). The hook itself enforces
   // the ≥2-character floor.
-  const debouncedQuery = useDebouncedValue(query.trim(), 300);
+  const debouncedQuery = useDebouncedValue(query.trim(), 200);
   // Explicit chip beats category fallback; chips for unsupported facets
   // collapse to "all" so we still hit the wire and don't 400.
   const chipTcg: TcgChip = SUPPORTED_TCGS.has(selectedTcg) ? selectedTcg : "all";
@@ -246,11 +251,16 @@ export default function SearchScreen() {
         : "all";
   const live = useCardSearch({ q: debouncedQuery, tcg: liveTcg, limit: 20 });
   const showLive = debouncedQuery.length >= 2;
+  // When the user is actively typing a free-text query the *live catalog*
+  // is the authoritative answer — the local vault/catalog filter below is
+  // almost always empty (it can only match cards already in the user's
+  // collection or the seeded market catalog) and produces a confusing
+  // "No matches" panel directly under a successful live result. Suppress
+  // the local filtered block whenever live search is the primary surface.
+  const showLocalResults = showResults && !showLive;
 
   const commitRecentSearch = (q: string) => {
-    const trimmed = q.trim();
-    if (!trimmed) return;
-    setRecent((prev) => [trimmed, ...prev.filter((r) => r !== trimmed)].slice(0, 6));
+    pushRecent(q);
   };
 
   return (
@@ -266,6 +276,8 @@ export default function SearchScreen() {
             value={query}
             onChangeText={setQuery}
             onSubmitEditing={() => commitRecentSearch(query)}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             returnKeyType="search"
             placeholder="Search cards, sets, years…"
             placeholderTextColor={p.ink.dim}
@@ -297,6 +309,70 @@ export default function SearchScreen() {
             <Camera size={15} color={p.accent.mint} />
           </Pressable>
         </View>
+
+        {/* Inline recent-searches strip — surfaces saved queries the
+            moment the user focuses the input, so re-running a recent
+            search is one tap instead of scrolling to the idle band.
+            Hidden once the user starts typing (≥2 chars) so it doesn't
+            compete with live results. */}
+        {inputFocused && debouncedQuery.length < 2 && recent.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ gap: 8, paddingTop: 12, paddingRight: 8 }}
+          >
+            {recent.map((r) => (
+              <View
+                key={r}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  paddingLeft: 10,
+                  paddingRight: 4,
+                  paddingVertical: 4,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: p.line.default,
+                  backgroundColor: p.bg.elevated,
+                }}
+              >
+                <Clock size={11} color={p.ink.dim} />
+                <Pressable
+                  onPress={() => {
+                    setQuery(r);
+                    Keyboard.dismiss();
+                  }}
+                  hitSlop={6}
+                >
+                  <Text
+                    style={{
+                      color: p.ink.default,
+                      fontSize: 12,
+                      fontWeight: "600",
+                    }}
+                  >
+                    {r}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => removeRecent(r)}
+                  hitSlop={6}
+                  style={{
+                    width: 18,
+                    height: 18,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 999,
+                  }}
+                >
+                  <X size={11} color={p.ink.dim} />
+                </Pressable>
+              </View>
+            ))}
+          </ScrollView>
+        ) : null}
 
         {/* TCG facet chips (drive the live backend search) */}
         <ScrollView
@@ -401,14 +477,17 @@ export default function SearchScreen() {
           <LiveResultsSection
             query={debouncedQuery}
             tcg={liveTcg}
-            isLoading={live.isLoading}
+            isLoading={live.isLoading || live.isFetching}
             isError={live.isError}
             data={live.data?.results ?? []}
             upstreamError={live.data?.error}
+            partial={live.data?.partial}
+            onResultTap={commitRecentSearch}
           />
         ) : null}
 
-        {!showResults ? (
+        {!showLocalResults ? (
+          showLive ? null : (
           <>
             {/* Idle layout — organized into three clear bands so the
                 discovery surfaces stop fighting each other:
@@ -577,7 +656,7 @@ export default function SearchScreen() {
                   <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
                     Recent
                   </Text>
-                  <Pressable onPress={() => setRecent([])} hitSlop={6}>
+                  <Pressable onPress={() => clearRecent()} hitSlop={6}>
                     <Text className="text-[11px] font-semibold text-ink-muted">Clear</Text>
                   </Pressable>
                 </View>
@@ -625,6 +704,7 @@ export default function SearchScreen() {
               </View>
             ) : null}
           </>
+          )
         ) : (
           <View>
             {/* Active filter pill */}
@@ -778,6 +858,8 @@ function LiveResultsSection({
   isError,
   data,
   upstreamError,
+  partial,
+  onResultTap,
 }: {
   query: string;
   tcg: TcgKey | "all";
@@ -785,9 +867,29 @@ function LiveResultsSection({
   isError: boolean;
   data: CardSearchResult[];
   upstreamError?: string;
+  partial?: boolean;
+  onResultTap?: (q: string) => void;
 }) {
   const p = useThemedPalette();
   const tcgLabel = tcg === "all" ? "All TCGs" : tcg;
+
+  // Per-TCG breakdown for the header subtitle so the user can tell at a
+  // glance which catalogs the results came from (e.g. "5 cards · 3 Pokémon · 2 Magic")
+  // without scanning each row's badge.
+  const breakdown = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of data) counts[c.tcg] = (counts[c.tcg] ?? 0) + 1;
+    const labels: Record<string, string> = {
+      pokemon: "Pokémon",
+      magic: "Magic",
+      yugioh: "Yu-Gi-Oh!",
+    };
+    return Object.entries(counts)
+      .sort(([, a], [, b]) => b - a)
+      .map(([k, n]) => `${n} ${labels[k] ?? k}`)
+      .join(" · ");
+  }, [data]);
+
   return (
     <View>
       <View className="flex-row items-center justify-between">
@@ -796,9 +898,51 @@ function LiveResultsSection({
         </Text>
         {isLoading ? <ActivityIndicator size="small" color={p.accent.mint} /> : null}
       </View>
-      <Text className="mt-1 text-base font-semibold text-ink">
-        Results for “{query}”
-      </Text>
+
+      <View className="mt-1 flex-row items-baseline justify-between gap-2">
+        <Text
+          className="flex-1 text-base font-semibold text-ink"
+          numberOfLines={1}
+        >
+          {data.length > 0
+            ? `${data.length} ${data.length === 1 ? "result" : "results"} for “${query}”`
+            : isLoading
+              ? `Searching “${query}”…`
+              : `Results for “${query}”`}
+        </Text>
+        {/* Partial-results pill — surfaces backend fan-out cancellation
+            so the user understands why e.g. Pokémon is missing from the
+            list. The next keystroke will retry the laggard (20s TTL). */}
+        {partial && data.length > 0 ? (
+          <View
+            style={{
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderRadius: 999,
+              backgroundColor: withAlpha(p.accent.amber, 0.12),
+              borderWidth: 1,
+              borderColor: withAlpha(p.accent.amber, 0.3),
+            }}
+          >
+            <Text
+              style={{
+                color: p.accent.amber,
+                fontSize: 9,
+                fontWeight: "800",
+                letterSpacing: 0.8,
+              }}
+            >
+              PARTIAL
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      {breakdown && data.length > 0 ? (
+        <Text className="mt-0.5 text-[11px] text-ink-muted" numberOfLines={1}>
+          {breakdown}
+        </Text>
+      ) : null}
 
       {upstreamError ? (
         <View
@@ -821,9 +965,12 @@ function LiveResultsSection({
               compact
             />
           </View>
-        ) : isLoading ? (
-          <View className="items-center px-4 py-6">
-            <ActivityIndicator size="small" color={p.accent.mint} />
+        ) : isLoading && data.length === 0 ? (
+          // First-page skeleton — far better than a centered spinner
+          // because the layout doesn't jump when real rows arrive and
+          // the perceived wait is shorter (eyes have something to scan).
+          <View style={{ padding: 8 }}>
+            <SkeletonSearchResults rows={4} />
           </View>
         ) : data.length === 0 ? (
           <View style={{ padding: 8 }}>
@@ -834,9 +981,19 @@ function LiveResultsSection({
             />
           </View>
         ) : (
-          data.map((card, i) => (
-            <SearchResultRow key={card.id} card={card} bordered={i > 0} />
-          ))
+          // Rows fade slightly while a refresh is in-flight so the user
+          // gets visual confirmation that something is updating without
+          // losing the previous results (TanStack `keepPreviousData`).
+          <View style={{ opacity: isLoading ? 0.55 : 1 }}>
+            {data.map((card, i) => (
+              <SearchResultRow
+                key={card.id}
+                card={card}
+                bordered={i > 0}
+                onPressCapture={() => onResultTap?.(query)}
+              />
+            ))}
+          </View>
         )}
       </View>
     </View>

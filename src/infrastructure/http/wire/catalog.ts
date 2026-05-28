@@ -163,6 +163,13 @@ export interface CardSearchResponse {
   total: number;
   source: string;
   error?: string;
+  /**
+   * True when the backend's `tcg=all` fan-out completed with at least one
+   * provider cancelled or failed (e.g. pokemontcg.io was slow). The shown
+   * results are still valid — just incomplete — and the cache TTL is
+   * short so the next keystroke will retry the laggard.
+   */
+  partial?: boolean;
 }
 
 export interface TrendingResponseWire {
