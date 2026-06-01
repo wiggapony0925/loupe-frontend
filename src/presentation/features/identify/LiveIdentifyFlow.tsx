@@ -52,8 +52,6 @@ import {
   RotateCcw,
   Search,
   Sparkles,
-  Pause,
-  Play,
   X,
   Zap,
   ZapOff,
@@ -656,9 +654,9 @@ export function LiveIdentifyFlow({
           <TopBar
             onClose={onClose}
             flashOn={flashOn}
-            paused={paused}
+            locked={state.locked}
+            hasMatch={state.candidates.some((c) => c.confidence >= 0.5)}
             onToggleFlash={() => setFlashOn((v) => !v)}
-            onTogglePause={() => setPaused((v) => !v)}
           />
 
           <ReticleArea
@@ -706,79 +704,125 @@ export function LiveIdentifyFlow({
 function TopBar({
   onClose,
   flashOn,
-  paused,
+  locked,
+  hasMatch,
   onToggleFlash,
-  onTogglePause,
 }: {
   onClose: () => void;
   flashOn: boolean;
-  paused: boolean;
+  locked: boolean;
+  hasMatch: boolean;
   onToggleFlash: () => void;
-  onTogglePause: () => void;
 }) {
+  // Breathing status dot — gives the header a quiet "alive" pulse while
+  // hunting, then snaps solid mint the moment we have a match/lock.
+  const dot = useRef(new Animated.Value(0.35)).current;
+  useEffect(() => {
+    if (locked || hasMatch) {
+      dot.setValue(1);
+      return;
+    }
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(dot, {
+          toValue: 1,
+          duration: 750,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(dot, {
+          toValue: 0.35,
+          duration: 750,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [locked, hasMatch, dot]);
+
+  const status = locked
+    ? "Locked in"
+    : hasMatch
+      ? "Match found"
+      : "Looking for a card…";
+
   return (
     <LinearGradient
-      colors={["rgba(0,0,0,0.78)", "transparent"]}
-      style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 22 }}
+      colors={["rgba(0,0,0,0.74)", "transparent"]}
+      style={{ paddingHorizontal: 14, paddingTop: 6, paddingBottom: 30 }}
     >
       <View className="flex-row items-center justify-between">
         <Pressable
           onPress={onClose}
           hitSlop={12}
           accessibilityLabel="Close scanner"
-          className="h-9 w-9 items-center justify-center rounded-full"
-          style={{ backgroundColor: GLASS, borderWidth: 1, borderColor: HAIRLINE }}
+          className="h-[38px] w-[38px] items-center justify-center rounded-full"
+          style={({ pressed }) => ({
+            backgroundColor: GLASS,
+            borderWidth: 1,
+            borderColor: HAIRLINE,
+            opacity: pressed ? 0.7 : 1,
+          })}
         >
           <X size={18} color="#fff" />
         </Pressable>
 
-        <Text
-          style={{
-            color: "#fff",
-            fontSize: 15,
-            fontWeight: "700",
-            letterSpacing: -0.2,
-          }}
-        >
-          Scan a card
-        </Text>
-
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable
-            onPress={onTogglePause}
-            hitSlop={10}
-            accessibilityLabel={paused ? "Resume scanning" : "Pause scanning"}
-            className="h-9 w-9 items-center justify-center rounded-full"
+        {/* Centered title + live status. Top = current mode, bottom panel
+            = the actual result, so they never duplicate. */}
+        <View style={{ alignItems: "center", gap: 3 }}>
+          <Text
             style={{
-              backgroundColor: paused ? "rgba(255,255,255,0.95)" : GLASS,
-              borderWidth: 1,
-              borderColor: paused ? "transparent" : HAIRLINE,
+              color: "#fff",
+              fontSize: 15.5,
+              fontWeight: "700",
+              letterSpacing: -0.2,
             }}
           >
-            {paused ? (
-              <Play size={16} color="#000" />
-            ) : (
-              <Pause size={16} color="#fff" />
-            )}
-          </Pressable>
-          <Pressable
-            onPress={onToggleFlash}
-            hitSlop={10}
-            accessibilityLabel={flashOn ? "Turn flash off" : "Turn flash on"}
-            className="h-9 w-9 items-center justify-center rounded-full"
-            style={{
-              backgroundColor: flashOn ? palette.accent.amber : GLASS,
-              borderWidth: 1,
-              borderColor: flashOn ? "transparent" : HAIRLINE,
-            }}
-          >
-            {flashOn ? (
-              <Zap size={16} color="#000" />
-            ) : (
-              <ZapOff size={16} color="#fff" />
-            )}
-          </Pressable>
+            Scan a card
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Animated.View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: palette.accent.mint,
+                opacity: dot,
+              }}
+            />
+            <Text
+              style={{
+                color: "rgba(255,255,255,0.6)",
+                fontSize: 11.5,
+                fontWeight: "600",
+                letterSpacing: 0.2,
+              }}
+            >
+              {status}
+            </Text>
+          </View>
         </View>
+
+        <Pressable
+          onPress={onToggleFlash}
+          hitSlop={12}
+          accessibilityLabel={flashOn ? "Turn flash off" : "Turn flash on"}
+          className="h-[38px] w-[38px] items-center justify-center rounded-full"
+          style={({ pressed }) => ({
+            backgroundColor: flashOn ? palette.accent.amber : GLASS,
+            borderWidth: 1,
+            borderColor: flashOn ? "transparent" : HAIRLINE,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          {flashOn ? (
+            <Zap size={16} color="#000" />
+          ) : (
+            <ZapOff size={16} color="#fff" />
+          )}
+        </Pressable>
       </View>
     </LinearGradient>
   );
@@ -1085,39 +1129,69 @@ function CornerBracket({
   color: string;
   bold?: boolean;
 }) {
-  const SIZE = bold ? 32 : 26;
-  const THICK = bold ? 5 : 4;
-  const base = { position: "absolute" as const, width: SIZE, height: SIZE };
-  const horiz = { position: "absolute" as const, height: THICK, width: SIZE, backgroundColor: color };
-  const vert = { position: "absolute" as const, width: THICK, height: SIZE, backgroundColor: color };
+  // Rounded L-shaped bracket (Apple document-scanner aesthetic) — two
+  // borders + a single rounded corner instead of two hard rectangles.
+  const SIZE = bold ? 30 : 26;
+  const THICK = bold ? 4 : 3;
+  const RADIUS = 14;
+  const base = {
+    position: "absolute" as const,
+    width: SIZE,
+    height: SIZE,
+    borderColor: color,
+  };
   switch (corner) {
     case "tl":
       return (
-        <View style={{ ...base, top: -2, left: -2 }}>
-          <View style={{ ...horiz, top: 0, left: 0 }} />
-          <View style={{ ...vert, top: 0, left: 0 }} />
-        </View>
+        <View
+          style={{
+            ...base,
+            top: -2,
+            left: -2,
+            borderTopWidth: THICK,
+            borderLeftWidth: THICK,
+            borderTopLeftRadius: RADIUS,
+          }}
+        />
       );
     case "tr":
       return (
-        <View style={{ ...base, top: -2, right: -2 }}>
-          <View style={{ ...horiz, top: 0, right: 0 }} />
-          <View style={{ ...vert, top: 0, right: 0 }} />
-        </View>
+        <View
+          style={{
+            ...base,
+            top: -2,
+            right: -2,
+            borderTopWidth: THICK,
+            borderRightWidth: THICK,
+            borderTopRightRadius: RADIUS,
+          }}
+        />
       );
     case "bl":
       return (
-        <View style={{ ...base, bottom: -2, left: -2 }}>
-          <View style={{ ...horiz, bottom: 0, left: 0 }} />
-          <View style={{ ...vert, bottom: 0, left: 0 }} />
-        </View>
+        <View
+          style={{
+            ...base,
+            bottom: -2,
+            left: -2,
+            borderBottomWidth: THICK,
+            borderLeftWidth: THICK,
+            borderBottomLeftRadius: RADIUS,
+          }}
+        />
       );
     case "br":
       return (
-        <View style={{ ...base, bottom: -2, right: -2 }}>
-          <View style={{ ...horiz, bottom: 0, right: 0 }} />
-          <View style={{ ...vert, bottom: 0, right: 0 }} />
-        </View>
+        <View
+          style={{
+            ...base,
+            bottom: -2,
+            right: -2,
+            borderBottomWidth: THICK,
+            borderRightWidth: THICK,
+            borderBottomRightRadius: RADIUS,
+          }}
+        />
       );
   }
 }
