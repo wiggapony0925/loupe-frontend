@@ -43,6 +43,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import {
   Check,
@@ -134,6 +135,58 @@ const CROP_JPEG_QUALITY = 0.7;
 const GLASS = "rgba(20,20,23,0.66)";
 const GLASS_STRONG = "rgba(14,14,16,0.94)";
 const HAIRLINE = "rgba(255,255,255,0.10)";
+
+/**
+ * Frosted-glass circular button — a BlurView fill behind the icon so the
+ * camera feed shows through, blurred. Used for the top-bar close/flash
+ * controls. The Pressable stays the outer node so press feedback + hit
+ * targets are unaffected; the BlurView is clipped to the circle.
+ */
+function GlassCircle({
+  children,
+  onPress,
+  accessibilityLabel,
+  tint = GLASS,
+  borderColor = HAIRLINE,
+  size = 38,
+}: {
+  children: React.ReactNode;
+  onPress: () => void;
+  accessibilityLabel: string;
+  tint?: string;
+  borderColor?: string;
+  size?: number;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={12}
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => ({
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <BlurView
+        intensity={24}
+        tint="dark"
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: tint,
+        }}
+      >
+        {children}
+      </BlurView>
+    </Pressable>
+  );
+}
 
 /**
  * TCG hints surfaced as a chevron pill in the bottom bar. Each carries a
@@ -754,20 +807,9 @@ function TopBar({
       style={{ paddingHorizontal: 14, paddingTop: 6, paddingBottom: 30 }}
     >
       <View className="flex-row items-center justify-between">
-        <Pressable
-          onPress={onClose}
-          hitSlop={12}
-          accessibilityLabel="Close scanner"
-          className="h-[38px] w-[38px] items-center justify-center rounded-full"
-          style={({ pressed }) => ({
-            backgroundColor: GLASS,
-            borderWidth: 1,
-            borderColor: HAIRLINE,
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
+        <GlassCircle onPress={onClose} accessibilityLabel="Close scanner">
           <X size={18} color="#fff" />
-        </Pressable>
+        </GlassCircle>
 
         {/* Centered title + live status. Top = current mode, bottom panel
             = the actual result, so they never duplicate. */}
@@ -811,16 +853,38 @@ function TopBar({
           accessibilityLabel={flashOn ? "Turn flash off" : "Turn flash on"}
           className="h-[38px] w-[38px] items-center justify-center rounded-full"
           style={({ pressed }) => ({
-            backgroundColor: flashOn ? palette.accent.amber : GLASS,
+            overflow: "hidden",
             borderWidth: 1,
             borderColor: flashOn ? "transparent" : HAIRLINE,
             opacity: pressed ? 0.7 : 1,
           })}
         >
           {flashOn ? (
-            <Zap size={16} color="#000" />
+            <View
+              style={{
+                position: "absolute",
+                inset: 0,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: palette.accent.amber,
+              }}
+            >
+              <Zap size={16} color="#000" />
+            </View>
           ) : (
-            <ZapOff size={16} color="#fff" />
+            <BlurView
+              intensity={24}
+              tint="dark"
+              style={{
+                position: "absolute",
+                inset: 0,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: GLASS,
+              }}
+            >
+              <ZapOff size={16} color="#fff" />
+            </BlurView>
           )}
         </Pressable>
       </View>
@@ -1357,29 +1421,37 @@ function BottomPanel({
             accessibilityRole="button"
             accessibilityLabel="Change TCG hint"
             style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 7,
-              paddingLeft: 11,
-              paddingRight: 12,
-              paddingVertical: 10,
               borderRadius: 999,
-              backgroundColor: GLASS,
+              overflow: "hidden",
               borderWidth: 1,
               borderColor: HAIRLINE,
               opacity: pressed ? 0.7 : 1,
             })}
           >
-            <View
+            <BlurView
+              intensity={24}
+              tint="dark"
               style={{
-                width: 7,
-                height: 7,
-                borderRadius: 4,
-                backgroundColor: tcgColor,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 7,
+                paddingLeft: 11,
+                paddingRight: 12,
+                paddingVertical: 10,
+                backgroundColor: GLASS,
               }}
-            />
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>{tcgLabel}</Text>
-            <ChevronDown size={14} color="rgba(255,255,255,0.6)" />
+            >
+              <View
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 4,
+                  backgroundColor: tcgColor,
+                }}
+              />
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>{tcgLabel}</Text>
+              <ChevronDown size={14} color="rgba(255,255,255,0.6)" />
+            </BlurView>
           </Pressable>
         </View>
 
@@ -1425,20 +1497,28 @@ function BottomPanel({
             accessibilityLabel="Search the catalog manually"
             disabled={!onManualSearch}
             style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              paddingHorizontal: 13,
-              paddingVertical: 10,
               borderRadius: 999,
-              backgroundColor: GLASS,
+              overflow: "hidden",
               borderWidth: 1,
               borderColor: HAIRLINE,
               opacity: pressed ? 0.7 : onManualSearch ? 1 : 0.4,
             })}
           >
-            <Search size={15} color="rgba(255,255,255,0.9)" />
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>Search</Text>
+            <BlurView
+              intensity={24}
+              tint="dark"
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                paddingHorizontal: 13,
+                paddingVertical: 10,
+                backgroundColor: GLASS,
+              }}
+            >
+              <Search size={15} color="rgba(255,255,255,0.9)" />
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>Search</Text>
+            </BlurView>
           </Pressable>
         </View>
       </View>
