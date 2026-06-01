@@ -1002,6 +1002,26 @@ function ReticleArea({
     return () => anim.stop();
   }, [locked, breathe]);
 
+  // Floating price chip entrance. Springs up + fades in the moment the
+  // chip should be on screen (locked, and either loading or priced) so
+  // the value "pops" into place rather than hard-cutting in.
+  const priceChipVisible = locked && (priceLoading || marketPriceUsd != null);
+  const priceChipAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!priceChipVisible) {
+      priceChipAnim.setValue(0);
+      return;
+    }
+    const anim = Animated.spring(priceChipAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      bounciness: 10,
+      speed: 14,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [priceChipVisible, priceChipAnim]);
+
   // Tap-to-focus ripple. expo-camera on iOS does not refocus when the
   // subject changes — we hand the tap coordinate to the parent which
   // toggles the `autofocus` prop to force a refocus pass.
@@ -1090,7 +1110,7 @@ function ReticleArea({
               alignItems: "center",
             }}
           >
-            <View
+            <Animated.View
               style={{
                 paddingHorizontal: 18,
                 paddingVertical: 9,
@@ -1104,6 +1124,21 @@ function ReticleArea({
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 6,
+                opacity: priceChipAnim,
+                transform: [
+                  {
+                    translateY: priceChipAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [10, 0],
+                    }),
+                  },
+                  {
+                    scale: priceChipAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.85, 1],
+                    }),
+                  },
+                ],
               }}
             >
               {marketPriceUsd != null ? (
@@ -1154,7 +1189,7 @@ function ReticleArea({
                   </Text>
                 </>
               )}
-            </View>
+            </Animated.View>
           </View>
         ) : null}
 
@@ -2104,8 +2139,23 @@ function LockedResultSheet({
   // printings apart — the user picks the exact one they're holding.
   const alternates = candidates.slice(1, 7);
 
+  // Entrance: the sheet swaps in for the thin candidate strip the moment
+  // we lock, so spring it up from below + fade in to make the lock feel
+  // like a deliberate, satisfying "snap" rather than a layout jump.
+  const enter = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const anim = Animated.spring(enter, {
+      toValue: 1,
+      useNativeDriver: true,
+      bounciness: 9,
+      speed: 13,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [enter]);
+
   return (
-    <View
+    <Animated.View
       style={{
         backgroundColor: GLASS_STRONG,
         borderRadius: 24,
@@ -2118,6 +2168,21 @@ function LockedResultSheet({
         shadowRadius: 20,
         shadowOffset: { width: 0, height: 8 },
         elevation: 12,
+        opacity: enter,
+        transform: [
+          {
+            translateY: enter.interpolate({
+              inputRange: [0, 1],
+              outputRange: [18, 0],
+            }),
+          },
+          {
+            scale: enter.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.97, 1],
+            }),
+          },
+        ],
       }}
     >
       <View style={{ flexDirection: "row", gap: 14 }}>
@@ -2405,6 +2470,6 @@ function LockedResultSheet({
           Not it? Scan again
         </Text>
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
