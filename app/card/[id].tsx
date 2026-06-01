@@ -18,10 +18,10 @@
  *
  * Loading state: `<SkeletonCardDetailPage />`. Error: error card with retry.
  */
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import {
   Bell,
   ChevronDown,
@@ -101,6 +101,17 @@ export default function CardDetailScreen() {
   const canonicalQ = useCanonicalCard(cardId);
   const p = useThemedPalette();
   const { isAuthenticated } = useAuth();
+  const navigation = useNavigation();
+  // While the user is dragging on the price chart, suspend the
+  // navigator's swipe-back gesture so a left→right scrub reveals the
+  // price instead of popping back to the previous screen. Re-enabled
+  // the instant the finger lifts.
+  const handleChartScrubbing = useCallback(
+    (active: boolean) => {
+      navigation.setOptions({ gestureEnabled: !active });
+    },
+    [navigation],
+  );
   const myGradesQ = useMyGrades<GradedCard[]>();
   const isWatching = useIsWatching(cardId);
   const addWatch = useAddToWatchlist();
@@ -400,6 +411,7 @@ export default function CardDetailScreen() {
                 houseFilter={chartFilter?.house}
                 gradeFilter={chartFilter?.grade}
                 bleedX={20}
+                onScrubbingChange={handleChartScrubbing}
               />
 
               {/* 4b. Market signals row (52w hi/lo, trend, arbitrage,

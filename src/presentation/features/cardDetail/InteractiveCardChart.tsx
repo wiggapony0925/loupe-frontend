@@ -114,6 +114,13 @@ interface InteractiveCardChartProps {
    * matches `PortfolioChart`'s `bleedX` semantics. Defaults to 0.
    */
   bleedX?: number;
+  /**
+   * Fired when the user starts (`true`) and stops (`false`) dragging on
+   * the chart. The host screen uses this to suspend the navigator's
+   * swipe-back gesture while scrubbing, so a left→right drag scrubs the
+   * price instead of popping the page.
+   */
+  onScrubbingChange?: (active: boolean) => void;
 }
 
 export function InteractiveCardChart({
@@ -125,6 +132,7 @@ export function InteractiveCardChart({
   houseFilter,
   gradeFilter,
   bleedX = 0,
+  onScrubbingChange,
 }: InteractiveCardChartProps) {
   const p = useThemedPalette();
   const insets = useSafeAreaInsets();
@@ -206,6 +214,11 @@ export function InteractiveCardChart({
   // Baseline (period start) y — for the dashed reference line.
   const baselineY = coords[0]?.[1] ?? null;
 
+  // Keep the latest scrub callback in a ref so the ref-held responder
+  // (created once) always calls the current prop without going stale.
+  const onScrubbingChangeRef = useRef(onScrubbingChange);
+  onScrubbingChangeRef.current = onScrubbingChange;
+
   // Touch handlers — store only the raw X. Inline arrows keep the
   // ref-held responder free of stale `coords`/`width` closures; the
   // index is computed in render (see `scrubIdx`).
@@ -213,12 +226,24 @@ export function InteractiveCardChart({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (e: GestureResponderEvent) =>
-        setScrubX(e.nativeEvent.locationX),
+      // Claim the gesture on touch start so the navigator's edge
+      // swipe-back never gets a chance to capture a left→right drag
+      // that begins on the chart.
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: (e: GestureResponderEvent) => {
+        onScrubbingChangeRef.current?.(true);
+        setScrubX(e.nativeEvent.locationX);
+      },
       onPanResponderMove: (e: GestureResponderEvent) =>
         setScrubX(e.nativeEvent.locationX),
-      onPanResponderRelease: () => setScrubX(null),
-      onPanResponderTerminate: () => setScrubX(null),
+      onPanResponderRelease: () => {
+        onScrubbingChangeRef.current?.(false);
+        setScrubX(null);
+      },
+      onPanResponderTerminate: () => {
+        onScrubbingChangeRef.current?.(false);
+        setScrubX(null);
+      },
     }),
   ).current;
 
