@@ -14,11 +14,9 @@
  * provider-aware pricing without branching on `tcg` themselves.
  */
 import { useQuery } from "@tanstack/react-query";
-
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type { CanonicalCard } from "@/infrastructure/http/wire/canonicalCard";
-
 import { queryKeys } from "../queryKeys";
 
 const FIVE_MINUTES = 5 * 60 * 1000;

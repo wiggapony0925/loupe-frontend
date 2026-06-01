@@ -20,7 +20,6 @@ import {
   View,
 } from "react-native";
 import { Search, X } from "lucide-react-native";
-
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { ApiError } from "@/infrastructure/http/client";

@@ -15,7 +15,6 @@
  */
 import React from "react";
 import renderer from "react-test-renderer";
-
 import { CardAttributesPanel } from "@/presentation/features/cardAttributes/CardAttributesPanel";
 import type { CanonicalCard } from "@/infrastructure/http/wire/canonicalCard";
 

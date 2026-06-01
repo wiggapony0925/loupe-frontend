@@ -15,7 +15,6 @@
 import React, { useMemo } from "react";
 import { Linking, Pressable, Text, View } from "react-native";
 import Svg, { Circle, Line as SvgLine, Text as SvgText } from "react-native-svg";
-
 import { useCardComps } from "@/application/queries/catalog/useCardComps";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import {

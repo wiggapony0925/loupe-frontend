@@ -60,7 +60,7 @@ describe("extractSpeciesSlug", () => {
 });
 
 describe("pickEnglishFlavorText", () => {
-  const mk = (entries: Array<{ lang: string; text: string }>): PokeApiSpecies =>
+  const mk = (entries: { lang: string; text: string }[]): PokeApiSpecies =>
     ({
       flavor_text_entries: entries.map((e) => ({
         flavor_text: e.text,

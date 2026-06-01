@@ -122,7 +122,7 @@ export function pickCardBlurhash(
  * the detail screen prefetches `large` separately on navigate.
  */
 export function prefetchCardImages(
-  cards: ReadonlyArray<CardLike | null | undefined>,
+  cards: readonly (CardLike | null | undefined)[],
   variant: ImageVariant = "small",
 ): void {
   const urls: string[] = [];

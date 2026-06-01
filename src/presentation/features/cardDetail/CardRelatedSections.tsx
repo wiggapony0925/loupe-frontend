@@ -51,13 +51,12 @@ export function CardActiveAlerts({ cardId }: { cardId: string }) {
   const alertsQ = usePriceAlerts({ pending: true });
   const del = useDeletePriceAlert();
 
-  if (!isAuthenticated) return null;
-
   const mine: PriceAlertWire[] = useMemo(
     () => (alertsQ.data ?? []).filter((a) => a.card_id === cardId),
     [alertsQ.data, cardId],
   );
 
+  if (!isAuthenticated) return null;
   if (mine.length === 0) return null;
 
   return (

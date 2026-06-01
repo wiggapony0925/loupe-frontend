@@ -14,7 +14,7 @@ import { LiveIdentifyFlow } from "@/presentation/features/identify";
 import type { IdentifyTcgHint } from "@/infrastructure/repositories/identifyRepository";
 import { routes } from "@/shared/routes";
 
-const ALLOWED: ReadonlyArray<NonNullable<IdentifyTcgHint>> = [
+const ALLOWED: readonly NonNullable<IdentifyTcgHint>[] = [
   "pokemon",
   "magic",
   "yugioh",

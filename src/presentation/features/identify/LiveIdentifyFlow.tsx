@@ -58,7 +58,6 @@ import {
   Zap,
   ZapOff,
 } from "lucide-react-native";
-
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
@@ -139,7 +138,6 @@ const SCRIM = "rgba(0,0,0,0.55)";
 const GLASS = "rgba(20,20,23,0.66)";
 const GLASS_STRONG = "rgba(14,14,16,0.94)";
 const HAIRLINE = "rgba(255,255,255,0.10)";
-const HAIRLINE_SOFT = "rgba(255,255,255,0.06)";
 
 /**
  * TCG hints surfaced as a chevron pill in the bottom bar. Each carries a

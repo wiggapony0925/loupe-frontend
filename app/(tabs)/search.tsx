@@ -11,7 +11,6 @@
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Keyboard,
   Pressable,
   ScrollView,
@@ -22,10 +21,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@/application/queries/queryKeys";
 import { router } from "expo-router";
-import { routes } from "@/shared/routes";
 import { Camera, Clock, Search as SearchIcon, X } from "lucide-react-native";
+import { queryKeys } from "@/application/queries/queryKeys";
+import { routes } from "@/shared/routes";
 import { fetchCardSparklines, fetchCollection } from "@/infrastructure/repositories/forensicRepository";
 import { fetchMarketCatalog } from "@/infrastructure/repositories/marketRepository";
 import { Sparkline } from "@/presentation/components/Sparkline";
@@ -42,14 +41,11 @@ import { SearchResultRow } from "@/presentation/features/search/SearchResultRow"
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { CardImage } from "@/presentation/components/CardImage";
-import { SkeletonTrendingGrid, SkeletonSearchResults } from "@/presentation/components/Skeletons";
-import { CardTile, CardHorizontalRail } from "@/presentation/cards";
-import { pickCardImageUrl, pickCardBlurhash } from "@/shared/cardImage";
+import { SkeletonSearchResults } from "@/presentation/components/Skeletons";
+import { CardHorizontalRail } from "@/presentation/cards";
 import type { CardSearchResult, TcgKey } from "@/infrastructure/http";
 import { compactUsd } from "@/shared/format";
-import { getBrandLogo } from "@/shared/brandAssets";
 import { TcgMark } from "@/presentation/brand/TcgMark";
-import { SetLogo } from "@/presentation/brand/SetLogo";
 import { gradeColor, palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /** All TCG facets supported by the chip row, in render order. */
@@ -133,21 +129,6 @@ const CATEGORIES: Category[] = [
     match: (c) => /world cup|topps|chrome|panini|prizm|bowman/i.test(c.set),
   },
 ];
-
-/**
- * Marquee set per franchise category — used to give the category tile a
- * real, licensed-source set logo via `<SetLogo>` (Pokémon PNGs from the
- * Pokémon TCG API, Magic mana symbols from Scryfall). The tile remains
- * a *franchise* entry point; the set art is purely decorative shorthand.
- * Categories without a public-API logo source fall through to `TcgMark`.
- */
-const MARQUEE_SETS: Partial<Record<string, { tcg: "pokemon" | "magic" | "yugioh"; set: string; variant: "logo" | "symbol" }>> = {
-  // Picked for visual clarity at tile size, not recency:
-  //   • base1 — original Pokémon Base Set logo (iconic wordmark)
-  //   • lea   — Magic Alpha mana symbol (cleanest "M" silhouette)
-  pokemon: { tcg: "pokemon", set: "base1", variant: "logo" },
-  magic: { tcg: "magic", set: "lea", variant: "symbol" },
-};
 
 const QUICK_FILTERS: { key: Quickfilter; label: string }[] = [
   { key: "all", label: "All" },
@@ -1041,61 +1022,6 @@ function LiveResultsSection({
   );
 }
 
-function LiveResultRow({ card, bordered }: { card: CardSearchResult; bordered: boolean }) {
-  const p = useThemedPalette();
-  return (
-    <Pressable
-      onPress={() => router.push(routes.market(card.id))}
-      accessibilityRole="button"
-      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-      className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
-    >
-      <View
-        className="overflow-hidden rounded-lg"
-        style={{ width: 36, height: 50, backgroundColor: palette.bg.sunken }}
-      >
-        <CardImage
-          uri={pickCardImageUrl(card, "small")}
-          fallbackUri={card.image_url ?? undefined}
-          blurhash={pickCardBlurhash(card)}
-          width={36}
-          height={50}
-          rounded={8}
-          priority="low"
-          recyclingKey={card.id}
-          alt={card.name}
-          aspectRatio={undefined as unknown as number}
-        />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} className="text-sm font-semibold text-ink">
-          {card.name}
-        </Text>
-        <Text numberOfLines={1} className="mt-0.5 text-[11px] text-ink-muted">
-          {[card.set_name, card.number, card.year].filter(Boolean).join(" · ")}
-        </Text>
-      </View>
-      <View style={{ minWidth: 56, alignItems: "flex-end" }}>
-        <Text
-          style={{
-            color: p.accent.mint,
-            fontSize: 9,
-            fontWeight: "800",
-            letterSpacing: 0.8,
-          }}
-        >
-          {card.tcg.toUpperCase()}
-        </Text>
-        {card.rarity ? (
-          <Text className="mt-0.5 text-[10px] text-ink-muted" numberOfLines={1}>
-            {card.rarity}
-          </Text>
-        ) : null}
-      </View>
-    </Pressable>
-  );
-}
-
 // ── Trending section (empty-state default) ────────────────────────────
 // Renders as a horizontal rail (not a wrap-grid) so the entire Discover
 // band has consistent vertical rhythm — every rail in the band uses the
@@ -1143,14 +1069,4 @@ function TrendingSection({ tcg = "all" }: { tcg?: TcgChip }) {
   }
 
   return <CardHorizontalRail cards={cards} tileSize="md" showPrice edgeBleed={20} />;
-}
-
-function TrendingTile(_: {
-  card: CardSearchResult;
-  priority: "low" | "normal" | "high";
-}): null {
-  // Deprecated: replaced by reusable <CardTile> primitive. Retained as a
-  // no-op shim only to avoid ripping out the symbol mid-refactor; new
-  // call sites should use `CardTile` directly from `@/presentation/cards`.
-  return null;
 }

@@ -16,7 +16,6 @@ import React, { useCallback } from "react";
 import { Alert, FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { ArrowDownRight, ArrowUpRight, Bell, Heart, Trash2 } from "lucide-react-native";
-
 import { useDeletePriceAlert, usePriceAlerts } from "@/application/queries/alerts/usePriceAlerts";
 import {
   useRemoveFromWatchlist,

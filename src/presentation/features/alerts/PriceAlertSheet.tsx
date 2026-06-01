@@ -22,7 +22,6 @@ import {
   View,
 } from "react-native";
 import { X } from "lucide-react-native";
-
 import {
   useCreatePriceAlert,
   useDeletePriceAlert,

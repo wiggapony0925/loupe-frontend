@@ -17,7 +17,6 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react-native";
-
 import { usePortfolioHistory, useTopMovers } from "@/application/queries";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { Skeleton } from "@/presentation/components/Skeleton";

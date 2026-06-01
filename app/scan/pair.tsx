@@ -319,7 +319,6 @@ function HeroIcon({
   Icon: typeof Bluetooth;
   tint: string;
 }) {
-  const p = useThemedPalette();
   return (
     <View
       className="h-20 w-20 items-center justify-center rounded-3xl"

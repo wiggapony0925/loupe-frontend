@@ -9,7 +9,6 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-
 import {
   extractSpeciesSlug,
   fetchPokemonBySpecies,
@@ -17,7 +16,6 @@ import {
   type PokeApiPokemon,
   type PokeApiSpecies,
 } from "@/infrastructure/http/pokeApiClient";
-
 import { queryKeys } from "../queryKeys";
 
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;

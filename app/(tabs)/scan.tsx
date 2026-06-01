@@ -25,12 +25,10 @@ import {
   Camera,
   Layers,
   PlusCircle,
-  ScanLine,
   Smartphone,
   Sparkles,
   Zap,
 } from "lucide-react-native";
-
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { useScannerConnection } from "@/presentation/features/scanner";

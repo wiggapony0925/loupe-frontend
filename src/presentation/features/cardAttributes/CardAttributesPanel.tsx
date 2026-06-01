@@ -18,9 +18,7 @@
  *   - The registered panel returns null
  */
 import type { ReactElement } from "react";
-
 import type { CanonicalCard } from "@/infrastructure/http/wire/canonicalCard";
-
 import { PokedexPanel } from "../pokedex/PokedexPanel";
 import { GenericAttributesPanel } from "./GenericAttributesPanel";
 import { MtgOraclePanel } from "./MtgOraclePanel";

@@ -9,7 +9,6 @@
  */
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-
 import { WatchingList } from "@/presentation/features/watchlist/WatchingList";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 

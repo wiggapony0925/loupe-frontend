@@ -6,7 +6,6 @@
  * unit-testable from plain Node (no React Native runtime needed).
  */
 import type { PricePoint } from "@/domain/market";
-
 import type {
   DeltaResult,
   SeriesDirection,

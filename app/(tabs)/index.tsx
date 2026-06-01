@@ -2,9 +2,7 @@ import React, { useCallback, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/application/queries/queryKeys";
 import { router } from "expo-router";
-import { routes } from "@/shared/routes";
 import {
   ArrowUpRight,
   Bell,
@@ -13,6 +11,8 @@ import {
   Smartphone,
   Zap,
 } from "lucide-react-native";
+import { queryKeys } from "@/application/queries/queryKeys";
+import { routes } from "@/shared/routes";
 import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { HardwareStatusWidget, useScannerConnection } from "@/presentation/features/scanner";
 import { PortfolioChart, TodaysDeltaHero } from "@/presentation/features/analytics";

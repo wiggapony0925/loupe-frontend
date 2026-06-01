@@ -7,7 +7,6 @@
  */
 
 import Constants from "expo-constants";
-
 import type { NormalizedError } from "@/shared/errors";
 
 type SentryModule = typeof import("@sentry/react-native");

@@ -25,7 +25,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Check, ChevronLeft, Search, X } from "lucide-react-native";
-
 import {
   useCreateSealedHolding,
   useSealedProduct,
@@ -40,10 +39,10 @@ import { CardImage } from "@/presentation/components/CardImage";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
-const PRODUCT_TYPE_FILTERS: Array<{
+const PRODUCT_TYPE_FILTERS: {
   key: SealedProductType | null;
   label: string;
-}> = [
+}[] = [
   { key: null, label: "All" },
   { key: "booster_box", label: "Boxes" },
   { key: "etb", label: "ETBs" },

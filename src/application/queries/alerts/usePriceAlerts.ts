@@ -12,14 +12,12 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type {
   PriceAlertCreateWire,
   PriceAlertWire,
 } from "@/infrastructure/http";
-
 import { queryKeys } from "../queryKeys";
 
 export function usePriceAlerts(opts: { pending?: boolean } = {}) {

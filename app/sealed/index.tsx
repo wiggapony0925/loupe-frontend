@@ -23,7 +23,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft, Package, Plus, Trash2 } from "lucide-react-native";
-
 import {
   useDeleteSealedHolding,
   useMySealedHoldings,
@@ -173,7 +172,7 @@ export default function MySealedScreen() {
     [deleteMut],
   );
 
-  const rows = holdings.data ?? [];
+  const rows = useMemo(() => holdings.data ?? [], [holdings.data]);
 
   // Totals — cost-basis sum across the whole vault. Skips rows without a
   // recorded purchase price so the headline isn't misleadingly low.

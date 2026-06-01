@@ -29,9 +29,9 @@ import Svg, {
   Path,
   Stop,
 } from "react-native-svg";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCardPriceHistory } from "@/application/queries/catalog/useCardPriceHistory";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   clampLabelX,
   monotoneCubic,
@@ -164,7 +164,7 @@ export function InteractiveCardChart({
       ? history?.[historyKey]
       : undefined;
 
-  const points = series?.points ?? [];
+  const points = useMemo(() => series?.points ?? [], [series]);
 
   const coords: Coord[] = useMemo(() => {
     if (points.length < 2 || width <= 0) return [];

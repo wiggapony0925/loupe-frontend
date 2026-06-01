@@ -23,8 +23,8 @@
  * typed {@link ApiError}.
  */
 
-import type { Envelope, ErrorDetail } from "./envelope";
 import { captureApiError } from "@/infrastructure/observability/sentry";
+import type { Envelope, ErrorDetail } from "./envelope";
 
 const env = (process.env ?? {}) as Record<string, string | undefined>;
 

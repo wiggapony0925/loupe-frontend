@@ -11,7 +11,6 @@ import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import Svg, { Circle } from "react-native-svg";
-
 import { useSetProgress } from "@/application/queries/catalog/useSetProgress";
 import { SetLogo } from "@/presentation/brand/SetLogo";
 import { SectionHeader } from "@/presentation/components/SectionHeader";

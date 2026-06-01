@@ -9,11 +9,11 @@
 
 import React from "react";
 import { ActivityIndicator, View } from "react-native";
+import type { LucideIcon } from "lucide-react-native";
 import { ErrorState } from "@/presentation/components/ErrorState";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { normalizeError } from "@/shared/errors";
 import { useThemedPalette } from "@/presentation/theme/tokens";
-import type { LucideIcon } from "lucide-react-native";
 
 interface QueryLike<T> {
   data: T | undefined;

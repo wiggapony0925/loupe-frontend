@@ -7,7 +7,6 @@
  * present so layout collapses cleanly.
  */
 import { Text, View } from "react-native";
-
 import type { CanonicalCard } from "@/infrastructure/http/wire/canonicalCard";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 

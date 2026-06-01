@@ -8,6 +8,7 @@
  *   - rename / reorganize native modules without churning every caller
  *   - keep all `requireNativeModule` calls in one place
  */
+import { config } from "@/shared/config";
 import LoupeScannerBridge, {
   type CapturedFrame,
   type CaptureProgressPayload,
@@ -16,7 +17,6 @@ import LoupeScannerBridge, {
   type ScannerInfo,
   type ScannerStateChangePayload,
 } from "../../../modules/loupe-scanner-bridge";
-import { config } from "@/shared/config";
 
 export type {
   CapturedFrame,

@@ -25,7 +25,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { routes } from "@/shared/routes";
 import { useQuery } from "@tanstack/react-query";
 import Svg, {
   Circle,
@@ -45,6 +44,7 @@ import {
   ScanLine,
   ShoppingBag,
 } from "lucide-react-native";
+import { routes } from "@/shared/routes";
 import {
   fetchMarketCard,
   type GradedTier,

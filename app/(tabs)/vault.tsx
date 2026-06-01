@@ -13,7 +13,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
-import { routes } from "@/shared/routes";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDownRight,
@@ -28,6 +27,7 @@ import {
   Trash2,
   X,
 } from "lucide-react-native";
+import { routes } from "@/shared/routes";
 import { CardThumbnail } from "@/presentation/features/collection/CardThumbnail";
 import { FilterBar } from "@/presentation/features/collection/FilterBar";
 import { PositionRow } from "@/presentation/features/collection/PositionRow";

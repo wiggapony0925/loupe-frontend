@@ -26,10 +26,8 @@ import React, {
 } from "react";
 import { Appearance, Platform } from "react-native";
 import { useColorScheme } from "nativewind";
-
 import { useSettings } from "@/application/stores/settingsStore";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
-
 import {
   applyTheme,
   gradeColor,
@@ -125,6 +123,7 @@ export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
   if (ctx) return ctx;
   if (__DEV__ && Platform.OS !== "web") {
+    // eslint-disable-next-line no-console -- intentional dev-only misuse warning
     console.warn(
       "[loupe] useTheme() called outside <ThemeProvider> — falling back to module snapshot.",
     );

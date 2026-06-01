@@ -18,7 +18,6 @@
  */
 import { ActivityIndicator, Image, View } from "react-native";
 import { Text } from "react-native";
-
 import {
   usePokeApiPokemon,
   usePokeApiSpecies,

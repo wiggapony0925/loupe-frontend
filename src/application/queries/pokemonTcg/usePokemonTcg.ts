@@ -10,7 +10,6 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-
 import {
   fetchPokemonTcgCard,
   fetchPokemonTcgSets,
@@ -18,7 +17,6 @@ import {
   type PokemonTcgCard,
   type PokemonTcgSet,
 } from "@/infrastructure/http/pokemonTcgClient";
-
 import { queryKeys } from "../queryKeys";
 
 const TEN_MINUTES = 10 * 60 * 1000;

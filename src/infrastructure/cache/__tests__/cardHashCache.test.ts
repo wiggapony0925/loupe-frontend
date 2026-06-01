@@ -1,3 +1,4 @@
+import type { IdentifyCandidate } from "@/infrastructure/repositories/identifyRepository";
 import {
   _peekCardHashCache,
   clearCardHashCache,
@@ -5,7 +6,6 @@ import {
   lookupCardByHash,
   rememberCardHash,
 } from "../cardHashCache";
-import type { IdentifyCandidate } from "@/infrastructure/repositories/identifyRepository";
 
 jest.mock("@react-native-async-storage/async-storage", () => {
   let store: Record<string, string> = {};

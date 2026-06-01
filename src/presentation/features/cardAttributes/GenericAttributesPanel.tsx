@@ -16,7 +16,6 @@
  * `PANEL_REGISTRY` — the registry takes precedence over this fallback.
  */
 import { Text, View } from "react-native";
-
 import type { CanonicalCard } from "@/infrastructure/http/wire/canonicalCard";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 

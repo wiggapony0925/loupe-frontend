@@ -22,7 +22,6 @@
  * — the Promise wrapper is microtask-cheap.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 import type { IdentifyCandidate } from "@/infrastructure/repositories/identifyRepository";
 import { lookupStaticPhash } from "./staticPhashIndex";
 
