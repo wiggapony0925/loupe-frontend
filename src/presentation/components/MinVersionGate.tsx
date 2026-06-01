@@ -16,7 +16,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAppConfig } from "@/application/queries/ops/useAppConfig";
 import { LoupeMark } from "@/presentation/brand/LoupeMark";
 
-const APP_STORE_URL = "https://apps.apple.com/app/id0000000000";
+const APP_STORE_URL = "https://apps.apple.com/app/id6773403045";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=app.loupe.client";
 
 export function MinVersionGate({ children }: { children: React.ReactNode }) {
