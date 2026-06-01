@@ -128,12 +128,30 @@ const CROP_JPEG_QUALITY = 0.7;
 /** Dim applied outside the card window so the scan target pops. */
 const SCRIM = "rgba(0,0,0,0.55)";
 
-/** TCG hints surfaced as a chevron pill in the bottom bar. */
-const TCG_OPTIONS: { key: IdentifyTcgHint; label: string }[] = [
-  { key: null, label: "Auto-detect" },
-  { key: "pokemon", label: "Pokémon" },
-  { key: "magic", label: "Magic" },
-  { key: "yugioh", label: "Yu-Gi-Oh!" },
+/**
+ * Shared "glass" surface system for everything floating over the camera.
+ * The scanner is always rendered on a live (dark) camera feed regardless
+ * of the app theme, so these are intentionally fixed dark-glass values —
+ * one consistent material instead of the grab-bag of one-off rgba()s the
+ * surface used to mix. GLASS = floating pills/controls, GLASS_STRONG =
+ * result cards that need to stay legible over busy backgrounds.
+ */
+const GLASS = "rgba(20,20,23,0.66)";
+const GLASS_STRONG = "rgba(14,14,16,0.94)";
+const HAIRLINE = "rgba(255,255,255,0.10)";
+const HAIRLINE_SOFT = "rgba(255,255,255,0.06)";
+
+/**
+ * TCG hints surfaced as a chevron pill in the bottom bar. Each carries a
+ * brand-ish accent so the pill can show a colored dot for the selected
+ * game — a small, modern affordance that also makes a wrong auto-detect
+ * (e.g. a Pokémon card read as Yu-Gi-Oh) visible at a glance.
+ */
+const TCG_OPTIONS: { key: IdentifyTcgHint; label: string; color: string }[] = [
+  { key: null, label: "Auto-detect", color: palette.accent.mint },
+  { key: "pokemon", label: "Pokémon", color: palette.accent.amber },
+  { key: "magic", label: "Magic", color: palette.accent.blue },
+  { key: "yugioh", label: "Yu-Gi-Oh!", color: palette.accent.purple },
 ];
 
 interface LiveIdentifyFlowProps {
@@ -713,7 +731,7 @@ function TopBar({
           hitSlop={12}
           accessibilityLabel="Close scanner"
           className="h-9 w-9 items-center justify-center rounded-full"
-          style={{ backgroundColor: "rgba(255,255,255,0.14)" }}
+          style={{ backgroundColor: GLASS, borderWidth: 1, borderColor: HAIRLINE }}
         >
           <X size={18} color="#fff" />
         </Pressable>
@@ -736,9 +754,9 @@ function TopBar({
             accessibilityLabel={paused ? "Resume scanning" : "Pause scanning"}
             className="h-9 w-9 items-center justify-center rounded-full"
             style={{
-              backgroundColor: paused
-                ? "rgba(255,255,255,0.95)"
-                : "rgba(255,255,255,0.14)",
+              backgroundColor: paused ? "rgba(255,255,255,0.95)" : GLASS,
+              borderWidth: 1,
+              borderColor: paused ? "transparent" : HAIRLINE,
             }}
           >
             {paused ? (
@@ -753,9 +771,9 @@ function TopBar({
             accessibilityLabel={flashOn ? "Turn flash off" : "Turn flash on"}
             className="h-9 w-9 items-center justify-center rounded-full"
             style={{
-              backgroundColor: flashOn
-                ? palette.accent.amber
-                : "rgba(255,255,255,0.14)",
+              backgroundColor: flashOn ? palette.accent.amber : GLASS,
+              borderWidth: 1,
+              borderColor: flashOn ? "transparent" : HAIRLINE,
             }}
           >
             {flashOn ? (
@@ -1148,10 +1166,13 @@ function BottomPanel({
   formatUsd: (v: number) => string;
   palette: ReturnType<typeof useThemedPalette>;
 }) {
-  const tcgLabel = useMemo(
-    () => TCG_OPTIONS.find((o) => o.key === tcgHint)?.label ?? "Auto-detect",
+  const tcgOption = useMemo(
+    () => TCG_OPTIONS.find((o) => o.key === tcgHint) ?? TCG_OPTIONS[0]!,
     [tcgHint],
   );
+  const tcgLabel = tcgOption.label;
+  const tcgColor = tcgOption.color;
+  const shutterLocked = state.locked;
 
   return (
     <LinearGradient
@@ -1204,7 +1225,9 @@ function BottomPanel({
         {/* Left cluster — equal flex so the shutter stays dead-center
             regardless of the pill/Search label widths. */}
         <View style={{ flex: 1, alignItems: "flex-start" }}>
-          {/* TCG selector pill */}
+          {/* TCG selector pill — glassy dark to sit quietly on the camera
+              surface (the shutter is the only bright element), with a
+              per-game color dot so a wrong auto-detect is obvious. */}
           <Pressable
             onPress={onOpenTcgPicker}
             accessibilityRole="button"
@@ -1212,37 +1235,61 @@ function BottomPanel({
             style={({ pressed }) => ({
               flexDirection: "row",
               alignItems: "center",
-              gap: 4,
-              paddingHorizontal: 14,
-              paddingVertical: 9,
+              gap: 7,
+              paddingLeft: 11,
+              paddingRight: 12,
+              paddingVertical: 10,
               borderRadius: 999,
-              backgroundColor: "rgba(255,255,255,0.95)",
-              opacity: pressed ? 0.85 : 1,
+              backgroundColor: GLASS,
+              borderWidth: 1,
+              borderColor: HAIRLINE,
+              opacity: pressed ? 0.7 : 1,
             })}
           >
-            <Text style={{ color: "#000", fontWeight: "700", fontSize: 13 }}>{tcgLabel}</Text>
-            <ChevronDown size={14} color="#000" />
+            <View
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: 4,
+                backgroundColor: tcgColor,
+              }}
+            />
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>{tcgLabel}</Text>
+            <ChevronDown size={14} color="rgba(255,255,255,0.6)" />
           </Pressable>
         </View>
 
-        {/* Manual shutter — always usable as an override for the auto loop. */}
+        {/* Manual shutter — the single bright focal point. Picks up a mint
+            ring + glow the instant we lock so the control reflects state. */}
         <Pressable
           onPress={onManualCapture}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Capture frame now"
           style={({ pressed }) => ({
-            width: 72,
-            height: 72,
-            borderRadius: 36,
+            width: 74,
+            height: 74,
+            borderRadius: 37,
             borderWidth: 4,
-            borderColor: "rgba(255,255,255,0.95)",
+            borderColor: shutterLocked ? palette.accent.mint : "rgba(255,255,255,0.95)",
             alignItems: "center",
             justifyContent: "center",
             opacity: pressed ? 0.65 : 1,
+            shadowColor: shutterLocked ? palette.accent.mint : "#000",
+            shadowOpacity: shutterLocked ? 0.55 : 0.3,
+            shadowRadius: shutterLocked ? 14 : 8,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: shutterLocked ? 10 : 4,
           })}
         >
-          <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: "#fff" }} />
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: shutterLocked ? palette.accent.mint : "#fff",
+            }}
+          />
         </Pressable>
 
         {/* Right cluster — manual search escape hatch. */}
@@ -1257,14 +1304,16 @@ function BottomPanel({
               flexDirection: "row",
               alignItems: "center",
               gap: 6,
-              paddingHorizontal: 12,
-              paddingVertical: 9,
+              paddingHorizontal: 13,
+              paddingVertical: 10,
               borderRadius: 999,
-              backgroundColor: "rgba(255,255,255,0.14)",
+              backgroundColor: GLASS,
+              borderWidth: 1,
+              borderColor: HAIRLINE,
               opacity: pressed ? 0.7 : onManualSearch ? 1 : 0.4,
             })}
           >
-            <Search size={15} color="#fff" />
+            <Search size={15} color="rgba(255,255,255,0.9)" />
             <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>Search</Text>
           </Pressable>
         </View>
@@ -1370,12 +1419,12 @@ function HintPill({ label, pulse = false }: { label: string; pulse?: boolean }) 
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
-        paddingHorizontal: 14,
-        paddingVertical: 9,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
         borderRadius: 999,
-        backgroundColor: "rgba(0,0,0,0.55)",
+        backgroundColor: GLASS,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.08)",
+        borderColor: HAIRLINE,
       }}
     >
       {pulse ? (
@@ -1427,10 +1476,10 @@ function PreviewMatchCard({
         alignItems: "center",
         gap: 12,
         padding: 12,
-        borderRadius: 18,
-        backgroundColor: "rgba(15,15,17,0.94)",
+        borderRadius: 20,
+        backgroundColor: GLASS_STRONG,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.08)",
+        borderColor: HAIRLINE,
         opacity: pressed ? 0.85 : 1,
       })}
     >
@@ -1520,15 +1569,15 @@ function NoMatchCard({
   return (
     <View
       style={{
-        padding: 14,
-        borderRadius: 18,
-        backgroundColor: "rgba(15,15,17,0.94)",
+        padding: 16,
+        borderRadius: 20,
+        backgroundColor: GLASS_STRONG,
         borderWidth: 1,
-        borderColor: withAlpha(palette.accent.amber, 0.35),
+        borderColor: withAlpha(palette.accent.amber, 0.3),
         gap: 10,
       }}
     >
-      <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>
+      <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15, letterSpacing: -0.2 }}>
         Can't read this one
       </Text>
       <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, lineHeight: 17 }}>
@@ -1799,12 +1848,17 @@ function LockedResultSheet({
   return (
     <View
       style={{
-        backgroundColor: "rgba(15,15,17,0.96)",
-        borderRadius: 22,
-        padding: 14,
+        backgroundColor: GLASS_STRONG,
+        borderRadius: 24,
+        padding: 16,
         borderWidth: 1,
-        borderColor: withAlpha(palette.accent.mint, 0.18),
+        borderColor: withAlpha(palette.accent.mint, 0.22),
         gap: 14,
+        shadowColor: palette.accent.mint,
+        shadowOpacity: 0.18,
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 12,
       }}
     >
       <View style={{ flexDirection: "row", gap: 14 }}>
