@@ -1362,6 +1362,26 @@ function BottomPanel({
   const tcgColor = tcgOption.color;
   const shutterLocked = state.locked;
 
+  // Pulsing "halo" ring around the shutter once we lock — a gentle
+  // expanding/fading mint pulse that signals "got it, tap to view".
+  const shutterPulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!shutterLocked) {
+      shutterPulse.setValue(0);
+      return;
+    }
+    const anim = Animated.loop(
+      Animated.timing(shutterPulse, {
+        toValue: 1,
+        duration: 1300,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [shutterLocked, shutterPulse]);
+
   return (
     <LinearGradient
       colors={["transparent", "rgba(0,0,0,0.92)"]}
@@ -1457,36 +1477,63 @@ function BottomPanel({
 
         {/* Manual shutter — the single bright focal point. Picks up a mint
             ring + glow the instant we lock so the control reflects state. */}
-        <Pressable
-          onPress={onManualCapture}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Capture frame now"
-          style={({ pressed }) => ({
-            width: 74,
-            height: 74,
-            borderRadius: 37,
-            borderWidth: 4,
-            borderColor: shutterLocked ? palette.accent.mint : "rgba(255,255,255,0.95)",
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: pressed ? 0.65 : 1,
-            shadowColor: shutterLocked ? palette.accent.mint : "#000",
-            shadowOpacity: shutterLocked ? 0.55 : 0.3,
-            shadowRadius: shutterLocked ? 14 : 8,
-            shadowOffset: { width: 0, height: 0 },
-            elevation: shutterLocked ? 10 : 4,
-          })}
-        >
-          <View
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              backgroundColor: shutterLocked ? palette.accent.mint : "#fff",
-            }}
-          />
-        </Pressable>
+        <View style={{ width: 74, height: 74, alignItems: "center", justifyContent: "center" }}>
+          {shutterLocked ? (
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                width: 74,
+                height: 74,
+                borderRadius: 37,
+                borderWidth: 2,
+                borderColor: palette.accent.mint,
+                opacity: shutterPulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.6, 0],
+                }),
+                transform: [
+                  {
+                    scale: shutterPulse.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 1.7],
+                    }),
+                  },
+                ],
+              }}
+            />
+          ) : null}
+          <Pressable
+            onPress={onManualCapture}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Capture frame now"
+            style={({ pressed }) => ({
+              width: 74,
+              height: 74,
+              borderRadius: 37,
+              borderWidth: 4,
+              borderColor: shutterLocked ? palette.accent.mint : "rgba(255,255,255,0.95)",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.65 : 1,
+              shadowColor: shutterLocked ? palette.accent.mint : "#000",
+              shadowOpacity: shutterLocked ? 0.55 : 0.3,
+              shadowRadius: shutterLocked ? 14 : 8,
+              shadowOffset: { width: 0, height: 0 },
+              elevation: shutterLocked ? 10 : 4,
+            })}
+          >
+            <View
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                backgroundColor: shutterLocked ? palette.accent.mint : "#fff",
+              }}
+            />
+          </Pressable>
+        </View>
 
         {/* Right cluster — manual search escape hatch. */}
         <View style={{ flex: 1, alignItems: "flex-end" }}>
@@ -1676,17 +1723,24 @@ function PreviewMatchCard({
       accessibilityRole="button"
       accessibilityLabel={`Tap to confirm match: ${candidate.name}`}
       style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        padding: 12,
         borderRadius: 20,
-        backgroundColor: GLASS_STRONG,
+        overflow: "hidden",
         borderWidth: 1,
         borderColor: HAIRLINE,
         opacity: pressed ? 0.85 : 1,
       })}
     >
+      <BlurView
+        intensity={32}
+        tint="dark"
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          padding: 12,
+          backgroundColor: "rgba(14,14,16,0.72)",
+        }}
+      >
       <View
         style={{
           width: 54,
@@ -1759,6 +1813,7 @@ function PreviewMatchCard({
       </View>
 
       <ChevronRight size={18} color="rgba(255,255,255,0.55)" />
+      </BlurView>
     </Pressable>
   );
 }
