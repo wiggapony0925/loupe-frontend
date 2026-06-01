@@ -873,6 +873,28 @@ function ReticleArea({
     return () => anim.stop();
   }, [scanning, pulse]);
 
+  // Laser sweep that travels top→bottom of the card frame while we're
+  // hunting. Drives a translateY (0→1 interpolated to the card height
+  // in render). Pure perceptual "we're scanning" feedback.
+  const sweep = useRef(new Animated.Value(0)).current;
+  const hunting = scanning && !locked && !hasMatch && !paused;
+  useEffect(() => {
+    if (!hunting) {
+      sweep.setValue(0);
+      return;
+    }
+    const anim = Animated.loop(
+      Animated.timing(sweep, {
+        toValue: 1,
+        duration: 1700,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [hunting, sweep]);
+
   // Reticle hugs roughly the trading-card aspect of 2.5:3.5. The
   // tint reacts to detection so the user gets feedback even before we
   // commit to a lock: dim mint while hunting, bright mint the moment
@@ -1072,22 +1094,55 @@ function ReticleArea({
           </View>
         ) : null}
 
-        {/* Subtle scan beam — only while hunting. Replaces the old
-            "Hold Steady" pill (which duplicated the bottom status). */}
-        {scanning && !locked && !paused && !hasMatch ? (
+        {/* Laser sweep — a soft mint band that glides down the card
+            frame while hunting. Replaces the old static "Hold Steady"
+            pill (which duplicated the bottom status). */}
+        {hunting ? (
           <Animated.View
             pointerEvents="none"
             style={{
               position: "absolute",
-              left: 8,
-              right: 8,
-              top: "50%",
-              height: 2,
-              borderRadius: 2,
-              backgroundColor: withAlpha(palette.accent.mint, 0.7),
+              left: 6,
+              right: 6,
+              top: 0,
+              height: 56,
               opacity: pulse,
+              transform: [
+                {
+                  translateY: sweep.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-28, CARD_H - 28],
+                  }),
+                },
+              ],
             }}
-          />
+          >
+            <LinearGradient
+              colors={[
+                "transparent",
+                withAlpha(palette.accent.mint, 0.18),
+                withAlpha(palette.accent.mint, 0.0),
+              ]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={{ flex: 1, borderRadius: 8 }}
+            />
+            <View
+              style={{
+                position: "absolute",
+                left: 2,
+                right: 2,
+                top: 27,
+                height: 2,
+                borderRadius: 2,
+                backgroundColor: withAlpha(palette.accent.mint, 0.9),
+                shadowColor: palette.accent.mint,
+                shadowOpacity: 0.8,
+                shadowRadius: 6,
+                shadowOffset: { width: 0, height: 0 },
+              }}
+            />
+          </Animated.View>
         ) : null}
       </Animated.View>
 
