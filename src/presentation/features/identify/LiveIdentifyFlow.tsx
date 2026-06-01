@@ -33,7 +33,10 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
+  StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -120,6 +123,9 @@ const CROP_GLARE_LIMIT = 0.5;
 /** Long-edge for the perspective-corrected card upload (px). */
 const CROP_LONG_EDGE = 720;
 const CROP_JPEG_QUALITY = 0.7;
+
+/** Dim applied outside the card window so the scan target pops. */
+const SCRIM = "rgba(0,0,0,0.55)";
 
 /** TCG hints surfaced as a chevron pill in the bottom bar. */
 const TCG_OPTIONS: { key: IdentifyTcgHint; label: string }[] = [
@@ -500,6 +506,19 @@ export function LiveIdentifyFlow({
     };
   }, [permission?.granted, paused, state.locked, captureOnce]);
 
+  // expo-camera's continuous AF on iOS frequently "sticks" at infinity
+  // when pointed at a flat card held close — the subject never changes
+  // enough to retrigger the AF loop, so the preview stays soft and the
+  // blur gate rejects every frame ("can't scan this card"). Nudge the AF
+  // loop on mount and on a gentle cadence while we're actively hunting
+  // so a freshly-presented card snaps sharp without the user tapping.
+  useEffect(() => {
+    if (!permission?.granted || paused || state.locked) return;
+    refocus();
+    const id = setInterval(refocus, 2500);
+    return () => clearInterval(id);
+  }, [permission?.granted, paused, state.locked, refocus]);
+
   // ─── Actions ─────────────────────────────────────────────────────
   const handlePick = useCallback(
     (candidate: IdentifyCandidate) => {
@@ -860,16 +879,46 @@ function ReticleArea({
     [onTapFocus, focusRingAnim],
   );
 
+  // Card window sized in real pixels (not %) so the dim scrim's clear
+  // cutout and the corner brackets line up exactly. 78% of the short
+  // edge at the standard trading-card aspect (2.5:3.5) frames a card
+  // held at a comfortable distance without crowding the price chip.
+  const { width: winW, height: winH } = useWindowDimensions();
+  const CARD_W = Math.round(Math.min(winW * 0.78, winH * 0.5 * (2.5 / 3.5)));
+  const CARD_H = Math.round(CARD_W * (3.5 / 2.5));
+
   return (
     <Pressable
       onPress={handleTap}
       style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
     >
+      {/* Dimmed cutout scrim — darkens everything outside the card
+          window so the eye (and the user) lands squarely on the card,
+          the way Collectr / Google Lens frame a scan. Built from four
+          panels around an explicitly-sized clear window so it needs no
+          masking library and stays pixel-aligned with the brackets. */}
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <View style={{ flex: 1, backgroundColor: SCRIM }} />
+        <View style={{ flexDirection: "row", height: CARD_H }}>
+          <View style={{ flex: 1, backgroundColor: SCRIM }} />
+          <View
+            style={{
+              width: CARD_W,
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: withAlpha("#FFFFFF", locked || hasMatch ? 0 : 0.18),
+            }}
+          />
+          <View style={{ flex: 1, backgroundColor: SCRIM }} />
+        </View>
+        <View style={{ flex: 1, backgroundColor: SCRIM }} />
+      </View>
+
       <Animated.View
         pointerEvents="none"
         style={{
-          width: "72%",
-          aspectRatio: 2.5 / 3.5,
+          width: CARD_W,
+          height: CARD_H,
           transform: [{ scale: breathe }],
         }}
       >
@@ -1112,6 +1161,7 @@ function BottomPanel({
       {state.locked && state.candidates[0] ? (
         <LockedResultSheet
           candidate={state.candidates[0]}
+          candidates={state.candidates}
           confidence={state.topConfidence}
           marketPriceUsd={marketPriceUsd}
           priceLoading={priceLoading}
@@ -1121,6 +1171,7 @@ function BottomPanel({
             const c = state.candidates[0];
             if (c) onPickCandidate(c);
           }}
+          onPickAlternate={onPickCandidate}
           onAddToVault={() => {
             const c = state.candidates[0];
             if (c) onAddToVault(c);
@@ -1704,22 +1755,26 @@ function TcgPickerSheet({
 
 function LockedResultSheet({
   candidate,
+  candidates,
   confidence,
   marketPriceUsd,
   priceLoading,
   formatUsd,
   themed,
   onViewDetails,
+  onPickAlternate,
   onAddToVault,
   onRescan,
 }: {
   candidate: IdentifyCandidate;
+  candidates: IdentifyCandidate[];
   confidence: number;
   marketPriceUsd: number | null;
   priceLoading: boolean;
   formatUsd: (v: number) => string;
   themed: ReturnType<typeof useThemedPalette>;
   onViewDetails: () => void;
+  onPickAlternate: (c: IdentifyCandidate) => void;
   onAddToVault: () => void;
   onRescan: () => void;
 }) {
@@ -1727,6 +1782,11 @@ function LockedResultSheet({
   const setMeta = [candidate.set_name, candidate.number ? `#${candidate.number}` : null]
     .filter(Boolean)
     .join(" · ");
+  // Alternate printings: every candidate after the locked top. Critical
+  // for reprint ties (e.g. Base Set vs Base Set 2 Charizard share name +
+  // number + art) where the auto-lock can't tell two near-identical
+  // printings apart — the user picks the exact one they're holding.
+  const alternates = candidates.slice(1, 7);
 
   return (
     <View
@@ -1918,6 +1978,94 @@ function LockedResultSheet({
           <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Vault</Text>
         </Pressable>
       </View>
+
+      {/* Alternate printings — horizontal thumbnail strip. Lets the user
+          correct a reprint-tie lock (right name + number, wrong set) by
+          tapping the exact printing they're holding. Tapping deep-links
+          straight to that card's detail page. */}
+      {alternates.length > 0 ? (
+        <View style={{ gap: 8 }}>
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.5)",
+              fontSize: 10,
+              fontWeight: "800",
+              letterSpacing: 1.2,
+            }}
+          >
+            NOT THIS PRINTING? PICK THE EXACT ONE
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 10, paddingRight: 4 }}
+          >
+            {alternates.map((alt) => {
+              const altMeta = [
+                alt.set_name,
+                alt.number ? `#${alt.number}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <Pressable
+                  key={alt.card_id ?? alt.upstream_id ?? alt.name}
+                  onPress={() => onPickAlternate(alt)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Pick ${alt.name}${
+                    altMeta ? `, ${altMeta}` : ""
+                  }`}
+                  style={({ pressed }) => ({
+                    width: 92,
+                    gap: 5,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <View
+                    style={{
+                      width: 92,
+                      aspectRatio: 2.5 / 3.5,
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    {alt.image_url ? (
+                      <Image
+                        source={{ uri: alt.image_url }}
+                        style={{ width: "100%", height: "100%" }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        style={{
+                          flex: 1,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Sparkles size={16} color={withAlpha("#fff", 0.4)} />
+                      </View>
+                    )}
+                  </View>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      color: "rgba(255,255,255,0.85)",
+                      fontSize: 10,
+                      fontWeight: "600",
+                    }}
+                  >
+                    {altMeta || alt.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
 
       <Pressable
         onPress={onRescan}

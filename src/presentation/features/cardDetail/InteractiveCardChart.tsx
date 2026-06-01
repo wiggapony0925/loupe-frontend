@@ -132,7 +132,13 @@ export function InteractiveCardChart({
   const bleedLeft = Math.max(0, bleedX - insets.left);
   const bleedRight = Math.max(0, bleedX - insets.right);
   const [width, setWidth] = useState(0);
-  const [scrubIdx, setScrubIdx] = useState<number | null>(null);
+  // Store the raw touch X — NOT the resolved index. The PanResponder is
+  // created once (ref) so any closure it captures is frozen to the
+  // first render, when `coords` is empty and `width` is 0. Capturing the
+  // index there would permanently disable scrubbing. Instead we stash the
+  // raw X and resolve the index from the *live* coords during render —
+  // exactly how PortfolioChart's working scrubber does it.
+  const [scrubX, setScrubX] = useState<number | null>(null);
 
   const historyKey = RANGE_TO_HISTORY[range];
   const filterActive =
@@ -174,6 +180,10 @@ export function InteractiveCardChart({
     return `${linePath} L ${last[0]} ${CHART_HEIGHT} L ${first[0]} ${CHART_HEIGHT} Z`;
   }, [coords, linePath]);
 
+  // Resolve the scrub index from the current coords every render so the
+  // crosshair tracks the finger even as the series/width change.
+  const scrubIdx =
+    scrubX !== null && coords.length > 1 ? nearestIndex(scrubX, coords) : null;
   const firstPrice = points[0]?.price ?? null;
   const lastPrice = points[points.length - 1]?.price ?? null;
   const activeIdx =
@@ -196,20 +206,19 @@ export function InteractiveCardChart({
   // Baseline (period start) y — for the dashed reference line.
   const baselineY = coords[0]?.[1] ?? null;
 
-  // Touch handlers
-  const handleTouch = (e: GestureResponderEvent) => {
-    if (coords.length < 2 || width <= 0) return;
-    const x = e.nativeEvent.locationX;
-    setScrubIdx(nearestIndex(x, coords));
-  };
+  // Touch handlers — store only the raw X. Inline arrows keep the
+  // ref-held responder free of stale `coords`/`width` closures; the
+  // index is computed in render (see `scrubIdx`).
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: handleTouch,
-      onPanResponderMove: handleTouch,
-      onPanResponderRelease: () => setScrubIdx(null),
-      onPanResponderTerminate: () => setScrubIdx(null),
+      onPanResponderGrant: (e: GestureResponderEvent) =>
+        setScrubX(e.nativeEvent.locationX),
+      onPanResponderMove: (e: GestureResponderEvent) =>
+        setScrubX(e.nativeEvent.locationX),
+      onPanResponderRelease: () => setScrubX(null),
+      onPanResponderTerminate: () => setScrubX(null),
     }),
   ).current;
 

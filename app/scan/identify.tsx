@@ -35,16 +35,22 @@ export default function IdentifyScanScreen() {
         else router.replace("/");
       }}
       onConfirm={(candidate) => {
-        const cardId = candidate.card_id ?? null;
-        if (cardId) {
-          router.replace(routes.card(cardId));
+        // Open the rich card-detail page (price-by-grade, comps, the
+        // interactive scrub chart) on tap. The detail route resolves both
+        // a local `card_id` and a composite `upstream_id`
+        // (e.g. `pokemontcg:base1-4`), so a freshly-scanned card that only
+        // came back with an upstream id still lands on the full page
+        // instead of dropping into add-to-vault. "Add to collection" lives
+        // there as a primary CTA.
+        const detailId = candidate.card_id ?? candidate.upstream_id ?? null;
+        if (detailId) {
+          router.replace(routes.card(detailId));
           return;
         }
-        // Fallback: unresolved → straight to add-to-vault with whatever
+        // Truly unresolved → straight to add-to-vault with whatever
         // identity hints we have.
         router.replace(
           routes.gradeNew({
-            upstreamId: candidate.upstream_id ?? undefined,
             cardName: candidate.name,
             cardImage: candidate.image_url ?? undefined,
             cardSet: candidate.set_name ?? undefined,
