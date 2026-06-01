@@ -102,11 +102,12 @@ const LOCK_CONFIDENCE = 0.7;
 /**
  * Consecutive frames returning zero high-confidence (>=0.5) candidates
  * before we surface the "can't find a match" fallback CTA. At the
- * tightened CAPTURE_INTERVAL_MS (450ms) this works out to ~1.5–2s of
- * camera time before the user gets actionable guidance, instead of the
- * old ~4–5s where the screen looked frozen.
+ * tightened CAPTURE_INTERVAL_MS (450ms) this works out to ~2.7s of
+ * camera time before the user gets the escape hatch, instead of the
+ * old ~1.5s where the popup nagged almost instantly. The live
+ * "Scanning…" pulse keeps the surface feeling alive in the meantime.
  */
-const NO_MATCH_THRESHOLD = 3;
+const NO_MATCH_THRESHOLD = 6;
 
 // ── Native card-detector thresholds ─────────────────────────────────
 // These are deliberately conservative: a single bad frame should never
@@ -887,6 +888,12 @@ function ReticleArea({
   const CARD_W = Math.round(Math.min(winW * 0.78, winH * 0.5 * (2.5 / 3.5)));
   const CARD_H = Math.round(CARD_W * (3.5 / 2.5));
 
+  // Dim the surroundings while hunting so the eye lands on the card,
+  // then pull the scrim back the moment we detect/lock a card so the
+  // live card "pops" clean instead of sitting behind a flat grey wash —
+  // this is the "box adjusts to the card when it finds one" feel.
+  const scrim = locked || hasMatch ? "rgba(0,0,0,0.18)" : SCRIM;
+
   return (
     <Pressable
       onPress={handleTap}
@@ -898,9 +905,9 @@ function ReticleArea({
           panels around an explicitly-sized clear window so it needs no
           masking library and stays pixel-aligned with the brackets. */}
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: SCRIM }} />
+        <View style={{ flex: 1, backgroundColor: scrim }} />
         <View style={{ flexDirection: "row", height: CARD_H }}>
-          <View style={{ flex: 1, backgroundColor: SCRIM }} />
+          <View style={{ flex: 1, backgroundColor: scrim }} />
           <View
             style={{
               width: CARD_W,
@@ -909,9 +916,9 @@ function ReticleArea({
               borderColor: withAlpha("#FFFFFF", locked || hasMatch ? 0 : 0.18),
             }}
           />
-          <View style={{ flex: 1, backgroundColor: SCRIM }} />
+          <View style={{ flex: 1, backgroundColor: scrim }} />
         </View>
-        <View style={{ flex: 1, backgroundColor: SCRIM }} />
+        <View style={{ flex: 1, backgroundColor: scrim }} />
       </View>
 
       <Animated.View
@@ -1191,28 +1198,32 @@ function BottomPanel({
       )}
 
       <View
-        className="flex-row items-center justify-between"
+        className="flex-row items-center"
         style={{ paddingHorizontal: 6, paddingTop: 6 }}
       >
-        {/* TCG selector pill */}
-        <Pressable
-          onPress={onOpenTcgPicker}
-          accessibilityRole="button"
-          accessibilityLabel="Change TCG hint"
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 4,
-            paddingHorizontal: 14,
-            paddingVertical: 9,
-            borderRadius: 999,
-            backgroundColor: "rgba(255,255,255,0.95)",
-            opacity: pressed ? 0.85 : 1,
-          })}
-        >
-          <Text style={{ color: "#000", fontWeight: "700", fontSize: 13 }}>{tcgLabel}</Text>
-          <ChevronDown size={14} color="#000" />
-        </Pressable>
+        {/* Left cluster — equal flex so the shutter stays dead-center
+            regardless of the pill/Search label widths. */}
+        <View style={{ flex: 1, alignItems: "flex-start" }}>
+          {/* TCG selector pill */}
+          <Pressable
+            onPress={onOpenTcgPicker}
+            accessibilityRole="button"
+            accessibilityLabel="Change TCG hint"
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 4,
+              paddingHorizontal: 14,
+              paddingVertical: 9,
+              borderRadius: 999,
+              backgroundColor: "rgba(255,255,255,0.95)",
+              opacity: pressed ? 0.85 : 1,
+            })}
+          >
+            <Text style={{ color: "#000", fontWeight: "700", fontSize: 13 }}>{tcgLabel}</Text>
+            <ChevronDown size={14} color="#000" />
+          </Pressable>
+        </View>
 
         {/* Manual shutter — always usable as an override for the auto loop. */}
         <Pressable
@@ -1221,9 +1232,9 @@ function BottomPanel({
           accessibilityRole="button"
           accessibilityLabel="Capture frame now"
           style={({ pressed }) => ({
-            width: 66,
-            height: 66,
-            borderRadius: 33,
+            width: 72,
+            height: 72,
+            borderRadius: 36,
             borderWidth: 4,
             borderColor: "rgba(255,255,255,0.95)",
             alignItems: "center",
@@ -1231,32 +1242,32 @@ function BottomPanel({
             opacity: pressed ? 0.65 : 1,
           })}
         >
-          <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#fff" }} />
+          <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: "#fff" }} />
         </Pressable>
 
-        {/* Manual search escape hatch — replaces the inert search/barcode
-            segmented control. When no match arrives the user can jump
-            straight to the catalog search screen. */}
-        <Pressable
-          onPress={onManualSearch}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Search the catalog manually"
-          disabled={!onManualSearch}
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            paddingHorizontal: 12,
-            paddingVertical: 9,
-            borderRadius: 999,
-            backgroundColor: "rgba(255,255,255,0.14)",
-            opacity: pressed ? 0.7 : onManualSearch ? 1 : 0.4,
-          })}
-        >
-          <Search size={15} color="#fff" />
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>Search</Text>
-        </Pressable>
+        {/* Right cluster — manual search escape hatch. */}
+        <View style={{ flex: 1, alignItems: "flex-end" }}>
+          <Pressable
+            onPress={onManualSearch}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Search the catalog manually"
+            disabled={!onManualSearch}
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              paddingHorizontal: 12,
+              paddingVertical: 9,
+              borderRadius: 999,
+              backgroundColor: "rgba(255,255,255,0.14)",
+              opacity: pressed ? 0.7 : onManualSearch ? 1 : 0.4,
+            })}
+          >
+            <Search size={15} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>Search</Text>
+          </Pressable>
+        </View>
       </View>
     </LinearGradient>
   );
@@ -1338,15 +1349,12 @@ function ResultArea({
     }
     // No useful candidates yet. Show the no-match escape hatch once
     // we've burned NO_MATCH_THRESHOLD frames on nothing; otherwise a
-    // quiet "reading" pulse so the camera surface stays focused.
+    // live "Scanning…" pulse so the surface always feels alive (the
+    // capture loop is running continuously while mounted).
     if (state.emptyAttempts >= NO_MATCH_THRESHOLD) {
       return <NoMatchCard onManualSearch={onManualSearch} onRescan={onRescan} />;
     }
-    if (!scanning && state.emptyAttempts === 0) {
-      // Permission granted but we haven't fired our first request yet.
-      return <HintPill label="Center the card in the frame" />;
-    }
-    return <HintPill label="Reading card…" pulse />;
+    return <HintPill label="Scanning…" pulse />;
   }
 
   return (
