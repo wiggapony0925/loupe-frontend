@@ -48,6 +48,20 @@ export function useSealedSearch(
   });
 }
 
+/**
+ * Fetch a single sealed product by id. Used by the add screen's
+ * deep-link pre-select flow so a search-rail tap-through can hydrate
+ * the form even when the product isn't in the default catalog page.
+ */
+export function useSealedProduct(id: string | undefined) {
+  return useQuery<SealedProductWire>({
+    queryKey: queryKeys.sealed.item(id ?? ""),
+    queryFn: () => apiFetch<SealedProductWire>(ENDPOINTS.sealed.item(id!)),
+    enabled: !!id,
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useMySealedHoldings(opts: { includeOpened?: boolean } = {}) {
   const includeOpened = opts.includeOpened ?? true;
   return useQuery<SealedHoldingWire[]>({

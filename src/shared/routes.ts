@@ -64,6 +64,13 @@ export const routes = {
   },
   /** Edit an existing holding by its grade UUID. */
   gradeEdit: (id: string) => `/grade/${enc(id)}`,
+  /**
+   * Sealed product picker / add-to-vault screen. When a `productId`
+   * is supplied the form pre-selects that catalog row so search-rail
+   * tap-throughs land one step closer to saving.
+   */
+  sealedAdd: (productId?: string) =>
+    productId ? `/sealed/add?productId=${enc(productId)}` : "/sealed/add",
   compare: (a?: string, b?: string) => {
     const params = [a && `a=${enc(a)}`, b && `b=${enc(b)}`]
       .filter(Boolean)

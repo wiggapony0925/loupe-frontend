@@ -34,6 +34,9 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { COPY } from "@/shared/copy";
 import { useRecentSearches } from "@/application/stores/recentSearchesStore";
 import { useCardSearch, useTrendingCards } from "@/application/queries";
+import { useSealedSearch } from "@/application/queries/collection/useSealed";
+import type { SealedProductWire } from "@/infrastructure/http";
+import { sealedToCardSearchResult } from "@/presentation/features/search/sealedAdapter";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
@@ -251,12 +254,16 @@ export default function SearchScreen() {
         : "all";
   const live = useCardSearch({ q: debouncedQuery, tcg: liveTcg, limit: 20 });
   const showLive = debouncedQuery.length >= 2;
+  // Sealed catalog runs alongside singles — same debounced query, same
+  // ≥2-char gate — so "booster box" surfaces alongside cards instead of
+  // returning an empty live panel. Hits the local DB so it's cheap and
+  // doesn't compete with the upstream TCG fan-out.
+  const sealed = useSealedSearch(showLive ? debouncedQuery : "");
   // When the user is actively typing a free-text query the *live catalog*
   // is the authoritative answer — the local vault/catalog filter below is
-  // almost always empty (it can only match cards already in the user's
-  // collection or the seeded market catalog) and produces a confusing
-  // "No matches" panel directly under a successful live result. Suppress
-  // the local filtered block whenever live search is the primary surface.
+  // almost always empty and produces a confusing "No matches" panel
+  // directly under a successful live result. Suppress the local filtered
+  // block whenever live search is the primary surface.
   const showLocalResults = showResults && !showLive;
 
   const commitRecentSearch = (q: string) => {
@@ -480,6 +487,7 @@ export default function SearchScreen() {
             isLoading={live.isLoading || live.isFetching}
             isError={live.isError}
             data={live.data?.results ?? []}
+            sealed={sealed.data ?? []}
             upstreamError={live.data?.error}
             partial={live.data?.partial}
             onResultTap={commitRecentSearch}
@@ -857,6 +865,7 @@ function LiveResultsSection({
   isLoading,
   isError,
   data,
+  sealed = [],
   upstreamError,
   partial,
   onResultTap,
@@ -866,6 +875,7 @@ function LiveResultsSection({
   isLoading: boolean;
   isError: boolean;
   data: CardSearchResult[];
+  sealed?: SealedProductWire[];
   upstreamError?: string;
   partial?: boolean;
   onResultTap?: (q: string) => void;
@@ -996,6 +1006,37 @@ function LiveResultsSection({
           </View>
         )}
       </View>
+
+      {/* ── Sealed products subsection ─────────────────────────────────
+          Sealed (booster boxes, ETBs, tins…) lives in its own panel
+          beneath the cards rail so it's discoverable without competing
+          with the upstream single-card results. Hidden entirely when
+          the local catalog has no match for the query — better than a
+          confusing empty state. Tap-through routes to /sealed/add so
+          the user is one step from saving it to the vault. */}
+      {sealed.length > 0 ? (
+        <View className="mt-3">
+          <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+            Sealed products
+          </Text>
+          <Text className="mt-1 text-base font-semibold text-ink" numberOfLines={1}>
+            {`${sealed.length} ${sealed.length === 1 ? "match" : "matches"} \u00b7 boxes, ETBs, tins`}
+          </Text>
+          <View className="mt-2 overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+            {sealed.map((s, i) => (
+              <SearchResultRow
+                key={s.id}
+                card={sealedToCardSearchResult(s)}
+                bordered={i > 0}
+                badgeText="SEALED"
+                priceLabel="MSRP"
+                route={routes.sealedAdd(s.id)}
+                onPressCapture={() => onResultTap?.(query)}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }

@@ -57,12 +57,19 @@ export function CaptureReviewScreen({
       setLoading(false);
       return;
     }
-    recognizeCardText(front.uri).then((res) => {
-      if (cancelled) return;
-      setOcr(res);
-      setTitle(res.title ?? "");
-      setLoading(false);
-    });
+    recognizeCardText(front.uri)
+      .then((res) => {
+        if (cancelled) return;
+        setOcr(res);
+        setTitle(res.title ?? "");
+        setLoading(false);
+      })
+      .catch(() => {
+        // OCR is best-effort — on failure the user can still type the title
+        // manually, so we just clear the loading state rather than blocking.
+        if (cancelled) return;
+        setLoading(false);
+      });
     return () => {
       cancelled = true;
     };

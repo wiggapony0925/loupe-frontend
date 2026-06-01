@@ -1,10 +1,12 @@
 /**
  * Scan aggregate — async scan jobs and the forensic reports they produce.
  *
- * Lifecycle:
- *   POST /scanner/upload          → ScanJob { status: "queued" }
- *   Celery worker progresses      → ScanJob { status: "processing", progress }
- *   On completion                 → ScanJob { status: "ready", reportId }
+ * Lifecycle (presigned upload flow — see `app/routers/collection/scans.py`):
+ *   POST /v1/scans                → ScanJob { status: "queued" } + presigned URLs
+ *   PUT captures → object storage
+ *   POST /v1/scans/{id}/complete  → grading enqueued
+ *   /ws/scans progress frames     → ScanJob { status: "processing", progress }
+ *   On completion (wire "complete" → UI "ready") → ScanJob { reportId }
  *                                   ForensicReport { id: reportId, ... }
  */
 

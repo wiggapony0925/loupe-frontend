@@ -11,7 +11,7 @@
  * Intentionally no separate modal — keeps the UI footprint small and
  * lets the back button do the right thing on iOS.
  */
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -23,11 +23,12 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Check, ChevronLeft, Search, X } from "lucide-react-native";
 
 import {
   useCreateSealedHolding,
+  useSealedProduct,
   useSealedSearch,
 } from "@/application/queries/collection/useSealed";
 import type {
@@ -67,6 +68,7 @@ const PRODUCT_LABEL: Record<SealedProductType, string> = {
 export default function AddSealedScreen() {
   const p = useThemedPalette();
   const router = useRouter();
+  const { productId } = useLocalSearchParams<{ productId?: string }>();
 
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<SealedProductType | null>(null);
@@ -77,6 +79,16 @@ export default function AddSealedScreen() {
 
   const search = useSealedSearch(q, { productType: filter });
   const createMut = useCreateSealedHolding();
+  // Deep-link pre-select: when arriving from the search rail with a
+  // `productId`, hydrate `selected` straight from the per-id endpoint
+  // so the form is one tap from save even when the product isn't in
+  // the default catalog page.
+  const deepLinked = useSealedProduct(productId);
+
+  useEffect(() => {
+    if (selected != null) return;
+    if (deepLinked.data) setSelected(deepLinked.data);
+  }, [deepLinked.data, selected]);
 
   const canSubmit = useMemo(() => {
     if (selected == null) return false;

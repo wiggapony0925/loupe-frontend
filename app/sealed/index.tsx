@@ -29,6 +29,7 @@ import {
   useMySealedHoldings,
 } from "@/application/queries/collection/useSealed";
 import type { SealedHoldingWire, SealedProductType } from "@/infrastructure/http";
+import { fullUsd } from "@/shared/format";
 import { CardImage } from "@/presentation/components/CardImage";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { Skeleton } from "@/presentation/components/Skeleton";
@@ -46,16 +47,6 @@ const PRODUCT_LABEL: Record<SealedProductType, string> = {
   case: "Case",
   other: "Other",
 };
-
-function formatUsd(value: string | null | undefined): string {
-  if (value == null) return "—";
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "—";
-  return `$${n.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
 
 interface RowProps {
   holding: SealedHoldingWire;
@@ -139,7 +130,7 @@ function HoldingRow({ holding, onDelete }: RowProps) {
       </View>
       <View style={{ alignItems: "flex-end", gap: 2 }}>
         <Text style={{ color: p.ink.default, fontSize: 13, fontWeight: "600" }}>
-          {totalCost != null ? formatUsd(String(totalCost)) : "—"}
+          {totalCost != null ? fullUsd(totalCost) : "—"}
         </Text>
         <Text style={{ color: p.ink.dim, fontSize: 10 }}>cost basis</Text>
       </View>
@@ -256,7 +247,7 @@ export default function MySealedScreen() {
         </Text>
         {rows.length > 0 ? (
           <Text style={{ color: p.ink.muted, fontSize: 13, marginTop: 4 }}>
-            Total cost basis · {formatUsd(String(totalCost))}
+            Total cost basis · {fullUsd(totalCost)}
           </Text>
         ) : null}
       </View>

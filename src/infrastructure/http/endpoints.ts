@@ -20,7 +20,6 @@ export const ENDPOINTS = {
     apple: `${V1}/auth/apple`,
     google: `${V1}/auth/google`,
     refresh: `${V1}/auth/refresh`,
-    logout: `${V1}/auth/logout`,
   },
   me: {
     root: `${V1}/me`,

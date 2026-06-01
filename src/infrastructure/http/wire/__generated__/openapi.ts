@@ -257,10 +257,8 @@ export interface paths {
          * OCR pipeline accuracy + cost metrics (admin)
          * @description Rolling accuracy/cost metrics over the last ``days`` days.
          *
-         *     .. note::
-         *        TODO(admin-roles): there is no admin role on :class:`User` yet.
-         *        For now any signed-in user can hit this endpoint; once roles
-         *        land, gate with ``Depends(require_admin)``.
+         *     Gated by :func:`require_admin` — caller's email must be in the
+         *     ``ADMIN_EMAILS`` allowlist. Returns 403 otherwise.
          */
         get: operations["ocr_metrics_v1_cards_admin_ocr_metrics_get"];
         put?: never;
@@ -587,6 +585,9 @@ export interface paths {
          *
          *     Currently synthesizes a deterministic walk around the live market
          *     price (seeded by card id) so the chart is stable across refreshes.
+         *     When ``house``/``grade`` are supplied the walk is scaled by the same
+         *     drift × multiplier math that drives the per-house market table, so
+         *     tap-a-grade-row → chart-filters-by-tier works without a second API.
          */
         get: operations["get_prices_v1_cards__card_id__prices_get"];
         put?: never;
@@ -777,6 +778,30 @@ export interface paths {
          * @description Returns ``{ topMovers, recentScans }`` for the authenticated user. Top movers are scored against the trailing 1-year price history embedded in each card's metadata; recent scans are the last N graded cards in scan-time order. Both rails are bounded by the optional ``topMovers`` and ``recentScans`` query params.
          */
         get: operations["get_home_feed_v1_home_feed_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/img": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Proxy a card image (public)
+         * @description Fetch and re-emit ``u`` as an image with long cache headers.
+         *
+         *     Returns the raw image bytes on success. On upstream failure returns
+         *     HTTP 502 — the mobile ``CardImage`` already retries failed loads, so
+         *     a transient blip will recover automatically.
+         */
+        get: operations["proxy_image_v1_img_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1231,6 +1256,47 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/watchlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my watchlist
+         * @description Returns every card the signed-in user has pinned, most-recent first.
+         */
+        get: operations["list_mine_v1_watchlist_get"];
+        put?: never;
+        /**
+         * Pin a card to my watchlist
+         * @description Idempotent. Returns 201 with the existing row when the card was already pinned.
+         */
+        post: operations["create_v1_watchlist_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/watchlist/{card_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unpin a card from my watchlist */
+        delete: operations["delete_v1_watchlist__card_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2520,6 +2586,44 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** WatchlistAdd */
+        WatchlistAdd: {
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+        };
+        /**
+         * WatchlistItemRead
+         * @description One pinned card. `card_name`/`card_image_url` joined for the UI.
+         */
+        WatchlistItemRead: {
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+            /** Card Image Url */
+            card_image_url?: string | null;
+            /** Card Name */
+            card_name?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
         };
     };
     responses: never;
@@ -3967,6 +4071,36 @@ export interface operations {
             };
         };
     };
+    proxy_image_v1_img_get: {
+        parameters: {
+            query: {
+                /** @description Upstream image URL */
+                u: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_index_history_v1_market_indices__index_id__history_get: {
         parameters: {
             query?: {
@@ -4963,6 +5097,88 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+        };
+    };
+    list_mine_v1_watchlist_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchlistItemRead"][];
+                };
+            };
+        };
+    };
+    create_v1_watchlist_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatchlistAdd"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchlistItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_v1_watchlist__card_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

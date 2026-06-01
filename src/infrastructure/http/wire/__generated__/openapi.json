@@ -3105,6 +3105,75 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "WatchlistAdd": {
+        "properties": {
+          "card_id": {
+            "format": "uuid",
+            "title": "Card Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "card_id"
+        ],
+        "title": "WatchlistAdd",
+        "type": "object"
+      },
+      "WatchlistItemRead": {
+        "description": "One pinned card. `card_name`/`card_image_url` joined for the UI.",
+        "properties": {
+          "card_id": {
+            "format": "uuid",
+            "title": "Card Id",
+            "type": "string"
+          },
+          "card_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Image Url"
+          },
+          "card_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "card_id",
+          "created_at"
+        ],
+        "title": "WatchlistItemRead",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -3747,7 +3816,7 @@
     },
     "/v1/cards/admin/ocr/metrics": {
       "get": {
-        "description": "Rolling accuracy/cost metrics over the last ``days`` days.\n\n.. note::\n   TODO(admin-roles): there is no admin role on :class:`User` yet.\n   For now any signed-in user can hit this endpoint; once roles\n   land, gate with ``Depends(require_admin)``.",
+        "description": "Rolling accuracy/cost metrics over the last ``days`` days.\n\nGated by :func:`require_admin` \u2014 caller's email must be in the\n``ADMIN_EMAILS`` allowlist. Returns 403 otherwise.",
         "operationId": "ocr_metrics_v1_cards_admin_ocr_metrics_get",
         "parameters": [
           {
@@ -4526,7 +4595,7 @@
     },
     "/v1/cards/{card_id}/prices": {
       "get": {
-        "description": "Return a price history series for the given composite card id.\n\nCurrently synthesizes a deterministic walk around the live market\nprice (seeded by card id) so the chart is stable across refreshes.",
+        "description": "Return a price history series for the given composite card id.\n\nCurrently synthesizes a deterministic walk around the live market\nprice (seeded by card id) so the chart is stable across refreshes.\nWhen ``house``/``grade`` are supplied the walk is scaled by the same\ndrift \u00d7 multiplier math that drives the per-house market table, so\ntap-a-grade-row \u2192 chart-filters-by-tier works without a second API.",
         "operationId": "get_prices_v1_cards__card_id__prices_get",
         "parameters": [
           {
@@ -4544,7 +4613,7 @@
             "required": false,
             "schema": {
               "default": "30d",
-              "pattern": "^(7d|30d|90d|180d|1y|365d)$",
+              "pattern": "^(7d|30d|90d|180d|1y|365d|all)$",
               "title": "Range",
               "type": "string"
             }
@@ -5468,6 +5537,44 @@
         "summary": "Aggregated home-screen rails",
         "tags": [
           "home"
+        ]
+      }
+    },
+    "/v1/img": {
+      "get": {
+        "description": "Fetch and re-emit ``u`` as an image with long cache headers.\n\nReturns the raw image bytes on success. On upstream failure returns\nHTTP 502 \u2014 the mobile ``CardImage`` already retries failed loads, so\na transient blip will recover automatically.",
+        "operationId": "proxy_image_v1_img_get",
+        "parameters": [
+          {
+            "description": "Upstream image URL",
+            "in": "query",
+            "name": "u",
+            "required": true,
+            "schema": {
+              "description": "Upstream image URL",
+              "title": "U",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Proxy a card image (public)",
+        "tags": [
+          "images"
         ]
       }
     },
@@ -7103,6 +7210,123 @@
         "summary": "Set-completion progress for the signed-in user",
         "tags": [
           "sets"
+        ]
+      }
+    },
+    "/v1/watchlist": {
+      "get": {
+        "description": "Returns every card the signed-in user has pinned, most-recent first.",
+        "operationId": "list_mine_v1_watchlist_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WatchlistItemRead"
+                  },
+                  "title": "Response List Mine V1 Watchlist Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List my watchlist",
+        "tags": [
+          "watchlist"
+        ]
+      },
+      "post": {
+        "description": "Idempotent. Returns 201 with the existing row when the card was already pinned.",
+        "operationId": "create_v1_watchlist_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchlistAdd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistItemRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Pin a card to my watchlist",
+        "tags": [
+          "watchlist"
+        ]
+      }
+    },
+    "/v1/watchlist/{card_id}": {
+      "delete": {
+        "operationId": "delete_v1_watchlist__card_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unpin a card from my watchlist",
+        "tags": [
+          "watchlist"
         ]
       }
     },

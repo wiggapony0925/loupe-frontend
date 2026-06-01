@@ -59,16 +59,22 @@ const FALLBACK_API_BASE: string =
 
 // Loud startup log so any TestFlight build can be diagnosed by reading the
 // device console: connect device to Mac, open Console.app, filter on
-// `[apiFetch]`. Shows up exactly once per app launch.
-// eslint-disable-next-line no-console
-console.log(
-  "[apiFetch] init base=",
-  PRIMARY_API_BASE,
-  "envProvided=",
-  Boolean(env.EXPO_PUBLIC_API_URL),
-  "dev=",
-  typeof __DEV__ !== "undefined" && __DEV__,
-);
+// `[apiFetch]`. Shows up exactly once per app launch. Gated so release
+// builds stay quiet unless diagnostics are explicitly enabled.
+if (
+  (typeof __DEV__ !== "undefined" && __DEV__) ||
+  (env.EXPO_PUBLIC_LOG_API ?? "false").toLowerCase() === "true"
+) {
+  // eslint-disable-next-line no-console
+  console.log(
+    "[apiFetch] init base=",
+    PRIMARY_API_BASE,
+    "envProvided=",
+    Boolean(env.EXPO_PUBLIC_API_URL),
+    "dev=",
+    typeof __DEV__ !== "undefined" && __DEV__,
+  );
+}
 
 // Mutable so we can sticky-switch after a successful fallback.
 let activeApiBase: string = PRIMARY_API_BASE;

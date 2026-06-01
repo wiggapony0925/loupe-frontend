@@ -7,7 +7,7 @@
  */
 import React from "react";
 import { Pressable, Text, View } from "react-native";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { routes } from "@/shared/routes";
 import type { CardSearchResult } from "@/infrastructure/http";
 import { CardImage } from "@/presentation/components/CardImage";
@@ -22,6 +22,12 @@ interface SearchResultRowProps {
   priority?: "low" | "normal" | "high";
   /** Fires *before* navigation so callers can persist analytics / recents. */
   onPressCapture?: () => void;
+  /** Override the default `/card/[id]` destination (used by sealed). */
+  route?: Href;
+  /** Override the upper-left chip label (defaults to TCG). */
+  badgeText?: string;
+  /** Override the right-column eyebrow (defaults to "MARKET"). */
+  priceLabel?: string;
 }
 
 export function SearchResultRow({
@@ -29,6 +35,9 @@ export function SearchResultRow({
   bordered = false,
   priority = "low",
   onPressCapture,
+  route,
+  badgeText,
+  priceLabel = "MARKET",
 }: SearchResultRowProps) {
   const p = useThemedPalette();
   const market = card.pricing_summary?.market?.amount ?? null;
@@ -38,7 +47,7 @@ export function SearchResultRow({
     <Pressable
       onPress={() => {
         onPressCapture?.();
-        router.push(routes.card(card.id));
+        router.push(route ?? routes.card(card.id));
       }}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
@@ -79,7 +88,7 @@ export function SearchResultRow({
                 letterSpacing: 0.8,
               }}
             >
-              {card.tcg.toUpperCase()}
+              {(badgeText ?? card.tcg).toUpperCase()}
             </Text>
           </View>
           {card.rarity ? (
@@ -109,7 +118,7 @@ export function SearchResultRow({
             marginTop: 2,
           }}
         >
-          MARKET
+          {priceLabel}
         </Text>
       </View>
     </Pressable>

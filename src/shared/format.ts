@@ -49,3 +49,20 @@ export function useCompactUsd(): (value: number) => string {
   const code = useSettings((s) => s.currency);
   return (value: number) => formatMoney(value, code, { compact: true });
 }
+
+/**
+ * Full-precision USD formatter ("$1,234.50"). Unlike `compactUsd`, this
+ * does NOT convert to the operator's selected currency — it renders the
+ * raw USD figure with two fixed decimals. Accepts numbers or numeric
+ * strings (e.g. decimal columns serialized as strings by the API) and
+ * returns an em-dash for null/NaN inputs.
+ */
+export function fullUsd(value: string | number | null | undefined): string {
+  if (value == null) return "—";
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return "—";
+  return `$${n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}

@@ -93,10 +93,6 @@ export function refreshSession(body: RefreshRequest): Promise<TokenPair> {
   });
 }
 
-export function logout(): Promise<void> {
-  return apiFetch<void>(ENDPOINTS.auth.logout, { method: "POST" });
-}
-
 export function getMe(): Promise<MeResponse> {
   return apiFetch<MeResponse>(ENDPOINTS.me.root, { method: "GET" });
 }
