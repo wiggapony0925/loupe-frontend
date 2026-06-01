@@ -95,18 +95,19 @@ const CAPTURE_QUALITY = 0.42;
  * stack requests, and capture / encode / upload are now pipelined so
  * the next frame starts as soon as the previous response lands.
  */
-const CAPTURE_INTERVAL_MS = 450;
+const CAPTURE_INTERVAL_MS = 1000;
 /** Confidence at which we fire the success haptic + freeze the carousel. */
 const LOCK_CONFIDENCE = 0.7;
 /**
  * Consecutive frames returning zero high-confidence (>=0.5) candidates
  * before we surface the "can't find a match" fallback CTA. At the
- * tightened CAPTURE_INTERVAL_MS (450ms) this works out to ~2.7s of
- * camera time before the user gets the escape hatch, instead of the
- * old ~1.5s where the popup nagged almost instantly. The live
- * "Scanning…" pulse keeps the surface feeling alive in the meantime.
+ * CAPTURE_INTERVAL_MS (1000ms) cadence — chosen to stay under the
+ * backend's 60/min identify rate limit so frames stop getting 429'd
+ * mid-scan — this works out to ~3s of camera time before the user gets
+ * the escape hatch. The live "Scanning…" pulse keeps the surface feeling
+ * alive in the meantime.
  */
-const NO_MATCH_THRESHOLD = 6;
+const NO_MATCH_THRESHOLD = 3;
 
 // ── Native card-detector thresholds ─────────────────────────────────
 // These are deliberately conservative: a single bad frame should never
@@ -123,9 +124,6 @@ const CROP_GLARE_LIMIT = 0.5;
 /** Long-edge for the perspective-corrected card upload (px). */
 const CROP_LONG_EDGE = 720;
 const CROP_JPEG_QUALITY = 0.7;
-
-/** Dim applied outside the card window so the scan target pops. */
-const SCRIM = "rgba(0,0,0,0.55)";
 
 /**
  * Shared "glass" surface system for everything floating over the camera.
@@ -904,11 +902,10 @@ function ReticleArea({
   const CARD_W = Math.round(Math.min(winW * 0.78, winH * 0.5 * (2.5 / 3.5)));
   const CARD_H = Math.round(CARD_W * (3.5 / 2.5));
 
-  // Dim the surroundings while hunting so the eye lands on the card,
-  // then pull the scrim back the moment we detect/lock a card so the
-  // live card "pops" clean instead of sitting behind a flat grey wash —
-  // this is the "box adjusts to the card when it finds one" feel.
-  const scrim = locked || hasMatch ? "rgba(0,0,0,0.18)" : SCRIM;
+  // No scrim. The user wants the live camera fully visible — the corner
+  // brackets + thin card-window border do all the framing, no grey wash
+  // over the feed.
+  const scrim = "transparent";
 
   return (
     <Pressable
