@@ -24,7 +24,7 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
-import { Appearance, Platform } from "react-native";
+import { Appearance, Platform, View } from "react-native";
 import { useColorScheme } from "nativewind";
 import { useSettings } from "@/application/stores/settingsStore";
 import { GluestackUIProvider } from "@/components/ui/gluestack-ui-provider";
@@ -34,6 +34,7 @@ import {
   palette,
   radius,
   spacing,
+  themeVars,
   withAlpha,
   type Palette,
   type Scheme,
@@ -106,7 +107,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     <ThemeContext.Provider value={value}>
       {/* 3. Gluestack v3 — owns its own colorScheme View. We hand it the
             resolved mode so it stays in lock-step with our palette. */}
-      <GluestackUIProvider mode={scheme}>{children}</GluestackUIProvider>
+      <GluestackUIProvider mode={scheme}>
+        {/* 4. Inject the `--loupe-*` CSS variables for the active scheme.
+              On native, NativeWind does NOT flip the `:root`/`.dark`
+              vars from global.css at runtime, so without this every
+              Tailwind palette shorthand (`bg-bg`, `border-line`, …)
+              would stay frozen on the light `:root` values. Applying
+              `themeVars[scheme]` here is what actually switches them. */}
+        <View style={[themeVars[scheme], { flex: 1 }]}>{children}</View>
+      </GluestackUIProvider>
     </ThemeContext.Provider>
   );
 }

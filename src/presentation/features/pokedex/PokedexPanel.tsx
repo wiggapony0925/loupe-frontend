@@ -23,7 +23,7 @@ import {
   usePokeApiSpecies,
 } from "@/application/queries/pokeApi/usePokeApi";
 import { pickEnglishFlavorText } from "@/infrastructure/http/pokeApiClient";
-import { palette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 const TYPE_COLOR: Record<string, string> = {
   normal: "#a8a878",
@@ -51,6 +51,7 @@ function titleCase(s: string): string {
 }
 
 export function PokedexPanel({ cardName }: { cardName: string | null | undefined }) {
+  const p = useThemedPalette();
   const pokemonQ = usePokeApiPokemon(cardName);
   const speciesQ = usePokeApiSpecies(cardName);
 
@@ -79,8 +80,8 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
       style={{
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: withAlpha(palette.accent.amber, 0.22),
-        backgroundColor: "rgba(255,255,255,0.03)",
+        borderColor: withAlpha(p.accent.amber, 0.22),
+        backgroundColor: p.bg.elevated,
         padding: 14,
         gap: 12,
       }}
@@ -88,7 +89,7 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Text
           style={{
-            color: palette.accent.amber,
+            color: p.accent.amber,
             fontSize: 10,
             fontWeight: "800",
             letterSpacing: 2,
@@ -99,7 +100,7 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
         {pokemon?.id ? (
           <Text
             style={{
-              color: withAlpha("#fff", 0.45),
+              color: p.ink.dim,
               fontSize: 11,
               fontWeight: "600",
               fontVariant: ["tabular-nums"],
@@ -116,7 +117,7 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
             width: 88,
             height: 88,
             borderRadius: 12,
-            backgroundColor: "rgba(255,255,255,0.05)",
+            backgroundColor: p.bg.sunken,
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
@@ -125,18 +126,18 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
           {sprite ? (
             <Image source={{ uri: sprite }} style={{ width: 84, height: 84 }} resizeMode="contain" />
           ) : pokemonQ.isLoading || speciesQ.isLoading ? (
-            <ActivityIndicator size="small" color={palette.accent.amber} />
+            <ActivityIndicator size="small" color={p.accent.amber} />
           ) : null}
         </View>
 
         <View style={{ flex: 1, gap: 6 }}>
           {pokemon?.name ? (
-            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
+            <Text style={{ color: p.ink.default, fontSize: 16, fontWeight: "700" }}>
               {titleCase(pokemon.name)}
             </Text>
           ) : null}
           {genus ? (
-            <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>{genus}</Text>
+            <Text style={{ color: p.ink.muted, fontSize: 12 }}>{genus}</Text>
           ) : null}
 
           {pokemon?.types?.length ? (
@@ -172,7 +173,7 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
           {heightM != null && weightKg != null ? (
             <Text
               style={{
-                color: "rgba(255,255,255,0.55)",
+                color: p.ink.muted,
                 fontSize: 11,
                 fontVariant: ["tabular-nums"],
               }}
@@ -186,7 +187,7 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
       {flavor ? (
         <Text
           style={{
-            color: "rgba(255,255,255,0.72)",
+            color: p.ink.muted,
             fontSize: 12,
             lineHeight: 17,
             fontStyle: "italic",

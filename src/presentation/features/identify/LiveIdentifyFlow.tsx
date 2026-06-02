@@ -716,6 +716,11 @@ export function LiveIdentifyFlow({
   const fallbackMarketPriceUsd = extractMarketPriceUsd(pokemonTcg.data);
 
   const marketPriceUsd = ourMarketPriceUsd ?? fallbackMarketPriceUsd;
+  // 1-year trend for the locked card — drives the Robinhood-style
+  // green/red delta line under the hero price. Only our backend snapshot
+  // carries it; the Pokémon TCG fallback has no history, so this stays
+  // null for cache/upstream-only matches and the delta line is hidden.
+  const marketChangePct1y = market.data?.snapshot.summary.change_pct_1y ?? null;
   const priceLoading =
     (market.isLoading || pokemonTcg.isLoading) && marketPriceUsd == null;
 
@@ -817,6 +822,7 @@ export function LiveIdentifyFlow({
             onManualSearch={onManualSearch}
             scanning={scanning}
             marketPriceUsd={marketPriceUsd}
+            marketChangePct1y={marketChangePct1y}
             priceLoading={priceLoading}
             formatUsd={formatUsd}
             palette={p}
@@ -1446,6 +1452,7 @@ function BottomPanel({
   onManualSearch,
   scanning,
   marketPriceUsd,
+  marketChangePct1y,
   priceLoading,
   formatUsd,
   palette: themed,
@@ -1470,6 +1477,7 @@ function BottomPanel({
   onManualSearch?: () => void;
   scanning: boolean;
   marketPriceUsd: number | null;
+  marketChangePct1y: number | null;
   priceLoading: boolean;
   formatUsd: (v: number) => string;
   palette: ReturnType<typeof useThemedPalette>;
@@ -1520,6 +1528,7 @@ function BottomPanel({
           candidates={state.candidates}
           confidence={state.topConfidence}
           marketPriceUsd={marketPriceUsd}
+          marketChangePct1y={marketChangePct1y}
           priceLoading={priceLoading}
           formatUsd={formatUsd}
           themed={themed}
@@ -2362,6 +2371,7 @@ function LockedResultSheet({
   candidates,
   confidence,
   marketPriceUsd,
+  marketChangePct1y,
   priceLoading,
   formatUsd,
   themed,
@@ -2376,6 +2386,7 @@ function LockedResultSheet({
   candidates: IdentifyCandidate[];
   confidence: number;
   marketPriceUsd: number | null;
+  marketChangePct1y: number | null;
   priceLoading: boolean;
   formatUsd: (v: number) => string;
   themed: ReturnType<typeof useThemedPalette>;
@@ -2390,6 +2401,11 @@ function LockedResultSheet({
   const setMeta = [candidate.set_name, candidate.number ? `#${candidate.number}` : null]
     .filter(Boolean)
     .join(" · ");
+  // Robinhood-style trend: green up / red down delta line under the
+  // hero price. Hidden when we have no history (cache / upstream-only).
+  const hasTrend = marketChangePct1y != null && Number.isFinite(marketChangePct1y);
+  const trendUp = (marketChangePct1y ?? 0) >= 0;
+  const trendColor = trendUp ? palette.accent.mint : palette.accent.rose;
   // Alternate printings: every candidate after the locked top. Critical
   // for reprint ties (e.g. Base Set vs Base Set 2 Charizard share name +
   // number + art) where the auto-lock can't tell two near-identical
@@ -2541,18 +2557,53 @@ function LockedResultSheet({
               MARKET PRICE
             </Text>
             {marketPriceUsd != null ? (
-              <Text
-                style={{
-                  color: palette.accent.mint,
-                  fontSize: 24,
-                  fontWeight: "800",
-                  letterSpacing: -0.6,
-                  fontVariant: ["tabular-nums"],
-                  marginTop: 2,
-                }}
-              >
-                {formatUsd(marketPriceUsd)}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, marginTop: 2 }}>
+                <Text
+                  style={{
+                    color: "#fff",
+                    fontSize: 28,
+                    fontWeight: "800",
+                    letterSpacing: -0.8,
+                    fontVariant: ["tabular-nums"],
+                  }}
+                >
+                  {formatUsd(marketPriceUsd)}
+                </Text>
+                {hasTrend ? (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 2,
+                      paddingBottom: 3,
+                    }}
+                  >
+                    <Text style={{ color: trendColor, fontSize: 12, fontWeight: "800" }}>
+                      {trendUp ? "▲" : "▼"}
+                    </Text>
+                    <Text
+                      style={{
+                        color: trendColor,
+                        fontSize: 13,
+                        fontWeight: "800",
+                        fontVariant: ["tabular-nums"],
+                      }}
+                    >
+                      {Math.abs(marketChangePct1y!).toFixed(1)}%
+                    </Text>
+                    <Text
+                      style={{
+                        color: "rgba(255,255,255,0.4)",
+                        fontSize: 10,
+                        fontWeight: "700",
+                        marginLeft: 1,
+                      }}
+                    >
+                      1Y
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
             ) : priceLoading ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
                 <ActivityIndicator size="small" color={palette.accent.mint} />

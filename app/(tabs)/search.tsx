@@ -14,7 +14,6 @@ import {
   Keyboard,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -506,7 +505,7 @@ export default function SearchScreen() {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 10, paddingTop: 16, paddingRight: 8 }}
+                contentContainerStyle={{ gap: 12, paddingTop: 16, paddingRight: 8 }}
               >
                 {CATEGORIES.map((cat) => {
                   const count = cards.filter(cat.match).length;
@@ -515,71 +514,56 @@ export default function SearchScreen() {
                       key={cat.key}
                       onPress={() => setActiveCategory(cat.key)}
                       style={({ pressed }) => ({
-                        width: 148,
+                        width: 116,
+                        paddingVertical: 18,
+                        paddingHorizontal: 12,
+                        alignItems: "center",
+                        gap: 11,
                         opacity: pressed ? 0.9 : 1,
-                        transform: pressed ? [{ scale: 0.985 }] : undefined,
+                        transform: pressed ? [{ scale: 0.96 }] : undefined,
                       })}
-                      className="overflow-hidden rounded-2xl border border-line bg-bg-elevated"
+                      className="rounded-3xl border border-line bg-bg-elevated"
                     >
-                      {/* Hero panel — translucent wash of brand color
-                          over the elevated surface; logo carries the
-                          brand, no garish fill. */}
+                      {/* Brand badge — the franchise glyph sits in a
+                          solid, app-icon-style brand-colored disc. Reads
+                          far more premium than the old faint full-bleed
+                          wash, and gives each category an instantly
+                          recognizable color chip. */}
                       <View
                         style={{
-                          height: 96,
-                          backgroundColor: withAlpha(cat.tint, 0.05),
+                          width: 60,
+                          height: 60,
+                          borderRadius: 18,
+                          backgroundColor: cat.tint,
                           alignItems: "center",
                           justifyContent: "center",
-                          paddingHorizontal: 12,
-                          borderBottomWidth: StyleSheet.hairlineWidth,
-                          borderBottomColor: withAlpha(cat.tint, 0.18),
+                          shadowColor: cat.tint,
+                          shadowOpacity: 0.35,
+                          shadowRadius: 10,
+                          shadowOffset: { width: 0, height: 4 },
+                          elevation: 4,
                         }}
                       >
-                        {/* Unified glyph treatment — every category tile
-                            uses the same TcgMark at the same size so the
-                            rail reads as a consistent grid instead of a
-                            mismatched collage of full wordmarks vs tiny
-                            symbols. */}
                         <TcgMark
                           set={cat.key}
-                          size={56}
-                          color={cat.tint}
-                          background="transparent"
+                          size={34}
+                          color="#FFFFFF"
+                          background={cat.tint}
                         />
                       </View>
-                      {/* Label strip — clean type, brand color reduced
-                          to a 6px accent dot. */}
-                      <View
-                        style={{
-                          paddingHorizontal: 12,
-                          paddingVertical: 12,
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <View
-                          style={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: 3,
-                            backgroundColor: cat.tint,
-                          }}
-                        />
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text
-                            numberOfLines={1}
-                            className="text-[14px] font-semibold text-ink"
-                          >
-                            {cat.label}
-                          </Text>
-                          <Text
-                            numberOfLines={1}
-                            className="mt-0.5 text-[11px] text-ink-dim"
-                          >
-                            {count} {count === 1 ? "card" : "cards"}
-                          </Text>
-                        </View>
+                      <View style={{ alignItems: "center", gap: 2 }}>
+                        <Text
+                          numberOfLines={1}
+                          className="text-[13.5px] font-semibold text-ink"
+                        >
+                          {cat.label}
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          className="text-[11px] text-ink-dim"
+                        >
+                          {count} {count === 1 ? "card" : "cards"}
+                        </Text>
                       </View>
                     </Pressable>
                   );

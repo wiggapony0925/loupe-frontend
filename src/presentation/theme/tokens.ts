@@ -12,6 +12,7 @@
  * `useThemedPalette()` hook which does it for them.
  */
 
+import { vars } from "nativewind";
 import { useColorScheme } from "react-native";
 import { useSettings } from "@/application/stores/settingsStore";
 
@@ -87,6 +88,55 @@ export function applyTheme(scheme: Scheme): void {
 export function getActiveScheme(): Scheme {
   return activeScheme;
 }
+
+/**
+ * Convert a `#RGB`/`#RRGGBB` hex string to a NativeWind-friendly
+ * `"R G B"` triplet (no commas) so it can back a CSS variable consumed
+ * by Tailwind's `rgb(var(--loupe-*) / <alpha-value>)` shorthand.
+ */
+function hexToTriplet(hex: string): string {
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `${r} ${g} ${b}`;
+}
+
+/**
+ * Build the `--loupe-*` CSS variable map for a palette. Keeping this
+ * derived from the same `lightPalette`/`darkPalette` source means the
+ * inline-style consumers (`useThemedPalette`) and the Tailwind class
+ * consumers (`bg-bg`, `text-ink`, …) can never drift apart.
+ */
+function paletteToVars(pal: typeof darkPalette): Record<string, string> {
+  return {
+    "--loupe-bg-base": hexToTriplet(pal.bg.base),
+    "--loupe-bg-elevated": hexToTriplet(pal.bg.elevated),
+    "--loupe-bg-sunken": hexToTriplet(pal.bg.sunken),
+    "--loupe-line": hexToTriplet(pal.line.default),
+    "--loupe-line-strong": hexToTriplet(pal.line.strong),
+    "--loupe-ink": hexToTriplet(pal.ink.default),
+    "--loupe-ink-muted": hexToTriplet(pal.ink.muted),
+    "--loupe-ink-dim": hexToTriplet(pal.ink.dim),
+    "--loupe-accent-mint": hexToTriplet(pal.accent.mint),
+    "--loupe-accent-blue": hexToTriplet(pal.accent.blue),
+    "--loupe-accent-amber": hexToTriplet(pal.accent.amber),
+    "--loupe-accent-rose": hexToTriplet(pal.accent.rose),
+  };
+}
+
+/**
+ * Per-scheme `vars()` styles. On native, NativeWind does NOT flip the
+ * `:root`/`.dark` CSS variables declared in `global.css` at runtime —
+ * those only resolve on web. To make the Tailwind palette shorthands
+ * actually switch on device, apply `themeVars[scheme]` as an inline
+ * style on a wrapping `<View>` (see `ThemeProvider`).
+ */
+export const themeVars: Record<Scheme, ReturnType<typeof vars>> = {
+  light: vars(paletteToVars(lightPalette)),
+  dark: vars(paletteToVars(darkPalette)),
+};
 
 export const radius = {
   xs: 2,
