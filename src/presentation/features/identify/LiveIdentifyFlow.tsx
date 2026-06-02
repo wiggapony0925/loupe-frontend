@@ -49,6 +49,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Layers,
   Plus,
   RotateCcw,
   Search,
@@ -218,6 +219,13 @@ interface LiveIdentifyFlowProps {
     identificationId: string,
   ) => void;
   /**
+   * Called when the user finalizes a batch ("stack") of scanned cards.
+   * The host route bulk-adds each candidate to the vault as a RAW
+   * (ungraded) holding, then navigates away. When omitted, the batch
+   * tray and its "Add to stack" affordances are hidden entirely.
+   */
+  onAddBatch?: (candidates: IdentifyCandidate[]) => void;
+  /**
    * Called when the user taps the "Search manually" escape hatch on the
    * no-match state. Host route should push to the catalog search screen.
    */
@@ -251,10 +259,24 @@ const EMPTY_STATE: IdentifyState = {
   emptyAttempts: 0,
 };
 
+/**
+ * Stable identity for a candidate, used to de-dupe the batch stack so
+ * scanning the same card twice doesn't queue it twice. Falls back to
+ * name+number when neither catalog id is resolved yet.
+ */
+function candidateKey(c: IdentifyCandidate): string {
+  return (
+    c.card_id ??
+    c.upstream_id ??
+    `${c.name.toLowerCase()}|${c.number ?? ""}`
+  );
+}
+
 export function LiveIdentifyFlow({
   onClose,
   onConfirm,
   onAddToVault,
+  onAddBatch,
   onManualSearch,
   initialTcg = null,
 }: LiveIdentifyFlowProps) {
@@ -300,6 +322,13 @@ export function LiveIdentifyFlow({
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<IdentifyState>(EMPTY_STATE);
+  /**
+   * The batch "stack" — confirmed cards queued up while scanning a pile.
+   * Each tap on "Add to stack" pushes the locked candidate here and
+   * resets the scanner for the next card. Finalized together via
+   * `onAddBatch`. De-duplicated by `candidateKey`.
+   */
+  const [batch, setBatch] = useState<IdentifyCandidate[]>([]);
   /**
    * Per-frame guidance from the native card detector ("Hold steady",
    * "Reduce glare", …). `null` when no actionable hint is needed or
@@ -625,6 +654,47 @@ export function LiveIdentifyFlow({
     [state.identificationId, onAddToVault],
   );
 
+  // ─── Batch stack ─────────────────────────────────────────────────
+  // Push the current card onto the stack, record positive feedback,
+  // then reset the scanner so the next card in the pile can be read.
+  const handleAddToBatch = useCallback(
+    (candidate: IdentifyCandidate) => {
+      const id = state.identificationId;
+      Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
+      ).catch(() => {});
+      if (id) {
+        submitIdentifyFeedback(id, {
+          correct: true,
+          chosen_card_id: candidate.card_id,
+        }).catch(() => {});
+      }
+      setBatch((prev) =>
+        prev.some((c) => candidateKey(c) === candidateKey(candidate))
+          ? prev
+          : [...prev, candidate],
+      );
+      setState(EMPTY_STATE);
+      setError(null);
+      setPaused(false);
+    },
+    [state.identificationId],
+  );
+
+  const handleRemoveFromBatch = useCallback((key: string) => {
+    Haptics.selectionAsync().catch(() => {});
+    setBatch((prev) => prev.filter((c) => candidateKey(c) !== key));
+  }, []);
+
+  const handleFinishBatch = useCallback(() => {
+    if (batch.length === 0) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => {},
+    );
+    onAddBatch?.(batch);
+    setBatch([]);
+  }, [batch, onAddBatch]);
+
   // ─── Live price for the locked candidate ────────────────
   // Once we've locked onto a top candidate with a resolved catalog
   // id, fetch its raw market price so the floating chip + result
@@ -737,6 +807,11 @@ export function LiveIdentifyFlow({
             }}
             onPickCandidate={handlePick}
             onAddToVault={handleAddToVault}
+            batch={batch}
+            batchEnabled={onAddBatch != null}
+            onAddToBatch={handleAddToBatch}
+            onRemoveFromBatch={handleRemoveFromBatch}
+            onFinishBatch={handleFinishBatch}
             onRescan={handleRescan}
             onManualCapture={captureOnce}
             onManualSearch={onManualSearch}
@@ -1361,6 +1436,11 @@ function BottomPanel({
   onPickTcg,
   onPickCandidate,
   onAddToVault,
+  batch,
+  batchEnabled,
+  onAddToBatch,
+  onRemoveFromBatch,
+  onFinishBatch,
   onRescan,
   onManualCapture,
   onManualSearch,
@@ -1380,6 +1460,11 @@ function BottomPanel({
   onPickTcg: (t: IdentifyTcgHint) => void;
   onPickCandidate: (c: IdentifyCandidate) => void;
   onAddToVault: (c: IdentifyCandidate) => void;
+  batch: IdentifyCandidate[];
+  batchEnabled: boolean;
+  onAddToBatch: (c: IdentifyCandidate) => void;
+  onRemoveFromBatch: (key: string) => void;
+  onFinishBatch: () => void;
   onRescan: () => void;
   onManualCapture: () => void;
   onManualSearch?: () => void;
@@ -1438,6 +1523,7 @@ function BottomPanel({
           priceLoading={priceLoading}
           formatUsd={formatUsd}
           themed={themed}
+          batchEnabled={batchEnabled}
           onViewDetails={() => {
             const c = state.candidates[0];
             if (c) onPickCandidate(c);
@@ -1446,6 +1532,10 @@ function BottomPanel({
           onAddToVault={() => {
             const c = state.candidates[0];
             if (c) onAddToVault(c);
+          }}
+          onAddToBatch={() => {
+            const c = state.candidates[0];
+            if (c) onAddToBatch(c);
           }}
           onRescan={onRescan}
         />
@@ -1460,6 +1550,15 @@ function BottomPanel({
           onManualSearch={onManualSearch}
         />
       )}
+
+      {batchEnabled && batch.length > 0 ? (
+        <BatchTray
+          batch={batch}
+          themed={themed}
+          onRemove={onRemoveFromBatch}
+          onFinish={onFinishBatch}
+        />
+      ) : null}
 
       <View
         className="flex-row items-center"
@@ -2098,6 +2197,160 @@ function TcgPickerSheet({
   );
 }
 
+// ─────────────── Batch stack tray ───────────────
+// A scrollable, frosted strip of the cards queued up while scanning a
+// pile. Sits above the control row whenever the stack is non-empty so
+// the user can review what's been captured, prune mistakes, and add the
+// whole batch to the vault in one tap.
+
+function BatchTray({
+  batch,
+  themed,
+  onRemove,
+  onFinish,
+}: {
+  batch: IdentifyCandidate[];
+  themed: ReturnType<typeof useThemedPalette>;
+  onRemove: (key: string) => void;
+  onFinish: () => void;
+}) {
+  const count = batch.length;
+  return (
+    <View
+      style={{
+        borderRadius: 18,
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor: withAlpha(themed.accent.mint, 0.22),
+      }}
+    >
+      <BlurView
+        intensity={30}
+        tint="dark"
+        style={{ backgroundColor: GLASS, paddingTop: 10, paddingBottom: 12 }}
+      >
+        {/* Header: count + finalize */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: 12,
+            marginBottom: 8,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+            <Layers size={15} color={themed.accent.mint} />
+            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>
+              {count} in stack
+            </Text>
+          </View>
+          <Pressable
+            onPress={onFinish}
+            accessibilityRole="button"
+            accessibilityLabel={`Add all ${count} cards to vault`}
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              paddingVertical: 7,
+              paddingHorizontal: 12,
+              borderRadius: 999,
+              backgroundColor: themed.accent.mint,
+              opacity: pressed ? 0.85 : 1,
+            })}
+          >
+            <Plus size={14} color="#08110D" />
+            <Text style={{ color: "#08110D", fontWeight: "800", fontSize: 13 }}>
+              Add all to vault
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Scrollable thumbnail strip */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingHorizontal: 12,
+            gap: 10,
+            alignItems: "flex-start",
+          }}
+        >
+          {batch.map((c) => {
+            const key = candidateKey(c);
+            return (
+              <View key={key} style={{ width: 64, alignItems: "center" }}>
+                <View style={{ width: 64, height: 88 }}>
+                  {c.image_url ? (
+                    <Image
+                      source={{ uri: c.image_url }}
+                      style={{
+                        width: 64,
+                        height: 88,
+                        borderRadius: 8,
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                      }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        width: 64,
+                        height: 88,
+                        borderRadius: 8,
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Sparkles size={18} color="rgba(255,255,255,0.4)" />
+                    </View>
+                  )}
+                  {/* Remove badge */}
+                  <Pressable
+                    onPress={() => onRemove(key)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${c.name} from stack`}
+                    hitSlop={6}
+                    style={{
+                      position: "absolute",
+                      top: -6,
+                      right: -6,
+                      width: 22,
+                      height: 22,
+                      borderRadius: 11,
+                      backgroundColor: "rgba(8,8,10,0.92)",
+                      borderWidth: 1,
+                      borderColor: withAlpha("#fff", 0.18),
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <X size={13} color="#fff" />
+                  </Pressable>
+                </View>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: "rgba(255,255,255,0.7)",
+                    fontSize: 10,
+                    fontWeight: "600",
+                    marginTop: 4,
+                    maxWidth: 64,
+                  }}
+                >
+                  {c.name}
+                </Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+      </BlurView>
+    </View>
+  );
+}
+
 // ─────────────── Locked-state hero result sheet ───────────────
 // Once auto-capture locks on a high-confidence match we trade the
 // thin candidate strip for a full-width "matched card" sheet, à la
@@ -2112,9 +2365,11 @@ function LockedResultSheet({
   priceLoading,
   formatUsd,
   themed,
+  batchEnabled,
   onViewDetails,
   onPickAlternate,
   onAddToVault,
+  onAddToBatch,
   onRescan,
 }: {
   candidate: IdentifyCandidate;
@@ -2124,9 +2379,11 @@ function LockedResultSheet({
   priceLoading: boolean;
   formatUsd: (v: number) => string;
   themed: ReturnType<typeof useThemedPalette>;
+  batchEnabled: boolean;
   onViewDetails: () => void;
   onPickAlternate: (c: IdentifyCandidate) => void;
   onAddToVault: () => void;
+  onAddToBatch: () => void;
   onRescan: () => void;
 }) {
   const confidencePct = Math.round(confidence * 100);
@@ -2319,6 +2576,32 @@ function LockedResultSheet({
         </View>
       </View>
 
+      {/* Add to stack — the fast batch path. Tapping queues this card
+          and instantly re-arms the scanner for the next one in the pile,
+          so a whole stack can be logged without leaving the camera. */}
+      {batchEnabled ? (
+        <Pressable
+          onPress={onAddToBatch}
+          accessibilityRole="button"
+          accessibilityLabel="Add to stack and scan next"
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            paddingVertical: 13,
+            borderRadius: 14,
+            backgroundColor: palette.accent.mint,
+            opacity: pressed ? 0.85 : 1,
+          })}
+        >
+          <Layers size={17} color="#08110D" />
+          <Text style={{ color: "#08110D", fontWeight: "800", fontSize: 14 }}>
+            Add to stack &amp; scan next
+          </Text>
+        </Pressable>
+      ) : null}
+
       {/* Action row */}
       <View style={{ flexDirection: "row", gap: 10 }}>
         <Pressable
@@ -2333,14 +2616,24 @@ function LockedResultSheet({
             gap: 6,
             paddingVertical: 12,
             borderRadius: 14,
-            backgroundColor: palette.accent.mint,
+            backgroundColor: batchEnabled
+              ? "rgba(255,255,255,0.06)"
+              : palette.accent.mint,
+            borderWidth: batchEnabled ? 1 : 0,
+            borderColor: withAlpha("#fff", 0.16),
             opacity: pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ color: "#08110D", fontWeight: "800", fontSize: 14 }}>
+          <Text
+            style={{
+              color: batchEnabled ? "#fff" : "#08110D",
+              fontWeight: "800",
+              fontSize: 14,
+            }}
+          >
             View details
           </Text>
-          <ChevronRight size={16} color="#08110D" />
+          <ChevronRight size={16} color={batchEnabled ? "#fff" : "#08110D"} />
         </Pressable>
         <Pressable
           onPress={onAddToVault}
