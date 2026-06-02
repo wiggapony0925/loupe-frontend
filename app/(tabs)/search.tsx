@@ -524,31 +524,37 @@ export default function SearchScreen() {
                       })}
                       className="rounded-3xl border border-line bg-bg-elevated"
                     >
-                      {/* Brand badge — the franchise glyph sits in a
-                          solid, app-icon-style brand-colored disc. Reads
-                          far more premium than the old faint full-bleed
-                          wash, and gives each category an instantly
-                          recognizable color chip. */}
+                      {/* Brand badge — app-icon-style chip. The franchise
+                          glyph is TWO-TONE (a foreground + a negative-space
+                          colour), so the badge body MUST be the colour we
+                          pass as the glyph's `background`, otherwise the
+                          negative-space parts vanish and you get a white
+                          blob. We therefore use a solid WHITE badge and
+                          draw the glyph in the brand tint — the two tones
+                          read correctly and a tint ring + soft glow give
+                          each category its colour identity. */}
                       <View
                         style={{
-                          width: 60,
-                          height: 60,
-                          borderRadius: 18,
-                          backgroundColor: cat.tint,
+                          width: 58,
+                          height: 58,
+                          borderRadius: 17,
+                          backgroundColor: "#FFFFFF",
                           alignItems: "center",
                           justifyContent: "center",
+                          borderWidth: 1.5,
+                          borderColor: withAlpha(cat.tint, 0.35),
                           shadowColor: cat.tint,
-                          shadowOpacity: 0.35,
-                          shadowRadius: 10,
+                          shadowOpacity: 0.3,
+                          shadowRadius: 9,
                           shadowOffset: { width: 0, height: 4 },
                           elevation: 4,
                         }}
                       >
                         <TcgMark
                           set={cat.key}
-                          size={34}
-                          color="#FFFFFF"
-                          background={cat.tint}
+                          size={32}
+                          color={cat.tint}
+                          background="#FFFFFF"
                         />
                       </View>
                       <View style={{ alignItems: "center", gap: 2 }}>

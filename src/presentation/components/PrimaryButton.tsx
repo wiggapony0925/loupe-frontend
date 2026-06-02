@@ -16,6 +16,10 @@ interface PrimaryButtonProps {
   variant?: "mint" | "blue" | "ghost";
   /** Optional accessibility label. Falls back to `label`. */
   accessibilityLabel?: string;
+  /** Fired on press-and-hold. Enables the quick-add gesture on CTAs. */
+  onLongPress?: () => void;
+  /** Hold duration (ms) before `onLongPress` fires. Defaults to 320. */
+  delayLongPress?: number;
 }
 
 /**
@@ -33,6 +37,8 @@ export function PrimaryButton({
   disabled = false,
   variant = "mint",
   accessibilityLabel,
+  onLongPress,
+  delayLongPress = 320,
 }: PrimaryButtonProps) {
   const p = useThemedPalette();
   const handlePress = () => {
@@ -40,6 +46,13 @@ export function PrimaryButton({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onPress();
   };
+  const handleLongPress = onLongPress
+    ? () => {
+        if (disabled || loading) return;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+        onLongPress();
+      }
+    : undefined;
 
   const isGhost = variant === "ghost";
   const gradient: [string, string] =
@@ -51,6 +64,8 @@ export function PrimaryButton({
   return (
     <Pressable
       onPress={handlePress}
+      onLongPress={handleLongPress}
+      delayLongPress={delayLongPress}
       disabled={disabled || loading}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}

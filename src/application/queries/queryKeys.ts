@@ -25,6 +25,10 @@ export const queryKeys = {
     profile: () => ["me"] as const,
     grades: () => ["me", "grades"] as const,
   },
+  grades: {
+    all: ["grades"] as const,
+    item: (id: string) => ["grades", "item", id] as const,
+  },
   portfolio: {
     all: ["portfolio"] as const,
     summary: () => ["portfolio", "summary"] as const,

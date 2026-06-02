@@ -1,15 +1,18 @@
 /**
- * `EbaySoldListingsPanel` — last-90-day eBay sold-price scatter + median.
+ * `RecentSoldPanel` — last-90-day recent-sold scatter + median, aggregated
+ * across every comp source the backend can reach.
  *
- * Reuses `useCardComps` (which fans out across configured providers in
- * `comps_service.py`) and filters to `source === "ebay"` client-side.
- * Renders a small SVG scatter of price-over-time with a horizontal
- * median line so the user can eyeball volatility vs. the cross-grader
- * card-detail chart immediately above it.
+ * The backend (`comps_service.py` → `registry.fan_out_comps`) already fans
+ * out across all configured providers — eBay's API *and* the keyless
+ * 130point scraper — and returns a unified `SoldCompWire[]`, each tagged
+ * with its `source`. We render whatever comes back (no client-side source
+ * filter), so recent-sold stays populated even when eBay's API is down or
+ * unconfigured. Each row shows a small source chip for provenance, and the
+ * header summarizes which sources contributed.
  *
- * The list under the chart is capped to ten most-recent rows — anyone
- * who wants the full firehose can tap "View all on eBay" which opens
- * the eBay search URL for the card.
+ * The list under the chart is capped to ten most-recent rows; the
+ * "Browse on eBay ↗" link opens the eBay sold-search for the card as a
+ * convenience escape hatch to the full firehose.
  */
 
 import React, { useMemo } from "react";
@@ -24,7 +27,7 @@ import {
 } from "@/presentation/theme/tokens";
 import type { SoldCompWire } from "@/infrastructure/http";
 
-export interface EbaySoldListingsPanelProps {
+export interface RecentSoldPanelProps {
   cardId: string;
   /** Display name used to build a generic eBay search fallback link. */
   cardName?: string | null;
@@ -32,6 +35,22 @@ export interface EbaySoldListingsPanelProps {
 
 const CHART_H = 140;
 const CHART_PAD = { top: 12, right: 12, bottom: 20, left: 32 };
+
+/** Human label for a comp `source` slug (e.g. "ebay" → "eBay"). */
+function sourceLabel(source: string): string {
+  switch (source.toLowerCase()) {
+    case "ebay":
+      return "eBay";
+    case "130point":
+      return "130point";
+    case "pwcc":
+      return "PWCC";
+    case "goldin":
+      return "Goldin";
+    default:
+      return source.charAt(0).toUpperCase() + source.slice(1);
+  }
+}
 
 function median(nums: number[]): number {
   if (nums.length === 0) return 0;
@@ -51,14 +70,16 @@ function fmtDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-export function EbaySoldListingsPanel({ cardId, cardName }: EbaySoldListingsPanelProps) {
+export function RecentSoldPanel({ cardId, cardName }: RecentSoldPanelProps) {
   const p = useThemedPalette();
   const q = useCardComps(cardId, { days: 90, limit: 100 });
 
-  const ebay = useMemo<SoldCompWire[]>(
+  // Render every source the backend returned, ascending by date for the
+  // scatter. No client-side source filter — provenance is shown per-row.
+  const comps = useMemo<SoldCompWire[]>(
     () =>
       (q.data?.comps ?? [])
-        .filter((c) => c.source.toLowerCase() === "ebay")
+        .slice()
         .sort(
           (a, b) =>
             new Date(a.sold_at).getTime() - new Date(b.sold_at).getTime(),
@@ -67,9 +88,20 @@ export function EbaySoldListingsPanel({ cardId, cardName }: EbaySoldListingsPane
   );
 
   const med = useMemo(
-    () => median(ebay.map((c) => c.price.amount).filter((n) => Number.isFinite(n))),
-    [ebay],
+    () => median(comps.map((c) => c.price.amount).filter((n) => Number.isFinite(n))),
+    [comps],
   );
+
+  // Distinct contributing sources, ordered by sale count, for the header.
+  const sourceSummary = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of comps) {
+      counts.set(c.source, (counts.get(c.source) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([source]) => sourceLabel(source));
+  }, [comps]);
 
   const ebaySearchUrl = cardName
     ? `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(cardName)}&LH_Sold=1&LH_Complete=1`
@@ -100,16 +132,17 @@ export function EbaySoldListingsPanel({ cardId, cardName }: EbaySoldListingsPane
               textTransform: "uppercase",
             }}
           >
-            eBay Sold
+            Recent Sold
           </Text>
           <Text style={{ color: p.ink.muted, fontSize: 11 }}>
-            · 90d · {ebay.length} sales
+            · 90d · {comps.length} sales
+            {sourceSummary.length > 0 ? ` · ${sourceSummary.join(" + ")}` : ""}
           </Text>
         </View>
         {ebaySearchUrl ? (
           <Pressable onPress={openEbay} hitSlop={8} accessibilityRole="button">
             <Text style={{ color: palette.accent.mint, fontSize: 11, fontWeight: "700" }}>
-              View on eBay ↗
+              Browse on eBay ↗
             </Text>
           </Pressable>
         ) : null}
@@ -117,7 +150,7 @@ export function EbaySoldListingsPanel({ cardId, cardName }: EbaySoldListingsPane
 
       {q.isLoading ? (
         <Skeleton width="100%" height={CHART_H} radius={14} />
-      ) : ebay.length === 0 ? (
+      ) : comps.length === 0 ? (
         <View
           style={{
             padding: 16,
@@ -129,12 +162,12 @@ export function EbaySoldListingsPanel({ cardId, cardName }: EbaySoldListingsPane
           }}
         >
           <Text style={{ color: p.ink.muted, fontSize: 12 }}>
-            No eBay sales in the last 90 days
+            No recent sales in the last 90 days
           </Text>
         </View>
       ) : (
         <>
-          <ScatterChart points={ebay} median={med} palette={p} />
+          <ScatterChart points={comps} median={med} palette={p} />
           <View
             style={{
               borderRadius: 14,
@@ -144,7 +177,7 @@ export function EbaySoldListingsPanel({ cardId, cardName }: EbaySoldListingsPane
               overflow: "hidden",
             }}
           >
-            {ebay.slice(-10).reverse().map((c, i, arr) => (
+            {comps.slice(-10).reverse().map((c, i, arr) => (
               <CompRow
                 key={`${c.url || c.sold_at}:${i}`}
                 comp={c}
@@ -288,11 +321,25 @@ function CompRow({
         <Text numberOfLines={1} style={{ color: p.ink.default, fontSize: 12, fontWeight: "600" }}>
           {comp.title}
         </Text>
-        <Text style={{ color: p.ink.muted, fontSize: 10, marginTop: 2 }}>
-          {fmtDate(comp.sold_at)}
-          {comp.grade ? ` · ${(comp.house ?? "").toUpperCase()} ${comp.grade}` : ""}
-          {comp.condition ? ` · ${comp.condition}` : ""}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+          <View
+            style={{
+              paddingHorizontal: 6,
+              paddingVertical: 1,
+              borderRadius: 5,
+              backgroundColor: withAlpha(p.ink.dim, 0.12),
+            }}
+          >
+            <Text style={{ color: p.ink.muted, fontSize: 9, fontWeight: "700", letterSpacing: 0.3 }}>
+              {sourceLabel(comp.source)}
+            </Text>
+          </View>
+          <Text style={{ color: p.ink.muted, fontSize: 10 }}>
+            {fmtDate(comp.sold_at)}
+            {comp.grade ? ` · ${(comp.house ?? "").toUpperCase()} ${comp.grade}` : ""}
+            {comp.condition ? ` · ${comp.condition}` : ""}
+          </Text>
+        </View>
       </View>
       <Text style={{ color: p.ink.default, fontSize: 13, fontWeight: "700" }}>
         ${comp.price.amount.toFixed(2)}

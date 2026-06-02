@@ -21,6 +21,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import {
   Bell,
@@ -36,6 +37,7 @@ import { useCard } from "@/application/queries/catalog/useCard";
 import { useCanonicalCard } from "@/application/queries/catalog/useCanonicalCard";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
 import { useMyGrades } from "@/application/queries/collection/useMyGrades";
+import { useCreateGrade } from "@/application/queries/collection/useGradeMutations";
 import {
   useAddToWatchlist,
   useIsWatching,
@@ -48,8 +50,9 @@ import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { CardImage } from "@/presentation/components/CardImage";
 import { Card3DModal } from "@/presentation/components/Card3DModal";
 import { QueryState } from "@/presentation/components/QueryState";
+import { QuickAddBanner } from "@/presentation/components/QuickAddBanner";
 import { PriceAlertSheet } from "@/presentation/features/alerts/PriceAlertSheet";
-import { EbaySoldListingsPanel } from "@/presentation/features/market/EbaySoldListingsPanel";
+import { RecentSoldPanel } from "@/presentation/features/market/RecentSoldPanel";
 import { CardAttributesPanel } from "@/presentation/features/cardAttributes/CardAttributesPanel";
 import {
   GradeSummaryPills,
@@ -130,6 +133,47 @@ export default function CardDetailScreen() {
   );
   const ownedGrade = ownedGrades[0] ?? null;
   const ownedCount = ownedGrades.length;
+
+  // ── Hold-to-quick-add ────────────────────────────────────────────
+  // Press-and-hold on the "Add to collection" CTA drops the card into
+  // the vault as a raw NM copy with no form round-trip, then confirms
+  // via an auto-dismissing banner. Tapping (not holding) still opens
+  // the full form for grade / house / cost-basis entry.
+  const createGrade = useCreateGrade();
+  const [banner, setBanner] = useState<{
+    title: string;
+    subtitle?: string;
+    tone: "success" | "error";
+  } | null>(null);
+
+  const handleQuickAdd = useCallback(() => {
+    if (!cardId || createGrade.isPending) return;
+    createGrade.mutate(
+      { cardId, grade: 9, house: "loupe", condition: "nm" },
+      {
+        onSuccess: () => {
+          Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success,
+          ).catch(() => {});
+          setBanner({
+            title: "Added to vault",
+            subtitle: `${cardQ.data?.name ?? "Card"} · Raw · NM`,
+            tone: "success",
+          });
+        },
+        onError: () => {
+          Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Error,
+          ).catch(() => {});
+          setBanner({
+            title: "Couldn't add to vault",
+            subtitle: "Tap to open the full form instead.",
+            tone: "error",
+          });
+        },
+      },
+    );
+  }, [cardId, createGrade, cardQ.data?.name]);
 
   const [range, setRange] = useState<CardRangeKey>("1Y");
   const [house, setHouse] = useState<HouseId | "all">("all");
@@ -317,7 +361,19 @@ export default function CardDetailScreen() {
                         }),
                       );
                     }}
+                    onLongPress={handleQuickAdd}
+                    accessibilityLabel="Add to collection. Press and hold to quick-add as a raw card."
                   />
+                  <Text
+                    style={{
+                      color: p.ink.dim,
+                      fontSize: 11,
+                      fontWeight: "600",
+                      textAlign: "center",
+                    }}
+                  >
+                    Hold to quick-add as Raw · NM
+                  </Text>
                   {ownedCount > 0 ? (
                     <Pressable
                       onPress={() => {
@@ -538,7 +594,7 @@ export default function CardDetailScreen() {
               {/* Live listings + recent comps (real data, gracefully empty) */}
               <LiveListingsSection cardId={cardId} />
               <RecentCompsSection cardId={cardId} />
-              <EbaySoldListingsPanel cardId={cardId} cardName={card?.name ?? null} />
+              <RecentSoldPanel cardId={cardId} cardName={card?.name ?? null} />
 
               {/* Set-completion progress for this card's set. */}
               <SetProgressForCard setId={card.set?.id ?? null} />
@@ -599,6 +655,21 @@ export default function CardDetailScreen() {
         subtitle={card?.set_name ?? undefined}
         recyclingKey={card?.id}
         backVariant={inferBackVariant(card ?? null)}
+      />
+      <QuickAddBanner
+        visible={banner != null}
+        title={banner?.title ?? ""}
+        subtitle={banner?.subtitle}
+        tone={banner?.tone ?? "success"}
+        actionLabel={
+          banner?.tone === "success" && ownedGrade ? "View" : undefined
+        }
+        onAction={
+          banner?.tone === "success" && ownedGrade
+            ? () => router.push(routes.gradeEdit(ownedGrade.id))
+            : undefined
+        }
+        onHide={() => setBanner(null)}
       />
     </SafeAreaView>
   );

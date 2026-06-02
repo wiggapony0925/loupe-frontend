@@ -116,8 +116,23 @@ const NO_MATCH_THRESHOLD = 3;
 // scores returned by the iOS Vision/CoreImage pipeline in
 // `LoupeScannerBridgeModule.swift` — `blurScore` is a Laplacian-variance
 // log mapping and `glareScore` is a bright-pixel fraction.
-const BLUR_REJECT = 0.55;
-const GLARE_REJECT = 0.6;
+//
+// Tuned LOOSER than the original (0.55 / 0.6) after field reports of
+// "won't scan anything": iOS continuous-AF sticks soft on flat cards
+// held close, which kept `blurScore` just over the old gate and made
+// the loop reject every single frame forever. We now only suppress on
+// *severe* blur/glare and — crucially — force an identify through after
+// a short run of skips so the scanner can never get permanently stuck.
+const BLUR_REJECT = 0.68;
+const GLARE_REJECT = 0.72;
+/**
+ * After this many consecutive frames skipped for blur/glare we upload
+ * the next frame anyway. A soft-but-readable card is far better than a
+ * scanner that silently refuses to ever try. The server's OCR is more
+ * tolerant of mild blur than this client-side gate assumes.
+ */
+const FORCE_IDENTIFY_AFTER_SKIPS = 2;
+
 /** Crop the detected card before upload only when quality is solid. */
 const CROP_BLUR_LIMIT = 0.45;
 const CROP_GLARE_LIMIT = 0.5;
@@ -345,6 +360,27 @@ export function LiveIdentifyFlow({
     detectorHintRef.current = next;
     setDetectorHint(next);
   }, []);
+  /**
+   * Consecutive frames skipped by the blur/glare gate. Once this hits
+   * `FORCE_IDENTIFY_AFTER_SKIPS` we upload the next frame regardless so
+   * the scanner can never get permanently wedged on a soft preview
+   * (the classic iOS stuck-autofocus failure mode).
+   */
+  const skippedFramesRef = useRef(0);
+  /**
+   * Whether the native detector currently sees a card-shaped rectangle.
+   * Drives the reticle's "locked the card finder" colour the instant a
+   * card is framed — Collectr-style live feedback, independent of
+   * whether the backend has resolved a match yet. Ref-guarded so we
+   * only re-render on transitions.
+   */
+  const [cardFound, setCardFound] = useState(false);
+  const cardFoundRef = useRef(false);
+  const updateCardFound = useCallback((next: boolean) => {
+    if (cardFoundRef.current === next) return;
+    cardFoundRef.current = next;
+    setCardFound(next);
+  }, []);
 
   // ─── Capture loop ────────────────────────────────────────────────
   // We deliberately drive the loop from a ref-guarded setTimeout chain
@@ -489,18 +525,31 @@ export function LiveIdentifyFlow({
       if (cardDetector.capabilities.analyze) {
         const report = await cardDetector.analyzeFrame(processed.uri);
         if (cancelledRef.current) return;
+        updateCardFound(report.corners != null);
+        // We only HARD-skip a frame when blur/glare is severe AND we
+        // haven't already skipped a run of frames. The forced-through
+        // path guarantees the scanner always makes progress even on a
+        // soft preview (stuck iOS autofocus), trading a little extra
+        // OCR spend for never appearing "broken".
+        const severelyBlurred = report.blurScore > BLUR_REJECT;
+        const severeGlare = report.glareScore > GLARE_REJECT;
+        const mustForce =
+          skippedFramesRef.current >= FORCE_IDENTIFY_AFTER_SKIPS;
         if (!report.corners) {
           // Don't yell at the user immediately — first 1-2 frames
           // often miss while they're framing. The capture loop fires
-          // every CAPTURE_INTERVAL_MS so this self-corrects fast.
+          // every CAPTURE_INTERVAL_MS so this self-corrects fast. We
+          // still upload the full frame so a card the detector can't
+          // outline (busy background, odd angle) can still be read.
           updateDetectorHint("Position card in the frame");
-        } else if (report.blurScore > BLUR_REJECT) {
-          updateDetectorHint("Hold steady");
+        } else if ((severelyBlurred || severeGlare) && !mustForce) {
+          skippedFramesRef.current += 1;
+          updateDetectorHint(
+            severeGlare ? "Reduce glare / tilt the card" : "Hold steady",
+          );
           return; // Skip identify; next frame in CAPTURE_INTERVAL_MS.
-        } else if (report.glareScore > GLARE_REJECT) {
-          updateDetectorHint("Reduce glare / tilt the card");
-          return;
         } else {
+          skippedFramesRef.current = 0;
           updateDetectorHint(null);
           if (
             report.blurScore < CROP_BLUR_LIMIT &&
@@ -637,7 +686,9 @@ export function LiveIdentifyFlow({
     setState(EMPTY_STATE);
     setError(null);
     setPaused(false);
-  }, []);
+    skippedFramesRef.current = 0;
+    updateCardFound(false);
+  }, [updateCardFound]);
 
   const handleAddToVault = useCallback(
     (candidate: IdentifyCandidate) => {
@@ -791,6 +842,7 @@ export function LiveIdentifyFlow({
             scanning={scanning && !paused}
             locked={state.locked}
             hasMatch={state.candidates.some((c) => c.confidence >= 0.5)}
+            cardFound={cardFound}
             paused={paused}
             marketPriceUsd={marketPriceUsd}
             formatUsd={formatUsd}
@@ -977,6 +1029,7 @@ function ReticleArea({
   scanning,
   locked,
   hasMatch,
+  cardFound,
   paused,
   marketPriceUsd,
   priceLoading,
@@ -986,6 +1039,7 @@ function ReticleArea({
   scanning: boolean;
   locked: boolean;
   hasMatch: boolean;
+  cardFound: boolean;
   paused: boolean;
   marketPriceUsd: number | null;
   priceLoading: boolean;
@@ -1042,13 +1096,16 @@ function ReticleArea({
 
   // Reticle hugs roughly the trading-card aspect of 2.5:3.5. The
   // tint reacts to detection so the user gets feedback even before we
-  // commit to a lock: dim mint while hunting, bright mint the moment
-  // we have a candidate ≥ 0.5, locked-mint when we commit.
-  const tint = locked
-    ? palette.accent.mint
-    : hasMatch
+  // commit to a lock: dim mint while hunting, brighter the moment the
+  // native card-finder outlines a card, full mint once we have a
+  // candidate ≥ 0.5 / lock. This is the Collectr-style "the finder has
+  // your card" affordance that the old static bracket lacked.
+  const tint =
+    locked || hasMatch
       ? palette.accent.mint
-      : withAlpha(palette.accent.mint, 0.55);
+      : cardFound
+        ? withAlpha(palette.accent.mint, 0.9)
+        : withAlpha(palette.accent.mint, 0.5);
 
   // Subtle breathing scale so the frame feels alive even before we
   // have a lock (we don't have native edge-detection yet — this is
@@ -1174,7 +1231,12 @@ function ReticleArea({
         }}
       >
         {(["tl", "tr", "bl", "br"] as const).map((c) => (
-          <CornerBracket key={c} corner={c} color={tint} bold={hasMatch || locked} />
+          <CornerBracket
+            key={c}
+            corner={c}
+            color={tint}
+            bold={hasMatch || locked || cardFound}
+          />
         ))}
 
         {/* Floating price chip — TCGplayer / Collectr style. Hovers

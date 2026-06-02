@@ -54,6 +54,11 @@ import {
   type MarketSource,
 } from "@/infrastructure/repositories/marketRepository";
 import { useMyGrades } from "@/application/queries/collection/useMyGrades";
+import {
+  useAddToWatchlist,
+  useIsWatching,
+  useRemoveFromWatchlist,
+} from "@/application/queries/collection/useWatchlist";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import type { GradedCard } from "@/infrastructure/http";
@@ -63,6 +68,7 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { SkeletonMarketDetailPage } from "@/presentation/components/Skeletons";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { ErrorState } from "@/presentation/components/ErrorState";
+import { PriceAlertSheet } from "@/presentation/features/alerts/PriceAlertSheet";
 
 const RANGES: MarketRange[] = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
 const CHART_HEIGHT = 200;
@@ -73,7 +79,26 @@ export default function MarketDetailScreen() {
   const p = useThemedPalette();
   const [condition, setCondition] = useState<MarketCondition>("graded");
   const [range, setRange] = useState<MarketRange>("1Y");
-  const [watching, setWatching] = useState(false);
+  // Watchlist state is owned by the backend (via React Query) so the
+  // heart persists across screens and sessions and can drive price
+  // alerts — the old local `useState(false)` silently dropped every
+  // tap, so a user who "saved" a card found it missing from their
+  // watchlist. Mirrors the wiring in `app/card/[id].tsx`.
+  const isWatching = useIsWatching(id || undefined);
+  const addWatch = useAddToWatchlist();
+  const removeWatch = useRemoveFromWatchlist();
+  const toggleWatch = () => {
+    if (!id) return;
+    if (isWatching) {
+      removeWatch.mutate(id);
+    } else {
+      addWatch.mutate(id);
+    }
+  };
+  // Price-alert sheet — the bell button used to be an inert Pressable
+  // with no onPress, so tapping it did nothing. It now opens the same
+  // `PriceAlertSheet` the card-detail screen uses.
+  const [alertOpen, setAlertOpen] = useState(false);
 
   const market = useQuery({
     queryKey: queryKeys.market.detail(id, condition),
@@ -140,24 +165,25 @@ export default function MarketDetailScreen() {
         </Text>
         <View className="flex-row gap-2">
           <Pressable
-            onPress={() => setWatching((w) => !w)}
+            onPress={toggleWatch}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={watching ? "Remove from watchlist" : "Add to watchlist"}
+            accessibilityLabel={isWatching ? "Remove from watchlist" : "Add to watchlist"}
             className="h-9 w-9 items-center justify-center rounded-full"
             style={{
-              backgroundColor: watching
+              backgroundColor: isWatching
                 ? withAlpha(p.accent.rose, 0.16)
                 : withAlpha(p.ink.dim, 0.08),
             }}
           >
             <Heart
               size={16}
-              color={watching ? p.accent.rose : p.ink.default}
-              fill={watching ? p.accent.rose : "transparent"}
+              color={isWatching ? p.accent.rose : p.ink.default}
+              fill={isWatching ? p.accent.rose : "transparent"}
             />
           </Pressable>
           <Pressable
+            onPress={() => setAlertOpen(true)}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Set price alert"
@@ -455,6 +481,13 @@ export default function MarketDetailScreen() {
           </Pressable>
         </View>
       ) : null}
+      <PriceAlertSheet
+        cardId={id}
+        cardName={data?.title ?? null}
+        currentPriceUsd={data?.conditionPrices?.[condition] ?? null}
+        visible={alertOpen}
+        onClose={() => setAlertOpen(false)}
+      />
     </SafeAreaView>
   );
 }

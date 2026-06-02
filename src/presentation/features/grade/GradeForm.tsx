@@ -265,18 +265,28 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
     );
   };
 
+  // Live headline figure for the hero — the user's typed estimate when
+  // present, otherwise the market suggestion. Drives the big number.
+  const displayValue: number | null =
+    estimatedValue !== "" ? Number(estimatedValue) : suggestedEstimate;
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: p.bg.base }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
     >
-      <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 96, gap: 20 }}
-        keyboardShouldPersistTaps="handled"
+      {/* Top bar — stays pinned above the scroll content. */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 20,
+          paddingTop: 4,
+          paddingBottom: 10,
+        }}
       >
-      {/* Header */}
-      <View className="flex-row items-center justify-between">
         <Pressable
           onPress={() => router.back()}
           hitSlop={12}
@@ -304,43 +314,96 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
         )}
       </View>
 
-      {/* Card identity (read-only) */}
-      <View
-        style={{
-          flexDirection: "row",
-          gap: 14,
-          padding: 12,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: p.line.default,
-          backgroundColor: p.bg.elevated,
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 4,
+          paddingBottom: 40,
+          gap: 22,
         }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <CardImage
-          uri={card.imageUrl}
-          width={64}
-          height={90}
-          rounded={10}
-          contentFit="contain"
-          alt={card.name ?? "Card"}
-        />
-        <View style={{ flex: 1, justifyContent: "center", gap: 4 }}>
+        {/* Hero — centered card portrait, title, set/year, TCG pill. */}
+        <View style={{ alignItems: "center", gap: 14, paddingTop: 4 }}>
+          <View
+            style={{
+              shadowColor: "#000",
+              shadowOpacity: 0.28,
+              shadowRadius: 18,
+              shadowOffset: { width: 0, height: 10 },
+              elevation: 8,
+              borderRadius: 14,
+            }}
+          >
+            <CardImage
+              uri={card.imageUrl}
+              width={132}
+              height={184}
+              rounded={14}
+              contentFit="contain"
+              alt={card.name ?? "Card"}
+            />
+          </View>
+          <View style={{ alignItems: "center", gap: 5 }}>
+            <Text
+              style={{
+                color: p.ink.default,
+                fontSize: 20,
+                fontWeight: "700",
+                textAlign: "center",
+                letterSpacing: -0.3,
+              }}
+              numberOfLines={2}
+            >
+              {card.name ?? "Unknown card"}
+            </Text>
+            <Text
+              style={{ color: p.ink.muted, fontSize: 13, fontWeight: "500" }}
+              numberOfLines={1}
+            >
+              {[card.setName, card.year ? String(card.year) : null]
+                .filter(Boolean)
+                .join(" · ") || "—"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Estimated-value headline — Robinhood-style big number framed
+            by hairline rules. Reflects the live estimate as the user
+            tweaks grade / house / the value field. */}
+        <View
+          style={{
+            alignItems: "center",
+            gap: 4,
+            paddingVertical: 18,
+            borderTopWidth: 1,
+            borderBottomWidth: 1,
+            borderColor: p.line.default,
+          }}
+        >
           <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-            Card
+            Estimated value
           </Text>
           <Text
-            className="text-base font-semibold text-ink"
-            numberOfLines={2}
+            style={{
+              color: p.ink.default,
+              fontSize: 36,
+              fontWeight: "800",
+              letterSpacing: -1,
+            }}
           >
-            {card.name ?? "Unknown card"}
-          </Text>
-          <Text className="text-[12px] text-ink-muted" numberOfLines={1}>
-            {[card.setName, card.year ? String(card.year) : null]
-              .filter(Boolean)
-              .join(" · ") || "—"}
+            {displayValue != null && Number.isFinite(displayValue)
+              ? displayValue.toLocaleString("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                  maximumFractionDigits: 2,
+                })
+              : marketQ.isLoading && mode === "create"
+                ? "—"
+                : "$0.00"}
           </Text>
         </View>
-      </View>
 
       {/* Grade */}
       <Field label="Grade" hint="0 – 10. Use 0 for a raw / ungraded card.">
@@ -598,8 +661,20 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           }}
         />
       </Field>
+    </ScrollView>
 
-      <View style={{ paddingTop: 8 }}>
+      {/* Sticky CTA — full-width, sits above the home indicator with a
+          hairline separator, the way Robinhood pins its primary action. */}
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 12,
+          paddingBottom: Platform.OS === "ios" ? 28 : 16,
+          borderTopWidth: 1,
+          borderColor: p.line.default,
+          backgroundColor: p.bg.base,
+        }}
+      >
         <PrimaryButton
           label={mode === "create" ? "Add to vault" : "Save changes"}
           onPress={onSubmit}
@@ -607,7 +682,6 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           disabled={!canSubmit}
         />
       </View>
-    </ScrollView>
     </KeyboardAvoidingView>
   );
 }

@@ -1,8 +1,10 @@
 /**
  * Notifications — inbox for scan-complete alerts, price moves, and system
- * messages. Today it renders a static placeholder; once the backend exposes
- * `/v1/notifications` we'll swap the inline `MOCK_FEED` for a React Query
- * hook against the repository layer (mirroring `forensicRepository`).
+ * messages. The inbox is derived from REAL data: every price alert the
+ * backend has flagged as triggered (`triggered_at != null`) becomes a
+ * "market" notification. Scan/system categories will light up once those
+ * event sources land server-side; until then they simply have no rows
+ * (no mocks, no fabricated values).
  *
  * The empty state previews three faint "ghost" rows so users can read the
  * eventual layout before any real notification has arrived — much friendlier
@@ -26,6 +28,8 @@ import {
 import { routes } from "@/shared/routes";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { WatchingList } from "@/presentation/features/watchlist/WatchingList";
+import { usePriceAlerts } from "@/application/queries/alerts/usePriceAlerts";
+import type { PriceAlertWire } from "@/infrastructure/http";
 
 type Category = "all" | "scan" | "market" | "system";
 type Tab = "inbox" | "watching";
@@ -38,9 +42,52 @@ type Notification = {
   /** ISO timestamp — formatted for display via `relative()`. */
   at: string;
   unread: boolean;
+  /** Optional deep-link target (e.g. the card behind a price alert). */
+  cardId?: string;
 };
 
-const MOCK_FEED: Notification[] = [];
+/** A triggered alert counts as "new" for 48h — there's no server-side
+ *  read state yet, so recency is the honest proxy for unread. */
+const UNREAD_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+function formatUsd(value: string | number | null): string {
+  if (value === null) return "";
+  const n = typeof value === "string" ? Number(value) : value;
+  if (!Number.isFinite(n)) return "";
+  return `$${n.toLocaleString("en-US", {
+    minimumFractionDigits: n % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/** Map the backend's triggered price alerts into inbox notifications.
+ *  Only alerts the server has actually flagged (`triggered_at != null`)
+ *  appear — we never fabricate a price move. */
+function buildFeed(alerts: PriceAlertWire[]): Notification[] {
+  return alerts
+    .filter((a) => a.triggered_at !== null)
+    .map((a) => {
+      const name = a.card_name ?? "A watched card";
+      const direction = a.condition === "above" ? "rose above" : "dropped below";
+      const threshold = formatUsd(a.threshold_usd);
+      const hit = formatUsd(a.triggered_price_usd);
+      const triggeredAt = a.triggered_at as string;
+      const isUnread =
+        Date.now() - new Date(triggeredAt).getTime() < UNREAD_WINDOW_MS;
+      return {
+        id: a.id,
+        category: "market" as const,
+        title: `${name} hit your target`,
+        body: hit
+          ? `${direction} ${threshold} — last seen ${hit}`
+          : `${direction} ${threshold}`,
+        at: triggeredAt,
+        unread: isUnread,
+        cardId: a.card_id,
+      };
+    })
+    .sort((x, y) => new Date(y.at).getTime() - new Date(x.at).getTime());
+}
 
 const CATEGORY_META: Record<
   Exclude<Category, "all">,
@@ -68,13 +115,20 @@ export default function NotificationsScreen() {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [filter, setFilter] = useState<Category>("all");
 
+  // Real inbox: triggered price alerts become "market" notifications.
+  const alertsQ = usePriceAlerts({ pending: false });
+  const feed = useMemo(
+    () => buildFeed(alertsQ.data ?? []),
+    [alertsQ.data],
+  );
+
   const visible = useMemo(
-    () => (filter === "all" ? MOCK_FEED : MOCK_FEED.filter((n) => n.category === filter)),
-    [filter],
+    () => (filter === "all" ? feed : feed.filter((n) => n.category === filter)),
+    [feed, filter],
   );
   const unreadCount = useMemo(
-    () => MOCK_FEED.filter((n) => n.unread).length,
-    [],
+    () => feed.filter((n) => n.unread).length,
+    [feed],
   );
 
   return (
@@ -430,8 +484,16 @@ function NotificationRow({
 }) {
   const meta = CATEGORY_META[item.category];
   const tint = palette.accent[meta.tint];
+  // A price-alert notification deep-links to the card it fired on.
+  const onPress = item.cardId
+    ? () => router.push(routes.card(item.cardId as string))
+    : undefined;
   return (
-    <View
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? "button" : undefined}
+      style={({ pressed }) => ({ opacity: pressed && onPress ? 0.6 : 1 })}
       className={`flex-row items-start gap-3 px-5 py-4 ${isLast ? "" : "border-b border-line"}`}
     >
       <View
@@ -460,7 +522,7 @@ function NotificationRow({
           }}
         />
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
