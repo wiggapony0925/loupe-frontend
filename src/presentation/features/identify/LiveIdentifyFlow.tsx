@@ -59,6 +59,7 @@ import {
   ZapOff,
 } from "lucide-react-native";
 import { CardImage } from "@/presentation/components/CardImage";
+import { AppNoticeModal } from "@/presentation/components/AppNoticeModal";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
@@ -98,7 +99,9 @@ const CAPTURE_INTERVAL_MS = 1000;
 /** Confidence at which we fire the success haptic + freeze the carousel. */
 const LOCK_CONFIDENCE = 0.7;
 /** Lowest confidence worth showing as a possible live match. */
-const PREVIEW_CONFIDENCE = 0.35;
+const PREVIEW_CONFIDENCE = 0.52;
+/** Confidence where tapping a preview should be treated as a real confirm. */
+const CONFIRM_CONFIDENCE = 0.62;
 /**
  * Consecutive frames returning zero preview-worthy candidates
  * before we surface the "can't find a match" fallback CTA. At the
@@ -153,18 +156,13 @@ const GLASS = "rgba(7,10,12,0.52)";
 const GLASS_STRONG = "rgba(5,8,10,0.88)";
 const HAIRLINE = "rgba(255,255,255,0.08)";
 
-/**
- * Frosted-glass circular button — a BlurView fill behind the icon so the
- * camera feed shows through, blurred. Used for the top-bar close/flash
- * controls. The Pressable stays the outer node so press feedback + hit
- * targets are unaffected; the BlurView is clipped to the circle.
- */
+/** Circular camera overlay button. Kept simple and actually round on iOS. */
 function GlassCircle({
   children,
   onPress,
   accessibilityLabel,
-  tint = GLASS,
-  borderColor = HAIRLINE,
+  tint = "transparent",
+  borderColor = "transparent",
   size = 38,
 }: {
   children: React.ReactNode;
@@ -187,11 +185,13 @@ function GlassCircle({
         borderWidth: 1,
         borderColor,
         opacity: pressed ? 0.7 : 1,
+        shadowColor: "#000",
+        shadowOpacity: 0.45,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
       })}
     >
-      <BlurView
-        intensity={24}
-        tint="dark"
+      <View
         style={{
           flex: 1,
           alignItems: "center",
@@ -200,9 +200,29 @@ function GlassCircle({
         }}
       >
         {children}
-      </BlurView>
+      </View>
     </Pressable>
   );
+}
+
+function scannerErrorCopy(message: string): string {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("cameraview") ||
+    lower.includes("takepicture") ||
+    lower.includes("view with tag")
+  ) {
+    return "Camera lost the preview for a moment. Keep Loupe open, point at the card, and try again.";
+  }
+  if (lower.includes("network") || lower.includes("fetch")) {
+    return "Loupe could not reach the scanner service. Check your connection and try again.";
+  }
+  if (lower.includes("monthly budget") || lower.includes("budget")) {
+    return "The live OCR fallback is temporarily unavailable. Try search or scan again in better light.";
+  }
+  return message.length > 150
+    ? "Loupe could not scan that frame. Re-frame the card and try again."
+    : message;
 }
 
 /**
@@ -422,6 +442,8 @@ export function LiveIdentifyFlow({
   const formatUsd = useCompactUsd();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+  const [cameraKey, setCameraKey] = useState(0);
+  const [cameraReady, setCameraReady] = useState(false);
   /**
    * The capture loop has two distinct stages with very different
    * runtimes — the camera-bound capture+encode (~50–120ms) and the
@@ -461,6 +483,10 @@ export function LiveIdentifyFlow({
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<IdentifyState>(EMPTY_STATE);
+  const showScannerError = useCallback((message: string) => {
+    setError(scannerErrorCopy(message));
+    setPaused(true);
+  }, []);
   /**
    * The batch "stack" — confirmed cards queued up while scanning a pile.
    * Each tap on "Add to stack" pushes the locked candidate here and
@@ -536,30 +562,34 @@ export function LiveIdentifyFlow({
               });
               if (cancelledRef.current) return;
             } else {
-              setError("On-device OCR found no text. Try better lighting.");
+              showScannerError("On-device OCR found no text. Try better lighting.");
             }
           } else {
-            setError(
+            showScannerError(
               res.fallback_reason ?? "Scanner over monthly budget. Try again later.",
             );
           }
         }
         setState((prev) => {
           const top = res.candidates[0]?.confidence ?? 0;
-          const justLocked = !prev.locked && top >= LOCK_CONFIDENCE;
-          const hasUsefulMatch = res.candidates.some((c) => c.confidence >= 0.5);
+          const hasPreviewMatch = res.candidates.some(
+            (c) => c.confidence >= PREVIEW_CONFIDENCE,
+          );
+          const justLocked = hasPreviewMatch && !prev.locked && top >= LOCK_CONFIDENCE;
           if (justLocked) {
             Haptics.notificationAsync(
               Haptics.NotificationFeedbackType.Success,
             ).catch(() => {});
           }
           return {
-            candidates: res.candidates,
-            identificationId: res.identification_id,
-            topConfidence: top,
-            primarySource: res.primary_source,
+            candidates: hasPreviewMatch ? res.candidates : prev.candidates,
+            identificationId: hasPreviewMatch
+              ? res.identification_id
+              : prev.identificationId,
+            topConfidence: hasPreviewMatch ? top : prev.topConfidence,
+            primarySource: hasPreviewMatch ? res.primary_source : prev.primarySource,
             locked: prev.locked || justLocked,
-            emptyAttempts: hasUsefulMatch ? 0 : prev.emptyAttempts + 1,
+            emptyAttempts: hasPreviewMatch ? 0 : prev.emptyAttempts + 1,
           };
         });
         // ── On-device cache write ───────────────────────────────────
@@ -593,19 +623,19 @@ export function LiveIdentifyFlow({
       } catch (e) {
         if (cancelledRef.current) return;
         const msg = e instanceof Error ? e.message : "Identification failed";
-        setError(msg);
+        showScannerError(msg);
       } finally {
         networkBusyRef.current = false;
         if (!cancelledRef.current) setScanning(false);
       }
     },
-    [tcgHint],
+    [tcgHint, showScannerError],
   );
 
   const captureOnce = useCallback(async () => {
     if (cancelledRef.current || captureBusyRef.current) return;
     const camera = cameraRef.current;
-    if (!camera) return;
+    if (!camera || !cameraReady) return;
     captureBusyRef.current = true;
     setError(null);
     try {
@@ -665,7 +695,7 @@ export function LiveIdentifyFlow({
           // every CAPTURE_INTERVAL_MS so this self-corrects fast. We
           // still upload the full frame so a card the detector can't
           // outline (busy background, odd angle) can still be read.
-          updateDetectorHint("Position card in the frame");
+          updateDetectorHint("Hold steady / reduce glare");
         } else if ((severelyBlurred || severeGlare) && !mustForce) {
           skippedFramesRef.current += 1;
           updateDetectorHint(
@@ -753,9 +783,9 @@ export function LiveIdentifyFlow({
       captureBusyRef.current = false;
       if (cancelledRef.current) return;
       const msg = e instanceof Error ? e.message : "Capture failed";
-      setError(msg);
+      showScannerError(msg);
     }
-  }, [runIdentify, updateDetectorHint]);
+  }, [cameraReady, runIdentify, showScannerError, updateDetectorHint]);
 
   useEffect(() => {
     cancelledRef.current = false;
@@ -810,6 +840,8 @@ export function LiveIdentifyFlow({
     setState(EMPTY_STATE);
     setError(null);
     setPaused(false);
+    setCameraReady(false);
+    setCameraKey((key) => key + 1);
     skippedFramesRef.current = 0;
     updateCardFound(false);
   }, [updateCardFound]);
@@ -947,11 +979,13 @@ export function LiveIdentifyFlow({
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <CameraView
+        key={cameraKey}
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
         facing="back"
         flash={flashOn ? "on" : "off"}
         autofocus={autofocusOn ? "on" : "off"}
+        onCameraReady={() => setCameraReady(true)}
       />
       <ScannerOverlay
         state={state}
@@ -972,13 +1006,23 @@ export function LiveIdentifyFlow({
         palette={p}
         onClose={onClose}
         onToggleFlash={() => setFlashOn((v) => !v)}
-        onOpenTcgPicker={() => setTcgPickerOpen((v) => !v)}
-        onCloseTcgPicker={() => setTcgPickerOpen(false)}
+        onOpenTcgPicker={() =>
+          setTcgPickerOpen((v) => {
+            const next = !v;
+            setPaused(next);
+            return next;
+          })
+        }
+        onCloseTcgPicker={() => {
+          setTcgPickerOpen(false);
+          setPaused(false);
+        }}
         onPickTcg={(t) => {
           setTcgHint(t);
           setTcgPickerOpen(false);
           setState(EMPTY_STATE);
           setError(null);
+          setPaused(false);
           skippedFramesRef.current = 0;
           updateCardFound(false);
         }}
@@ -1089,7 +1133,7 @@ function ScannerOverlay({
 
       <BottomPanel
         state={state}
-        error={error}
+        error={null}
         detectorHint={detectorHint}
         tcgHint={tcgHint}
         tcgPickerOpen={tcgPickerOpen}
@@ -1112,6 +1156,17 @@ function ScannerOverlay({
         priceLoading={priceLoading}
         formatUsd={formatUsd}
         palette={themed}
+      />
+      <AppNoticeModal
+        visible={error != null}
+        variant="danger"
+        title="Could not scan that frame"
+        message={error ?? undefined}
+        primaryAction={{ label: "Try again", onPress: onRescan }}
+        secondaryAction={
+          onManualSearch ? { label: "Search manually", onPress: onManualSearch } : undefined
+        }
+        onClose={onRescan}
       />
     </SafeAreaView>
   );
@@ -1165,13 +1220,14 @@ function TopBar({
       : "Looking for a card…";
 
   return (
-    <LinearGradient
-      colors={["rgba(0,0,0,0.74)", "transparent"]}
-      style={{ paddingHorizontal: 14, paddingTop: 6, paddingBottom: 30 }}
-    >
+    <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 }}>
       <View className="flex-row items-center justify-between">
-        <GlassCircle onPress={onClose} accessibilityLabel="Close scanner">
-          <X size={18} color="#fff" />
+        <GlassCircle
+          onPress={onClose}
+          accessibilityLabel="Close scanner"
+          size={44}
+        >
+          <X size={24} color="#fff" strokeWidth={2.2} />
         </GlassCircle>
 
         {/* Centered title + live status. Top = current mode, bottom panel
@@ -1182,7 +1238,10 @@ function TopBar({
               color: "#fff",
               fontSize: 15.5,
               fontWeight: "700",
-              letterSpacing: -0.2,
+              letterSpacing: 0,
+              textShadowColor: "rgba(0,0,0,0.72)",
+              textShadowRadius: 10,
+              textShadowOffset: { width: 0, height: 2 },
             }}
           >
             Scan a card
@@ -1210,48 +1269,19 @@ function TopBar({
           </View>
         </View>
 
-        <Pressable
+        <GlassCircle
           onPress={onToggleFlash}
-          hitSlop={12}
           accessibilityLabel={flashOn ? "Turn flash off" : "Turn flash on"}
-          className="h-[38px] w-[38px] items-center justify-center rounded-full"
-          style={({ pressed }) => ({
-            overflow: "hidden",
-            borderWidth: 1,
-            borderColor: flashOn ? "transparent" : HAIRLINE,
-            opacity: pressed ? 0.7 : 1,
-          })}
+          size={44}
         >
           {flashOn ? (
-            <View
-              style={{
-                position: "absolute",
-                inset: 0,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: palette.accent.amber,
-              }}
-            >
-              <Zap size={16} color="#000" />
-            </View>
+            <Zap size={23} color={palette.accent.amber} strokeWidth={2.2} />
           ) : (
-            <BlurView
-              intensity={24}
-              tint="dark"
-              style={{
-                position: "absolute",
-                inset: 0,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: GLASS,
-              }}
-            >
-              <ZapOff size={16} color="#fff" />
-            </BlurView>
+            <ZapOff size={23} color="#fff" strokeWidth={2.2} />
           )}
-        </Pressable>
+        </GlassCircle>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -1806,8 +1836,8 @@ function BottomPanel({
 
   return (
     <LinearGradient
-      colors={["transparent", "rgba(0,0,0,0.92)"]}
-      style={{ paddingHorizontal: 14, paddingBottom: 8, paddingTop: 14, gap: 10 }}
+      colors={["transparent", "rgba(0,0,0,0.84)"]}
+      style={{ paddingHorizontal: 12, paddingBottom: 0, paddingTop: 8, gap: 7 }}
     >
       <TcgPickerSheet
         visible={tcgPickerOpen}
@@ -1869,7 +1899,7 @@ function BottomPanel({
 
       <View
         className="flex-row items-center"
-        style={{ paddingHorizontal: 6, paddingTop: 6 }}
+        style={{ paddingHorizontal: 2, paddingTop: 2 }}
       >
         {/* Left cluster — equal flex so the shutter stays dead-center
             regardless of the pill/Search label widths. */}
@@ -1918,15 +1948,15 @@ function BottomPanel({
 
         {/* Manual shutter — the single bright focal point. Picks up a mint
             ring + glow the instant we lock so the control reflects state. */}
-        <View style={{ width: 74, height: 74, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 66, height: 66, alignItems: "center", justifyContent: "center" }}>
           {shutterLocked ? (
             <Animated.View
               pointerEvents="none"
               style={{
                 position: "absolute",
-                width: 74,
-                height: 74,
-                borderRadius: 37,
+                width: 66,
+                height: 66,
+                borderRadius: 33,
                 borderWidth: 2,
                 borderColor: palette.accent.mint,
                 opacity: shutterPulse.interpolate({
@@ -1950,10 +1980,10 @@ function BottomPanel({
             accessibilityRole="button"
             accessibilityLabel="Capture frame now"
             style={({ pressed }) => ({
-              width: 74,
-              height: 74,
-              borderRadius: 37,
-              borderWidth: 4,
+              width: 66,
+              height: 66,
+              borderRadius: 33,
+              borderWidth: 3.5,
               borderColor: shutterLocked ? palette.accent.mint : "rgba(255,255,255,0.95)",
               alignItems: "center",
               justifyContent: "center",
@@ -1967,9 +1997,9 @@ function BottomPanel({
           >
             <View
               style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
+                width: 50,
+                height: 50,
+                borderRadius: 25,
                 backgroundColor: shutterLocked ? palette.accent.mint : "#fff",
               }}
             />
@@ -2015,28 +2045,21 @@ function BottomPanel({
             accessibilityLabel="Search the catalog manually"
             disabled={!onManualSearch}
             style={({ pressed }) => ({
-              borderRadius: 999,
+              width: 50,
+              height: 50,
+              borderRadius: 25,
               overflow: "hidden",
-              borderWidth: 1,
-              borderColor: HAIRLINE,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "transparent",
               opacity: pressed ? 0.7 : onManualSearch ? 1 : 0.4,
+              shadowColor: "#000",
+              shadowOpacity: 0.42,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 3 },
             })}
           >
-            <BlurView
-              intensity={24}
-              tint="dark"
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                paddingHorizontal: 13,
-                paddingVertical: 10,
-                backgroundColor: GLASS,
-              }}
-            >
-              <Search size={15} color="rgba(255,255,255,0.9)" />
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>Search</Text>
-            </BlurView>
+            <Search size={29} color="rgba(255,255,255,0.94)" strokeWidth={2.1} />
           </Pressable>
         </View>
       </View>
@@ -2110,7 +2133,6 @@ function ResultArea({
 
   const visible = state.candidates.filter((c) => c.confidence >= PREVIEW_CONFIDENCE);
   const top = visible[0];
-  const alts = visible.length - 1;
 
   if (!top) {
     // Surface live detector guidance ("Hold steady" / "Reduce glare")
@@ -2136,9 +2158,7 @@ function ResultArea({
     return <HintPill label="Scanning…" pulse />;
   }
 
-  return (
-    <PreviewMatchCard candidate={top} alts={alts} onConfirm={() => onPickCandidate(top)} />
-  );
+  return <PreviewMatchTray candidates={visible} onPickCandidate={onPickCandidate} />;
 }
 
 function HintPill({ label, pulse = false }: { label: string; pulse?: boolean }) {
@@ -2183,48 +2203,79 @@ function HintPill({ label, pulse = false }: { label: string; pulse?: boolean }) 
  * more matches exist; the user can also keep moving the camera and the
  * card will update live as confidence climbs.
  */
+function PreviewMatchTray({
+  candidates,
+  onPickCandidate,
+}: {
+  candidates: IdentifyCandidate[];
+  onPickCandidate: (c: IdentifyCandidate) => void;
+}) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ paddingHorizontal: 2, gap: 10 }}
+    >
+      {candidates.slice(0, 6).map((candidate, index) => (
+        <PreviewMatchCard
+          key={`${candidateKey(candidate)}:${index}`}
+          candidate={candidate}
+          primary={index === 0}
+          onConfirm={() => onPickCandidate(candidate)}
+        />
+      ))}
+    </ScrollView>
+  );
+}
+
 function PreviewMatchCard({
   candidate,
-  alts,
+  primary,
   onConfirm,
 }: {
   candidate: IdentifyCandidate;
-  alts: number;
+  primary: boolean;
   onConfirm: () => void;
 }) {
   const confidencePct = Math.round(candidate.confidence * 100);
   const confidenceLabel =
     candidate.confidence >= 0.5 ? `${confidencePct}% MATCH` : `${confidencePct}% POSSIBLE`;
+  const confirmable = candidate.confidence >= CONFIRM_CONFIDENCE;
   const setMeta = [candidate.set_name, candidate.number ? `#${candidate.number}` : null]
     .filter(Boolean)
     .join(" · ");
   return (
     <Pressable
-      onPress={onConfirm}
+      onPress={confirmable ? onConfirm : undefined}
       accessibilityRole="button"
-      accessibilityLabel={`Tap to confirm match: ${candidate.name}`}
+      accessibilityLabel={
+        confirmable
+          ? `Tap to confirm match: ${candidate.name}`
+          : `Possible match: ${candidate.name}`
+      }
       style={({ pressed }) => ({
-        borderRadius: 20,
+        width: primary ? 292 : 238,
+        borderRadius: 18,
         overflow: "hidden",
         borderWidth: 1,
-        borderColor: HAIRLINE,
-        opacity: pressed ? 0.85 : 1,
+        borderColor: primary ? withAlpha(palette.accent.mint, 0.24) : HAIRLINE,
+        opacity: pressed && confirmable ? 0.85 : 1,
       })}
     >
       <BlurView
-        intensity={32}
+        intensity={28}
         tint="dark"
         style={{
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
-          padding: 12,
-          backgroundColor: "rgba(14,14,16,0.72)",
+          gap: 10,
+          padding: 10,
+          backgroundColor: "rgba(10,11,13,0.76)",
         }}
       >
       <View
         style={{
-          width: 54,
+          width: primary ? 48 : 42,
           aspectRatio: 2.5 / 3.5,
           borderRadius: 8,
           overflow: "hidden",
@@ -2251,44 +2302,44 @@ function PreviewMatchCard({
           />
           <Text
             style={{
-              color: palette.accent.mint,
-              fontSize: 10,
+              color: confirmable ? palette.accent.mint : palette.accent.amber,
+              fontSize: 9.5,
               fontWeight: "800",
-              letterSpacing: 1.3,
+              letterSpacing: 1.2,
             }}
           >
-            {confidenceLabel} · TAP TO CONFIRM
+            {confidenceLabel} · {confirmable ? "TAP TO CONFIRM" : "KEEP SCANNING"}
           </Text>
         </View>
         <Text
           numberOfLines={1}
-          style={{ color: "#fff", fontSize: 15, fontWeight: "700", letterSpacing: -0.2 }}
+          style={{ color: "#fff", fontSize: primary ? 14.5 : 13, fontWeight: "700", letterSpacing: 0 }}
         >
           {candidate.name}
         </Text>
         {setMeta ? (
           <Text
             numberOfLines={1}
-            style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: "500" }}
+            style={{ color: "rgba(255,255,255,0.6)", fontSize: 11.5, fontWeight: "500" }}
           >
             {setMeta}
           </Text>
         ) : null}
-        {alts > 0 ? (
+        {!confirmable ? (
           <Text
             style={{
-              color: "rgba(255,255,255,0.45)",
+              color: "rgba(255,255,255,0.42)",
               fontSize: 10,
               fontWeight: "600",
               marginTop: 2,
             }}
           >
-            +{alts} other match{alts === 1 ? "" : "es"}
+            Waiting for a cleaner read
           </Text>
         ) : null}
       </View>
 
-      <ChevronRight size={18} color="rgba(255,255,255,0.55)" />
+      {confirmable ? <ChevronRight size={17} color="rgba(255,255,255,0.5)" /> : null}
       </BlurView>
     </Pressable>
   );
