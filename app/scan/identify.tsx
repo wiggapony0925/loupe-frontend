@@ -40,7 +40,7 @@ export default function IdentifyScanScreen() {
   const initialTcg: IdentifyTcgHint =
     typeof tcg === "string" && (ALLOWED as readonly string[]).includes(tcg)
       ? (tcg as NonNullable<IdentifyTcgHint>)
-      : null;
+      : "pokemon";
 
   const handleAddBatch = React.useCallback(
     async (candidates: IdentifyCandidate[]) => {

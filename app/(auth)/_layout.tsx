@@ -3,14 +3,16 @@
  */
 import React from "react";
 import { Stack } from "expo-router";
-import { palette } from "@/presentation/theme/tokens";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 
 export default function AuthLayout() {
+  const p = useThemedPalette();
+
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: palette.bg.base },
+        contentStyle: { backgroundColor: p.bg.base },
         animation: "fade",
       }}
     />

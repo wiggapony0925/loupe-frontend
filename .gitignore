@@ -3,6 +3,7 @@ node_modules/
 build/
 dist/
 coverage/
+*.ipa
 *.log
 *.tsbuildinfo
 .eslintcache

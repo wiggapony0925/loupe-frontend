@@ -3,8 +3,8 @@
  *
  * Real-API-only. There is no `/v1/market/...` namespace on the backend;
  * `fetchMarketCatalog` adapts `/v1/cards/trending` into the
- * `CatalogEntry[]` shape the Search screen expects. The detail page
- * (`app/market/[id].tsx`) consumes `useCard` / `useCardMarket` etc.
+ * `CatalogEntry[]` shape the Search screen expects. The unified card
+ * detail page (`app/card/[id].tsx`) consumes `useCard` / `useCardMarket` etc.
  * directly, so `fetchMarketCard` is retained only for legacy callers
  * and will throw if invoked at runtime.
  */
@@ -120,11 +120,11 @@ export function fetchMarketCard(
   _id: string,
   _condition: MarketCondition = "graded",
 ): Promise<MarketCard> {
-  // The Market detail page (`app/market/[id].tsx`) reads `useCard` /
-  // `useCardMarket` / `useCardListings` / `useCardComps` directly from
-  // the real `/v1/cards/...` endpoints. This helper is no longer used
-  // at runtime; we throw so anything that calls it surfaces clearly
-  // instead of silently producing fake data.
+  // The unified card detail page reads `useCard` / `useCardMarket` /
+  // `useCardListings` / `useCardComps` directly from the real
+  // `/v1/cards/...` endpoints. This helper is no longer used at runtime;
+  // we throw so anything that calls it surfaces clearly instead of
+  // silently producing fake data.
   throw new ApiError(`/v1/cards/${_id}/market`, {
     code: "market.deprecated",
     message:

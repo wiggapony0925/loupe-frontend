@@ -57,6 +57,46 @@ export function houseColor(
   }
 }
 
+function titleCase(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function formatTcgName(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const labels: Record<string, string> = {
+    pokemon: "Pokémon",
+    pokemontcg: "Pokémon",
+    mtg: "Magic: The Gathering",
+    magic: "Magic: The Gathering",
+    magicthegathering: "Magic: The Gathering",
+    yugioh: "Yu-Gi-Oh!",
+    onepiece: "One Piece",
+    onepiecetcg: "One Piece",
+    lorcana: "Disney Lorcana",
+    sports: "Sports",
+  };
+  return labels[normalized] ?? titleCase(value);
+}
+
+function formatSourceLabel(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const labels: Record<string, string> = {
+    pokemontcgapi: "Pokémon TCG API",
+    pokemontcg: "Pokémon TCG API",
+    tcgplayer: "TCGplayer",
+    scryfall: "Scryfall",
+    ygoprodeck: "YGOPRODeck",
+    sportsdb: "Sports catalog",
+  };
+  return labels[normalized] ?? titleCase(value);
+}
+
 export function flattenHouses(
   houses: HouseBlockWire[],
   filter: HouseId | "all",
@@ -363,7 +403,7 @@ export function GradeRow({
         alignItems: "center",
         paddingHorizontal: 14,
         paddingVertical: 12,
-        gap: 10,
+        gap: 12,
         borderBottomWidth: isLast ? 0 : 1,
         borderBottomColor: p.line.default,
         backgroundColor: active ? withAlpha(accent, 0.10) : "transparent",
@@ -376,7 +416,8 @@ export function GradeRow({
           flexDirection: "row",
           alignItems: "center",
           gap: 8,
-          minWidth: 84,
+          flex: 1,
+          minWidth: 0,
         }}
       >
         <View
@@ -388,20 +429,21 @@ export function GradeRow({
           }}
         />
         <Text
+          numberOfLines={1}
           style={{
             color: p.ink.default,
             fontSize: 12,
             fontWeight: "700",
             letterSpacing: 0.4,
+            flexShrink: 1,
           }}
         >
           {HOUSE_LABEL[row.house] ?? row.house.toUpperCase()} {row.grade_label}
         </Text>
       </View>
-      <Text className="text-[11px] text-ink-muted">
+      <Text className="min-w-[54px] text-right text-[11px] text-ink-muted">
         {row.population.toLocaleString()} pop
       </Text>
-      <View style={{ flex: 1 }} />
       {row.source === "synthesized" ? (
         <View
           style={{
@@ -418,11 +460,23 @@ export function GradeRow({
           </Text>
         </View>
       ) : null}
-      <Text style={{ color: changeColor, fontSize: 11, fontWeight: "700" }}>
+      <Text
+        style={{
+          color: changeColor,
+          fontSize: 11,
+          fontWeight: "700",
+          minWidth: 50,
+          textAlign: "right",
+        }}
+      >
         {positive ? "+" : ""}
         {row.change_pct.toFixed(1)}%
       </Text>
-      <Price usd={row.market.amount} className="text-sm font-semibold text-ink" />
+      <Price
+        usd={row.market.amount}
+        className="text-sm font-semibold text-ink"
+        style={{ minWidth: 64, textAlign: "right" }}
+      />
     </Wrapper>
   );
 }
@@ -434,12 +488,12 @@ export function CardDetailsBlock({ card }: { card: CardSearchResult }) {
     if (value === null || value === undefined || value === "") return;
     rows.push({ label, value: String(value) });
   };
-  push("Number", card.number);
+  push("Collector number", card.number);
   push("Rarity", card.rarity);
-  push("Year", card.year);
+  push("Release year", card.year);
   push("Set", card.set_name);
-  push("TCG", card.tcg);
-  push("Source", card.source);
+  push("Trading card game", formatTcgName(card.tcg));
+  push("Data source", formatSourceLabel(card.source));
 
   return (
     <View style={{ gap: 14 }}>
@@ -463,12 +517,17 @@ export function CardDetailsBlock({ card }: { card: CardSearchResult }) {
               paddingVertical: 12,
               borderBottomWidth: i < rows.length - 1 ? 1 : 0,
               borderBottomColor: p.line.default,
+              gap: 12,
             }}
           >
-            <Text className="text-[11px] uppercase tracking-wider text-ink-dim">
+            <Text className="w-[118px] text-[11px] uppercase tracking-wider text-ink-dim">
               {r.label}
             </Text>
-            <Text className="ml-3 flex-1 text-right text-[12px] text-ink" numberOfLines={3}>
+            <Text
+              className="flex-1 text-right text-[12px] leading-5 text-ink"
+              numberOfLines={4}
+              ellipsizeMode="tail"
+            >
               {r.value}
             </Text>
           </View>
@@ -488,6 +547,7 @@ export function CardDetailsBlock({ card }: { card: CardSearchResult }) {
               }}
             >
               <Text
+                numberOfLines={1}
                 style={{
                   color: p.ink.muted,
                   fontSize: 10,
@@ -495,7 +555,7 @@ export function CardDetailsBlock({ card }: { card: CardSearchResult }) {
                   letterSpacing: 0.5,
                 }}
               >
-                {t.toUpperCase()}
+                {titleCase(t)}
               </Text>
             </View>
           ))}
@@ -610,7 +670,6 @@ function ListingCard({ listing }: { listing: ListingWire }) {
           priority="low"
           recyclingKey={listing.image_url ?? listing.url}
           alt={listing.title ?? "listing"}
-          aspectRatio={undefined as unknown as number}
         />
       ) : (
         <View

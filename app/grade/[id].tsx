@@ -11,9 +11,10 @@ import { useLocalSearchParams } from "expo-router";
 import { useMyGrades } from "@/application/queries/collection/useMyGrades";
 import { GradeForm } from "@/presentation/features/grade/GradeForm";
 import type { GradedCard } from "@/infrastructure/http";
-import { palette } from "@/presentation/theme/tokens";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 
 export default function EditGradeScreen() {
+  const p = useThemedPalette();
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useMyGrades<GradedCard[]>();
   const row = (q.data ?? []).find((g) => g.id === id);
@@ -21,7 +22,7 @@ export default function EditGradeScreen() {
   if (q.isLoading) {
     return (
       <SafeAreaView edges={["top"]} className="flex-1 items-center justify-center bg-bg">
-        <ActivityIndicator color={palette.accent.mint} />
+        <ActivityIndicator color={p.accent.mint} />
       </SafeAreaView>
     );
   }

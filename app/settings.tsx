@@ -27,7 +27,7 @@ import {
 import { useSettings, type Currency, type ThemeMode } from "@/application/stores/settingsStore";
 import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
 import { getCurrency } from "@/shared/currency";
-import { palette, useThemedPalette } from "@/presentation/theme/tokens";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 
 type PageKey = "menu" | "general" | "appearance" | "legal" | "about";
@@ -85,6 +85,8 @@ export default function SettingsScreen() {
 /* ─── Header ──────────────────────────────────────────────────────────── */
 
 function Header({ title, onBack }: { title: string; onBack: () => void }) {
+  const p = useThemedPalette();
+
   return (
     <View className="flex-row items-center justify-between px-5 pb-3 pt-2">
       <Pressable
@@ -94,7 +96,7 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
         accessibilityRole="button"
         accessibilityLabel="Back"
       >
-        <ChevronLeft size={22} color={palette.ink.default} />
+        <ChevronLeft size={22} color={p.ink.default} />
       </Pressable>
       <Text className="text-base font-semibold tracking-tight text-ink">{title}</Text>
       <View className="h-9 w-9" />
@@ -105,6 +107,7 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
 /* ─── Robinhood-style menu page ──────────────────────────────────────── */
 
 function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
+  const p = useThemedPalette();
   const { user, signOut } = useAuth();
   const version = Constants.expoConfig?.version ?? "0.1.0";
   const [copied, setCopied] = useState(false);
@@ -139,13 +142,13 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         <Text className="text-[40px] font-bold tracking-tight text-ink">Settings</Text>
         <View
           className="h-14 w-14 items-center justify-center rounded-full"
-          style={{ borderWidth: 2, borderColor: palette.accent.mint }}
+          style={{ borderWidth: 2, borderColor: p.accent.mint }}
         >
           <View
             className="h-11 w-11 items-center justify-center rounded-full"
-            style={{ backgroundColor: `${palette.accent.mint}22` }}
+            style={{ backgroundColor: `${p.accent.mint}22` }}
           >
-            <Text className="text-lg font-bold" style={{ color: palette.accent.mint }}>
+            <Text className="text-lg font-bold" style={{ color: p.accent.mint }}>
               {initial}
             </Text>
           </View>
@@ -250,7 +253,7 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           style={({ pressed }) => ({
             opacity: pressed ? 0.7 : 1,
             borderWidth: 1.5,
-            borderColor: palette.accent.rose,
+            borderColor: p.accent.rose,
             borderRadius: 999,
             paddingVertical: 16,
             alignItems: "center",
@@ -259,8 +262,8 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
             gap: 8,
           })}
         >
-          <LogOut size={16} color={palette.accent.rose} />
-          <Text className="text-base font-bold" style={{ color: palette.accent.rose }}>
+          <LogOut size={16} color={p.accent.rose} />
+          <Text className="text-base font-bold" style={{ color: p.accent.rose }}>
             Log out
           </Text>
         </Pressable>
@@ -280,6 +283,8 @@ function MenuRow({
   onPress: () => void;
   isLast?: boolean;
 }) {
+  const p = useThemedPalette();
+
   return (
     <Pressable
       onPress={onPress}
@@ -294,7 +299,7 @@ function MenuRow({
           <Text className="text-[17px] font-semibold text-ink">{title}</Text>
           <Text className="mt-1 text-[13px] leading-[18px] text-ink-muted">{subtitle}</Text>
         </View>
-        <ChevronRight size={18} color={palette.ink.dim} />
+        <ChevronRight size={18} color={p.ink.dim} />
       </View>
     </Pressable>
   );
@@ -317,7 +322,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Row({
   icon: Icon,
-  iconTint = palette.ink.muted,
+  iconTint,
   label,
   description,
   trailing,
@@ -332,15 +337,17 @@ function Row({
   onPress?: () => void;
   isLast?: boolean;
 }) {
+  const p = useThemedPalette();
+  const tint = iconTint ?? p.ink.muted;
   const Body = (
     <View
       className={`flex-row items-center gap-3 px-4 py-3.5 ${isLast ? "" : "border-b border-line"}`}
     >
       <View
         className="h-8 w-8 items-center justify-center rounded-lg"
-        style={{ backgroundColor: `${iconTint}1A` }}
+        style={{ backgroundColor: `${tint}18` }}
       >
-        <Icon size={15} color={iconTint} />
+        <Icon size={16} color={tint} />
       </View>
       <View className="flex-1">
         <Text className="text-[14px] font-medium text-ink">{label}</Text>
@@ -372,6 +379,7 @@ function ToggleRow(
     onValueChange: (v: boolean) => void;
   },
 ) {
+  const p = useThemedPalette();
   const { value, onValueChange, ...rest } = props;
   return (
     <Row
@@ -380,9 +388,9 @@ function ToggleRow(
         <Switch
           value={value}
           onValueChange={onValueChange}
-          trackColor={{ false: palette.line.default, true: palette.accent.mint }}
+          trackColor={{ false: p.line.default, true: p.accent.mint }}
           thumbColor="#FFFFFF"
-          ios_backgroundColor={palette.line.default}
+          ios_backgroundColor={p.line.default}
         />
       }
     />
@@ -392,6 +400,7 @@ function ToggleRow(
 /* ─── General tab ────────────────────────────────────────────────────── */
 
 function GeneralTab() {
+  const p = useThemedPalette();
   const s = useSettings();
   return (
     <>
@@ -402,7 +411,7 @@ function GeneralTab() {
       <Section title="Capture">
         <ToggleRow
           icon={Wand2}
-          iconTint={palette.accent.blue}
+          iconTint={p.accent.blue}
           label="Auto OCR title detection"
           description="Read card title from the first capture before grading."
           value={s.autoOcr}
@@ -410,7 +419,7 @@ function GeneralTab() {
         />
         <ToggleRow
           icon={ShieldCheck}
-          iconTint={palette.accent.mint}
+          iconTint={p.accent.mint}
           label="Quality gate"
           description="Reject blurry or glared shots before upload."
           value={s.qualityGate}
@@ -422,7 +431,7 @@ function GeneralTab() {
       <Section title="Feedback">
         <ToggleRow
           icon={Vibrate}
-          iconTint={palette.accent.amber}
+          iconTint={p.accent.amber}
           label="Haptic feedback"
           description="Subtle taps on capture, navigation, and grade reveal."
           value={s.hapticsEnabled}
@@ -434,7 +443,7 @@ function GeneralTab() {
       <Section title="Notifications">
         <ToggleRow
           icon={Bell}
-          iconTint={palette.accent.mint}
+          iconTint={p.accent.mint}
           label="Scan complete"
           description="Notify when a forensic report finishes processing."
           value={s.scanCompleteAlerts}
@@ -442,7 +451,7 @@ function GeneralTab() {
         />
         <ToggleRow
           icon={CircleDollarSign}
-          iconTint={palette.accent.blue}
+          iconTint={p.accent.blue}
           label="Price drops"
           description="Alert when a vault card moves more than 10%."
           value={s.priceDropAlerts}
@@ -463,8 +472,8 @@ function GeneralTab() {
         accessibilityRole="button"
         accessibilityLabel="Reset settings"
       >
-        <RotateCcw size={14} color={palette.accent.rose} />
-        <Text className="text-sm font-medium" style={{ color: palette.accent.rose }}>
+        <RotateCcw size={14} color={p.accent.rose} />
+        <Text className="text-sm font-medium" style={{ color: p.accent.rose }}>
           Reset to defaults
         </Text>
       </Pressable>
@@ -473,9 +482,10 @@ function GeneralTab() {
 }
 
 function CurrencyPicker({ value, onChange }: { value: Currency; onChange: (c: Currency) => void }) {
+  const p = useThemedPalette();
   const [open, setOpen] = useState(false);
   const meta = getCurrency(value);
-  const tint = meta.kind === "crypto" ? palette.accent.amber : palette.accent.mint;
+  const tint = meta.kind === "crypto" ? p.accent.amber : p.accent.mint;
   return (
     <View className="px-2 py-2">
       <Pressable
@@ -485,7 +495,7 @@ function CurrencyPicker({ value, onChange }: { value: Currency; onChange: (c: Cu
         className="flex-row items-center gap-3 rounded-xl px-3 py-3"
         style={({ pressed }) => ({
           opacity: pressed ? 0.85 : 1,
-          backgroundColor: pressed ? `${palette.ink.muted}11` : "transparent",
+          backgroundColor: pressed ? `${p.ink.muted}11` : "transparent",
         })}
       >
         <View
@@ -528,6 +538,7 @@ function CurrencyPicker({ value, onChange }: { value: Currency; onChange: (c: Cu
 /* ─── Appearance tab ─────────────────────────────────────────────────── */
 
 function AppearanceTab() {
+  const p = useThemedPalette();
   const themeMode = useSettings((s) => s.themeMode);
   const setThemeMode = useSettings((s) => s.setThemeMode);
 
@@ -539,7 +550,7 @@ function AppearanceTab() {
 
       <View className="rounded-2xl border border-line bg-bg-elevated p-4">
         <View className="flex-row items-center gap-2">
-          <Sparkles size={13} color={palette.accent.mint} />
+          <Sparkles size={13} color={p.accent.mint} />
           <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
             Precision palette
           </Text>
@@ -549,10 +560,10 @@ function AppearanceTab() {
           Light is a warm cream palette inspired by tinted album artwork.
         </Text>
         <View className="mt-3 flex-row items-center gap-2">
-          <Swatch tint={palette.accent.mint} label="Mint" />
-          <Swatch tint={palette.accent.blue} label="Blue" />
-          <Swatch tint={palette.accent.amber} label="Amber" />
-          <Swatch tint={palette.accent.rose} label="Rose" />
+          <Swatch tint={p.accent.mint} label="Mint" />
+          <Swatch tint={p.accent.blue} label="Blue" />
+          <Swatch tint={p.accent.amber} label="Amber" />
+          <Swatch tint={p.accent.rose} label="Rose" />
         </View>
       </View>
     </>
@@ -560,6 +571,7 @@ function AppearanceTab() {
 }
 
 function ThemePicker({ value, onChange }: { value: ThemeMode; onChange: (m: ThemeMode) => void }) {
+  const p = useThemedPalette();
   const opts: { m: ThemeMode; label: string; icon: LucideIcon }[] = [
     { m: "light", label: "Light", icon: Sun },
     { m: "dark", label: "Dark", icon: Moon },
@@ -577,12 +589,12 @@ function ThemePicker({ value, onChange }: { value: ThemeMode; onChange: (m: Them
             accessibilityState={{ selected: active }}
             accessibilityLabel={`${o.label} theme`}
             className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-3"
-            style={{ backgroundColor: active ? `${palette.accent.mint}22` : "transparent" }}
+            style={{ backgroundColor: active ? `${p.accent.mint}22` : "transparent" }}
           >
-            <o.icon size={14} color={active ? palette.accent.mint : palette.ink.muted} />
+            <o.icon size={14} color={active ? p.accent.mint : p.ink.muted} />
             <Text
               className="text-[12px] font-semibold tracking-wider"
-              style={{ color: active ? palette.accent.mint : palette.ink.muted }}
+              style={{ color: active ? p.accent.mint : p.ink.muted }}
             >
               {o.label}
             </Text>
@@ -605,6 +617,7 @@ function Swatch({ tint, label }: { tint: string; label: string }) {
 /* ─── About tab ──────────────────────────────────────────────────────── */
 
 function AboutTab() {
+  const p = useThemedPalette();
   const version = Constants.expoConfig?.version ?? "0.1.0";
   const sdk = Constants.expoConfig?.sdkVersion ?? "—";
   const build = useMemo(() => `Build ${(Constants.nativeBuildVersion ?? "dev").toString()}`, []);
@@ -613,10 +626,10 @@ function AboutTab() {
     <>
       <Section title="App">
         <Row icon={Info} label="Version" description={`${version} · Expo SDK ${sdk}`} />
-        <Row icon={Sparkles} iconTint={palette.accent.mint} label="Channel" description={build} />
+        <Row icon={Sparkles} iconTint={p.accent.mint} label="Channel" description={build} />
         <Row
           icon={Camera}
-          iconTint={palette.accent.blue}
+          iconTint={p.accent.blue}
           label="Capture engine"
           description="Photometric 4-light + JS quality gate"
           isLast
@@ -628,7 +641,7 @@ function AboutTab() {
           icon={Github}
           label="Source on GitHub"
           description="github.com/wiggapony0925/loupe-frontend"
-          trailing={<ChevronRight size={16} color={palette.ink.dim} />}
+          trailing={<ChevronRight size={16} color={p.ink.dim} />}
           onPress={() =>
             Alert.alert("Open in browser?", "https://github.com/wiggapony0925/loupe-frontend", [
               { text: "OK" },
@@ -639,7 +652,7 @@ function AboutTab() {
           icon={Shield}
           label="Privacy"
           description="Captures stay on-device until you grade."
-          trailing={<ChevronRight size={16} color={palette.ink.dim} />}
+          trailing={<ChevronRight size={16} color={p.ink.dim} />}
           onPress={() =>
             Alert.alert(
               "Privacy",
@@ -682,32 +695,33 @@ async function openLegal(url: string, label: string) {
 }
 
 function LegalTab() {
+  const p = useThemedPalette();
   const version = Constants.expoConfig?.version ?? "0.1.0";
   return (
     <>
       <Section title="Documents">
         <Row
           icon={Shield}
-          iconTint={palette.accent.mint}
+          iconTint={p.accent.mint}
           label="Terms of service"
           description="Your agreement with Loupe — read before continuing."
-          trailing={<ChevronRight size={16} color={palette.ink.dim} />}
+          trailing={<ChevronRight size={16} color={p.ink.dim} />}
           onPress={() => openLegal(LEGAL_LINKS.terms, "Terms of service")}
         />
         <Row
           icon={ShieldCheck}
-          iconTint={palette.accent.blue}
+          iconTint={p.accent.blue}
           label="Privacy policy"
           description="How we collect, store, and use your data."
-          trailing={<ChevronRight size={16} color={palette.ink.dim} />}
+          trailing={<ChevronRight size={16} color={p.ink.dim} />}
           onPress={() => openLegal(LEGAL_LINKS.privacy, "Privacy policy")}
         />
         <Row
           icon={Info}
-          iconTint={palette.accent.amber}
+          iconTint={p.accent.amber}
           label="Open-source acknowledgements"
           description="Credits for the libraries Loupe is built on."
-          trailing={<ChevronRight size={16} color={palette.ink.dim} />}
+          trailing={<ChevronRight size={16} color={p.ink.dim} />}
           onPress={() =>
             openLegal(LEGAL_LINKS.acknowledgements, "Open-source acknowledgements")
           }

@@ -45,7 +45,7 @@ import { CardHorizontalRail } from "@/presentation/cards";
 import type { CardSearchResult, TcgKey } from "@/infrastructure/http";
 import { compactUsd } from "@/shared/format";
 import { TcgMark } from "@/presentation/brand/TcgMark";
-import { gradeColor, palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { gradeColor, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /** All TCG facets supported by the chip row, in render order. */
 type TcgChip = TcgKey | "all";
@@ -73,13 +73,14 @@ interface SearchableCard {
 }
 
 type Quickfilter = "all" | "graded" | "vintage" | "modern";
+type AccentKey = "mint" | "blue" | "amber" | "rose" | "purple";
 
 interface Category {
   key: string;
   label: string;
   /** Display monogram if no image. */
   mono: string;
-  tint: string;
+  accent: AccentKey;
   /** Match predicate against any searchable card. */
   match: (c: SearchableCard) => boolean;
 }
@@ -89,42 +90,42 @@ const CATEGORIES: Category[] = [
     key: "pokemon",
     label: "Pokémon",
     mono: "PKM",
-    tint: "#FFCB05",
+    accent: "amber",
     match: (c) => /pokemon/i.test(c.set),
   },
   {
     key: "magic",
     label: "Magic",
     mono: "MTG",
-    tint: "#E33D3D",
+    accent: "blue",
     match: (c) => /magic/i.test(c.set),
   },
   {
     key: "yugioh",
     label: "Yu-Gi-Oh!",
     mono: "YGO",
-    tint: "#A347D6",
+    accent: "purple",
     match: (c) => /yu-?gi-?oh/i.test(c.set),
   },
   {
     key: "onepiece",
     label: "One Piece",
     mono: "OPC",
-    tint: "#FF6B35",
+    accent: "rose",
     match: (c) => /one\s?piece/i.test(c.set),
   },
   {
     key: "lorcana",
     label: "Lorcana",
     mono: "LRC",
-    tint: "#C8A24A",
+    accent: "amber",
     match: (c) => /lorcana/i.test(c.set),
   },
   {
     key: "sports",
     label: "Sports",
     mono: "SPT",
-    tint: "#0A84FF",
+    accent: "mint",
     match: (c) => /world cup|topps|chrome|panini|prizm|bowman/i.test(c.set),
   },
 ];
@@ -453,6 +454,15 @@ export default function SearchScreen() {
             );
           })}
         </ScrollView>
+
+        {!showLive && recent.length > 0 ? (
+          <RecentSearchStrip
+            recent={recent}
+            onPick={(value) => setQuery(value)}
+            onRemove={removeRecent}
+            onClear={clearRecent}
+          />
+        ) : null}
       </View>
 
       <ScrollView
@@ -481,7 +491,7 @@ export default function SearchScreen() {
                 discovery surfaces stop fighting each other:
                   1. BROWSE   → Categories grid (the entry point)
                   2. DISCOVER → Trending + per-TCG rails
-                  3. YOUR STUFF → Recent searches + vault top picks
+                  3. YOUR STUFF → Vault top picks
                 Each band has a single eyebrow so users can tell at a
                 glance which kind of content they're scanning. */}
 
@@ -491,17 +501,8 @@ export default function SearchScreen() {
                 Browse
               </Text>
               <Text className="mt-1 text-2xl font-semibold tracking-tight text-ink">
-                Categories
+                Start browsing
               </Text>
-              {/* Horizontal rail of fixed-width tiles. The previous
-                  2-up grid relied on `flex-wrap` + percentage width,
-                  which collapses unpredictably in RN once `gap` is
-                  involved — labels were truncating to "M…" / "Y…"
-                  and the "cards" count was stacking vertically. A
-                  rail guarantees every tile gets the same generous
-                  width (148px) regardless of label length, and adds
-                  horizontal scroll so we never run out of room as
-                  more franchises are added. */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -509,66 +510,73 @@ export default function SearchScreen() {
               >
                 {CATEGORIES.map((cat) => {
                   const count = cards.filter(cat.match).length;
+                  const active = activeCategory === cat.key;
+                  const tint = p.accent[cat.accent];
                   return (
                     <Pressable
                       key={cat.key}
-                      onPress={() => setActiveCategory(cat.key)}
+                      onPress={() => {
+                        setActiveCategory((prev) => (prev === cat.key ? null : cat.key));
+                        setSelectedTcg(cat.key as TcgChip);
+                      }}
                       style={({ pressed }) => ({
-                        width: 116,
-                        paddingVertical: 18,
-                        paddingHorizontal: 12,
-                        alignItems: "center",
-                        gap: 11,
+                        width: 156,
+                        minHeight: 136,
+                        padding: 14,
+                        justifyContent: "space-between",
                         opacity: pressed ? 0.9 : 1,
                         transform: pressed ? [{ scale: 0.96 }] : undefined,
+                        borderRadius: 18,
+                        borderWidth: 1,
+                        borderColor: active ? withAlpha(tint, 0.55) : p.line.default,
+                        backgroundColor: active ? withAlpha(tint, 0.10) : p.bg.elevated,
                       })}
-                      className="rounded-3xl border border-line bg-bg-elevated"
                     >
-                      {/* Brand badge — app-icon-style chip. The franchise
-                          glyph is TWO-TONE (a foreground + a negative-space
-                          colour), so the badge body MUST be the colour we
-                          pass as the glyph's `background`, otherwise the
-                          negative-space parts vanish and you get a white
-                          blob. We therefore use a solid WHITE badge and
-                          draw the glyph in the brand tint — the two tones
-                          read correctly and a tint ring + soft glow give
-                          each category its colour identity. */}
-                      <View
-                        style={{
-                          width: 58,
-                          height: 58,
-                          borderRadius: 17,
-                          backgroundColor: "#FFFFFF",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderWidth: 1.5,
-                          borderColor: withAlpha(cat.tint, 0.35),
-                          shadowColor: cat.tint,
-                          shadowOpacity: 0.3,
-                          shadowRadius: 9,
-                          shadowOffset: { width: 0, height: 4 },
-                          elevation: 4,
-                        }}
-                      >
-                        <TcgMark
-                          set={cat.key}
-                          size={32}
-                          color={cat.tint}
-                          background="#FFFFFF"
-                        />
-                      </View>
-                      <View style={{ alignItems: "center", gap: 2 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                        <View
+                          style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 14,
+                            backgroundColor: p.bg.base,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderWidth: 1,
+                            borderColor: withAlpha(tint, 0.34),
+                          }}
+                        >
+                          <TcgMark
+                            set={cat.key}
+                            size={28}
+                            color={tint}
+                            background={p.bg.base}
+                          />
+                        </View>
                         <Text
-                          numberOfLines={1}
-                          className="text-[13.5px] font-semibold text-ink"
+                          numberOfLines={2}
+                          style={{
+                            flex: 1,
+                            color: p.ink.default,
+                            fontSize: 14,
+                            fontWeight: "800",
+                            lineHeight: 17,
+                          }}
                         >
                           {cat.label}
                         </Text>
+                      </View>
+                      <View>
                         <Text
                           numberOfLines={1}
-                          className="text-[11px] text-ink-dim"
+                          style={{ color: p.ink.muted, fontSize: 11, fontWeight: "700" }}
                         >
                           {count} {count === 1 ? "card" : "cards"}
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          style={{ color: active ? tint : p.ink.dim, fontSize: 10, marginTop: 2 }}
+                        >
+                          {active ? "Selected" : "Tap to filter"}
                         </Text>
                       </View>
                     </Pressable>
@@ -627,35 +635,6 @@ export default function SearchScreen() {
             </View>
 
             {/* ── BAND 3 · YOUR STUFF ─────────────────────── */}
-
-            {/* Recent searches */}
-            {recent.length > 0 ? (
-              <View>
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-                    Recent
-                  </Text>
-                  <Pressable onPress={() => clearRecent()} hitSlop={6}>
-                    <Text className="text-[11px] font-semibold text-ink-muted">Clear</Text>
-                  </Pressable>
-                </View>
-                <View className="mt-3 overflow-hidden rounded-2xl border border-line bg-bg-elevated">
-                  {recent.map((r, i) => (
-                    <Pressable
-                      key={r}
-                      onPress={() => setQuery(r)}
-                      className={`flex-row items-center gap-3 px-4 py-3 ${
-                        i > 0 ? "border-t border-line/60" : ""
-                      }`}
-                    >
-                      <Clock size={14} color={p.ink.muted} />
-                      <Text className="flex-1 text-sm text-ink">{r}</Text>
-                      <SearchIcon size={14} color={p.ink.dim} />
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            ) : null}
 
             {/* Trending in collection (top 3 by value as a "popular" rail) */}
             {cards.length > 0 ? (
@@ -738,6 +717,84 @@ export default function SearchScreen() {
   );
 }
 
+function RecentSearchStrip({
+  recent,
+  onPick,
+  onRemove,
+  onClear,
+}: {
+  recent: string[];
+  onPick: (value: string) => void;
+  onRemove: (value: string) => void;
+  onClear: () => void;
+}) {
+  const p = useThemedPalette();
+  if (recent.length === 0) return null;
+  return (
+    <View style={{ paddingTop: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+          Recent searches
+        </Text>
+        <Pressable onPress={onClear} hitSlop={8}>
+          <Text style={{ color: p.ink.muted, fontSize: 11, fontWeight: "700" }}>
+            Clear
+          </Text>
+        </Pressable>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ gap: 8, paddingTop: 8, paddingRight: 8 }}
+      >
+        {recent.map((item) => (
+          <View
+            key={item}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              maxWidth: 220,
+              paddingLeft: 10,
+              paddingRight: 4,
+              paddingVertical: 5,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: p.line.default,
+              backgroundColor: p.bg.elevated,
+            }}
+          >
+            <Clock size={12} color={p.ink.dim} />
+            <Pressable onPress={() => onPick(item)} hitSlop={6} style={{ flexShrink: 1 }}>
+              <Text
+                numberOfLines={1}
+                style={{ color: p.ink.default, fontSize: 12, fontWeight: "700" }}
+              >
+                {item}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => onRemove(item)}
+              hitSlop={6}
+              style={{
+                width: 20,
+                height: 20,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 999,
+              }}
+              accessibilityLabel={`Remove recent search ${item}`}
+            >
+              <X size={11} color={p.ink.dim} />
+            </Pressable>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 function ResultRow({
   card,
   spark,
@@ -756,14 +813,14 @@ function ResultRow({
 
   return (
     <Pressable
-      onPress={() => router.push(routes.market(card.id))}
+      onPress={() => router.push(routes.card(card.id))}
       accessibilityRole="button"
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
     >
       <View
         className="overflow-hidden rounded-lg"
-        style={{ width: 36, height: 50, backgroundColor: palette.bg.sunken }}
+        style={{ width: 36, height: 50, backgroundColor: p.bg.sunken }}
       >
         <CardImage
           uri={card.thumbnailUri}
@@ -773,7 +830,6 @@ function ResultRow({
           priority="low"
           recyclingKey={card.id}
           alt={card.title}
-          aspectRatio={undefined as unknown as number}
         />
       </View>
       <View style={{ flex: 1 }}>

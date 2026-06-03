@@ -33,7 +33,7 @@ const env = (process.env ?? {}) as Record<string, string | undefined>;
  * bundle so release builds work even if the EAS env var is missing.
  * Update this constant if the Cloud Run service URL ever changes.
  */
-const PRODUCTION_API_BASE = "https://loupe-api-714615078104.us-central1.run.app";
+const PRODUCTION_API_BASE = "https://loupe-api-wrrcqaayra-uc.a.run.app";
 
 function resolveApiBase(): string {
   const fromEnv = env.EXPO_PUBLIC_API_URL?.trim();

@@ -6,7 +6,7 @@ interface ScannerState {
   isScanning: boolean;
   lastScanId: string | null;
   /**
-   * If the user initiated this scan from a market detail page, the catalog
+    * If the user initiated this scan from a card detail page, the catalog
    * id is parked here for the lifetime of the scan. The forensic report
    * screen reads it to render the "Compared to market: …" cross-link, and
    * `finishScan` clears it as soon as the report is ready.

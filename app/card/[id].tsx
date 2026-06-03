@@ -69,6 +69,7 @@ import {
   RecentCompsSection,
   StatTile,
   flattenHouses,
+  formatTcgName,
   houseColor,
 } from "@/presentation/features/cardDetail/CardDetailParts";
 import {
@@ -89,7 +90,7 @@ import { SkeletonCardDetailPage } from "@/presentation/components/Skeletons";
 import { DataSourcesFooter } from "@/presentation/components/DataSourcesFooter";
 import { pickCardBlurhash, pickCardImageUrl } from "@/shared/cardImage";
 import { inferBackVariant } from "@/shared/cardBacks";
-import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import type { HouseId } from "@/infrastructure/http";
 
 // ── Range type lives in InteractiveCardChart now ────────────────────
@@ -219,7 +220,7 @@ export default function CardDetailScreen() {
           accessibilityLabel="Back"
           className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
         >
-          <ChevronLeft size={18} color={palette.ink.default} />
+          <ChevronLeft size={18} color={p.ink.default} />
         </Pressable>
         <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
           Market
@@ -302,12 +303,12 @@ export default function CardDetailScreen() {
                       borderRadius: 999,
                       alignItems: "center",
                       justifyContent: "center",
-                      backgroundColor: "rgba(0,0,0,0.55)",
+                      backgroundColor: withAlpha(p.bg.base, 0.78),
                       borderWidth: 1,
-                      borderColor: "rgba(255,255,255,0.22)",
+                      borderColor: withAlpha(p.ink.default, 0.18),
                     }}
                   >
-                    <Expand size={13} color="#fff" strokeWidth={2.5} />
+                    <Expand size={13} color={p.ink.default} strokeWidth={2.5} />
                   </View>
                 </Pressable>
                 <View style={{ flex: 1, justifyContent: "center", gap: 6 }}>
@@ -317,24 +318,29 @@ export default function CardDetailScreen() {
                   >
                     {card.name}
                   </Text>
-                  <Text className="text-[12px] text-ink-muted" numberOfLines={1}>
-                    {card.set_name ?? "—"}
+                  <Text
+                    className="text-[12px] leading-4 text-ink-muted"
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                  >
+                    {card.set_name ?? "Unknown set"}
                   </Text>
-                  <Text className="text-[11px] text-ink-dim">
+                  <Text className="text-[11px] text-ink-dim" numberOfLines={1}>
                     {[card.year, card.number ? `#${card.number}` : null]
                       .filter(Boolean)
-                      .join(" · ") || "—"}
+                      .join(" · ") || "Card details pending"}
                   </Text>
                   <Text
                     style={{
                       color: p.ink.dim,
                       fontSize: 10,
                       fontWeight: "800",
-                      letterSpacing: 2,
+                      letterSpacing: 1,
                       marginTop: 6,
                     }}
+                    numberOfLines={1}
                   >
-                    {(card.tcg ?? "—").toString().toUpperCase()}
+                    {formatTcgName(card.tcg) ?? "Trading card"}
                   </Text>
                 </View>
               </View>

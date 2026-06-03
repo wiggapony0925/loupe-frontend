@@ -217,7 +217,7 @@ export default function ScanDetailScreen() {
           {/* Actions. */}
           <View className="mt-1 gap-2">
             <Pressable
-              onPress={() => router.push(routes.market(data.card_id))}
+              onPress={() => router.push(routes.card(data.card_id))}
               style={({ pressed }) => ({
                 flexDirection: "row",
                 alignItems: "center",

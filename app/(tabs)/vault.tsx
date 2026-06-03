@@ -44,7 +44,7 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { useMoney } from "@/presentation/components/Price";
 import { COPY } from "@/shared/copy";
 import { queryKeys } from "@/application/queries/queryKeys";
-import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 type ViewMode = "list" | "grid";
 
@@ -203,7 +203,7 @@ export default function VaultScreen() {
             // doesn't kick off a network round-trip mid-selection.
             onRefresh={selectionMode ? () => {} : onRefresh}
             enabled={!selectionMode}
-            tintColor={palette.accent.mint}
+            tintColor={p.accent.mint}
           />
         }
         ListHeaderComponent={

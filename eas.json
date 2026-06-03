@@ -16,7 +16,7 @@
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://loupe-api-714615078104.us-central1.run.app"
+        "EXPO_PUBLIC_API_URL": "https://loupe-api-wrrcqaayra-uc.a.run.app"
       },
       "ios": {
         "simulator": false
@@ -28,7 +28,7 @@
       "env": {
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "EAS_BUILD_NO_EXPO_GO_WARNING": "true",
-        "EXPO_PUBLIC_API_URL": "https://loupe-api-714615078104.us-central1.run.app"
+        "EXPO_PUBLIC_API_URL": "https://loupe-api-wrrcqaayra-uc.a.run.app"
       }
     }
   },

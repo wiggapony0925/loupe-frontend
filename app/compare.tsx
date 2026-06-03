@@ -15,13 +15,13 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react-native";
 import { fetchReport } from "@/infrastructure/repositories/forensicRepository";
 import { queryKeys } from "@/application/queries/queryKeys";
-import { gradeColor, palette, useThemedPalette } from "@/presentation/theme/tokens";
+import { gradeColor, useThemedPalette } from "@/presentation/theme/tokens";
 import { compactUsd } from "@/shared/format";
 import { SkeletonComparePage } from "@/presentation/components/Skeletons";
 import type { ForensicReport, ForensicScore } from "@/domain";
 
 export default function CompareScreen() {
-  useThemedPalette();
+  const p = useThemedPalette();
   const { a, b } = useLocalSearchParams<{ a?: string; b?: string }>();
   const ra = useQuery({ queryKey: queryKeys.reports.item(a ?? ""), queryFn: () => fetchReport(a!), enabled: !!a });
   const rb = useQuery({ queryKey: queryKeys.reports.item(b ?? ""), queryFn: () => fetchReport(b!), enabled: !!b });
@@ -36,7 +36,7 @@ export default function CompareScreen() {
           accessibilityLabel="Go back"
           className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
         >
-          <ChevronLeft size={18} color={palette.ink.default} />
+          <ChevronLeft size={18} color={p.ink.default} />
         </Pressable>
         <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
           Compare grades
@@ -130,6 +130,7 @@ function ScoreRow({ label, value }: { label: string; value: number }) {
 }
 
 function DeltaRow({ left, right }: { left: ForensicScore; right: ForensicScore }) {
+  const p = useThemedPalette();
   const rows: { label: string; key: keyof ForensicScore }[] = [
     { label: "Composite", key: "composite" },
     { label: "Surface", key: "surface" },
@@ -146,7 +147,7 @@ function DeltaRow({ left, right }: { left: ForensicScore; right: ForensicScore }
         {rows.map(({ label, key }) => {
           const delta = right[key] - left[key];
           const tint =
-            delta === 0 ? palette.ink.muted : delta > 0 ? palette.accent.mint : palette.accent.rose;
+            delta === 0 ? p.ink.muted : delta > 0 ? p.accent.mint : p.accent.rose;
           return (
             <View key={key} className="flex-row items-center justify-between">
               <Text className="text-sm text-ink">{label}</Text>

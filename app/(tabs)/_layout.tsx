@@ -2,7 +2,7 @@ import React from "react";
 import { useColorScheme, View } from "react-native";
 import { Tabs } from "expo-router";
 import { Gauge, Layers, BarChart3, Camera, Search } from "lucide-react-native";
-import { palette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useSettings } from "@/application/stores/settingsStore";
 
 export default function TabsLayout() {
@@ -10,6 +10,7 @@ export default function TabsLayout() {
   // the freshly-mutated palette values when the user toggles Light/Dark.
   const themeMode = useSettings((s) => s.themeMode);
   const systemScheme = useColorScheme();
+  const p = useThemedPalette();
   // Resolve to the actual visible scheme so "Auto" mode also remounts the
   // navigator when the device theme flips.
   const resolved = themeMode === "system" ? (systemScheme ?? "dark") : themeMode;
@@ -21,11 +22,11 @@ export default function TabsLayout() {
       key={resolved}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: palette.accent.mint,
-        tabBarInactiveTintColor: palette.ink.dim,
+        tabBarActiveTintColor: p.accent.mint,
+        tabBarInactiveTintColor: p.ink.dim,
         tabBarStyle: {
-          backgroundColor: palette.bg.elevated,
-          borderTopColor: palette.line.default,
+          backgroundColor: p.bg.elevated,
+          borderTopColor: p.line.default,
           borderTopWidth: 0.5,
           height: 84,
           paddingTop: 8,
@@ -82,17 +83,17 @@ export default function TabsLayout() {
                 justifyContent: "center",
                 marginTop: -12,
                 backgroundColor: focused
-                  ? palette.accent.mint
-                  : withAlpha(palette.accent.mint, 0.18),
+                  ? p.accent.mint
+                  : withAlpha(p.accent.mint, 0.18),
                 borderWidth: 1,
                 borderColor: focused
-                  ? palette.accent.mint
-                  : withAlpha(palette.accent.mint, 0.4),
+                  ? p.accent.mint
+                  : withAlpha(p.accent.mint, 0.4),
               }}
             >
               <Camera
                 size={20}
-                color={focused ? palette.bg.base : palette.accent.mint}
+                color={focused ? p.bg.base : p.accent.mint}
               />
             </View>
           ),
@@ -101,7 +102,7 @@ export default function TabsLayout() {
             fontWeight: "700",
             letterSpacing: 0.5,
             textTransform: "uppercase",
-            color: palette.accent.mint,
+            color: p.accent.mint,
             // The icon sits in a 44dp circle pulled up by marginTop:-12,
             // which leaves the label too close to the camera glyph. Push
             // it back down so it visually aligns with the neighbouring

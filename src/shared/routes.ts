@@ -28,7 +28,8 @@ export const routes = {
   /** Deep link to the standalone price-alert list. */
   watchlist: () => "/watchlist" as const,
   card: (id: string) => `/card/${enc(id)}`,
-  market: (id: string) => `/market/${enc(id)}`,
+  /** Legacy alias. Market data now lives on the unified card detail page. */
+  market: (id: string) => `/card/${enc(id)}`,
   scan: (id: string) => `/scan/${enc(id)}`,
   scanPhone: (mode?: ScanPhoneMode) =>
     mode ? `/scan/phone?mode=${mode}` : "/scan/phone",

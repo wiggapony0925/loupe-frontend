@@ -26,7 +26,7 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import { routes } from "@/shared/routes";
-import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { type Palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { WatchingList } from "@/presentation/features/watchlist/WatchingList";
 import { usePriceAlerts } from "@/application/queries/alerts/usePriceAlerts";
 import type { PriceAlertWire } from "@/infrastructure/http";
@@ -91,7 +91,7 @@ function buildFeed(alerts: PriceAlertWire[]): Notification[] {
 
 const CATEGORY_META: Record<
   Exclude<Category, "all">,
-  { Icon: LucideIcon; tint: keyof typeof palette.accent; label: string }
+  { Icon: LucideIcon; tint: keyof Palette["accent"]; label: string }
 > = {
   scan: { Icon: Sparkles, tint: "mint", label: "Scan" },
   market: { Icon: TrendingUp, tint: "blue", label: "Market" },
@@ -106,7 +106,7 @@ const FILTERS: { key: Category; label: string }[] = [
 ];
 
 export default function NotificationsScreen() {
-  useThemedPalette();
+  const p = useThemedPalette();
   // Deep-link support: a notification that says "your alert fired" can
   // route to `/notifications?tab=watching` and land users on the price-
   // alert list inside the same surface as the inbox.
@@ -151,11 +151,11 @@ export default function NotificationsScreen() {
           {tab === "inbox" && unreadCount > 0 ? (
             <View
               className="rounded-full px-2 py-0.5"
-              style={{ backgroundColor: withAlpha(palette.accent.mint, 0.18) }}
+              style={{ backgroundColor: withAlpha(p.accent.mint, 0.18) }}
             >
               <Text
                 className="text-[11px] font-bold"
-                style={{ color: palette.accent.mint, letterSpacing: 0.4 }}
+                style={{ color: p.accent.mint, letterSpacing: 0.4 }}
               >
                 {unreadCount} NEW
               </Text>
@@ -208,6 +208,8 @@ function TabSegment({
   value: Tab;
   onChange: (t: Tab) => void;
 }) {
+  const p = useThemedPalette();
+
   return (
     <View
       style={{
@@ -217,8 +219,8 @@ function TabSegment({
         padding: 4,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: palette.line.default,
-        backgroundColor: palette.bg.elevated,
+        borderColor: p.line.default,
+        backgroundColor: p.bg.elevated,
       }}
     >
       {(["inbox", "watching"] as const).map((opt) => {
@@ -234,14 +236,14 @@ function TabSegment({
               paddingVertical: 8,
               borderRadius: 8,
               backgroundColor: active
-                ? withAlpha(palette.accent.mint, 0.16)
+                  ? withAlpha(p.accent.mint, 0.16)
                 : "transparent",
               alignItems: "center",
             }}
           >
             <Text
               style={{
-                color: active ? palette.accent.mint : palette.ink.muted,
+                color: active ? p.accent.mint : p.ink.muted,
                 fontSize: 12,
                 fontWeight: "700",
                 letterSpacing: 1,
@@ -268,6 +270,8 @@ function Header({
   onBack: () => void;
   onOpenSettings: () => void;
 }) {
+  const p = useThemedPalette();
+
   return (
     <View className="flex-row items-center justify-between px-3 pb-2 pt-2">
       <Pressable
@@ -277,7 +281,7 @@ function Header({
         accessibilityRole="button"
         accessibilityLabel="Back"
       >
-        <ChevronLeft size={22} color={palette.ink.default} />
+        <ChevronLeft size={22} color={p.ink.default} />
       </Pressable>
       <Text className="text-[13px] font-semibold tracking-tight text-ink-muted">
         {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
@@ -289,7 +293,7 @@ function Header({
         accessibilityRole="button"
         accessibilityLabel="Notification settings"
       >
-        <Settings2 size={18} color={palette.ink.muted} />
+        <Settings2 size={18} color={p.ink.muted} />
       </Pressable>
     </View>
   );
@@ -304,6 +308,8 @@ function FilterStrip({
   value: Category;
   onChange: (v: Category) => void;
 }) {
+  const p = useThemedPalette();
+
   return (
     <ScrollView
       horizontal
@@ -324,16 +330,16 @@ function FilterStrip({
               paddingVertical: 7,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: active ? palette.accent.mint : palette.line.default,
+              borderColor: active ? p.accent.mint : p.line.default,
               backgroundColor: active
-                ? withAlpha(palette.accent.mint, 0.14)
-                : palette.bg.elevated,
+                ? withAlpha(p.accent.mint, 0.14)
+                : p.bg.elevated,
               opacity: pressed ? 0.7 : 1,
             })}
           >
             <Text
               style={{
-                color: active ? palette.accent.mint : palette.ink.muted,
+                color: active ? p.accent.mint : p.ink.muted,
                 fontSize: 12,
                 fontWeight: "700",
                 letterSpacing: 0.4,
@@ -357,6 +363,7 @@ function EmptyState({
   filter: Category;
   hasUnread: boolean;
 }) {
+  const p = useThemedPalette();
   const title =
     filter === "all"
       ? hasUnread
@@ -370,16 +377,16 @@ function EmptyState({
       <View className="items-center pt-2">
         <View
           className="h-20 w-20 items-center justify-center rounded-full"
-          style={{ backgroundColor: withAlpha(palette.accent.mint, 0.08) }}
+          style={{ backgroundColor: withAlpha(p.accent.mint, 0.08) }}
         >
           <View
             className="h-14 w-14 items-center justify-center rounded-full"
-            style={{ backgroundColor: withAlpha(palette.accent.mint, 0.16) }}
+            style={{ backgroundColor: withAlpha(p.accent.mint, 0.16) }}
           >
             {hasUnread ? (
-              <CheckCheck size={24} color={palette.accent.mint} />
+              <CheckCheck size={24} color={p.accent.mint} />
             ) : (
-              <BellOff size={22} color={palette.accent.mint} />
+              <BellOff size={22} color={p.accent.mint} />
             )}
           </View>
         </View>
@@ -437,8 +444,9 @@ function GhostRow({
   when: string;
   isLast?: boolean;
 }) {
+  const p = useThemedPalette();
   const meta = CATEGORY_META[category];
-  const tint = palette.accent[meta.tint];
+  const tint = p.accent[meta.tint];
   return (
     <View
       className={`flex-row items-start gap-3 px-4 py-3.5 ${isLast ? "" : "border-b border-line"}`}
@@ -482,8 +490,9 @@ function NotificationRow({
   item: Notification;
   isLast: boolean;
 }) {
+  const p = useThemedPalette();
   const meta = CATEGORY_META[item.category];
-  const tint = palette.accent[meta.tint];
+  const tint = p.accent[meta.tint];
   // A price-alert notification deep-links to the card it fired on.
   const onPress = item.cardId
     ? () => router.push(routes.card(item.cardId as string))
@@ -517,7 +526,7 @@ function NotificationRow({
             width: 8,
             height: 8,
             borderRadius: 4,
-            backgroundColor: palette.accent.mint,
+            backgroundColor: p.accent.mint,
             marginTop: 6,
           }}
         />

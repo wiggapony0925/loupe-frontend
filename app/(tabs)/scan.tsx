@@ -32,7 +32,7 @@ import {
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { useScannerConnection } from "@/presentation/features/scanner";
-import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
 type Mode = "studio" | "quick";
@@ -170,6 +170,8 @@ interface ModeCardProps {
 }
 
 function ModeCard({ label, tagline, detail, tint, active, onPress }: ModeCardProps) {
+  const p = useThemedPalette();
+
   return (
     <Pressable
       onPress={onPress}
@@ -178,8 +180,8 @@ function ModeCard({ label, tagline, detail, tint, active, onPress }: ModeCardPro
       style={{
         borderRadius: 16,
         borderWidth: active ? 1.5 : 1,
-        borderColor: active ? tint : palette.line.default,
-        backgroundColor: active ? withAlpha(tint, 0.08) : palette.bg.elevated,
+        borderColor: active ? tint : p.line.default,
+        backgroundColor: active ? withAlpha(tint, 0.08) : p.bg.elevated,
         padding: 16,
         gap: 6,
       }}
@@ -190,12 +192,12 @@ function ModeCard({ label, tagline, detail, tint, active, onPress }: ModeCardPro
             width: 8,
             height: 8,
             borderRadius: 4,
-            backgroundColor: active ? tint : palette.line.default,
+            backgroundColor: active ? tint : p.line.default,
           }}
         />
         <Text
           style={{
-            color: active ? tint : palette.ink.dim,
+            color: active ? tint : p.ink.dim,
             fontSize: 10,
             fontWeight: "700",
             letterSpacing: 2,
@@ -205,10 +207,10 @@ function ModeCard({ label, tagline, detail, tint, active, onPress }: ModeCardPro
           {label}
         </Text>
       </View>
-      <Text style={{ color: palette.ink.default, fontSize: 16, fontWeight: "600" }}>
+      <Text style={{ color: p.ink.default, fontSize: 16, fontWeight: "600" }}>
         {tagline}
       </Text>
-      <Text style={{ color: palette.ink.muted, fontSize: 12, lineHeight: 17 }}>
+      <Text style={{ color: p.ink.muted, fontSize: 12, lineHeight: 17 }}>
         {detail}
       </Text>
     </Pressable>
@@ -224,6 +226,8 @@ interface SecondaryRowProps {
 }
 
 function SecondaryRow({ icon: Icon, tint, label, detail, onPress }: SecondaryRowProps) {
+  const p = useThemedPalette();
+
   return (
     <Pressable
       onPress={onPress}
@@ -234,8 +238,8 @@ function SecondaryRow({ icon: Icon, tint, label, detail, onPress }: SecondaryRow
         padding: 14,
         borderRadius: 14,
         borderWidth: 1,
-        borderColor: palette.line.default,
-        backgroundColor: palette.bg.elevated,
+        borderColor: p.line.default,
+        backgroundColor: p.bg.elevated,
       }}
     >
       <View
@@ -251,14 +255,14 @@ function SecondaryRow({ icon: Icon, tint, label, detail, onPress }: SecondaryRow
         <Icon size={18} color={tint} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: palette.ink.default, fontSize: 14, fontWeight: "600" }}>
+        <Text style={{ color: p.ink.default, fontSize: 14, fontWeight: "600" }}>
           {label}
         </Text>
-        <Text style={{ color: palette.ink.muted, fontSize: 12, marginTop: 2 }}>
+        <Text style={{ color: p.ink.muted, fontSize: 12, marginTop: 2 }}>
           {detail}
         </Text>
       </View>
-      <Layers size={14} color={palette.ink.dim} />
+      <Layers size={14} color={p.ink.dim} />
     </Pressable>
   );
 }

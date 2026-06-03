@@ -28,11 +28,11 @@ import { useApiHealth, useHomeFeed, useTopMovers } from "@/application/queries";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { MoversCardRow } from "@/presentation/cards";
 import { compactUsd, greeting, relativeTime } from "@/shared/format";
-import { gradeColor, palette, useThemedPalette } from "@/presentation/theme/tokens";
+import { gradeColor, useThemedPalette } from "@/presentation/theme/tokens";
 import type { RecentScanRow } from "@/infrastructure/repositories/homeRepository";
 
 export default function CommandCenterScreen() {
-  useThemedPalette();
+  const p = useThemedPalette();
   const qc = useQueryClient();
   const { isAuthenticated } = useAuth();
   const summary = useQuery({ queryKey: queryKeys.collection.summary(), queryFn: fetchCollectionSummary });
@@ -65,7 +65,7 @@ export default function CommandCenterScreen() {
           <RefreshControl
             refreshing={pulling}
             onRefresh={onRefresh}
-            tintColor={palette.accent.mint}
+            tintColor={p.accent.mint}
           />
         }
       >
@@ -91,7 +91,7 @@ export default function CommandCenterScreen() {
                 className="flex-row items-center gap-1"
               >
                 <Text className="text-xs font-medium text-ink-muted">All</Text>
-                <ArrowUpRight size={14} color={palette.ink.muted} />
+                <ArrowUpRight size={14} color={p.ink.muted} />
               </Pressable>
             }
           />
@@ -118,7 +118,7 @@ export default function CommandCenterScreen() {
                       ? compactUsd(summary.data.totalValueUsd)
                       : "—"
                   }
-                  accent={palette.accent.mint}
+                  accent={p.accent.mint}
                 />
                 {summary.data?.unrealizedPnlUsd != null &&
                 summary.data?.unrealizedPnlPct != null ? (
@@ -131,8 +131,8 @@ export default function CommandCenterScreen() {
                     }${summary.data.unrealizedPnlPct.toFixed(1)}%)`}
                     accent={
                       summary.data.unrealizedPnlUsd >= 0
-                        ? palette.accent.mint
-                        : palette.accent.rose
+                        ? p.accent.mint
+                        : p.accent.rose
                     }
                   />
                 ) : (
@@ -143,7 +143,7 @@ export default function CommandCenterScreen() {
                         ? `${(summary.data.avgAccuracy * 100).toFixed(1)}%`
                         : "—"
                     }
-                    accent={palette.accent.blue}
+                    accent={p.accent.blue}
                   />
                 )}
                 <KpiPill
@@ -153,7 +153,7 @@ export default function CommandCenterScreen() {
                       ? hardware.data.scansRemaining.toLocaleString()
                       : "—"
                   }
-                  accent={palette.accent.amber}
+                  accent={p.accent.amber}
                 />
               </>
             )}
@@ -181,7 +181,7 @@ export default function CommandCenterScreen() {
                 className="flex-row items-center gap-1"
               >
                 <Text className="text-xs font-medium text-ink-muted">Vault</Text>
-                <ArrowUpRight size={14} color={palette.ink.muted} />
+                <ArrowUpRight size={14} color={p.ink.muted} />
               </Pressable>
             }
           />
@@ -229,7 +229,7 @@ export default function CommandCenterScreen() {
                 className="flex-row items-center gap-1"
               >
                 <Text className="text-xs font-medium text-ink-muted">More</Text>
-                <ArrowUpRight size={14} color={palette.ink.muted} />
+                <ArrowUpRight size={14} color={p.ink.muted} />
               </Pressable>
             }
           />
@@ -256,7 +256,7 @@ export default function CommandCenterScreen() {
                 style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
               >
                 <Text className="text-xs font-medium text-ink-muted">Manage</Text>
-                <ArrowUpRight size={14} color={palette.ink.muted} />
+                <ArrowUpRight size={14} color={p.ink.muted} />
               </Pressable>
             }
           />
@@ -485,6 +485,7 @@ function KpiPill({
  * (Studio = 4-shot, Quick = 2-shot) and a single hero CTA.
  */
 function PhoneCaptureCard() {
+  const p = useThemedPalette();
   const [mode, setMode] = useState<"studio" | "quick">("studio");
   const isStudio = mode === "studio";
 
@@ -493,7 +494,7 @@ function PhoneCaptureCard() {
       <View className="px-5 pt-4">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-1.5">
-            <Smartphone size={11} color={palette.ink.dim} />
+            <Smartphone size={11} color={p.ink.dim} />
             <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
               Phone Camera
             </Text>
@@ -502,13 +503,13 @@ function PhoneCaptureCard() {
             <ModeSegment
               label="Studio"
               active={isStudio}
-              tint={palette.accent.mint}
+              tint={p.accent.mint}
               onPress={() => setMode("studio")}
             />
             <ModeSegment
               label="Quick"
               active={!isStudio}
-              tint={palette.accent.blue}
+              tint={p.accent.blue}
               onPress={() => setMode("quick")}
             />
           </View>
@@ -547,6 +548,8 @@ function ModeSegment({
   tint: string;
   onPress: () => void;
 }) {
+  const p = useThemedPalette();
+
   return (
     <Pressable
       onPress={onPress}
@@ -559,7 +562,7 @@ function ModeSegment({
     >
       <Text
         className="text-[10px] font-semibold uppercase tracking-[2px]"
-        style={{ color: active ? tint : palette.ink.dim }}
+        style={{ color: active ? tint : p.ink.dim }}
       >
         {label}
       </Text>

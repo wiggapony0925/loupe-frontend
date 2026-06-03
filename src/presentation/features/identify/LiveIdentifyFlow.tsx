@@ -88,26 +88,25 @@ const CAPTURE_LONG_EDGE = 900;
 const CAPTURE_QUALITY = 0.42;
 /**
  * Min gap between identify calls. Keeps the device cool + bill low.
- * Tuned to ~450ms (vs the previous 900ms) because the server-side
- * Vision+rerank round-trip is consistently ~120–200ms when warm —
- * the previous interval meant the user perceived the carousel as
- * frozen between frames. We still gate on `inflightRef` so we never
- * stack requests, and capture / encode / upload are now pipelined so
- * the next frame starts as soon as the previous response lands.
+ * Kept at 1000ms so we stay under the backend's identify rate limit
+ * and avoid piling up Google Vision work. Capture/encode can overlap
+ * the previous request, but network identify stays single-flight.
  */
 const CAPTURE_INTERVAL_MS = 1000;
 /** Confidence at which we fire the success haptic + freeze the carousel. */
 const LOCK_CONFIDENCE = 0.7;
+/** Lowest confidence worth showing as a possible live match. */
+const PREVIEW_CONFIDENCE = 0.35;
 /**
- * Consecutive frames returning zero high-confidence (>=0.5) candidates
+ * Consecutive frames returning zero preview-worthy candidates
  * before we surface the "can't find a match" fallback CTA. At the
  * CAPTURE_INTERVAL_MS (1000ms) cadence — chosen to stay under the
  * backend's 60/min identify rate limit so frames stop getting 429'd
- * mid-scan — this works out to ~3s of camera time before the user gets
+ * mid-scan — this works out to ~6s of camera time before the user gets
  * the escape hatch. The live "Scanning…" pulse keeps the surface feeling
  * alive in the meantime.
  */
-const NO_MATCH_THRESHOLD = 3;
+const NO_MATCH_THRESHOLD = 6;
 
 // ── Native card-detector thresholds ─────────────────────────────────
 // These are deliberately conservative: a single bad frame should never
@@ -210,11 +209,15 @@ function GlassCircle({
  * game — a small, modern affordance that also makes a wrong auto-detect
  * (e.g. a Pokémon card read as Yu-Gi-Oh) visible at a glance.
  */
-const TCG_OPTIONS: { key: IdentifyTcgHint; label: string; color: string }[] = [
-  { key: null, label: "Auto-detect", color: palette.accent.mint },
-  { key: "pokemon", label: "Pokémon", color: palette.accent.amber },
-  { key: "magic", label: "Magic", color: palette.accent.blue },
-  { key: "yugioh", label: "Yu-Gi-Oh!", color: palette.accent.purple },
+const TCG_OPTIONS: {
+  key: IdentifyTcgHint;
+  label: string;
+  accent: keyof ReturnType<typeof useThemedPalette>["accent"];
+}[] = [
+  { key: null, label: "Auto-detect", accent: "mint" },
+  { key: "pokemon", label: "Pokémon", accent: "amber" },
+  { key: "magic", label: "Magic", accent: "blue" },
+  { key: "yugioh", label: "Yu-Gi-Oh!", accent: "purple" },
 ];
 
 interface LiveIdentifyFlowProps {
@@ -302,7 +305,8 @@ export function LiveIdentifyFlow({
   /**
    * The capture loop has two distinct stages with very different
    * runtimes — the camera-bound capture+encode (~50–120ms) and the
-   * network-bound identify call (~120–250ms warm, much longer cold).
+    * network-bound identify call, which can take multiple seconds while
+    * Google Vision is in the loop.
    * Holding a single lock across both stages serialises the whole
    * pipeline and leaves the camera idle for half the cycle. Splitting
    * them lets the next shutter fire as soon as the current frame's
@@ -388,8 +392,8 @@ export function LiveIdentifyFlow({
   // request takes longer than the cadence, melting both phone and
   // backend.
   // Two-stage pipeline. The camera-bound capture+encode (~50-120ms)
-  // and the network-bound identify call (~120-250ms warm, much longer
-  // cold) get separate locks so a frame's shutter can fire while the
+  // and the network-bound identify call get separate locks so a frame's
+  // shutter can fire while the
   // previous frame is still uploading. This roughly doubles the
   // effective frame rate at the same backend load. We still cap
   // network concurrency at 1 so we never stack identify requests.
@@ -834,14 +838,14 @@ export function LiveIdentifyFlow({
             onClose={onClose}
             flashOn={flashOn}
             locked={state.locked}
-            hasMatch={state.candidates.some((c) => c.confidence >= 0.5)}
+            hasMatch={state.candidates.some((c) => c.confidence >= PREVIEW_CONFIDENCE)}
             onToggleFlash={() => setFlashOn((v) => !v)}
           />
 
           <ReticleArea
             scanning={scanning && !paused}
             locked={state.locked}
-            hasMatch={state.candidates.some((c) => c.confidence >= 0.5)}
+            hasMatch={state.candidates.some((c) => c.confidence >= PREVIEW_CONFIDENCE)}
             cardFound={cardFound}
             paused={paused}
             marketPriceUsd={marketPriceUsd}
@@ -1549,7 +1553,7 @@ function BottomPanel({
     [tcgHint],
   );
   const tcgLabel = tcgOption.label;
-  const tcgColor = tcgOption.color;
+  const tcgColor = themed.accent[tcgOption.accent];
   const shutterLocked = state.locked;
 
   // Pulsing "halo" ring around the shutter once we lock — a gentle
@@ -1582,6 +1586,7 @@ function BottomPanel({
         selected={tcgHint}
         onSelect={(t) => onPickTcg(t)}
         onClose={onCloseTcgPicker}
+        themed={themed}
       />
 
       {state.locked && state.candidates[0] ? (
@@ -1619,6 +1624,7 @@ function BottomPanel({
           onPickCandidate={onPickCandidate}
           onRescan={onRescan}
           onManualSearch={onManualSearch}
+          themed={themed}
         />
       )}
 
@@ -1798,6 +1804,7 @@ function ResultArea({
   onPickCandidate,
   onRescan,
   onManualSearch,
+  themed,
 }: {
   state: IdentifyState;
   error: string | null;
@@ -1806,6 +1813,7 @@ function ResultArea({
   onPickCandidate: (c: IdentifyCandidate) => void;
   onRescan: () => void;
   onManualSearch?: () => void;
+  themed: ReturnType<typeof useThemedPalette>;
 }) {
   if (error) {
     return (
@@ -1840,7 +1848,7 @@ function ResultArea({
     );
   }
 
-  const visible = state.candidates.filter((c) => c.confidence >= 0.5);
+  const visible = state.candidates.filter((c) => c.confidence >= PREVIEW_CONFIDENCE);
   const top = visible[0];
   const alts = visible.length - 1;
 
@@ -1857,7 +1865,13 @@ function ResultArea({
     // live "Scanning…" pulse so the surface always feels alive (the
     // capture loop is running continuously while mounted).
     if (state.emptyAttempts >= NO_MATCH_THRESHOLD) {
-      return <NoMatchCard onManualSearch={onManualSearch} onRescan={onRescan} />;
+      return (
+        <NoMatchCard
+          onManualSearch={onManualSearch}
+          onRescan={onRescan}
+          themed={themed}
+        />
+      );
     }
     return <HintPill label="Scanning…" pulse />;
   }
@@ -1919,6 +1933,8 @@ function PreviewMatchCard({
   onConfirm: () => void;
 }) {
   const confidencePct = Math.round(candidate.confidence * 100);
+  const confidenceLabel =
+    candidate.confidence >= 0.5 ? `${confidencePct}% MATCH` : `${confidencePct}% POSSIBLE`;
   const setMeta = [candidate.set_name, candidate.number ? `#${candidate.number}` : null]
     .filter(Boolean)
     .join(" · ");
@@ -1986,7 +2002,7 @@ function PreviewMatchCard({
               letterSpacing: 1.3,
             }}
           >
-            {confidencePct}% MATCH · TAP TO CONFIRM
+            {confidenceLabel} · TAP TO CONFIRM
           </Text>
         </View>
         <Text
@@ -2026,27 +2042,29 @@ function PreviewMatchCard({
 function NoMatchCard({
   onManualSearch,
   onRescan,
+  themed,
 }: {
   onManualSearch?: () => void;
   onRescan: () => void;
+  themed: ReturnType<typeof useThemedPalette>;
 }) {
   return (
     <View
       style={{
-        padding: 16,
-        borderRadius: 20,
-        backgroundColor: GLASS_STRONG,
+        padding: 14,
+        borderRadius: 18,
+        backgroundColor: withAlpha(themed.bg.sunken, 0.94),
         borderWidth: 1,
-        borderColor: withAlpha(palette.accent.amber, 0.3),
-        gap: 10,
+        borderColor: withAlpha(themed.accent.amber, 0.32),
+        gap: 9,
       }}
     >
-      <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15, letterSpacing: -0.2 }}>
-        Can't read this one
+      <Text style={{ color: themed.ink.default, fontWeight: "800", fontSize: 15 }}>
+        Still searching
       </Text>
-      <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, lineHeight: 17 }}>
-        Try moving closer, flattening the card against a dark surface, or turning
-        on the flash. If you already know what it is, search the catalog by name.
+      <Text style={{ color: themed.ink.muted, fontSize: 12, lineHeight: 17 }}>
+        Hold the card flat inside the corners, tap the shutter for a sharper frame,
+        or search by name.
       </Text>
       <View style={{ flexDirection: "row", gap: 8, marginTop: 2 }}>
         {onManualSearch ? (
@@ -2062,7 +2080,7 @@ function NoMatchCard({
               gap: 6,
               paddingVertical: 10,
               borderRadius: 12,
-              backgroundColor: palette.accent.mint,
+              backgroundColor: themed.accent.mint,
               opacity: pressed ? 0.8 : 1,
             })}
           >
@@ -2085,12 +2103,12 @@ function NoMatchCard({
             paddingVertical: 10,
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.15)",
+            borderColor: withAlpha(themed.ink.default, 0.16),
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <RotateCcw size={13} color="#fff" />
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Retry</Text>
+          <RotateCcw size={13} color={themed.ink.default} />
+          <Text style={{ color: themed.ink.default, fontWeight: "700", fontSize: 13 }}>Retry</Text>
         </Pressable>
       </View>
     </View>
@@ -2118,11 +2136,13 @@ function TcgPickerSheet({
   selected,
   onSelect,
   onClose,
+  themed,
 }: {
   visible: boolean;
   selected: IdentifyTcgHint;
   onSelect: (t: IdentifyTcgHint) => void;
   onClose: () => void;
+  themed: ReturnType<typeof useThemedPalette>;
 }) {
   return (
     <Modal
@@ -2142,13 +2162,13 @@ function TcgPickerSheet({
           <SafeAreaView
             edges={["bottom"]}
             style={{
-              backgroundColor: "#0F0F11",
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
+              backgroundColor: themed.bg.elevated,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
               paddingTop: 10,
               paddingBottom: Platform.OS === "ios" ? 8 : 16,
               borderTopWidth: 1,
-              borderColor: "rgba(255,255,255,0.06)",
+              borderColor: themed.line.default,
             }}
           >
             {/* Drag handle */}
@@ -2158,7 +2178,7 @@ function TcgPickerSheet({
                   width: 40,
                   height: 4,
                   borderRadius: 2,
-                  backgroundColor: "rgba(255,255,255,0.22)",
+                  backgroundColor: withAlpha(themed.ink.default, 0.22),
                 }}
               />
             </View>
@@ -2166,7 +2186,7 @@ function TcgPickerSheet({
             <View style={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10 }}>
               <Text
                 style={{
-                  color: "rgba(255,255,255,0.55)",
+                  color: themed.ink.dim,
                   fontSize: 10,
                   fontWeight: "700",
                   letterSpacing: 2.4,
@@ -2177,20 +2197,20 @@ function TcgPickerSheet({
               </Text>
               <Text
                 style={{
-                  color: "#fff",
+                  color: themed.ink.default,
                   fontSize: 20,
                   fontWeight: "800",
-                  letterSpacing: -0.4,
                   marginTop: 4,
                 }}
               >
-                Identify cards from…
+                Identify cards from
               </Text>
             </View>
 
             <View style={{ paddingHorizontal: 12, paddingBottom: 6 }}>
               {TCG_OPTIONS.map((o) => {
                 const active = o.key === selected;
+                const optionColor = themed.accent[o.accent];
                 return (
                   <Pressable
                     key={String(o.key)}
@@ -2206,14 +2226,14 @@ function TcgPickerSheet({
                       marginVertical: 2,
                       borderRadius: 14,
                       backgroundColor: active
-                        ? withAlpha(palette.accent.mint, 0.14)
+                        ? withAlpha(optionColor, 0.14)
                         : pressed
-                          ? "rgba(255,255,255,0.04)"
+                          ? withAlpha(themed.ink.default, 0.05)
                           : "transparent",
                       borderWidth: 1,
                       borderColor: active
-                        ? withAlpha(palette.accent.mint, 0.4)
-                        : "rgba(255,255,255,0.05)",
+                        ? withAlpha(optionColor, 0.4)
+                        : themed.line.default,
                     })}
                   >
                     <View
@@ -2224,23 +2244,22 @@ function TcgPickerSheet({
                         alignItems: "center",
                         justifyContent: "center",
                         backgroundColor: active
-                          ? palette.accent.mint
-                          : "rgba(255,255,255,0.08)",
+                          ? optionColor
+                          : withAlpha(themed.ink.default, 0.08),
                       }}
                     >
                       {active ? (
                         <Check size={16} color="#0B0B0D" strokeWidth={3} />
                       ) : (
-                        <Sparkles size={14} color="rgba(255,255,255,0.55)" />
+                        <Sparkles size={14} color={withAlpha(themed.ink.default, 0.55)} />
                       )}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text
                         style={{
-                          color: "#fff",
+                          color: themed.ink.default,
                           fontSize: 15,
                           fontWeight: active ? "700" : "600",
-                          letterSpacing: -0.2,
                         }}
                       >
                         {o.label}
@@ -2248,7 +2267,7 @@ function TcgPickerSheet({
                       {o.key === null ? (
                         <Text
                           style={{
-                            color: "rgba(255,255,255,0.5)",
+                            color: themed.ink.muted,
                             fontSize: 11,
                             marginTop: 2,
                           }}
