@@ -27,6 +27,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Image,
   type GestureResponderEvent,
   type DimensionValue,
   Linking,
@@ -41,7 +42,7 @@ import {
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
@@ -97,11 +98,13 @@ const CAPTURE_QUALITY = 0.42;
  */
 const CAPTURE_INTERVAL_MS = 1000;
 /** Confidence at which we fire the success haptic + freeze the carousel. */
-const LOCK_CONFIDENCE = 0.7;
+const LOCK_CONFIDENCE = 0.62;
 /** Lowest confidence worth showing as a possible live match. */
-const PREVIEW_CONFIDENCE = 0.52;
+const PREVIEW_CONFIDENCE = 0.35;
 /** Confidence where tapping a preview should be treated as a real confirm. */
-const CONFIRM_CONFIDENCE = 0.62;
+const CONFIRM_CONFIDENCE = 0.45;
+/** Lowest candidate worth swapping into a captured-photo session tile. */
+const SESSION_RESULT_CONFIDENCE = 0.2;
 /**
  * Consecutive frames returning zero preview-worthy candidates
  * before we surface the "can't find a match" fallback CTA. At the
@@ -290,6 +293,17 @@ interface IdentifyState {
   emptyAttempts: number;
 }
 
+interface ScanSessionItem {
+  id: string;
+  photoUri: string;
+  candidate: IdentifyCandidate | null;
+  identificationId: string | null;
+  confidence: number | null;
+  status: "scanning" | "matched" | "missed";
+}
+
+const MAX_SCAN_SESSION_ITEMS = 8;
+
 const EMPTY_STATE: IdentifyState = {
   candidates: [],
   identificationId: null,
@@ -458,6 +472,7 @@ export function LiveIdentifyFlow({
    */
   const captureBusyRef = useRef(false);
   const networkBusyRef = useRef(false);
+  const activeIdentifyCountRef = useRef(0);
   const cancelledRef = useRef(false);
 
   const [paused, setPaused] = useState(false);
@@ -483,6 +498,40 @@ export function LiveIdentifyFlow({
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<IdentifyState>(EMPTY_STATE);
+  const [scanSession, setScanSession] = useState<ScanSessionItem[]>([]);
+  const scanSessionSeqRef = useRef(0);
+  const addScanSessionItem = useCallback((photoUri: string) => {
+    const id = `${Date.now()}-${scanSessionSeqRef.current++}`;
+    setScanSession((prev) =>
+      [
+        ...prev,
+        {
+          id,
+          photoUri,
+          candidate: null,
+          identificationId: null,
+          confidence: null,
+          status: "scanning" as const,
+        },
+      ].slice(-MAX_SCAN_SESSION_ITEMS),
+    );
+    return id;
+  }, []);
+  const updateScanSessionItem = useCallback(
+    (
+      id: string | null,
+      patch: Partial<Omit<ScanSessionItem, "id" | "photoUri">>,
+    ) => {
+      if (!id) return;
+      setScanSession((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      );
+    },
+    [],
+  );
+  const removeScanSessionItem = useCallback((id: string) => {
+    setScanSession((prev) => prev.filter((item) => item.id !== id));
+  }, []);
   const showScannerError = useCallback((message: string) => {
     setError(scannerErrorCopy(message));
     setPaused(true);
@@ -544,9 +593,15 @@ export function LiveIdentifyFlow({
   // effective frame rate at the same backend load. We still cap
   // network concurrency at 1 so we never stack identify requests.
   const runIdentify = useCallback(
-    async (uri: string, providedHash: string | null = null) => {
-      if (networkBusyRef.current) return;
-      networkBusyRef.current = true;
+    async (
+      uri: string,
+      providedHash: string | null = null,
+      scanItemId: string | null = null,
+    ) => {
+      const manualCapture = scanItemId != null;
+      if (!manualCapture && networkBusyRef.current) return;
+      if (!manualCapture) networkBusyRef.current = true;
+      activeIdentifyCountRef.current += 1;
       setScanning(true);
       try {
         let res: IdentifyResponse = await identifyCard(uri, tcgHint);
@@ -570,11 +625,19 @@ export function LiveIdentifyFlow({
             );
           }
         }
+        const topCandidate = res.candidates[0] ?? null;
+        const top = topCandidate?.confidence ?? 0;
+        const hasPreviewMatch = res.candidates.some(
+          (c) => c.confidence >= PREVIEW_CONFIDENCE,
+        );
+        const hasSessionMatch = topCandidate != null && top >= SESSION_RESULT_CONFIDENCE;
+        updateScanSessionItem(scanItemId, {
+          candidate: hasSessionMatch ? topCandidate : null,
+          identificationId: hasSessionMatch ? res.identification_id : null,
+          confidence: top,
+          status: hasSessionMatch ? "matched" : "missed",
+        });
         setState((prev) => {
-          const top = res.candidates[0]?.confidence ?? 0;
-          const hasPreviewMatch = res.candidates.some(
-            (c) => c.confidence >= PREVIEW_CONFIDENCE,
-          );
           const justLocked = hasPreviewMatch && !prev.locked && top >= LOCK_CONFIDENCE;
           if (justLocked) {
             Haptics.notificationAsync(
@@ -598,7 +661,6 @@ export function LiveIdentifyFlow({
         // exact URI we just uploaded so subsequent frames of the same
         // card (which dHash to within a few bits) short-circuit on the
         // way in. Fire-and-forget; hash failure is non-fatal.
-        const topCandidate = res.candidates[0];
         const topConfidence = topCandidate?.confidence ?? 0;
         if (
           providedHash &&
@@ -622,17 +684,21 @@ export function LiveIdentifyFlow({
         }
       } catch (e) {
         if (cancelledRef.current) return;
+        updateScanSessionItem(scanItemId, { status: "missed" });
         const msg = e instanceof Error ? e.message : "Identification failed";
         showScannerError(msg);
       } finally {
-        networkBusyRef.current = false;
-        if (!cancelledRef.current) setScanning(false);
+        if (!manualCapture) networkBusyRef.current = false;
+        activeIdentifyCountRef.current = Math.max(0, activeIdentifyCountRef.current - 1);
+        if (!cancelledRef.current && activeIdentifyCountRef.current === 0) {
+          setScanning(false);
+        }
       }
     },
-    [tcgHint, showScannerError],
+    [tcgHint, showScannerError, updateScanSessionItem],
   );
 
-  const captureOnce = useCallback(async () => {
+  const captureOnce = useCallback(async (recordSessionItem = false) => {
     if (cancelledRef.current || captureBusyRef.current) return;
     const camera = cameraRef.current;
     if (!camera || !cameraReady) return;
@@ -663,6 +729,7 @@ export function LiveIdentifyFlow({
       // start firing in parallel with this frame's network identify.
       captureBusyRef.current = false;
       if (cancelledRef.current) return;
+      const scanItemId = recordSessionItem ? addScanSessionItem(processed.uri) : null;
 
       // ── Native card detector ──────────────────────────────────────
       // On dev/prod builds this runs Vision + a Laplacian-variance blur
@@ -696,7 +763,7 @@ export function LiveIdentifyFlow({
           // still upload the full frame so a card the detector can't
           // outline (busy background, odd angle) can still be read.
           updateDetectorHint("Hold steady / reduce glare");
-        } else if ((severelyBlurred || severeGlare) && !mustForce) {
+        } else if ((severelyBlurred || severeGlare) && !mustForce && !scanItemId) {
           skippedFramesRef.current += 1;
           updateDetectorHint(
             severeGlare ? "Reduce glare / tilt the card" : "Hold steady",
@@ -766,6 +833,12 @@ export function LiveIdentifyFlow({
               locked: true,
               emptyAttempts: 0,
             }));
+            updateScanSessionItem(scanItemId, {
+              candidate: cachedCandidate,
+              identificationId: null,
+              confidence: cachedCandidate.confidence,
+              status: "matched",
+            });
             // Bump LRU timestamp on the cache entry.
             rememberCardHash(frameHash, cachedCandidate, cachedCandidate.confidence).catch(
               () => {},
@@ -778,14 +851,14 @@ export function LiveIdentifyFlow({
       // Fire-and-forget; network concurrency is gated by networkBusyRef.
       // If a previous identify is still in flight we drop this frame
       // (the next is only ~CAPTURE_INTERVAL_MS away).
-      runIdentify(uploadUri, frameHash).catch(() => {});
+      runIdentify(uploadUri, frameHash, scanItemId).catch(() => {});
     } catch (e) {
       captureBusyRef.current = false;
       if (cancelledRef.current) return;
       const msg = e instanceof Error ? e.message : "Capture failed";
       showScannerError(msg);
     }
-  }, [cameraReady, runIdentify, showScannerError, updateDetectorHint]);
+  }, [addScanSessionItem, cameraReady, runIdentify, showScannerError, updateDetectorHint, updateScanSessionItem]);
 
   useEffect(() => {
     cancelledRef.current = false;
@@ -836,6 +909,23 @@ export function LiveIdentifyFlow({
     [state.identificationId, onConfirm],
   );
 
+  const handlePickScanSessionItem = useCallback(
+    (item: ScanSessionItem) => {
+      const candidate = item.candidate;
+      if (!candidate) return;
+      const id = item.identificationId;
+      Haptics.selectionAsync().catch(() => {});
+      if (id) {
+        submitIdentifyFeedback(id, {
+          correct: true,
+          chosen_card_id: candidate.card_id,
+        }).catch(() => {});
+      }
+      onConfirm?.(candidate, id ?? "");
+    },
+    [onConfirm],
+  );
+
   const handleRescan = useCallback(() => {
     setState(EMPTY_STATE);
     setError(null);
@@ -845,6 +935,14 @@ export function LiveIdentifyFlow({
     skippedFramesRef.current = 0;
     updateCardFound(false);
   }, [updateCardFound]);
+
+  const handleManualCapture = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setState(EMPTY_STATE);
+    setError(null);
+    setPaused(false);
+    void captureOnce(true);
+  }, [captureOnce]);
 
   const handleAddToVault = useCallback(
     (candidate: IdentifyCandidate) => {
@@ -998,6 +1096,7 @@ export function LiveIdentifyFlow({
         flashOn={flashOn}
         cardFound={cardFound}
         batch={batch}
+        scanSession={scanSession}
         batchEnabled={onAddBatch != null}
         marketPriceUsd={marketPriceUsd}
         marketChangePct1y={marketChangePct1y}
@@ -1030,9 +1129,11 @@ export function LiveIdentifyFlow({
         onAddToVault={handleAddToVault}
         onAddToBatch={handleAddToBatch}
         onRemoveFromBatch={handleRemoveFromBatch}
+        onPickScanSessionItem={handlePickScanSessionItem}
+        onRemoveScanSessionItem={removeScanSessionItem}
         onFinishBatch={handleFinishBatch}
         onRescan={handleRescan}
-        onManualCapture={captureOnce}
+        onManualCapture={handleManualCapture}
         onManualSearch={onManualSearch}
         onTapFocus={refocus}
       />
@@ -1053,6 +1154,7 @@ function ScannerOverlay({
   flashOn,
   cardFound,
   batch,
+  scanSession,
   batchEnabled,
   marketPriceUsd,
   marketChangePct1y,
@@ -1068,6 +1170,8 @@ function ScannerOverlay({
   onAddToVault,
   onAddToBatch,
   onRemoveFromBatch,
+  onPickScanSessionItem,
+  onRemoveScanSessionItem,
   onFinishBatch,
   onRescan,
   onManualCapture,
@@ -1084,6 +1188,7 @@ function ScannerOverlay({
   flashOn: boolean;
   cardFound: boolean;
   batch: IdentifyCandidate[];
+  scanSession: ScanSessionItem[];
   batchEnabled: boolean;
   marketPriceUsd: number | null;
   marketChangePct1y: number | null;
@@ -1099,6 +1204,8 @@ function ScannerOverlay({
   onAddToVault: (c: IdentifyCandidate) => void;
   onAddToBatch: (c: IdentifyCandidate) => void;
   onRemoveFromBatch: (key: string) => void;
+  onPickScanSessionItem: (item: ScanSessionItem) => void;
+  onRemoveScanSessionItem: (id: string) => void;
   onFinishBatch: () => void;
   onRescan: () => void;
   onManualCapture: () => void;
@@ -1108,6 +1215,7 @@ function ScannerOverlay({
   const hasMatch = state.candidates.some((c) => c.confidence >= PREVIEW_CONFIDENCE);
   return (
     <SafeAreaView
+      edges={["top", "left", "right"]}
       pointerEvents="box-none"
       style={{ ...StyleSheet.absoluteFillObject, justifyContent: "space-between" }}
     >
@@ -1143,9 +1251,12 @@ function ScannerOverlay({
         onPickCandidate={onPickCandidate}
         onAddToVault={onAddToVault}
         batch={batch}
+        scanSession={scanSession}
         batchEnabled={batchEnabled}
         onAddToBatch={onAddToBatch}
         onRemoveFromBatch={onRemoveFromBatch}
+        onPickScanSessionItem={onPickScanSessionItem}
+        onRemoveScanSessionItem={onRemoveScanSessionItem}
         onFinishBatch={onFinishBatch}
         onRescan={onRescan}
         onManualCapture={onManualCapture}
@@ -1765,9 +1876,12 @@ function BottomPanel({
   onPickCandidate,
   onAddToVault,
   batch,
+  scanSession,
   batchEnabled,
   onAddToBatch,
   onRemoveFromBatch,
+  onPickScanSessionItem,
+  onRemoveScanSessionItem,
   onFinishBatch,
   onRescan,
   onManualCapture,
@@ -1790,9 +1904,12 @@ function BottomPanel({
   onPickCandidate: (c: IdentifyCandidate) => void;
   onAddToVault: (c: IdentifyCandidate) => void;
   batch: IdentifyCandidate[];
+  scanSession: ScanSessionItem[];
   batchEnabled: boolean;
   onAddToBatch: (c: IdentifyCandidate) => void;
   onRemoveFromBatch: (key: string) => void;
+  onPickScanSessionItem: (item: ScanSessionItem) => void;
+  onRemoveScanSessionItem: (id: string) => void;
   onFinishBatch: () => void;
   onRescan: () => void;
   onManualCapture: () => void;
@@ -1812,7 +1929,9 @@ function BottomPanel({
   const tcgColor = themed.accent[tcgOption.accent];
   const shutterLocked = state.locked;
   const { height: screenHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const compactLockedSheet = screenHeight < 760 || batch.length > 0;
+  const hasScanSession = scanSession.length > 0;
 
   // Pulsing "halo" ring around the shutter once we lock — a gentle
   // expanding/fading mint pulse that signals "got it, tap to view".
@@ -1836,8 +1955,14 @@ function BottomPanel({
 
   return (
     <LinearGradient
-      colors={["transparent", "rgba(0,0,0,0.84)"]}
-      style={{ paddingHorizontal: 12, paddingBottom: 0, paddingTop: 8, gap: 7 }}
+      colors={["transparent", "rgba(0,0,0,0.72)", "rgba(0,0,0,0.96)"]}
+      locations={[0, 0.24, 1]}
+      style={{
+        paddingHorizontal: 12,
+        paddingBottom: Math.max(insets.bottom, 12),
+        paddingTop: 12,
+        gap: 8,
+      }}
     >
       <TcgPickerSheet
         visible={tcgPickerOpen}
@@ -1847,7 +1972,7 @@ function BottomPanel({
         themed={themed}
       />
 
-      {state.locked && state.candidates[0] ? (
+      {state.locked && state.candidates[0] && !hasScanSession ? (
         <LockedResultSheet
           candidate={state.candidates[0]}
           candidates={state.candidates}
@@ -1874,7 +1999,7 @@ function BottomPanel({
           }}
           onRescan={onRescan}
         />
-      ) : (
+      ) : !hasScanSession ? (
         <ResultArea
           state={state}
           error={error}
@@ -1885,7 +2010,7 @@ function BottomPanel({
           onManualSearch={onManualSearch}
           themed={themed}
         />
-      )}
+      ) : null}
 
       {batchEnabled && batch.length > 0 ? (
         <BatchTray
@@ -1894,6 +2019,15 @@ function BottomPanel({
           onPick={onPickCandidate}
           onRemove={onRemoveFromBatch}
           onFinish={onFinishBatch}
+        />
+      ) : null}
+
+      {hasScanSession ? (
+        <ScanSessionTray
+          items={scanSession}
+          themed={themed}
+          onPick={onPickScanSessionItem}
+          onRemove={onRemoveScanSessionItem}
         />
       ) : null}
 
@@ -2074,7 +2208,7 @@ function BottomPanel({
  *   • no-match       — `emptyAttempts >= NO_MATCH_THRESHOLD` → show a
  *                      manual-search escape hatch
  *   • reading        — scanning, no useful candidates yet
- *   • preview-match  — at least one >= 0.5 candidate, not yet locked.
+ *   • preview-match  — at least one preview-worthy candidate, not yet locked.
  *                      Shows the top candidate as a single Collectr-style
  *                      card with a "Tap to confirm" CTA and a chevron
  *                      to alt matches.
@@ -2357,18 +2491,18 @@ function NoMatchCard({
   return (
     <View
       style={{
-        padding: 14,
+        padding: 13,
         borderRadius: 18,
-        backgroundColor: withAlpha(themed.bg.sunken, 0.94),
+        backgroundColor: GLASS_STRONG,
         borderWidth: 1,
-        borderColor: withAlpha(themed.accent.amber, 0.32),
-        gap: 9,
+        borderColor: withAlpha(themed.accent.amber, 0.28),
+        gap: 8,
       }}
     >
-      <Text style={{ color: themed.ink.default, fontWeight: "800", fontSize: 15 }}>
+      <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
         Still searching
       </Text>
-      <Text style={{ color: themed.ink.muted, fontSize: 12, lineHeight: 17 }}>
+      <Text style={{ color: "rgba(255,255,255,0.68)", fontSize: 12, lineHeight: 17 }}>
         Hold the card flat inside the corners, tap the shutter for a sharper frame,
         or search by name.
       </Text>
@@ -2409,12 +2543,12 @@ function NoMatchCard({
             paddingVertical: 10,
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: withAlpha(themed.ink.default, 0.16),
+            borderColor: withAlpha("#fff", 0.16),
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <RotateCcw size={13} color={themed.ink.default} />
-          <Text style={{ color: themed.ink.default, fontWeight: "700", fontSize: 13 }}>Retry</Text>
+          <RotateCcw size={13} color="#fff" />
+          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Retry</Text>
         </Pressable>
       </View>
     </View>
@@ -2771,6 +2905,181 @@ function BatchTray({
         </ScrollView>
       </BlurView>
     </View>
+  );
+}
+
+function ScanSessionTray({
+  items,
+  themed,
+  onPick,
+  onRemove,
+}: {
+  items: ScanSessionItem[];
+  themed: ReturnType<typeof useThemedPalette>;
+  onPick: (item: ScanSessionItem) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <View
+      style={{
+        borderRadius: 20,
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor: withAlpha("#fff", 0.1),
+        backgroundColor: "rgba(5,8,10,0.74)",
+      }}
+    >
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 10,
+          paddingVertical: 10,
+          gap: 10,
+          alignItems: "stretch",
+        }}
+      >
+        {items.map((item, index) => (
+          <ScanSessionCard
+            key={item.id}
+            item={item}
+            index={index}
+            themed={themed}
+            onPick={onPick}
+            onRemove={onRemove}
+          />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function ScanSessionCard({
+  item,
+  index,
+  themed,
+  onPick,
+  onRemove,
+}: {
+  item: ScanSessionItem;
+  index: number;
+  themed: ReturnType<typeof useThemedPalette>;
+  onPick: (item: ScanSessionItem) => void;
+  onRemove: (id: string) => void;
+}) {
+  const matched = item.status === "matched" && item.candidate != null;
+  const confidencePct = item.confidence != null ? Math.round(item.confidence * 100) : null;
+  const title = matched
+    ? item.candidate?.name ?? "Matched card"
+    : item.status === "missed"
+      ? "No match yet"
+      : "Reading photo";
+  const subtitle = matched
+    ? `${confidencePct ?? 0}% match`
+    : item.status === "missed"
+      ? "Try another angle"
+      : "Photo captured";
+
+  return (
+    <Pressable
+      onPress={matched ? () => onPick(item) : undefined}
+      accessibilityRole="button"
+      accessibilityLabel={matched ? `Open scanned card ${title}` : `Captured scan ${index + 1}`}
+      style={({ pressed }) => ({
+        width: 190,
+        minHeight: 76,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        padding: 9,
+        borderRadius: 16,
+        backgroundColor: matched ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)",
+        borderWidth: 1,
+        borderColor: matched ? withAlpha(themed.accent.mint, 0.28) : withAlpha("#fff", 0.08),
+        opacity: pressed && matched ? 0.76 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 42,
+          aspectRatio: 2.5 / 3.5,
+          borderRadius: 8,
+          overflow: "hidden",
+          backgroundColor: "rgba(255,255,255,0.08)",
+          borderWidth: 1,
+          borderColor: withAlpha("#fff", 0.08),
+        }}
+      >
+        {matched && item.candidate ? (
+          <CandidateCardImage
+            candidate={item.candidate}
+            variant="thumb"
+            rounded={8}
+            priority="normal"
+          />
+        ) : (
+          <Image
+            source={{ uri: item.photoUri }}
+            resizeMode="cover"
+            style={{ width: "100%", height: "100%" }}
+          />
+        )}
+      </View>
+
+      <View style={{ flex: 1, gap: 3 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: matched
+                ? themed.accent.mint
+                : item.status === "missed"
+                  ? themed.accent.amber
+                  : themed.accent.blue,
+            }}
+          />
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.54)",
+              fontSize: 9,
+              fontWeight: "900",
+              letterSpacing: 0.8,
+              textTransform: "uppercase",
+            }}
+          >
+            {matched ? "Scanned" : item.status === "missed" ? "Needs retry" : "Processing"}
+          </Text>
+        </View>
+        <Text numberOfLines={2} style={{ color: "#fff", fontSize: 12.5, fontWeight: "800" }}>
+          {title}
+        </Text>
+        <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.52)", fontSize: 10.5, fontWeight: "600" }}>
+          {subtitle}
+        </Text>
+      </View>
+
+      <Pressable
+        onPress={() => onRemove(item.id)}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={`Remove captured scan ${index + 1}`}
+        style={{
+          position: "absolute",
+          top: 5,
+          right: 5,
+          width: 20,
+          height: 20,
+          borderRadius: 10,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "rgba(0,0,0,0.48)",
+        }}
+      >
+        <X size={12} color="rgba(255,255,255,0.88)" />
+      </Pressable>
+    </Pressable>
   );
 }
 

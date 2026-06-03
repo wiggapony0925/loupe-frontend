@@ -33,6 +33,7 @@ import { FilterBar } from "@/presentation/features/collection/FilterBar";
 import { PositionRow } from "@/presentation/features/collection/PositionRow";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { useFilteredCollection } from "@/presentation/features/collection/useFilteredCollection";
+import { useMySealedHoldings } from "@/application/queries/collection/useSealed";
 import { useVaultFilters, useVaultSelection } from "@/application/stores";
 import {
   deleteGradedCard,
@@ -62,6 +63,7 @@ export default function VaultScreen() {
     availableSets,
     summary,
   } = useFilteredCollection();
+  const sealedHoldings = useMySealedHoldings({ includeOpened: false });
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   // Multi-select state lives in its own store so filter / search
@@ -85,8 +87,11 @@ export default function VaultScreen() {
     onSettled: () => {
       // Refresh both the list and any cached summary / sparkline data
       // so the hero, pills, and tiles all reflect the smaller vault.
+      qc.invalidateQueries({ queryKey: queryKeys.me.grades() });
       qc.invalidateQueries({ queryKey: queryKeys.collection.all });
       qc.invalidateQueries({ queryKey: queryKeys.cards.sparklines() });
+      qc.invalidateQueries({ queryKey: queryKeys.portfolio.all });
+      qc.invalidateQueries({ queryKey: queryKeys.sets.progress() });
     },
   });
 
@@ -158,9 +163,37 @@ export default function VaultScreen() {
     return { value, avgGrade, count: cards.length, unique: uniqueCount, loupeGraded };
   }, [cards, uniqueCount, loupeGradedCount]);
 
+  const sealedStats = useMemo(() => {
+    const rows = sealedHoldings.data ?? [];
+    let unitCount = 0;
+    let totalCostUsd = 0;
+    let totalEstimatedValueUsd = 0;
+    let estimatedCount = 0;
+    for (const row of rows) {
+      unitCount += row.quantity;
+      const costEach = row.purchase_price_usd != null ? Number(row.purchase_price_usd) : null;
+      if (costEach != null && Number.isFinite(costEach)) {
+        totalCostUsd += costEach * row.quantity;
+      }
+      const valueEach = row.estimated_value_usd != null ? Number(row.estimated_value_usd) : null;
+      if (valueEach != null && Number.isFinite(valueEach)) {
+        totalEstimatedValueUsd += valueEach * row.quantity;
+        estimatedCount += 1;
+      }
+    }
+    return {
+      holdingCount: rows.length,
+      unitCount,
+      totalCostUsd,
+      totalEstimatedValueUsd: estimatedCount > 0 ? totalEstimatedValueUsd : null,
+    };
+  }, [sealedHoldings.data]);
+
   const onRefresh = useCallback(() => {
     qc.invalidateQueries({ queryKey: queryKeys.collection.all });
     qc.invalidateQueries({ queryKey: queryKeys.cards.sparklines() });
+    qc.invalidateQueries({ queryKey: queryKeys.portfolio.all });
+    qc.invalidateQueries({ queryKey: queryKeys.sets.progress() });
   }, [qc]);
 
   const headerPadX = viewMode === "grid" ? 0 : 14;
@@ -222,6 +255,7 @@ export default function VaultScreen() {
               <VaultPageHeader
                 onAdd={() => router.push(routes.gradeNew())}
                 onScan={() => router.push(routes.scanPhone())}
+                onSealed={() => router.push(routes.sealed())}
               />
             )}
             {isLoading ? (
@@ -240,6 +274,12 @@ export default function VaultScreen() {
                   pnlPct={summary?.unrealizedPnlPct ?? null}
                 />
                 <PortfolioPills stats={stats} />
+                <SealedVaultCard
+                  stats={sealedStats}
+                  loading={sealedHoldings.isLoading}
+                  onOpen={() => router.push(routes.sealed())}
+                  onAdd={() => router.push(routes.sealedAdd())}
+                />
                 <SetProgressCarousel />
                 <VaultSearchBar />
                 <FilterBar availableSets={availableSets} />
@@ -683,12 +723,13 @@ function VaultSelectionBar({
 function VaultPageHeader({
   onAdd,
   onScan,
+  onSealed,
 }: {
   onAdd: () => void;
   onScan: () => void;
+  onSealed: () => void;
 }) {
   const p = useThemedPalette();
-  const router = useRouter();
   return (
     <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
       <View style={{ flex: 1 }}>
@@ -738,32 +779,156 @@ function VaultPageHeader({
       >
         <Camera size={17} color="#fff" strokeWidth={2.5} />
       </Pressable>
-      {/* Sealed-vault peer destination — same collection, different shape
-          (booster boxes / ETBs / tins). Lives here rather than as its
-          own tab to keep the bottom-nav from getting cluttered. */}
       <Pressable
-        onPress={() => router.push("/sealed")}
+        onPress={onSealed}
         accessibilityRole="button"
         accessibilityLabel="Open sealed vault"
+        hitSlop={6}
         style={({ pressed }) => ({
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 6,
-          paddingHorizontal: 12,
+          width: 36,
           height: 36,
+          alignItems: "center",
+          justifyContent: "center",
           borderRadius: 999,
           borderWidth: 1,
-          borderColor: p.line.default,
-          backgroundColor: p.bg.elevated,
+          borderColor: withAlpha(p.ink.muted, 0.2),
+          backgroundColor: withAlpha(p.ink.muted, 0.1),
           opacity: pressed ? 0.75 : 1,
         })}
       >
-        <Package size={14} color={p.ink.default} />
-        <Text
-          style={{ color: p.ink.default, fontSize: 12, fontWeight: "700" }}
+        <Package size={17} color={p.ink.default} strokeWidth={2.35} />
+      </Pressable>
+    </View>
+  );
+}
+
+function SealedVaultCard({
+  stats,
+  loading,
+  onOpen,
+  onAdd,
+}: {
+  stats: {
+    holdingCount: number;
+    unitCount: number;
+    totalCostUsd: number;
+    totalEstimatedValueUsd: number | null;
+  };
+  loading: boolean;
+  onOpen: () => void;
+  onAdd: () => void;
+}) {
+  const p = useThemedPalette();
+  const { format } = useMoney();
+  if (loading) {
+    return <Skeleton width="100%" height={78} radius={18} />;
+  }
+
+  const hasHoldings = stats.holdingCount > 0;
+  const headline = hasHoldings
+    ? `${stats.holdingCount} sealed holding${stats.holdingCount === 1 ? "" : "s"}`
+    : "Track sealed product";
+  const detail = hasHoldings
+    ? `${stats.unitCount} total unit${stats.unitCount === 1 ? "" : "s"}`
+    : "Booster boxes, ETBs, tins";
+  const valueLabel =
+    stats.totalEstimatedValueUsd != null
+      ? "Est. value"
+      : stats.totalCostUsd > 0
+        ? "Cost basis"
+        : "Sealed vault";
+  const value =
+    stats.totalEstimatedValueUsd != null
+      ? stats.totalEstimatedValueUsd
+      : stats.totalCostUsd > 0
+        ? stats.totalCostUsd
+        : null;
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        padding: 12,
+        borderRadius: 18,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: withAlpha(p.accent.mint, 0.2),
+        backgroundColor: p.bg.elevated,
+      }}
+    >
+      <Pressable
+        onPress={onOpen}
+        accessibilityRole="button"
+        accessibilityLabel="Open sealed vault"
+        style={({ pressed }) => ({
+          flex: 1,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          opacity: pressed ? 0.76 : 1,
+        })}
+      >
+        <View
+          style={{
+            width: 46,
+            height: 46,
+            borderRadius: 16,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: withAlpha(p.accent.mint, 0.14),
+          }}
         >
-          Sealed
-        </Text>
+          <Package size={22} color={p.accent.mint} strokeWidth={2.35} />
+        </View>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={{ color: p.ink.default, fontSize: 15, fontWeight: "800" }}>
+            {headline}
+          </Text>
+          <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "600" }}>
+            {detail}
+          </Text>
+        </View>
+        <View style={{ alignItems: "flex-end", gap: 3 }}>
+          <Text
+            style={{
+              color: p.ink.dim,
+              fontSize: 9,
+              fontWeight: "800",
+              letterSpacing: 1.3,
+              textTransform: "uppercase",
+            }}
+          >
+            {valueLabel}
+          </Text>
+          <Text
+            style={{
+              color: value != null ? p.ink.default : p.accent.mint,
+              fontSize: 14,
+              fontWeight: "800",
+              fontVariant: ["tabular-nums"],
+            }}
+          >
+            {value != null ? format(value, { compact: false }) : "Open"}
+          </Text>
+        </View>
+      </Pressable>
+      <Pressable
+        onPress={onAdd}
+        accessibilityRole="button"
+        accessibilityLabel="Add sealed product"
+        hitSlop={6}
+        style={({ pressed }) => ({
+          width: 38,
+          height: 38,
+          borderRadius: 19,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: withAlpha(p.accent.mint, 0.16),
+          opacity: pressed ? 0.72 : 1,
+        })}
+      >
+        <Plus size={18} color={p.accent.mint} strokeWidth={2.6} />
       </Pressable>
     </View>
   );

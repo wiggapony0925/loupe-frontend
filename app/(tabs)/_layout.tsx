@@ -1,7 +1,8 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Modal,
   Pressable,
+  StyleSheet,
   Text,
   type AccessibilityRole,
   type GestureResponderEvent,
@@ -13,6 +14,19 @@ import {
 import * as Haptics from "expo-haptics";
 import { router, Tabs } from "expo-router";
 import { Gauge, Layers, BarChart3, Camera, Search, Zap } from "lucide-react-native";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useSettings } from "@/application/stores/settingsStore";
 import { routes } from "@/shared/routes";
@@ -204,67 +218,173 @@ function ScanTabButton({
       <Modal
         visible={menuOpen}
         transparent
-        animationType="fade"
+        animationType="none"
         statusBarTranslucent
         onRequestClose={() => setMenuOpen(false)}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close scan actions"
-          onPress={() => setMenuOpen(false)}
-          style={{
-            flex: 1,
-            justifyContent: "flex-end",
-            alignItems: "center",
-            paddingBottom: 96,
-            backgroundColor: "rgba(0,0,0,0.16)",
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 12,
-              padding: 8,
-              borderRadius: 24,
-              backgroundColor: p.bg.elevated,
-              borderWidth: 1,
-              borderColor: p.line.default,
-              shadowColor: "#000",
-              shadowOpacity: 0.22,
-              shadowRadius: 18,
-              shadowOffset: { width: 0, height: 10 },
-              elevation: 16,
-            }}
-          >
-            <ScanShortcutTarget
-              label="Grade"
-              icon="grade"
-              tint={p.accent.mint}
-              palette={p}
-              onPress={() => navigateToShortcut("grade")}
-            />
-            <ScanShortcutTarget
-              label="Identify"
-              icon="identify"
-              tint={p.accent.blue}
-              palette={p}
-              onPress={() => navigateToShortcut("identify")}
-            />
-          </View>
-        </Pressable>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <ScanActionSheet
+            palette={p}
+            onClose={() => setMenuOpen(false)}
+            onSelect={navigateToShortcut}
+          />
+        </GestureHandlerRootView>
       </Modal>
     </>
   );
 }
 
+/**
+ * Draggable bottom sheet for the long-press Scan menu. Slides up from the
+ * tab bar, can be dragged down (or tapped on the scrim) to dismiss, and
+ * exposes the two quick-scan actions. Uses gesture-handler + reanimated so
+ * the drag runs on the UI thread (the old PanResponder version crashed).
+ */
+function ScanActionSheet({
+  palette: p,
+  onClose,
+  onSelect,
+}: {
+  palette: ReturnType<typeof useThemedPalette>;
+  onClose: () => void;
+  onSelect: (target: ScanShortcut) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const translateY = useSharedValue(80);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    translateY.value = withSpring(0, { damping: 20, stiffness: 240, mass: 0.7 });
+    opacity.value = withTiming(1, { duration: 180 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const animateClose = useCallback(() => {
+    opacity.value = withTiming(0, { duration: 140 });
+    translateY.value = withTiming(220, { duration: 180 }, (finished) => {
+      if (finished) {
+        runOnJS(onClose)();
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onClose]);
+
+  const pan = Gesture.Pan()
+    .onUpdate((event) => {
+      translateY.value = Math.max(0, event.translationY);
+    })
+    .onEnd((event) => {
+      if (event.translationY > 80 || event.velocityY > 700) {
+        runOnJS(animateClose)();
+      } else {
+        translateY.value = withSpring(0, {
+          damping: 20,
+          stiffness: 240,
+          mass: 0.7,
+        });
+      }
+    });
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+  const scrimStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+
+  const handleSelect = useCallback(
+    (target: ScanShortcut) => {
+      Haptics.selectionAsync().catch(() => {});
+      onSelect(target);
+    },
+    [onSelect],
+  );
+
+  return (
+    <View style={{ flex: 1, justifyContent: "flex-end" }}>
+      <Animated.View style={[StyleSheet.absoluteFill, scrimStyle]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close scan actions"
+          onPress={animateClose}
+          style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.5)" }]}
+        />
+      </Animated.View>
+      <GestureDetector gesture={pan}>
+        <Animated.View
+          style={[
+            {
+              marginHorizontal: 14,
+              marginBottom: insets.bottom + 96,
+              padding: 16,
+              borderRadius: 28,
+              backgroundColor: p.bg.elevated,
+              borderWidth: 1,
+              borderColor: p.line.default,
+              shadowColor: "#000",
+              shadowOpacity: 0.3,
+              shadowRadius: 28,
+              shadowOffset: { width: 0, height: 16 },
+              elevation: 24,
+            },
+            sheetStyle,
+          ]}
+        >
+          <View
+            style={{
+              alignSelf: "center",
+              width: 40,
+              height: 5,
+              borderRadius: 3,
+              backgroundColor: withAlpha(p.ink.dim, 0.4),
+              marginBottom: 14,
+            }}
+          />
+          <Text
+            style={{
+              color: p.ink.dim,
+              fontSize: 11,
+              fontWeight: "700",
+              letterSpacing: 1,
+              textTransform: "uppercase",
+              marginBottom: 12,
+              marginLeft: 4,
+            }}
+          >
+            Quick scan
+          </Text>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <ScanShortcutTarget
+              label="Grade"
+              caption="Studio capture"
+              icon="grade"
+              tint={p.accent.mint}
+              palette={p}
+              onPress={() => handleSelect("grade")}
+            />
+            <ScanShortcutTarget
+              label="Identify"
+              caption="Quick lookup"
+              icon="identify"
+              tint={p.accent.blue}
+              palette={p}
+              onPress={() => handleSelect("identify")}
+            />
+          </View>
+        </Animated.View>
+      </GestureDetector>
+    </View>
+  );
+}
+
 function ScanShortcutTarget({
   label,
+  caption,
   icon,
   tint,
   palette: p,
   onPress,
 }: {
   label: string;
+  caption: string;
   icon: ScanShortcut;
   tint: string;
   palette: ReturnType<typeof useThemedPalette>;
@@ -277,34 +397,48 @@ function ScanShortcutTarget({
       accessibilityRole="button"
       accessibilityLabel={label === "Grade" ? "Open grade scanner" : "Open quick identify scanner"}
       style={({ pressed }) => ({
-        width: 112,
-        minHeight: 62,
-        borderRadius: 18,
-        paddingHorizontal: 12,
-        paddingVertical: 9,
+        flex: 1,
+        minHeight: 96,
+        borderRadius: 20,
+        paddingHorizontal: 14,
+        paddingVertical: 16,
         alignItems: "center",
         justifyContent: "center",
-        gap: 5,
-        backgroundColor: withAlpha(tint, pressed ? 0.22 : 0.12),
+        gap: 8,
+        backgroundColor: withAlpha(tint, pressed ? 0.2 : 0.1),
         borderWidth: 1,
-        borderColor: withAlpha(tint, pressed ? 0.62 : 0.34),
-        shadowColor: tint,
-        shadowOpacity: pressed ? 0.26 : 0.14,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 8 },
-        elevation: 8,
+        borderColor: withAlpha(tint, pressed ? 0.6 : 0.3),
       })}
     >
-      <Icon size={18} color={tint} />
+      <View
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: withAlpha(tint, 0.16),
+        }}
+      >
+        <Icon size={22} color={tint} />
+      </View>
       <Text
         style={{
           color: p.ink.default,
-          fontSize: 11,
+          fontSize: 14,
           fontWeight: "800",
-          letterSpacing: 0,
         }}
       >
         {label}
+      </Text>
+      <Text
+        style={{
+          color: p.ink.dim,
+          fontSize: 11,
+          fontWeight: "500",
+        }}
+      >
+        {caption}
       </Text>
     </Pressable>
   );

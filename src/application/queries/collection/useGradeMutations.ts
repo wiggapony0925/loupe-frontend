@@ -58,9 +58,9 @@ function toCreateBody(input: CreateGradeInput): Record<string, unknown> {
 function invalidateGradeCaches(qc: ReturnType<typeof useQueryClient>) {
   void qc.invalidateQueries({ queryKey: queryKeys.me.grades() });
   void qc.invalidateQueries({ queryKey: queryKeys.collection.all });
-  void qc.invalidateQueries({ queryKey: ["card-sparklines"] });
-  void qc.invalidateQueries({ queryKey: ["portfolio-summary"] });
-  void qc.invalidateQueries({ queryKey: ["portfolio-history"] });
+  void qc.invalidateQueries({ queryKey: queryKeys.cards.sparklines() });
+  void qc.invalidateQueries({ queryKey: queryKeys.portfolio.all });
+  void qc.invalidateQueries({ queryKey: queryKeys.sets.progress() });
 }
 
 export function useCreateGrade() {
