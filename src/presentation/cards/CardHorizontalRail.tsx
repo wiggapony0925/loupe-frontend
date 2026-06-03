@@ -21,6 +21,8 @@ import { TILE_WIDTH, type CardWire, type CardTileSize } from "./types";
 export interface CardHorizontalRailProps {
   cards: CardWire[];
   tileSize?: CardTileSize;
+  showName?: boolean;
+  showSet?: boolean;
   showPrice?: boolean;
   showTrend?: boolean;
   title?: string;
@@ -44,6 +46,8 @@ export interface CardHorizontalRailProps {
 export function CardHorizontalRail({
   cards,
   tileSize = "md",
+  showName = true,
+  showSet,
   showPrice = false,
   showTrend: _showTrend = false,
   title,
@@ -79,6 +83,8 @@ export function CardHorizontalRail({
             card={item}
             size={tileSize}
             width={tileWidth}
+            showName={showName}
+            showSet={showSet}
             showPrice={showPrice}
             priority={index < 3 ? "normal" : "low"}
             onPress={onCardPress ? () => onCardPress(item) : undefined}

@@ -117,11 +117,15 @@ export default function CardDetailScreen() {
     [navigation],
   );
   const myGradesQ = useMyGrades<GradedCard[]>();
-  const isWatching = useIsWatching(cardId);
+  const isWatching = useIsWatching(cardId, isAuthenticated);
   const addWatch = useAddToWatchlist();
   const removeWatch = useRemoveFromWatchlist();
   const toggleWatch = () => {
     if (!cardId) return;
+    if (!isAuthenticated) {
+      router.push("/(auth)/sign-in");
+      return;
+    }
     if (isWatching) {
       removeWatch.mutate(cardId);
     } else {
@@ -227,7 +231,7 @@ export default function CardDetailScreen() {
         </Text>
         <View className="flex-row gap-2">
           <IconBtn
-            label={isWatching ? "Remove from watchlist" : "Save to watchlist"}
+            label={isWatching ? "Remove favorite" : "Save favorite"}
             onPress={toggleWatch}
           >
             <Heart
@@ -236,7 +240,16 @@ export default function CardDetailScreen() {
               fill={isWatching ? p.accent.rose : "transparent"}
             />
           </IconBtn>
-          <IconBtn label="Set price alert" onPress={() => setAlertOpen(true)}>
+          <IconBtn
+            label={isAuthenticated ? "Set price alert" : "Sign in to set price alert"}
+            onPress={() => {
+              if (!isAuthenticated) {
+                router.push("/(auth)/sign-in");
+                return;
+              }
+              setAlertOpen(true);
+            }}
+          >
             <Bell size={16} color={p.ink.muted} />
           </IconBtn>
         </View>
@@ -598,7 +611,7 @@ export default function CardDetailScreen() {
               </View>
 
               {/* Live listings + recent comps (real data, gracefully empty) */}
-              <LiveListingsSection cardId={cardId} />
+              <LiveListingsSection cardId={cardId} card={card} />
               <RecentCompsSection cardId={cardId} />
               <RecentSoldPanel cardId={cardId} cardName={card?.name ?? null} />
 

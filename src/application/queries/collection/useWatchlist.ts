@@ -21,18 +21,20 @@ import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type { WatchlistItemWire } from "@/infrastructure/http";
 import { queryKeys } from "../queryKeys";
 
-export function useWatchlist() {
+export function useWatchlist(opts: { enabled?: boolean } = {}) {
+  const enabled = opts.enabled ?? true;
   return useQuery<WatchlistItemWire[]>({
     queryKey: queryKeys.watchlist.list(),
     queryFn: () =>
       apiFetch<WatchlistItemWire[]>(ENDPOINTS.watchlist.list),
+    enabled,
     staleTime: 30_000,
   });
 }
 
 /** Derived selector — true when `cardId` is on the signed-in user's watchlist. */
-export function useIsWatching(cardId: string | undefined): boolean {
-  const { data } = useWatchlist();
+export function useIsWatching(cardId: string | undefined, enabled = true): boolean {
+  const { data } = useWatchlist({ enabled });
   if (!cardId || !data) return false;
   return data.some((row) => row.card_id === cardId);
 }

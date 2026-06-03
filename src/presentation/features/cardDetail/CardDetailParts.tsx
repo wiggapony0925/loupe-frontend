@@ -602,33 +602,89 @@ export function SectionHeader({
   );
 }
 
-export function LiveListingsSection({ cardId }: { cardId: string }) {
+type MarketplaceFallback = {
+  label: string;
+  title: string;
+  subtitle: string;
+  url: string;
+  tone: "mint" | "amber" | "blue" | "purple";
+};
+
+function buildListingQuery(card: CardSearchResult | null | undefined): string {
+  if (!card) return "trading card";
+  return [
+    card.name,
+    card.set_name,
+    card.number ? `#${card.number}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim() || "trading card";
+}
+
+function marketplaceFallbacks(query: string): MarketplaceFallback[] {
+  const q = encodeURIComponent(query);
+  return [
+    {
+      label: "Active",
+      title: "eBay live search",
+      subtitle: "Buy-it-now listings for this card",
+      url: `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_BIN=1`,
+      tone: "mint",
+    },
+    {
+      label: "Bids",
+      title: "eBay auctions",
+      subtitle: "Auction results ending soon",
+      url: `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Auction=1&_sop=1`,
+      tone: "amber",
+    },
+    {
+      label: "Market",
+      title: "TCGplayer search",
+      subtitle: "Seller inventory and market asks",
+      url: `https://www.tcgplayer.com/search/all/product?q=${q}&view=grid`,
+      tone: "blue",
+    },
+    {
+      label: "Comps",
+      title: "PriceCharting search",
+      subtitle: "Price guide and marketplace context",
+      url: `https://www.pricecharting.com/search-products?q=${q}&type=prices`,
+      tone: "purple",
+    },
+  ];
+}
+
+export function LiveListingsSection({
+  cardId,
+  card,
+}: {
+  cardId: string;
+  card?: CardSearchResult | null;
+}) {
   const p = useThemedPalette();
   const q = useCardListings(cardId, { limit: 12 });
   const listings = q.data?.listings ?? [];
+  const fallbackQuery = q.data?.query?.trim() || buildListingQuery(card);
+  const fallbacks = marketplaceFallbacks(fallbackQuery);
 
   return (
     <View style={{ gap: 4 }}>
-      <SectionHeader label="Live Listings" badge={`${listings.length}`} />
+      <SectionHeader
+        label="Live Listings"
+        badge={listings.length > 0 ? `${listings.length}` : "Search"}
+      />
       {q.isLoading ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <SkeletonListingsRail rows={4} />
         </ScrollView>
       ) : listings.length === 0 ? (
-        <View
-          style={{
-            padding: 16,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: p.line.default,
-            backgroundColor: p.bg.elevated,
-            alignItems: "center",
-          }}
-        >
-          <Text className="text-[12px] text-ink-muted">
-            No live listings right now
-          </Text>
-        </View>
+        <MarketplaceFallbackRail
+          query={fallbackQuery}
+          links={fallbacks}
+          providerError={q.isError}
+        />
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={{ flexDirection: "row", gap: 10, paddingRight: 12 }}>
@@ -639,6 +695,90 @@ export function LiveListingsSection({ cardId }: { cardId: string }) {
         </ScrollView>
       )}
     </View>
+  );
+}
+
+function MarketplaceFallbackRail({
+  query,
+  links,
+  providerError,
+}: {
+  query: string;
+  links: MarketplaceFallback[];
+  providerError: boolean;
+}) {
+  const p = useThemedPalette();
+  return (
+    <View style={{ gap: 10 }}>
+      <Text style={{ color: p.ink.muted, fontSize: 12, lineHeight: 17 }}>
+        {providerError
+          ? "Listing providers are unavailable. Open live marketplace searches instead."
+          : "No API listings came back. Open live marketplace searches for current asks, auctions, and bids."}
+      </Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={{ flexDirection: "row", gap: 10, paddingRight: 12 }}>
+          {links.map((link) => (
+            <MarketplaceFallbackCard key={link.title} link={link} query={query} />
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function MarketplaceFallbackCard({
+  link,
+  query,
+}: {
+  link: MarketplaceFallback;
+  query: string;
+}) {
+  const p = useThemedPalette();
+  const accent = p.accent[link.tone];
+  return (
+    <Pressable
+      onPress={() => Linking.openURL(link.url).catch(() => undefined)}
+      accessibilityRole="link"
+      accessibilityLabel={`Open ${link.title}`}
+      style={({ pressed }) => ({
+        width: 178,
+        padding: 12,
+        borderRadius: 14,
+        backgroundColor: p.bg.elevated,
+        borderWidth: 1,
+        borderColor: withAlpha(accent, 0.28),
+        gap: 10,
+        opacity: pressed ? 0.78 : 1,
+      })}
+    >
+      <View
+        style={{
+          alignSelf: "flex-start",
+          paddingHorizontal: 8,
+          paddingVertical: 3,
+          borderRadius: 999,
+          backgroundColor: withAlpha(accent, 0.14),
+        }}
+      >
+        <Text style={{ color: accent, fontSize: 10, fontWeight: "800" }}>
+          {link.label}
+        </Text>
+      </View>
+      <View style={{ gap: 4 }}>
+        <Text numberOfLines={1} style={{ color: p.ink.default, fontSize: 13, fontWeight: "800" }}>
+          {link.title}
+        </Text>
+        <Text style={{ color: p.ink.muted, fontSize: 11, lineHeight: 15 }}>
+          {link.subtitle}
+        </Text>
+      </View>
+      <Text numberOfLines={2} style={{ color: p.ink.dim, fontSize: 10, lineHeight: 14 }}>
+        {query}
+      </Text>
+      <Text style={{ color: accent, fontSize: 11, fontWeight: "800" }}>
+        Open live results
+      </Text>
+    </Pressable>
   );
 }
 

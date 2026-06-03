@@ -28,7 +28,7 @@ import {
   Animated,
   Easing,
   type GestureResponderEvent,
-  Image,
+  type DimensionValue,
   Linking,
   Modal,
   Platform,
@@ -58,6 +58,7 @@ import {
   Zap,
   ZapOff,
 } from "lucide-react-native";
+import { CardImage } from "@/presentation/components/CardImage";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
@@ -83,6 +84,7 @@ import {
   lookupCardByHash,
   rememberCardHash,
 } from "@/infrastructure/cache/cardHashCache";
+import { pickCardImageUrl, type ImageVariant } from "@/shared/cardImage";
 
 const CAPTURE_LONG_EDGE = 900;
 const CAPTURE_QUALITY = 0.42;
@@ -147,9 +149,9 @@ const CROP_JPEG_QUALITY = 0.7;
  * surface used to mix. GLASS = floating pills/controls, GLASS_STRONG =
  * result cards that need to stay legible over busy backgrounds.
  */
-const GLASS = "rgba(20,20,23,0.66)";
-const GLASS_STRONG = "rgba(14,14,16,0.94)";
-const HAIRLINE = "rgba(255,255,255,0.10)";
+const GLASS = "rgba(7,10,12,0.52)";
+const GLASS_STRONG = "rgba(5,8,10,0.88)";
+const HAIRLINE = "rgba(255,255,255,0.08)";
 
 /**
  * Frosted-glass circular button — a BlurView fill behind the icon so the
@@ -287,6 +289,124 @@ function candidateKey(c: IdentifyCandidate): string {
     c.card_id ??
     c.upstream_id ??
     `${c.name.toLowerCase()}|${c.number ?? ""}`
+  );
+}
+
+function upstreamProvider(candidate: IdentifyCandidate): string {
+  const upstream = candidate.upstream_id ?? "";
+  const colon = upstream.indexOf(":");
+  if (colon > 0) return upstream.slice(0, colon).toLowerCase();
+  return (candidate.tcg ?? "").toLowerCase();
+}
+
+function upstreamCardId(candidate: IdentifyCandidate): string | null {
+  const upstream = candidate.upstream_id?.trim();
+  if (!upstream) return null;
+  const colon = upstream.indexOf(":");
+  return colon >= 0 ? upstream.slice(colon + 1) : upstream;
+}
+
+function pokemonImageUrl(id: string, hires = false): string | undefined {
+  const dash = id.indexOf("-");
+  if (dash <= 0 || dash >= id.length - 1) return undefined;
+  const setCode = id.slice(0, dash);
+  const cardNumber = id.slice(dash + 1);
+  const suffix = hires ? "_hires" : "";
+  return `https://images.pokemontcg.io/${encodeURIComponent(setCode)}/${encodeURIComponent(cardNumber)}${suffix}.png`;
+}
+
+function derivedCandidateImageUrl(
+  candidate: IdentifyCandidate,
+  variant: ImageVariant,
+  fallback = false,
+): string | undefined {
+  const provider = upstreamProvider(candidate);
+  const id = upstreamCardId(candidate);
+  if (!id) return undefined;
+
+  if (provider.includes("pokemon") || provider.includes("pokemontcg")) {
+    const preferHires = variant === "hero" || variant === "large" || variant === "normal";
+    return pokemonImageUrl(id, fallback ? !preferHires : preferHires);
+  }
+
+  if (provider.includes("yugioh") || provider.includes("ygopro")) {
+    return fallback
+      ? `https://images.ygoprodeck.com/images/cards_cropped/${encodeURIComponent(id)}.jpg`
+      : `https://images.ygoprodeck.com/images/cards/${encodeURIComponent(id)}.jpg`;
+  }
+
+  if (provider.includes("magic") || provider.includes("scryfall")) {
+    const version = variant === "thumb" || variant === "small" ? "small" : "normal";
+    const fallbackVersion = version === "small" ? "normal" : "small";
+    return `https://api.scryfall.com/cards/${encodeURIComponent(id)}?format=image&version=${fallback ? fallbackVersion : version}`;
+  }
+
+  return undefined;
+}
+
+function candidateImageUrls(candidate: IdentifyCandidate, variant: ImageVariant) {
+  const derived = derivedCandidateImageUrl(candidate, variant);
+  const derivedFallback = derivedCandidateImageUrl(candidate, variant, true);
+  const uri = pickCardImageUrl(
+    {
+      image_url: candidate.image_url ?? derived,
+      images: null,
+      attributes: {},
+    },
+    variant,
+  );
+  const fallbackUri = pickCardImageUrl(
+    {
+      image_url: candidate.image_url ? derived ?? derivedFallback : derivedFallback,
+      images: null,
+      attributes: {},
+    },
+    variant,
+  );
+  return {
+    uri,
+    fallbackUri: fallbackUri && fallbackUri !== uri ? fallbackUri : undefined,
+  };
+}
+
+function candidateSourceLabel(source: string | null | undefined): string {
+  const normalized = (source ?? "").toLowerCase();
+  if (normalized.includes("phash") || normalized.includes("cache")) return "Instant";
+  if (normalized.includes("feedback")) return "Confirmed";
+  if (normalized.includes("text") || normalized.includes("ocr")) return "OCR";
+  return "Catalog";
+}
+
+function CandidateCardImage({
+  candidate,
+  variant = "small",
+  width = "100%",
+  height = "100%",
+  rounded = 9,
+  priority = "normal",
+}: {
+  candidate: IdentifyCandidate;
+  variant?: ImageVariant;
+  width?: DimensionValue;
+  height?: DimensionValue;
+  rounded?: number;
+  priority?: "low" | "normal" | "high";
+}) {
+  const { uri, fallbackUri } = candidateImageUrls(candidate, variant);
+  return (
+    <CardImage
+      uri={uri}
+      fallbackUri={fallbackUri}
+      width={width}
+      height={height}
+      rounded={rounded}
+      priority={priority}
+      recyclingKey={`${candidateKey(candidate)}:${uri ?? "missing"}`}
+      alt={candidate.name}
+      showSkeleton={false}
+      loadTimeoutMs={4500}
+      style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
+    />
   );
 }
 
@@ -828,68 +948,174 @@ export function LiveIdentifyFlow({
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <CameraView
         ref={cameraRef}
-        style={{ flex: 1 }}
+        style={StyleSheet.absoluteFill}
         facing="back"
         flash={flashOn ? "on" : "off"}
         autofocus={autofocusOn ? "on" : "off"}
-      >
-        <SafeAreaView style={{ flex: 1, justifyContent: "space-between" }}>
-          <TopBar
-            onClose={onClose}
-            flashOn={flashOn}
-            locked={state.locked}
-            hasMatch={state.candidates.some((c) => c.confidence >= PREVIEW_CONFIDENCE)}
-            onToggleFlash={() => setFlashOn((v) => !v)}
-          />
-
-          <ReticleArea
-            scanning={scanning && !paused}
-            locked={state.locked}
-            hasMatch={state.candidates.some((c) => c.confidence >= PREVIEW_CONFIDENCE)}
-            cardFound={cardFound}
-            paused={paused}
-            marketPriceUsd={marketPriceUsd}
-            formatUsd={formatUsd}
-            priceLoading={priceLoading}
-            onTapFocus={refocus}
-          />
-
-          <BottomPanel
-            state={state}
-            error={error}
-            detectorHint={detectorHint}
-            tcgHint={tcgHint}
-            tcgPickerOpen={tcgPickerOpen}
-            onOpenTcgPicker={() => setTcgPickerOpen((v) => !v)}
-            onCloseTcgPicker={() => setTcgPickerOpen(false)}
-            onPickTcg={(t) => {
-              setTcgHint(t);
-              setTcgPickerOpen(false);
-            }}
-            onPickCandidate={handlePick}
-            onAddToVault={handleAddToVault}
-            batch={batch}
-            batchEnabled={onAddBatch != null}
-            onAddToBatch={handleAddToBatch}
-            onRemoveFromBatch={handleRemoveFromBatch}
-            onFinishBatch={handleFinishBatch}
-            onRescan={handleRescan}
-            onManualCapture={captureOnce}
-            onManualSearch={onManualSearch}
-            scanning={scanning}
-            marketPriceUsd={marketPriceUsd}
-            marketChangePct1y={marketChangePct1y}
-            priceLoading={priceLoading}
-            formatUsd={formatUsd}
-            palette={p}
-          />
-        </SafeAreaView>
-      </CameraView>
+      />
+      <ScannerOverlay
+        state={state}
+        error={error}
+        detectorHint={detectorHint}
+        tcgHint={tcgHint}
+        tcgPickerOpen={tcgPickerOpen}
+        scanning={scanning}
+        paused={paused}
+        flashOn={flashOn}
+        cardFound={cardFound}
+        batch={batch}
+        batchEnabled={onAddBatch != null}
+        marketPriceUsd={marketPriceUsd}
+        marketChangePct1y={marketChangePct1y}
+        priceLoading={priceLoading}
+        formatUsd={formatUsd}
+        palette={p}
+        onClose={onClose}
+        onToggleFlash={() => setFlashOn((v) => !v)}
+        onOpenTcgPicker={() => setTcgPickerOpen((v) => !v)}
+        onCloseTcgPicker={() => setTcgPickerOpen(false)}
+        onPickTcg={(t) => {
+          setTcgHint(t);
+          setTcgPickerOpen(false);
+          setState(EMPTY_STATE);
+          setError(null);
+          skippedFramesRef.current = 0;
+          updateCardFound(false);
+        }}
+        onPickCandidate={handlePick}
+        onAddToVault={handleAddToVault}
+        onAddToBatch={handleAddToBatch}
+        onRemoveFromBatch={handleRemoveFromBatch}
+        onFinishBatch={handleFinishBatch}
+        onRescan={handleRescan}
+        onManualCapture={captureOnce}
+        onManualSearch={onManualSearch}
+        onTapFocus={refocus}
+      />
     </View>
   );
 }
 
 // ────────────────────────── Subviews ──────────────────────────
+
+function ScannerOverlay({
+  state,
+  error,
+  detectorHint,
+  tcgHint,
+  tcgPickerOpen,
+  scanning,
+  paused,
+  flashOn,
+  cardFound,
+  batch,
+  batchEnabled,
+  marketPriceUsd,
+  marketChangePct1y,
+  priceLoading,
+  formatUsd,
+  palette: themed,
+  onClose,
+  onToggleFlash,
+  onOpenTcgPicker,
+  onCloseTcgPicker,
+  onPickTcg,
+  onPickCandidate,
+  onAddToVault,
+  onAddToBatch,
+  onRemoveFromBatch,
+  onFinishBatch,
+  onRescan,
+  onManualCapture,
+  onManualSearch,
+  onTapFocus,
+}: {
+  state: IdentifyState;
+  error: string | null;
+  detectorHint: string | null;
+  tcgHint: IdentifyTcgHint;
+  tcgPickerOpen: boolean;
+  scanning: boolean;
+  paused: boolean;
+  flashOn: boolean;
+  cardFound: boolean;
+  batch: IdentifyCandidate[];
+  batchEnabled: boolean;
+  marketPriceUsd: number | null;
+  marketChangePct1y: number | null;
+  priceLoading: boolean;
+  formatUsd: (v: number) => string;
+  palette: ReturnType<typeof useThemedPalette>;
+  onClose: () => void;
+  onToggleFlash: () => void;
+  onOpenTcgPicker: () => void;
+  onCloseTcgPicker: () => void;
+  onPickTcg: (t: IdentifyTcgHint) => void;
+  onPickCandidate: (c: IdentifyCandidate) => void;
+  onAddToVault: (c: IdentifyCandidate) => void;
+  onAddToBatch: (c: IdentifyCandidate) => void;
+  onRemoveFromBatch: (key: string) => void;
+  onFinishBatch: () => void;
+  onRescan: () => void;
+  onManualCapture: () => void;
+  onManualSearch?: () => void;
+  onTapFocus: (point: { x: number; y: number }) => void;
+}) {
+  const hasMatch = state.candidates.some((c) => c.confidence >= PREVIEW_CONFIDENCE);
+  return (
+    <SafeAreaView
+      pointerEvents="box-none"
+      style={{ ...StyleSheet.absoluteFillObject, justifyContent: "space-between" }}
+    >
+      <TopBar
+        onClose={onClose}
+        flashOn={flashOn}
+        locked={state.locked}
+        hasMatch={hasMatch}
+        onToggleFlash={onToggleFlash}
+      />
+
+      <ReticleArea
+        scanning={scanning && !paused}
+        locked={state.locked}
+        hasMatch={hasMatch}
+        cardFound={cardFound}
+        paused={paused}
+        marketPriceUsd={marketPriceUsd}
+        formatUsd={formatUsd}
+        priceLoading={priceLoading}
+        onTapFocus={onTapFocus}
+      />
+
+      <BottomPanel
+        state={state}
+        error={error}
+        detectorHint={detectorHint}
+        tcgHint={tcgHint}
+        tcgPickerOpen={tcgPickerOpen}
+        onOpenTcgPicker={onOpenTcgPicker}
+        onCloseTcgPicker={onCloseTcgPicker}
+        onPickTcg={onPickTcg}
+        onPickCandidate={onPickCandidate}
+        onAddToVault={onAddToVault}
+        batch={batch}
+        batchEnabled={batchEnabled}
+        onAddToBatch={onAddToBatch}
+        onRemoveFromBatch={onRemoveFromBatch}
+        onFinishBatch={onFinishBatch}
+        onRescan={onRescan}
+        onManualCapture={onManualCapture}
+        onManualSearch={onManualSearch}
+        scanning={scanning}
+        marketPriceUsd={marketPriceUsd}
+        marketChangePct1y={marketChangePct1y}
+        priceLoading={priceLoading}
+        formatUsd={formatUsd}
+        palette={themed}
+      />
+    </SafeAreaView>
+  );
+}
 
 function TopBar({
   onClose,
@@ -1555,6 +1781,8 @@ function BottomPanel({
   const tcgLabel = tcgOption.label;
   const tcgColor = themed.accent[tcgOption.accent];
   const shutterLocked = state.locked;
+  const { height: screenHeight } = useWindowDimensions();
+  const compactLockedSheet = screenHeight < 760 || batch.length > 0;
 
   // Pulsing "halo" ring around the shutter once we lock — a gentle
   // expanding/fading mint pulse that signals "got it, tap to view".
@@ -1600,6 +1828,7 @@ function BottomPanel({
           formatUsd={formatUsd}
           themed={themed}
           batchEnabled={batchEnabled}
+          compact={compactLockedSheet}
           onViewDetails={() => {
             const c = state.candidates[0];
             if (c) onPickCandidate(c);
@@ -1632,6 +1861,7 @@ function BottomPanel({
         <BatchTray
           batch={batch}
           themed={themed}
+          onPick={onPickCandidate}
           onRemove={onRemoveFromBatch}
           onFinish={onFinishBatch}
         />
@@ -1744,6 +1974,36 @@ function BottomPanel({
               }}
             />
           </Pressable>
+          {batchEnabled && batch.length > 0 ? (
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                top: -2,
+                right: -2,
+                minWidth: 24,
+                height: 24,
+                paddingHorizontal: 7,
+                borderRadius: 12,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: palette.accent.mint,
+                borderWidth: 2,
+                borderColor: "rgba(0,0,0,0.82)",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#08110D",
+                  fontSize: 11,
+                  fontWeight: "900",
+                  fontVariant: ["tabular-nums"],
+                }}
+              >
+                {batch.length}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Right cluster — manual search escape hatch. */}
@@ -1971,17 +2231,12 @@ function PreviewMatchCard({
           backgroundColor: "rgba(255,255,255,0.06)",
         }}
       >
-        {candidate.image_url ? (
-          <Image
-            source={{ uri: candidate.image_url }}
-            style={{ width: "100%", height: "100%" }}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Sparkles size={16} color={withAlpha("#fff", 0.4)} />
-          </View>
-        )}
+        <CandidateCardImage
+          candidate={candidate}
+          variant="small"
+          rounded={8}
+          priority="high"
+        />
       </View>
 
       <View style={{ flex: 1, gap: 2 }}>
@@ -2296,11 +2551,13 @@ function TcgPickerSheet({
 function BatchTray({
   batch,
   themed,
+  onPick,
   onRemove,
   onFinish,
 }: {
   batch: IdentifyCandidate[];
   themed: ReturnType<typeof useThemedPalette>;
+  onPick: (candidate: IdentifyCandidate) => void;
   onRemove: (key: string) => void;
   onFinish: () => void;
 }) {
@@ -2308,18 +2565,21 @@ function BatchTray({
   return (
     <View
       style={{
-        borderRadius: 18,
+        borderRadius: 20,
         overflow: "hidden",
         borderWidth: 1,
-        borderColor: withAlpha(themed.accent.mint, 0.22),
+        borderColor: withAlpha(themed.accent.mint, 0.2),
+        shadowColor: "#000",
+        shadowOpacity: 0.22,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 8 },
       }}
     >
       <BlurView
-        intensity={30}
+        intensity={24}
         tint="dark"
-        style={{ backgroundColor: GLASS, paddingTop: 10, paddingBottom: 12 }}
+        style={{ backgroundColor: "rgba(5,8,10,0.72)", paddingTop: 10, paddingBottom: 12 }}
       >
-        {/* Header: count + finalize */}
         <View
           style={{
             flexDirection: "row",
@@ -2329,10 +2589,15 @@ function BatchTray({
             marginBottom: 8,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-            <Layers size={15} color={themed.accent.mint} />
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>
-              {count} in stack
+          <View style={{ gap: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+              <Layers size={15} color={themed.accent.mint} />
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>
+                Scan cart
+              </Text>
+            </View>
+            <Text style={{ color: "rgba(255,255,255,0.48)", fontSize: 10, fontWeight: "700" }}>
+              {count} card{count === 1 ? "" : "s"} ready
             </Text>
           </View>
           <Pressable
@@ -2346,18 +2611,17 @@ function BatchTray({
               paddingVertical: 7,
               paddingHorizontal: 12,
               borderRadius: 999,
-              backgroundColor: themed.accent.mint,
+              backgroundColor: withAlpha(themed.accent.mint, 0.96),
               opacity: pressed ? 0.85 : 1,
             })}
           >
             <Plus size={14} color="#08110D" />
             <Text style={{ color: "#08110D", fontWeight: "800", fontSize: 13 }}>
-              Add all to vault
+              Add all
             </Text>
           </Pressable>
         </View>
 
-        {/* Scrollable thumbnail strip */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -2369,35 +2633,53 @@ function BatchTray({
         >
           {batch.map((c) => {
             const key = candidateKey(c);
+            const confidencePct = Math.round(c.confidence * 100);
             return (
-              <View key={key} style={{ width: 64, alignItems: "center" }}>
-                <View style={{ width: 64, height: 88 }}>
-                  {c.image_url ? (
-                    <Image
-                      source={{ uri: c.image_url }}
+              <Pressable
+                key={key}
+                onPress={() => onPick(c)}
+                accessibilityRole="button"
+                accessibilityLabel={`View ${c.name} from scan cart`}
+                style={({ pressed }) => ({
+                  width: 68,
+                  alignItems: "center",
+                  opacity: pressed ? 0.72 : 1,
+                })}
+              >
+                <View style={{ width: 68, height: 94 }}>
+                  <CandidateCardImage
+                    candidate={c}
+                    variant="thumb"
+                    width={68}
+                    height={94}
+                    rounded={10}
+                    priority="low"
+                  />
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      left: 4,
+                      bottom: 4,
+                      paddingHorizontal: 5,
+                      paddingVertical: 2,
+                      borderRadius: 999,
+                      backgroundColor: "rgba(0,0,0,0.66)",
+                      borderWidth: 1,
+                      borderColor: withAlpha(themed.accent.mint, 0.28),
+                    }}
+                  >
+                    <Text
                       style={{
-                        width: 64,
-                        height: 88,
-                        borderRadius: 8,
-                        backgroundColor: "rgba(255,255,255,0.06)",
-                      }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View
-                      style={{
-                        width: 64,
-                        height: 88,
-                        borderRadius: 8,
-                        backgroundColor: "rgba(255,255,255,0.06)",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        color: "#fff",
+                        fontSize: 8,
+                        fontWeight: "900",
+                        fontVariant: ["tabular-nums"],
                       }}
                     >
-                      <Sparkles size={18} color="rgba(255,255,255,0.4)" />
-                    </View>
-                  )}
-                  {/* Remove badge */}
+                      {confidencePct}%
+                    </Text>
+                  </View>
                   <Pressable
                     onPress={() => onRemove(key)}
                     accessibilityRole="button"
@@ -2427,12 +2709,12 @@ function BatchTray({
                     fontSize: 10,
                     fontWeight: "600",
                     marginTop: 4,
-                    maxWidth: 64,
+                    maxWidth: 68,
                   }}
                 >
                   {c.name}
                 </Text>
-              </View>
+              </Pressable>
             );
           })}
         </ScrollView>
@@ -2457,6 +2739,7 @@ function LockedResultSheet({
   formatUsd,
   themed,
   batchEnabled,
+  compact,
   onViewDetails,
   onPickAlternate,
   onAddToVault,
@@ -2472,6 +2755,7 @@ function LockedResultSheet({
   formatUsd: (v: number) => string;
   themed: ReturnType<typeof useThemedPalette>;
   batchEnabled: boolean;
+  compact: boolean;
   onViewDetails: () => void;
   onPickAlternate: (c: IdentifyCandidate) => void;
   onAddToVault: () => void;
@@ -2482,6 +2766,7 @@ function LockedResultSheet({
   const setMeta = [candidate.set_name, candidate.number ? `#${candidate.number}` : null]
     .filter(Boolean)
     .join(" · ");
+  const sourceLabel = candidateSourceLabel(candidate.source);
   // Robinhood-style trend: green up / red down delta line under the
   // hero price. Hidden when we have no history (cache / upstream-only).
   const hasTrend = marketChangePct1y != null && Number.isFinite(marketChangePct1y);
@@ -2491,7 +2776,7 @@ function LockedResultSheet({
   // for reprint ties (e.g. Base Set vs Base Set 2 Charizard share name +
   // number + art) where the auto-lock can't tell two near-identical
   // printings apart — the user picks the exact one they're holding.
-  const alternates = candidates.slice(1, 7);
+  const alternates = candidates.slice(1, compact ? 4 : 7);
 
   // Entrance: the sheet swaps in for the thin candidate strip the moment
   // we lock, so spring it up from below + fade in to make the lock feel
@@ -2508,18 +2793,21 @@ function LockedResultSheet({
     return () => anim.stop();
   }, [enter]);
 
+  const heroImageWidth = compact ? 70 : 78;
+  const altWidth = compact ? 72 : 82;
+
   return (
     <Animated.View
       style={{
         backgroundColor: GLASS_STRONG,
-        borderRadius: 24,
-        padding: 16,
+        borderRadius: 22,
+        padding: compact ? 12 : 14,
         borderWidth: 1,
-        borderColor: withAlpha(palette.accent.mint, 0.22),
-        gap: 14,
+        borderColor: withAlpha(palette.accent.mint, 0.18),
+        gap: compact ? 10 : 14,
         shadowColor: palette.accent.mint,
-        shadowOpacity: 0.18,
-        shadowRadius: 20,
+        shadowOpacity: 0.12,
+        shadowRadius: 18,
         shadowOffset: { width: 0, height: 8 },
         elevation: 12,
         opacity: enter,
@@ -2543,32 +2831,21 @@ function LockedResultSheet({
         {/* Card thumbnail */}
         <View
           style={{
-            width: 86,
+            width: heroImageWidth,
             aspectRatio: 2.5 / 3.5,
-            borderRadius: 10,
+            borderRadius: 11,
             overflow: "hidden",
             backgroundColor: "rgba(255,255,255,0.06)",
             borderWidth: 1,
             borderColor: "rgba(255,255,255,0.08)",
           }}
         >
-          {candidate.image_url ? (
-            <Image
-              source={{ uri: candidate.image_url }}
-              style={{ width: "100%", height: "100%" }}
-              resizeMode="cover"
-            />
-          ) : (
-            <View
-              style={{
-                flex: 1,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Sparkles size={20} color={withAlpha("#fff", 0.5)} />
-            </View>
-          )}
+          <CandidateCardImage
+            candidate={candidate}
+            variant="normal"
+            rounded={11}
+            priority="high"
+          />
         </View>
 
         {/* Identity + price */}
@@ -2599,12 +2876,26 @@ function LockedResultSheet({
               >
                 MATCH · {confidencePct}%
               </Text>
+              <View
+                style={{
+                  paddingHorizontal: 7,
+                  paddingVertical: 2,
+                  borderRadius: 999,
+                  backgroundColor: withAlpha("#fff", 0.08),
+                  borderWidth: 1,
+                  borderColor: withAlpha("#fff", 0.1),
+                }}
+              >
+                <Text style={{ color: "rgba(255,255,255,0.72)", fontSize: 9, fontWeight: "800" }}>
+                  {sourceLabel}
+                </Text>
+              </View>
             </View>
             <Text
               numberOfLines={2}
               style={{
                 color: "#fff",
-                fontSize: 17,
+                fontSize: compact ? 16 : 17,
                 fontWeight: "700",
                 letterSpacing: -0.3,
                 lineHeight: 21,
@@ -2642,7 +2933,7 @@ function LockedResultSheet({
                 <Text
                   style={{
                     color: "#fff",
-                    fontSize: 28,
+                    fontSize: compact ? 24 : 28,
                     fontWeight: "800",
                     letterSpacing: -0.8,
                     fontVariant: ["tabular-nums"],
@@ -2721,15 +3012,15 @@ function LockedResultSheet({
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            paddingVertical: 13,
+            paddingVertical: 12,
             borderRadius: 14,
-            backgroundColor: palette.accent.mint,
+            backgroundColor: withAlpha(palette.accent.mint, 0.96),
             opacity: pressed ? 0.85 : 1,
           })}
         >
           <Layers size={17} color="#08110D" />
           <Text style={{ color: "#08110D", fontWeight: "800", fontSize: 14 }}>
-            Add to stack &amp; scan next
+            Add to scan cart
           </Text>
         </Pressable>
       ) : null}
@@ -2778,6 +3069,7 @@ function LockedResultSheet({
             gap: 6,
             paddingVertical: 12,
             paddingHorizontal: 16,
+            minWidth: compact ? 102 : 112,
             borderRadius: 14,
             borderWidth: 1,
             borderColor: withAlpha("#fff", 0.18),
@@ -2786,7 +3078,9 @@ function LockedResultSheet({
           })}
         >
           <Plus size={16} color="#fff" />
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>Vault</Text>
+          <Text numberOfLines={1} style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
+            Add one
+          </Text>
         </Pressable>
       </View>
 
@@ -2827,39 +3121,28 @@ function LockedResultSheet({
                     altMeta ? `, ${altMeta}` : ""
                   }`}
                   style={({ pressed }) => ({
-                    width: 92,
+                    width: altWidth,
                     gap: 5,
                     opacity: pressed ? 0.7 : 1,
                   })}
                 >
                   <View
                     style={{
-                      width: 92,
+                      width: altWidth,
                       aspectRatio: 2.5 / 3.5,
-                      borderRadius: 8,
+                      borderRadius: 10,
                       overflow: "hidden",
                       backgroundColor: "rgba(255,255,255,0.06)",
                       borderWidth: 1,
                       borderColor: "rgba(255,255,255,0.1)",
                     }}
                   >
-                    {alt.image_url ? (
-                      <Image
-                        source={{ uri: alt.image_url }}
-                        style={{ width: "100%", height: "100%" }}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View
-                        style={{
-                          flex: 1,
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Sparkles size={16} color={withAlpha("#fff", 0.4)} />
-                      </View>
-                    )}
+                    <CandidateCardImage
+                      candidate={alt}
+                      variant="thumb"
+                      rounded={10}
+                      priority="low"
+                    />
                   </View>
                   <Text
                     numberOfLines={1}

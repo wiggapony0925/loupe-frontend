@@ -142,7 +142,7 @@ export default function NotificationsScreen() {
           down so this screen reads as an inbox, not a marketing page. */}
       <View className="px-5 pb-3 pt-1">
         <Text className="text-[11px] font-semibold uppercase tracking-[3px] text-ink-dim">
-          {tab === "watching" ? "Watching · live" : "Inbox · live"}
+          {tab === "watching" ? "Favorites · alerts" : "Inbox · live"}
         </Text>
         <View className="mt-1 flex-row items-end justify-between">
           <Text className="text-[28px] font-bold tracking-tight text-ink">
@@ -164,12 +164,12 @@ export default function NotificationsScreen() {
         </View>
         <Text className="mt-1 text-[13px] text-ink-muted">
           {tab === "watching"
-            ? "Every card you're tracking with a price threshold."
+            ? "Favorite cards and every price threshold you have set."
             : "Scan reports, watched-comp moves, and system updates land here."}
         </Text>
       </View>
 
-      {/* Inbox vs Watching segmented control. Watch used to live as a
+      {/* Inbox vs Favorites segmented control. Watch used to live as a
           dedicated bottom tab — it was confusing next to the bell and
           burned a slot that Scan now occupies. Folding it in here keeps
           both surfaces one tap from anywhere via the global bell. */}
@@ -250,7 +250,7 @@ function TabSegment({
                 textTransform: "uppercase",
               }}
             >
-              {opt === "inbox" ? "Inbox" : "Watching"}
+              {opt === "inbox" ? "Inbox" : "Favorites"}
             </Text>
           </Pressable>
         );

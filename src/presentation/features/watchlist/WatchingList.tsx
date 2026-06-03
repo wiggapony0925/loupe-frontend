@@ -3,7 +3,7 @@
  * Watch tab. Rendered in two places now:
  *
  *   1. The Notifications screen behind the bell, under a
- *      `[Inbox | Watching]` segmented header.
+ *      `[Inbox | Favorites]` segmented header.
  *   2. The standalone `/watchlist` route, kept around for deep links
  *      (e.g. push notifications that say "your $X alert fired").
  *
@@ -156,7 +156,7 @@ function PinnedCardsRail({
             textTransform: "uppercase",
           }}
         >
-          Pinned · {items.length}
+          Favorites · {items.length}
         </Text>
       </View>
       <ScrollView
@@ -220,12 +220,12 @@ export function WatchingList({ showHeader = true }: WatchingListProps) {
   const onUnpin = useCallback(
     (item: WatchlistItemWire) => {
       Alert.alert(
-        "Unpin card?",
-        `Remove ${item.card_name ?? "this card"} from your watchlist?`,
+        "Remove favorite?",
+        `Remove ${item.card_name ?? "this card"} from your favorites?`,
         [
           { text: "Keep", style: "cancel" },
           {
-            text: "Unpin",
+            text: "Remove",
             style: "destructive",
             onPress: () => {
               void unpinMut.mutateAsync(item.card_id);
@@ -240,8 +240,8 @@ export function WatchingList({ showHeader = true }: WatchingListProps) {
   const onDelete = useCallback(
     (alert: PriceAlertWire) => {
       Alert.alert(
-        "Cancel alert?",
-        `Stop watching ${alert.card_name ?? "this card"}?`,
+        "Cancel price alert?",
+        `Stop the price alert for ${alert.card_name ?? "this card"}?`,
         [
           { text: "Keep", style: "cancel" },
           {
@@ -273,12 +273,12 @@ export function WatchingList({ showHeader = true }: WatchingListProps) {
               marginBottom: 4,
             }}
           >
-            Watchlist
+            Favorites & Alerts
           </Text>
           <Text style={{ color: p.ink.default, fontSize: 24, fontWeight: "700" }}>
-            {rows.length > 0
-              ? `${rows.length} card${rows.length === 1 ? "" : "s"} on watch`
-              : "Quiet on the wire"}
+            {pinned.length > 0 || rows.length > 0
+              ? `${pinned.length} favorite${pinned.length === 1 ? "" : "s"} · ${rows.length} alert${rows.length === 1 ? "" : "s"}`
+              : "Nothing saved yet"}
           </Text>
         </View>
       ) : null}
@@ -321,14 +321,14 @@ export function WatchingList({ showHeader = true }: WatchingListProps) {
           ) : alerts.isError ? (
             <EmptyState
               icon={Bell}
-              title="Couldn't load watchlist"
+              title="Couldn't load favorites"
               message={alerts.error?.message ?? "Pull to retry."}
             />
           ) : (
             <EmptyState
               icon={Bell}
               title="No alerts yet"
-              message="Tap the bell on any card to start watching its price."
+              message="Tap a heart to save favorite cards, or tap the bell on a card to add a price alert."
               secondaryActionLabel="Browse cards"
               onSecondaryAction={() => router.push("/search")}
             />

@@ -19,7 +19,6 @@
 import React, { useMemo } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
   Text,
   View,
@@ -28,6 +27,7 @@ import { router } from "expo-router";
 import { Bell, X } from "lucide-react-native";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { CardImage } from "@/presentation/components/CardImage";
+import { CardHorizontalRail } from "@/presentation/cards";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import {
   useDeletePriceAlert,
@@ -41,7 +41,6 @@ import type {
   PriceAlertWire,
   TcgKey,
 } from "@/infrastructure/http";
-import { pickCardImageUrl } from "@/shared/cardImage";
 
 /* ── 1. Active alerts for this card ──────────────────────────────── */
 
@@ -287,51 +286,13 @@ export function RelatedCardsRail({
       <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
         Other Prints
       </Text>
-      <FlatList
-        horizontal
-        data={results}
-        keyExtractor={(item) => item.id}
-        showsHorizontalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={{ width: 8 }} />}
-        renderItem={({ item }) => {
-          const imageUrl = pickCardImageUrl(item, "small");
-          return (
-            <Pressable
-              onPress={() => router.push(routes.card(item.id))}
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${item.name}`}
-              style={({ pressed }) => ({
-                width: 84,
-                opacity: pressed ? 0.8 : 1,
-              })}
-            >
-              <CardImage
-                uri={imageUrl}
-                width={84}
-                height={118}
-                rounded={8}
-                contentFit="contain"
-                alt={item.name}
-              />
-              <Text
-                numberOfLines={1}
-                style={{
-                  color: p.ink.default,
-                  fontSize: 10,
-                  fontWeight: "600",
-                  marginTop: 4,
-                }}
-              >
-                {item.set_name ?? item.name}
-              </Text>
-              {item.year ? (
-                <Text style={{ color: p.ink.dim, fontSize: 9 }}>
-                  {item.year}
-                </Text>
-              ) : null}
-            </Pressable>
-          );
-        }}
+      <CardHorizontalRail
+        cards={results}
+        tileSize="sm"
+        showSet
+        gap={10}
+        edgeBleed={20}
+        onCardPress={(item) => router.push(routes.card(item.id))}
       />
     </View>
   );
