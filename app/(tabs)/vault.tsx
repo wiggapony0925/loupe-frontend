@@ -49,6 +49,13 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 type ViewMode = "list" | "grid";
 
+type SealedVaultStats = {
+  holdingCount: number;
+  unitCount: number;
+  totalCostUsd: number;
+  totalEstimatedValueUsd: number | null;
+};
+
 export default function VaultScreen() {
   const p = useThemedPalette();
   const router = useRouter();
@@ -211,7 +218,7 @@ export default function VaultScreen() {
         contentContainerStyle={{
           paddingHorizontal: viewMode === "grid" ? 20 : 6,
           paddingTop: 20,
-          paddingBottom: 48,
+          paddingBottom: 132,
           gap: viewMode === "grid" ? 12 : 0,
         }}
         ItemSeparatorComponent={
@@ -240,7 +247,7 @@ export default function VaultScreen() {
           />
         }
         ListHeaderComponent={
-          <View className="gap-5 pb-4" style={{ paddingHorizontal: headerPadX }}>
+          <View className="gap-4 pb-3" style={{ paddingHorizontal: headerPadX }}>
             {/* Page anchor — swaps to a selection toolbar when the
                 user is staging cards for bulk delete so the header
                 action cluster doesn't compete for tap targets. */}
@@ -262,25 +269,12 @@ export default function VaultScreen() {
               <VaultHeaderSkeleton />
             ) : (
               <>
-                {/* Order rationale, top to bottom:
-                      1. Hero   — Robinhood-style portfolio value + P/L
-                      2. Pills  — Holdings / Avg grade / Loupe-graded
-                      3. Sets   — discovery rail (what's missing from binders)
-                      4. Search / Filter / View toggle — control cluster
-                         grouped directly above the list they act on. */}
                 <PortfolioHero
                   totalValueUsd={summary?.totalValueUsd ?? stats.value}
                   pnlUsd={summary?.unrealizedPnlUsd ?? null}
                   pnlPct={summary?.unrealizedPnlPct ?? null}
                 />
                 <PortfolioPills stats={stats} />
-                <SealedVaultCard
-                  stats={sealedStats}
-                  loading={sealedHoldings.isLoading}
-                  onOpen={() => router.push(routes.sealed())}
-                  onAdd={() => router.push(routes.sealedAdd())}
-                />
-                <SetProgressCarousel />
                 <VaultSearchBar />
                 <FilterBar availableSets={availableSets} />
                 <VaultListChrome
@@ -348,12 +342,15 @@ export default function VaultScreen() {
           );
         }}
         ListFooterComponent={
-          // Footer CTAs used to live here, but the primary actions (Scan
-          // / Add manually) are now lifted into VaultPageHeader so they
-          // — like Robinhood's deposit shortcut — stay reachable without
-          // scrolling. We leave a small spacer so the last row doesn't
-          // hug the tab bar.
-          !isLoading && cards.length > 0 ? <View style={{ height: 24 }} /> : null
+          !isLoading ? (
+            <VaultSupplementalSections
+              padX={headerPadX}
+              sealedStats={sealedStats}
+              sealedLoading={sealedHoldings.isLoading}
+              onOpenSealed={() => router.push(routes.sealed())}
+              onAddSealed={() => router.push(routes.sealedAdd())}
+            />
+          ) : null
         }
         ListEmptyComponent={
           isLoading ? (
@@ -412,6 +409,39 @@ export default function VaultScreen() {
         }
       />
     </SafeAreaView>
+  );
+}
+
+function VaultSupplementalSections({
+  padX,
+  sealedStats,
+  sealedLoading,
+  onOpenSealed,
+  onAddSealed,
+}: {
+  padX: number;
+  sealedStats: SealedVaultStats;
+  sealedLoading: boolean;
+  onOpenSealed: () => void;
+  onAddSealed: () => void;
+}) {
+  return (
+    <View
+      style={{
+        gap: 18,
+        paddingHorizontal: padX,
+        paddingTop: 22,
+        paddingBottom: 8,
+      }}
+    >
+      <SealedVaultCard
+        stats={sealedStats}
+        loading={sealedLoading}
+        onOpen={onOpenSealed}
+        onAdd={onAddSealed}
+      />
+      <SetProgressCarousel />
+    </View>
   );
 }
 
@@ -808,12 +838,7 @@ function SealedVaultCard({
   onOpen,
   onAdd,
 }: {
-  stats: {
-    holdingCount: number;
-    unitCount: number;
-    totalCostUsd: number;
-    totalEstimatedValueUsd: number | null;
-  };
+  stats: SealedVaultStats;
   loading: boolean;
   onOpen: () => void;
   onAdd: () => void;
@@ -850,11 +875,12 @@ function SealedVaultCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
+        minHeight: 72,
         padding: 12,
-        borderRadius: 18,
+        borderRadius: 16,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: withAlpha(p.accent.mint, 0.2),
-        backgroundColor: p.bg.elevated,
+        borderColor: p.line.default,
+        backgroundColor: withAlpha(p.accent.mint, 0.06),
       }}
     >
       <Pressable
@@ -871,21 +897,27 @@ function SealedVaultCard({
       >
         <View
           style={{
-            width: 46,
-            height: 46,
-            borderRadius: 16,
+            width: 42,
+            height: 42,
+            borderRadius: 14,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: withAlpha(p.accent.mint, 0.14),
           }}
         >
-          <Package size={22} color={p.accent.mint} strokeWidth={2.35} />
+          <Package size={21} color={p.accent.mint} strokeWidth={2.35} />
         </View>
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={{ color: p.ink.default, fontSize: 15, fontWeight: "800" }}>
+        <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+          <Text
+            numberOfLines={1}
+            style={{ color: p.ink.default, fontSize: 15, fontWeight: "800" }}
+          >
             {headline}
           </Text>
-          <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "600" }}>
+          <Text
+            numberOfLines={1}
+            style={{ color: p.ink.muted, fontSize: 12, fontWeight: "600" }}
+          >
             {detail}
           </Text>
         </View>

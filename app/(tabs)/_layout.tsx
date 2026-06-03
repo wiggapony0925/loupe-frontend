@@ -13,7 +13,16 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { router, Tabs } from "expo-router";
-import { Gauge, Layers, BarChart3, Camera, Search, Zap } from "lucide-react-native";
+import {
+  BarChart3,
+  Camera,
+  ChevronRight,
+  Gauge,
+  Layers,
+  Search,
+  X,
+  Zap,
+} from "lucide-react-native";
 import {
   Gesture,
   GestureDetector,
@@ -117,12 +126,12 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <View
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
+                width: 52,
+                height: 52,
+                borderRadius: 26,
                 alignItems: "center",
                 justifyContent: "center",
-                marginTop: -12,
+                marginTop: -18,
                 backgroundColor: focused
                   ? p.accent.mint
                   : withAlpha(p.accent.mint, 0.18),
@@ -130,11 +139,17 @@ export default function TabsLayout() {
                 borderColor: focused
                   ? p.accent.mint
                   : withAlpha(p.accent.mint, 0.4),
+                shadowColor: p.accent.mint,
+                shadowOpacity: focused ? 0.3 : 0.14,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 10,
               }}
             >
               <Camera
-                size={20}
+                size={23}
                 color={focused ? p.bg.base : p.accent.mint}
+                strokeWidth={2.3}
               />
             </View>
           ),
@@ -252,15 +267,18 @@ function ScanActionSheet({
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(80);
   const opacity = useSharedValue(0);
+  const scale = useSharedValue(0.96);
 
   useEffect(() => {
-    translateY.value = withSpring(0, { damping: 20, stiffness: 240, mass: 0.7 });
+    translateY.value = withSpring(0, { damping: 18, stiffness: 260, mass: 0.7 });
     opacity.value = withTiming(1, { duration: 180 });
+    scale.value = withSpring(1, { damping: 16, stiffness: 240, mass: 0.7 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const animateClose = useCallback(() => {
     opacity.value = withTiming(0, { duration: 140 });
+    scale.value = withTiming(0.96, { duration: 160 });
     translateY.value = withTiming(220, { duration: 180 }, (finished) => {
       if (finished) {
         runOnJS(onClose)();
@@ -286,7 +304,7 @@ function ScanActionSheet({
     });
 
   const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
   }));
   const scrimStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
@@ -305,24 +323,26 @@ function ScanActionSheet({
           accessibilityRole="button"
           accessibilityLabel="Close scan actions"
           onPress={animateClose}
-          style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.5)" }]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.62)" }]}
         />
       </Animated.View>
       <GestureDetector gesture={pan}>
         <Animated.View
           style={[
             {
-              marginHorizontal: 14,
-              marginBottom: insets.bottom + 96,
-              padding: 16,
+              marginHorizontal: 16,
+              marginBottom: Math.max(insets.bottom, 8) + 88,
+              paddingHorizontal: 16,
+              paddingTop: 10,
+              paddingBottom: 16,
               borderRadius: 28,
               backgroundColor: p.bg.elevated,
               borderWidth: 1,
               borderColor: p.line.default,
               shadowColor: "#000",
-              shadowOpacity: 0.3,
-              shadowRadius: 28,
-              shadowOffset: { width: 0, height: 16 },
+              shadowOpacity: 0.34,
+              shadowRadius: 30,
+              shadowOffset: { width: 0, height: 18 },
               elevation: 24,
             },
             sheetStyle,
@@ -335,38 +355,72 @@ function ScanActionSheet({
               height: 5,
               borderRadius: 3,
               backgroundColor: withAlpha(p.ink.dim, 0.4),
-              marginBottom: 14,
+              marginBottom: 12,
             }}
           />
-          <Text
+          <View
             style={{
-              color: p.ink.dim,
-              fontSize: 11,
-              fontWeight: "700",
-              letterSpacing: 1,
-              textTransform: "uppercase",
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
               marginBottom: 12,
-              marginLeft: 4,
             }}
           >
-            Quick scan
-          </Text>
-          <View style={{ flexDirection: "row", gap: 12 }}>
+            <View>
+              <Text
+                style={{
+                  color: p.ink.default,
+                  fontSize: 20,
+                  fontWeight: "800",
+                }}
+              >
+                Scan
+              </Text>
+              <Text
+                style={{
+                  color: p.ink.dim,
+                  fontSize: 12,
+                  fontWeight: "600",
+                  marginTop: 2,
+                }}
+              >
+                Choose the camera mode
+              </Text>
+            </View>
+            <Pressable
+              onPress={animateClose}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Close scan actions"
+              style={({ pressed }) => ({
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: withAlpha(p.ink.default, 0.08),
+                opacity: pressed ? 0.65 : 1,
+              })}
+            >
+              <X size={18} color={p.ink.dim} />
+            </Pressable>
+          </View>
+          <View style={{ gap: 12 }}>
             <ScanShortcutTarget
-              label="Grade"
-              caption="Studio capture"
-              icon="grade"
-              tint={p.accent.mint}
-              palette={p}
-              onPress={() => handleSelect("grade")}
-            />
-            <ScanShortcutTarget
-              label="Identify"
-              caption="Quick lookup"
+              label="Identify card"
+              caption="Fast match, price, then add"
               icon="identify"
               tint={p.accent.blue}
               palette={p}
               onPress={() => handleSelect("identify")}
+            />
+            <ScanShortcutTarget
+              label="Grade card"
+              caption="Capture front and back"
+              icon="grade"
+              tint={p.accent.mint}
+              palette={p}
+              onPress={() => handleSelect("grade")}
             />
           </View>
         </Animated.View>
@@ -395,51 +449,68 @@ function ScanShortcutTarget({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={label === "Grade" ? "Open grade scanner" : "Open quick identify scanner"}
+      accessibilityLabel={icon === "grade" ? "Open grade scanner" : "Open quick identify scanner"}
       style={({ pressed }) => ({
-        flex: 1,
-        minHeight: 96,
+        alignSelf: "stretch",
         borderRadius: 20,
-        paddingHorizontal: 14,
-        paddingVertical: 16,
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
-        backgroundColor: withAlpha(tint, pressed ? 0.2 : 0.1),
+        backgroundColor: pressed ? withAlpha(tint, 0.14) : p.bg.base,
         borderWidth: 1,
-        borderColor: withAlpha(tint, pressed ? 0.6 : 0.3),
+        borderColor: withAlpha(tint, pressed ? 0.64 : 0.24),
+        opacity: pressed ? 0.96 : 1,
       })}
     >
       <View
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 22,
+          flexDirection: "row",
           alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: withAlpha(tint, 0.16),
+          minHeight: 76,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
         }}
       >
-        <Icon size={22} color={tint} />
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: withAlpha(tint, 0.18),
+            marginRight: 12,
+          }}
+        >
+          <Icon size={22} color={tint} strokeWidth={2.3} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            numberOfLines={1}
+            style={{
+              color: p.ink.default,
+              fontSize: 16,
+              fontWeight: "700",
+            }}
+          >
+            {label}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={{
+              color: p.ink.dim,
+              fontSize: 12,
+              fontWeight: "500",
+              marginTop: 2,
+            }}
+          >
+            {caption}
+          </Text>
+        </View>
+        <ChevronRight
+          size={18}
+          color={withAlpha(p.ink.muted, 0.85)}
+          strokeWidth={2.4}
+          style={{ marginLeft: 8 }}
+        />
       </View>
-      <Text
-        style={{
-          color: p.ink.default,
-          fontSize: 14,
-          fontWeight: "800",
-        }}
-      >
-        {label}
-      </Text>
-      <Text
-        style={{
-          color: p.ink.dim,
-          fontSize: 11,
-          fontWeight: "500",
-        }}
-      >
-        {caption}
-      </Text>
     </Pressable>
   );
 }

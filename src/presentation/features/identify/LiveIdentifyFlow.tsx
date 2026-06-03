@@ -228,6 +228,18 @@ function scannerErrorCopy(message: string): string {
     : message;
 }
 
+function isTransientCameraCaptureError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("image could not be captured") ||
+    lower.includes("cameraview") ||
+    lower.includes("takepicture") ||
+    lower.includes("camera not ready") ||
+    lower.includes("camera is not running") ||
+    lower.includes("camera is closed")
+  );
+}
+
 /**
  * TCG hints surfaced as a chevron pill in the bottom bar. Each carries a
  * brand-ish accent so the pill can show a colored dot for the selected
@@ -473,6 +485,7 @@ export function LiveIdentifyFlow({
   const captureBusyRef = useRef(false);
   const networkBusyRef = useRef(false);
   const activeIdentifyCountRef = useRef(0);
+  const captureFailureCountRef = useRef(0);
   const cancelledRef = useRef(false);
 
   const [paused, setPaused] = useState(false);
@@ -707,13 +720,14 @@ export function LiveIdentifyFlow({
     try {
       const photo = await camera.takePictureAsync({
         quality: CAPTURE_QUALITY,
-        skipProcessing: true,
+        skipProcessing: Platform.OS === "android",
         exif: false,
       });
       if (!photo || cancelledRef.current) {
         captureBusyRef.current = false;
         return;
       }
+      captureFailureCountRef.current = 0;
       const longEdge = Math.max(photo.width, photo.height);
       const scale =
         longEdge > CAPTURE_LONG_EDGE ? CAPTURE_LONG_EDGE / longEdge : 1;
@@ -856,9 +870,24 @@ export function LiveIdentifyFlow({
       captureBusyRef.current = false;
       if (cancelledRef.current) return;
       const msg = e instanceof Error ? e.message : "Capture failed";
+      if (isTransientCameraCaptureError(msg)) {
+        captureFailureCountRef.current += 1;
+        updateDetectorHint(
+          captureFailureCountRef.current > 1
+            ? "Camera settling — keep the card in frame"
+            : "Hold steady while the camera focuses",
+        );
+        refocus();
+        if (captureFailureCountRef.current >= 3) {
+          captureFailureCountRef.current = 0;
+          setCameraReady(false);
+          setCameraKey((key) => key + 1);
+        }
+        return;
+      }
       showScannerError(msg);
     }
-  }, [addScanSessionItem, cameraReady, runIdentify, showScannerError, updateDetectorHint, updateScanSessionItem]);
+  }, [addScanSessionItem, cameraReady, refocus, runIdentify, showScannerError, updateCardFound, updateDetectorHint, updateScanSessionItem]);
 
   useEffect(() => {
     cancelledRef.current = false;
@@ -932,9 +961,11 @@ export function LiveIdentifyFlow({
     setPaused(false);
     setCameraReady(false);
     setCameraKey((key) => key + 1);
+    captureFailureCountRef.current = 0;
     skippedFramesRef.current = 0;
+    updateDetectorHint(null);
     updateCardFound(false);
-  }, [updateCardFound]);
+  }, [updateCardFound, updateDetectorHint]);
 
   const handleManualCapture = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -1558,7 +1589,11 @@ function ReticleArea({
   // edge at the standard trading-card aspect (2.5:3.5) frames a card
   // held at a comfortable distance without crowding the price chip.
   const { width: winW, height: winH } = useWindowDimensions();
-  const CARD_W = Math.round(Math.min(winW * 0.78, winH * 0.5 * (2.5 / 3.5)));
+  const insets = useSafeAreaInsets();
+  const cardAspect = 2.5 / 3.5;
+  const reservedChrome = insets.top + insets.bottom + 286;
+  const maxCardHeight = Math.max(320, winH - reservedChrome);
+  const CARD_W = Math.round(Math.min(winW * 0.8, maxCardHeight * cardAspect, 336));
   const CARD_H = Math.round(CARD_W * (3.5 / 2.5));
 
   // No scrim. The user wants the live camera fully visible — the corner
@@ -2031,13 +2066,10 @@ function BottomPanel({
         />
       ) : null}
 
-      <View
-        className="flex-row items-center"
-        style={{ paddingHorizontal: 2, paddingTop: 2 }}
-      >
-        {/* Left cluster — equal flex so the shutter stays dead-center
-            regardless of the pill/Search label widths. */}
-        <View style={{ flex: 1, alignItems: "flex-start" }}>
+      <View style={{ height: 76, justifyContent: "center", paddingTop: 2 }}>
+        {/* Left utility cluster. The shutter is centered independently
+          so label width can never pull it off-axis. */}
+        <View style={{ position: "absolute", left: 2, top: 14, alignItems: "flex-start" }}>
           {/* TCG selector pill — glassy dark to sit quietly on the camera
               surface (the shutter is the only bright element), with a
               per-game color dot so a wrong auto-detect is obvious. */}
@@ -2082,15 +2114,15 @@ function BottomPanel({
 
         {/* Manual shutter — the single bright focal point. Picks up a mint
             ring + glow the instant we lock so the control reflects state. */}
-        <View style={{ width: 66, height: 66, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 68, height: 68, alignSelf: "center", alignItems: "center", justifyContent: "center" }}>
           {shutterLocked ? (
             <Animated.View
               pointerEvents="none"
               style={{
                 position: "absolute",
-                width: 66,
-                height: 66,
-                borderRadius: 33,
+                width: 68,
+                height: 68,
+                borderRadius: 34,
                 borderWidth: 2,
                 borderColor: palette.accent.mint,
                 opacity: shutterPulse.interpolate({
@@ -2114,9 +2146,9 @@ function BottomPanel({
             accessibilityRole="button"
             accessibilityLabel="Capture frame now"
             style={({ pressed }) => ({
-              width: 66,
-              height: 66,
-              borderRadius: 33,
+              width: 68,
+              height: 68,
+              borderRadius: 34,
               borderWidth: 3.5,
               borderColor: shutterLocked ? palette.accent.mint : "rgba(255,255,255,0.95)",
               alignItems: "center",
@@ -2171,7 +2203,7 @@ function BottomPanel({
         </View>
 
         {/* Right cluster — manual search escape hatch. */}
-        <View style={{ flex: 1, alignItems: "flex-end" }}>
+        <View style={{ position: "absolute", right: 2, top: 14, alignItems: "flex-end" }}>
           <Pressable
             onPress={onManualSearch}
             hitSlop={8}
