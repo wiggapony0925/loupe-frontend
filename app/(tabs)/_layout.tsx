@@ -123,48 +123,8 @@ export default function TabsLayout() {
         options={{
           title: "Scan",
           tabBarButton: (props) => <ScanTabButton {...props} palette={p} />,
-          tabBarIcon: ({ focused }) => (
-            <View
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 26,
-                alignItems: "center",
-                justifyContent: "center",
-                marginTop: -18,
-                backgroundColor: focused
-                  ? p.accent.mint
-                  : withAlpha(p.accent.mint, 0.18),
-                borderWidth: 1,
-                borderColor: focused
-                  ? p.accent.mint
-                  : withAlpha(p.accent.mint, 0.4),
-                shadowColor: p.accent.mint,
-                shadowOpacity: focused ? 0.3 : 0.14,
-                shadowRadius: 12,
-                shadowOffset: { width: 0, height: 6 },
-                elevation: 10,
-              }}
-            >
-              <Camera
-                size={23}
-                color={focused ? p.bg.base : p.accent.mint}
-                strokeWidth={2.3}
-              />
-            </View>
-          ),
-          tabBarLabelStyle: {
-            fontSize: 10,
-            fontWeight: "700",
-            letterSpacing: 0.5,
-            textTransform: "uppercase",
-            color: p.accent.mint,
-            // The icon sits in a 44dp circle pulled up by marginTop:-12,
-            // which leaves the label too close to the camera glyph. Push
-            // it back down so it visually aligns with the neighbouring
-            // tab labels (VAULT / SEARCH) instead of crowding the icon.
-            marginTop: 6,
-          },
+          tabBarIcon: () => null,
+          tabBarLabel: () => null,
         }}
       />
       <Tabs.Screen
@@ -186,7 +146,6 @@ export default function TabsLayout() {
 }
 
 function ScanTabButton({
-  children,
   onPress,
   onLongPress,
   style,
@@ -220,15 +179,72 @@ function ScanTabButton({
         accessibilityLabel={accessibilityLabel}
         accessibilityState={accessibilityState}
         testID={testID}
-        style={({ pressed }) => [{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          opacity: pressed ? 0.76 : 1,
-          transform: [{ scale: selected ? 1.02 : 1 }],
-        }, style]}
+        style={({ pressed }) => [
+          style,
+          {
+            flex: 1,
+            minWidth: 0,
+            alignItems: "center",
+            justifyContent: "flex-start",
+            opacity: pressed ? 0.76 : 1,
+            transform: [{ scale: selected ? 1.02 : 1 }],
+          },
+        ]}
       >
-        {children}
+        <View
+          pointerEvents="none"
+          style={{
+            width: "100%",
+            alignItems: "center",
+            paddingTop: 0,
+          }}
+        >
+          <View
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 26,
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: -18,
+              marginBottom: 6,
+              backgroundColor: selected
+                ? p.accent.mint
+                : withAlpha(p.accent.mint, 0.18),
+              borderWidth: 1,
+              borderColor: selected
+                ? p.accent.mint
+                : withAlpha(p.accent.mint, 0.4),
+              shadowColor: p.accent.mint,
+              shadowOpacity: selected ? 0.3 : 0.14,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 10,
+            }}
+          >
+            <Camera
+              size={23}
+              color={selected ? p.bg.base : p.accent.mint}
+              strokeWidth={2.3}
+            />
+          </View>
+          <Text
+            numberOfLines={1}
+            style={{
+              width: "100%",
+              color: p.accent.mint,
+              fontSize: 10,
+              fontWeight: "700",
+              letterSpacing: 0.5,
+              lineHeight: 12,
+              textAlign: "center",
+              textTransform: "uppercase",
+              includeFontPadding: false,
+            }}
+          >
+            Scan
+          </Text>
+        </View>
       </Pressable>
       <Modal
         visible={menuOpen}

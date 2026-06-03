@@ -22,6 +22,7 @@ import {
   Layers,
   List as ListIcon,
   Package,
+  PackageOpen,
   Plus,
   Search,
   Trash2,
@@ -868,14 +869,16 @@ function SealedVaultCard({
       : stats.totalCostUsd > 0
         ? stats.totalCostUsd
         : null;
+  const primaryAction = hasHoldings ? onOpen : onAdd;
+  const metric = hasHoldings && value != null ? format(value, { compact: false }) : null;
 
   return (
     <View
       style={{
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
-        minHeight: 72,
+        gap: 10,
+        minHeight: 82,
         padding: 12,
         borderRadius: 16,
         borderWidth: StyleSheet.hairlineWidth,
@@ -884,11 +887,12 @@ function SealedVaultCard({
       }}
     >
       <Pressable
-        onPress={onOpen}
+        onPress={primaryAction}
         accessibilityRole="button"
-        accessibilityLabel="Open sealed vault"
+        accessibilityLabel={hasHoldings ? "Open sealed vault" : "Add sealed product"}
         style={({ pressed }) => ({
           flex: 1,
+          minWidth: 0,
           flexDirection: "row",
           alignItems: "center",
           gap: 12,
@@ -920,31 +924,63 @@ function SealedVaultCard({
           >
             {detail}
           </Text>
-        </View>
-        <View style={{ alignItems: "flex-end", gap: 3 }}>
-          <Text
-            style={{
-              color: p.ink.dim,
-              fontSize: 9,
-              fontWeight: "800",
-              letterSpacing: 1.3,
-              textTransform: "uppercase",
-            }}
-          >
-            {valueLabel}
-          </Text>
-          <Text
-            style={{
-              color: value != null ? p.ink.default : p.accent.mint,
-              fontSize: 14,
-              fontWeight: "800",
-              fontVariant: ["tabular-nums"],
-            }}
-          >
-            {value != null ? format(value, { compact: false }) : "Open"}
-          </Text>
+          {metric ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "baseline",
+                gap: 7,
+                marginTop: 4,
+              }}
+            >
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: p.ink.dim,
+                  fontSize: 9,
+                  fontWeight: "800",
+                  letterSpacing: 1.3,
+                  textTransform: "uppercase",
+                }}
+              >
+                {valueLabel}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: p.ink.default,
+                  fontSize: 13,
+                  fontWeight: "800",
+                  fontVariant: ["tabular-nums"],
+                }}
+              >
+                {metric}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </Pressable>
+      {hasHoldings ? (
+        <Pressable
+          onPress={onOpen}
+          accessibilityRole="button"
+          accessibilityLabel="Open sealed vault"
+          hitSlop={6}
+          style={({ pressed }) => ({
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 1,
+            borderColor: withAlpha(p.accent.mint, 0.34),
+            backgroundColor: withAlpha(p.accent.mint, 0.1),
+            opacity: pressed ? 0.72 : 1,
+          })}
+        >
+          <PackageOpen size={18} color={p.accent.mint} strokeWidth={2.35} />
+        </Pressable>
+      ) : null}
       <Pressable
         onPress={onAdd}
         accessibilityRole="button"
