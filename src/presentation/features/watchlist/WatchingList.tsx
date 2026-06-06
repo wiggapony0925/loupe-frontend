@@ -3,7 +3,7 @@
  * Watch tab. Rendered in two places now:
  *
  *   1. The Notifications screen behind the bell, under a
- *      `[Inbox | Favorites]` segmented header.
+ i *      `[Inbox | Favorites]` segmented header.
  *   2. The standalone `/watchlist` route, kept around for deep links
  *      (e.g. push notifications that say "your $X alert fired").
  *
