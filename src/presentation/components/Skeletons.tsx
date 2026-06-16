@@ -16,15 +16,15 @@
  * for back-compat.
  */
 import React, { useEffect, useMemo, useRef } from "react";
-import {
-  Animated,
-  Easing,
-  View,
-  type DimensionValue,
-  type ViewStyle,
-} from "react-native";
+import { Animated, Easing, View, type DimensionValue, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { getActiveScheme, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import {
+  getActiveScheme,
+  radius,
+  spacing,
+  useThemedPalette,
+  withAlpha,
+} from "@/presentation/theme/tokens";
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
@@ -38,9 +38,7 @@ const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
  */
 function useSkeletonFill(): string {
   const p = useThemedPalette();
-  return getActiveScheme() === "light"
-    ? withAlpha(p.ink.dim, 0.18)
-    : p.line.default;
+  return getActiveScheme() === "light" ? withAlpha(p.ink.dim, 0.18) : p.line.default;
 }
 
 // ─── Shared pulse ──────────────────────────────────────────────────────
@@ -102,12 +100,7 @@ interface BoxProps {
   style?: ViewStyle;
 }
 
-export function SkeletonBox({
-  width = "100%",
-  height = 16,
-  radius = 8,
-  style,
-}: BoxProps) {
+export function SkeletonBox({ width = "100%", height = 16, radius = 8, style }: BoxProps) {
   const fill = useSkeletonFill();
   const opacity = useShimmer();
   const sweep = useSweep();
@@ -115,9 +108,7 @@ export function SkeletonBox({
   // light mode. Either way it travels diagonally across the block to
   // sell the "loading" beat better than a flat opacity pulse can.
   const highlight = useMemo(
-    () => (getActiveScheme() === "light"
-      ? "rgba(255,255,255,0.55)"
-      : "rgba(255,255,255,0.07)"),
+    () => (getActiveScheme() === "light" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.07)"),
     [],
   );
   // Translate the highlight from −100% to +100% of the block's width.
@@ -127,12 +118,7 @@ export function SkeletonBox({
     outputRange: ["-100%", "100%"],
   });
   return (
-    <View
-      style={[
-        { width, height, borderRadius: radius, overflow: "hidden" },
-        style,
-      ]}
-    >
+    <View style={[{ width, height, borderRadius: radius, overflow: "hidden" }, style]}>
       <Animated.View style={{ flex: 1, backgroundColor: fill, opacity }} />
       <AnimatedLinearGradient
         pointerEvents="none"
@@ -152,28 +138,15 @@ export function SkeletonBox({
   );
 }
 
-export function SkeletonText({
-  width = "60%",
-  height = 12,
-  radius = 6,
-  style,
-}: BoxProps) {
-  return (
-    <SkeletonBox width={width} height={height} radius={radius} style={style} />
-  );
+export function SkeletonText({ width = "60%", height = 12, radius = 6, style }: BoxProps) {
+  return <SkeletonBox width={width} height={height} radius={radius} style={style} />;
 }
 
 export function SkeletonCircle({ size = 40 }: { size?: number }) {
   return <SkeletonBox width={size} height={size} radius={size / 2} />;
 }
 
-export function SkeletonPill({
-  width = 56,
-  height = 22,
-}: {
-  width?: number;
-  height?: number;
-}) {
+export function SkeletonPill({ width = 56, height = 22 }: { width?: number; height?: number }) {
   return <SkeletonBox width={width} height={height} radius={999} />;
 }
 
@@ -423,24 +396,41 @@ export function SkeletonScannersList({ rows = 3 }: { rows?: number }) {
 export function SkeletonListingsRail({ rows = 4 }: { rows?: number }) {
   const p = useThemedPalette();
   return (
-    <View style={{ flexDirection: "row", gap: 12 }}>
+    <View
+      style={{
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: p.line.default,
+        backgroundColor: p.bg.elevated,
+        overflow: "hidden",
+      }}
+    >
       {Array.from({ length: rows }).map((_, i) => (
         <View
           key={i}
           style={{
-            width: 168,
-            padding: 10,
-            borderRadius: 14,
-            backgroundColor: p.bg.elevated,
-            borderWidth: 1,
-            borderColor: p.line.default,
-            gap: 8,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: spacing.md,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.md,
+            borderBottomWidth: i === rows - 1 ? 0 : 1,
+            borderBottomColor: p.line.default,
           }}
         >
-          <SkeletonImage width="100%" height={120} radius={10} />
-          <SkeletonText width="80%" height={12} />
-          <SkeletonText width="55%" height={13} />
-          <SkeletonPill width={64} height={18} />
+          <SkeletonImage width={58} height={58} radius={radius.md} />
+          <View style={{ flex: 1, gap: spacing.sm }}>
+            <SkeletonText width="82%" height={13} />
+            <SkeletonText width="62%" height={13} />
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <SkeletonPill width={54} height={18} />
+              <SkeletonPill width={72} height={18} />
+            </View>
+          </View>
+          <View style={{ alignItems: "flex-end", gap: spacing.sm }}>
+            <SkeletonText width={68} height={16} />
+            <SkeletonCircle size={30} />
+          </View>
         </View>
       ))}
     </View>
@@ -507,10 +497,7 @@ export function SkeletonComparePage() {
     <View style={{ gap: 20 }}>
       <View style={{ flexDirection: "row", gap: 12 }}>
         {[0, 1].map((i) => (
-          <View
-            key={i}
-            style={{ flex: 1, gap: 12, padding: 12, borderRadius: 16 }}
-          >
+          <View key={i} style={{ flex: 1, gap: 12, padding: 12, borderRadius: 16 }}>
             <View style={{ aspectRatio: 2.5 / 3.5, width: "100%" }}>
               <SkeletonImage width="100%" height="100%" radius={12} />
             </View>
@@ -518,9 +505,7 @@ export function SkeletonComparePage() {
               <SkeletonText width="85%" height={14} />
               <SkeletonText width="55%" height={11} />
             </View>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-            >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <SkeletonText width={60} height={28} />
               <SkeletonText width={48} height={12} />
             </View>
@@ -576,9 +561,7 @@ export function SkeletonMarketDetailPage() {
       {/* Range pills */}
       <SkeletonChipRow count={7} />
       {/* Condition toggle */}
-      <View
-        style={{ flexDirection: "row", gap: 0, borderRadius: 12, overflow: "hidden" }}
-      >
+      <View style={{ flexDirection: "row", gap: 0, borderRadius: 12, overflow: "hidden" }}>
         {Array.from({ length: 3 }).map((_, i) => (
           <View key={i} style={{ flex: 1 }}>
             <SkeletonStatTile />
@@ -596,4 +579,3 @@ export function SkeletonMarketDetailPage() {
     </View>
   );
 }
-

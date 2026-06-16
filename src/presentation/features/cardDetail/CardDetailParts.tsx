@@ -7,14 +7,20 @@
  */
 import React from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Clock,
+  ExternalLink,
+  Gavel,
+  Search,
+  ShoppingBag,
+  Tag,
+  type LucideIcon,
+} from "lucide-react-native";
 import Svg, { Polyline } from "react-native-svg";
 import { CardImage } from "@/presentation/components/CardImage";
 import { Price } from "@/presentation/components/Price";
-import {
-  SkeletonCompsList,
-  SkeletonListingsRail,
-} from "@/presentation/components/Skeletons";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { SkeletonCompsList, SkeletonListingsRail } from "@/presentation/components/Skeletons";
+import { radius, spacing, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useCardListings } from "@/application/queries/catalog/useCardListings";
 import { useCardComps } from "@/application/queries/catalog/useCardComps";
 import type {
@@ -37,10 +43,7 @@ export const HOUSE_LABEL: Record<string, string> = {
 
 export const HOUSE_ORDER: HouseId[] = ["psa", "cgc", "bgs", "sgc", "tag"];
 
-export function houseColor(
-  house: string,
-  p: ReturnType<typeof useThemedPalette>,
-) {
+export function houseColor(house: string, p: ReturnType<typeof useThemedPalette>) {
   switch (house) {
     case "psa":
       return p.accent.mint;
@@ -193,9 +196,7 @@ export function Sparkline({
           justifyContent: "center",
         }}
       >
-        <Text className="text-[11px] text-ink-dim">
-          Intraday history coming soon
-        </Text>
+        <Text className="text-[11px] text-ink-dim">Intraday history coming soon</Text>
       </View>
     );
   }
@@ -223,10 +224,7 @@ export function Sparkline({
   const range = max - min || 1;
   const stride = (W - PAD * 2) / (points.length - 1);
   const coords = points
-    .map(
-      (v, i) =>
-        `${PAD + i * stride},${H - PAD - ((v - min) / range) * (H - PAD * 2)}`,
-    )
+    .map((v, i) => `${PAD + i * stride},${H - PAD - ((v - min) / range) * (H - PAD * 2)}`)
     .join(" ");
 
   const positive = (changePct ?? 0) >= 0;
@@ -406,7 +404,7 @@ export function GradeRow({
         gap: 12,
         borderBottomWidth: isLast ? 0 : 1,
         borderBottomColor: p.line.default,
-        backgroundColor: active ? withAlpha(accent, 0.10) : "transparent",
+        backgroundColor: active ? withAlpha(accent, 0.1) : "transparent",
       }}
     >
       {/* Tiny house dot + monochrome label — Robinhood keeps row
@@ -455,9 +453,7 @@ export function GradeRow({
             borderColor: p.line.default,
           }}
         >
-          <Text style={{ color: p.ink.dim, fontSize: 9, fontWeight: "700" }}>
-            est
-          </Text>
+          <Text style={{ color: p.ink.dim, fontSize: 9, fontWeight: "700" }}>est</Text>
         </View>
       ) : null}
       <Text
@@ -567,13 +563,7 @@ export function CardDetailsBlock({ card }: { card: CardSearchResult }) {
 
 // ── section headers + query-aware sections ────────────────────────────
 
-export function SectionHeader({
-  label,
-  badge,
-}: {
-  label: string;
-  badge?: string | null;
-}) {
+export function SectionHeader({ label, badge }: { label: string; badge?: string | null }) {
   const p = useThemedPalette();
   return (
     <View
@@ -595,9 +585,7 @@ export function SectionHeader({
       >
         {label}
       </Text>
-      {badge ? (
-        <Text style={{ color: p.ink.muted, fontSize: 11 }}>· {badge}</Text>
-      ) : null}
+      {badge ? <Text style={{ color: p.ink.muted, fontSize: 11 }}>· {badge}</Text> : null}
     </View>
   );
 }
@@ -605,21 +593,19 @@ export function SectionHeader({
 type MarketplaceFallback = {
   label: string;
   title: string;
-  subtitle: string;
   url: string;
   tone: "mint" | "amber" | "blue" | "purple";
+  icon: LucideIcon;
 };
 
 function buildListingQuery(card: CardSearchResult | null | undefined): string {
   if (!card) return "trading card";
-  return [
-    card.name,
-    card.set_name,
-    card.number ? `#${card.number}` : null,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .trim() || "trading card";
+  return (
+    [card.name, card.set_name, card.number ? `#${card.number}` : null]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || "trading card"
+  );
 }
 
 function marketplaceFallbacks(query: string): MarketplaceFallback[] {
@@ -627,33 +613,66 @@ function marketplaceFallbacks(query: string): MarketplaceFallback[] {
   return [
     {
       label: "Active",
-      title: "eBay live search",
-      subtitle: "Buy-it-now listings for this card",
+      title: "eBay",
       url: `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_BIN=1`,
       tone: "mint",
+      icon: ShoppingBag,
     },
     {
-      label: "Bids",
-      title: "eBay auctions",
-      subtitle: "Auction results ending soon",
+      label: "Auctions",
+      title: "eBay bids",
       url: `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Auction=1&_sop=1`,
       tone: "amber",
+      icon: Gavel,
     },
     {
       label: "Market",
-      title: "TCGplayer search",
-      subtitle: "Seller inventory and market asks",
+      title: "TCGplayer",
       url: `https://www.tcgplayer.com/search/all/product?q=${q}&view=grid`,
       tone: "blue",
+      icon: Search,
     },
     {
-      label: "Comps",
-      title: "PriceCharting search",
-      subtitle: "Price guide and marketplace context",
+      label: "Guide",
+      title: "PriceCharting",
       url: `https://www.pricecharting.com/search-products?q=${q}&type=prices`,
       tone: "purple",
+      icon: Tag,
     },
   ];
+}
+
+function formatListingSource(value: string | null | undefined): string {
+  if (!value) return "Marketplace";
+  const normalized = value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const labels: Record<string, string> = {
+    ebay: "eBay",
+    tcgplayer: "TCGplayer",
+    cardmarket: "Cardmarket",
+    pricecharting: "PriceCharting",
+  };
+  return labels[normalized] ?? titleCase(value);
+}
+
+function sourceBadge(listings: ListingWire[]): string {
+  if (listings.length === 0) return "Marketplace search";
+  const sources = Array.from(new Set(listings.map((l) => formatListingSource(l.source))));
+  const sourceText =
+    sources.length <= 2
+      ? sources.join(" + ")
+      : `${sources.slice(0, 2).join(" + ")} +${sources.length - 2}`;
+  return `${listings.length} · ${sourceText}`;
+}
+
+function formatTimeLeft(seconds: number | null | undefined): string | null {
+  if (seconds === null || seconds === undefined) return null;
+  if (seconds <= 0) return "ending";
+  const days = Math.floor(seconds / 86_400);
+  if (days >= 1) return `${days}d left`;
+  const hours = Math.floor(seconds / 3_600);
+  if (hours >= 1) return `${hours}h left`;
+  const minutes = Math.max(1, Math.floor(seconds / 60));
+  return `${minutes}m left`;
 }
 
 export function LiveListingsSection({
@@ -670,15 +689,13 @@ export function LiveListingsSection({
   const fallbacks = marketplaceFallbacks(fallbackQuery);
 
   return (
-    <View style={{ gap: 4 }}>
+    <View style={{ gap: spacing.sm }}>
       <SectionHeader
         label="Live Listings"
-        badge={listings.length > 0 ? `${listings.length}` : "Search"}
+        badge={q.isError ? "Unavailable" : sourceBadge(listings)}
       />
       {q.isLoading ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <SkeletonListingsRail rows={4} />
-        </ScrollView>
+        <SkeletonListingsRail rows={3} />
       ) : listings.length === 0 ? (
         <MarketplaceFallbackRail
           query={fallbackQuery}
@@ -686,13 +703,23 @@ export function LiveListingsSection({
           providerError={q.isError}
         />
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ flexDirection: "row", gap: 10, paddingRight: 12 }}>
-            {listings.map((l, i) => (
-              <ListingCard key={`${l.source}:${l.url || i}`} listing={l} />
-            ))}
-          </View>
-        </ScrollView>
+        <View
+          style={{
+            borderRadius: radius.lg,
+            borderWidth: 1,
+            borderColor: p.line.default,
+            backgroundColor: p.bg.elevated,
+            overflow: "hidden",
+          }}
+        >
+          {listings.map((l, i) => (
+            <ListingRow
+              key={`${l.source}:${l.url || i}`}
+              listing={l}
+              isLast={i === listings.length - 1}
+            />
+          ))}
+        </View>
       )}
     </View>
   );
@@ -709,16 +736,55 @@ function MarketplaceFallbackRail({
 }) {
   const p = useThemedPalette();
   return (
-    <View style={{ gap: 10 }}>
-      <Text style={{ color: p.ink.muted, fontSize: 12, lineHeight: 17 }}>
-        {providerError
-          ? "Listing providers are unavailable. Open live marketplace searches instead."
-          : "No API listings came back. Open live marketplace searches for current asks, auctions, and bids."}
-      </Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ flexDirection: "row", gap: 10, paddingRight: 12 }}>
+    <View
+      style={{
+        gap: spacing.md,
+        padding: spacing.md,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: providerError ? withAlpha(p.accent.amber, 0.4) : p.line.default,
+        backgroundColor: p.bg.elevated,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: withAlpha(providerError ? p.accent.amber : p.ink.muted, 0.12),
+          }}
+        >
+          <Search
+            size={16}
+            color={providerError ? p.accent.amber : p.ink.muted}
+            strokeWidth={2.25}
+          />
+        </View>
+        <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
+          <Text style={{ color: p.ink.default, fontSize: 13, fontWeight: "800" }}>
+            {providerError ? "Listings unavailable" : "No active listings"}
+          </Text>
+          <Text style={{ color: p.ink.muted, fontSize: 12, lineHeight: 17 }}>
+            {providerError
+              ? "Provider results did not load. Marketplace search is still available."
+              : "No provider returned active listings for this card."}
+          </Text>
+          <Text numberOfLines={1} style={{ color: p.ink.dim, fontSize: 11, lineHeight: 15 }}>
+            {query}
+          </Text>
+        </View>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: spacing.sm, paddingRight: 2 }}
+      >
+        <View style={{ flexDirection: "row", gap: spacing.sm }}>
           {links.map((link) => (
-            <MarketplaceFallbackCard key={link.title} link={link} query={query} />
+            <MarketplaceFallbackCard key={link.title} link={link} />
           ))}
         </View>
       </ScrollView>
@@ -726,86 +792,110 @@ function MarketplaceFallbackRail({
   );
 }
 
-function MarketplaceFallbackCard({
-  link,
-  query,
-}: {
-  link: MarketplaceFallback;
-  query: string;
-}) {
+function MarketplaceFallbackCard({ link }: { link: MarketplaceFallback }) {
   const p = useThemedPalette();
   const accent = p.accent[link.tone];
+  const Icon = link.icon;
   return (
     <Pressable
       onPress={() => Linking.openURL(link.url).catch(() => undefined)}
       accessibilityRole="link"
       accessibilityLabel={`Open ${link.title}`}
       style={({ pressed }) => ({
-        width: 178,
-        padding: 12,
-        borderRadius: 14,
-        backgroundColor: p.bg.elevated,
+        width: 136,
+        minHeight: 82,
+        padding: spacing.md,
+        borderRadius: radius.md,
+        backgroundColor: p.bg.sunken,
         borderWidth: 1,
-        borderColor: withAlpha(accent, 0.28),
-        gap: 10,
+        borderColor: withAlpha(accent, 0.32),
+        justifyContent: "space-between",
+        gap: spacing.sm,
         opacity: pressed ? 0.78 : 1,
       })}
     >
       <View
         style={{
-          alignSelf: "flex-start",
-          paddingHorizontal: 8,
-          paddingVertical: 3,
-          borderRadius: 999,
-          backgroundColor: withAlpha(accent, 0.14),
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: spacing.sm,
         }}
       >
-        <Text style={{ color: accent, fontSize: 10, fontWeight: "800" }}>
-          {link.label}
-        </Text>
+        <Icon size={15} color={accent} strokeWidth={2.25} />
+        <ExternalLink size={13} color={p.ink.dim} strokeWidth={2.25} />
       </View>
-      <View style={{ gap: 4 }}>
-        <Text numberOfLines={1} style={{ color: p.ink.default, fontSize: 13, fontWeight: "800" }}>
+      <View style={{ gap: 3 }}>
+        <Text numberOfLines={1} style={{ color: p.ink.default, fontSize: 12, fontWeight: "800" }}>
           {link.title}
         </Text>
-        <Text style={{ color: p.ink.muted, fontSize: 11, lineHeight: 15 }}>
-          {link.subtitle}
-        </Text>
+        <Text style={{ color: accent, fontSize: 10, fontWeight: "800" }}>{link.label}</Text>
       </View>
-      <Text numberOfLines={2} style={{ color: p.ink.dim, fontSize: 10, lineHeight: 14 }}>
-        {query}
-      </Text>
-      <Text style={{ color: accent, fontSize: 11, fontWeight: "800" }}>
-        Open live results
-      </Text>
     </Pressable>
   );
 }
 
-function ListingCard({ listing }: { listing: ListingWire }) {
+function ListingMetaPill({
+  label,
+  icon: Icon,
+  tone = "muted",
+}: {
+  label: string;
+  icon?: LucideIcon;
+  tone?: "muted" | "mint" | "amber";
+}) {
   const p = useThemedPalette();
+  const color = tone === "mint" ? p.accent.mint : tone === "amber" ? p.accent.amber : p.ink.muted;
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingHorizontal: 7,
+        paddingVertical: 3,
+        borderRadius: 999,
+        backgroundColor: withAlpha(color, 0.12),
+      }}
+    >
+      {Icon ? <Icon size={10} color={color} strokeWidth={2.25} /> : null}
+      <Text numberOfLines={1} style={{ color, fontSize: 10, fontWeight: "800" }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function ListingRow({ listing, isLast }: { listing: ListingWire; isLast: boolean }) {
+  const p = useThemedPalette();
+  const timeLeft = listing.is_auction ? formatTimeLeft(listing.time_left_seconds) : null;
   const onPress = () => {
     if (listing.url) Linking.openURL(listing.url).catch(() => undefined);
   };
   return (
     <Pressable
       onPress={onPress}
-      style={{
-        width: 168,
-        padding: 10,
-        borderRadius: 14,
-        backgroundColor: p.bg.elevated,
-        borderWidth: 1,
-        borderColor: p.line.default,
-        gap: 8,
-      }}
+      disabled={!listing.url}
+      accessibilityRole={listing.url ? "link" : undefined}
+      accessibilityLabel={`Open ${listing.title || "marketplace listing"}`}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.md,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.md,
+        borderBottomWidth: isLast ? 0 : 1,
+        borderBottomColor: p.line.default,
+        backgroundColor: pressed ? withAlpha(p.ink.default, 0.04) : "transparent",
+        opacity: pressed ? 0.82 : 1,
+      })}
     >
       {listing.image_url ? (
         <CardImage
           uri={listing.image_url}
-          width={148}
-          height={120}
-          rounded={10}
+          width={58}
+          height={58}
+          rounded={radius.md}
           contentFit="cover"
           priority="low"
           recyclingKey={listing.image_url ?? listing.url}
@@ -814,51 +904,71 @@ function ListingCard({ listing }: { listing: ListingWire }) {
       ) : (
         <View
           style={{
-            width: "100%",
-            height: 120,
-            borderRadius: 10,
+            width: 58,
+            height: 58,
+            borderRadius: radius.md,
             backgroundColor: p.bg.sunken,
-          }}
-        />
-      )}
-      <Text
-        numberOfLines={2}
-        style={{ color: p.ink.default, fontSize: 11, fontWeight: "600" }}
-      >
-        {listing.title}
-      </Text>
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Price
-          usd={listing.price.amount}
-          className="text-[13px] font-semibold text-ink"
-        />
-        {listing.is_auction ? (
-          <Text style={{ color: p.accent.amber, fontSize: 10, fontWeight: "700" }}>
-            AUCTION
-          </Text>
-        ) : null}
-      </View>
-      {listing.condition ? (
-        <View
-          style={{
-            alignSelf: "flex-start",
-            paddingHorizontal: 6,
-            paddingVertical: 2,
-            borderRadius: 999,
-            backgroundColor: withAlpha(p.accent.mint, 0.15),
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <Text style={{ color: p.accent.mint, fontSize: 10, fontWeight: "700" }}>
-            {listing.condition.toUpperCase()}
-          </Text>
+          <ShoppingBag size={18} color={p.ink.dim} strokeWidth={2.25} />
         </View>
-      ) : null}
+      )}
+      <View
+        style={{
+          flex: 1,
+          minWidth: 0,
+          gap: spacing.sm,
+        }}
+      >
+        <Text
+          numberOfLines={2}
+          style={{
+            color: p.ink.default,
+            fontSize: 12,
+            fontWeight: "700",
+            lineHeight: 16,
+          }}
+        >
+          {listing.title || "Marketplace listing"}
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+          <ListingMetaPill label={formatListingSource(listing.source)} />
+          {listing.condition ? (
+            <ListingMetaPill label={listing.condition} icon={Tag} tone="mint" />
+          ) : null}
+          {listing.is_auction ? (
+            <ListingMetaPill label="Auction" icon={Gavel} tone="amber" />
+          ) : null}
+          {timeLeft ? <ListingMetaPill label={timeLeft} icon={Clock} tone="amber" /> : null}
+        </View>
+      </View>
+      <View style={{ alignItems: "flex-end", gap: spacing.sm, minWidth: 76 }}>
+        <Price
+          usd={listing.price.amount}
+          compact={false}
+          style={{ color: p.ink.default, fontSize: 15, fontWeight: "800" }}
+        />
+        {listing.url ? (
+          <View
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: withAlpha(p.ink.default, 0.06),
+              borderWidth: 1,
+              borderColor: p.line.default,
+            }}
+          >
+            <ExternalLink size={14} color={p.ink.muted} strokeWidth={2.25} />
+          </View>
+        ) : (
+          <Text style={{ color: p.ink.dim, fontSize: 10, fontWeight: "700" }}>LIVE</Text>
+        )}
+      </View>
     </Pressable>
   );
 }
@@ -884,9 +994,7 @@ export function RecentCompsSection({ cardId }: { cardId: string }) {
             alignItems: "center",
           }}
         >
-          <Text className="text-[12px] text-ink-muted">
-            No recent comps in window
-          </Text>
+          <Text className="text-[12px] text-ink-muted">No recent comps in window</Text>
         </View>
       ) : (
         <View
@@ -938,10 +1046,7 @@ function CompRow({ comp, isLast }: { comp: SoldCompWire; isLast: boolean }) {
       }}
     >
       <View style={{ flex: 1, gap: 2 }}>
-        <Text
-          numberOfLines={1}
-          style={{ color: p.ink.default, fontSize: 12, fontWeight: "600" }}
-        >
+        <Text numberOfLines={1} style={{ color: p.ink.default, fontSize: 12, fontWeight: "600" }}>
           {comp.title}
         </Text>
         <Text style={{ color: p.ink.muted, fontSize: 10 }}>
