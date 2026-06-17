@@ -15,7 +15,8 @@ import type { ScanStatus } from "@/domain";
  *   3. Multipart upload to FastAPI, Celery job streamed via WebSocket
  *   4. On `ready`, navigates to the Forensic Report
  *
- * Falls back to a JS mock for the bridge in Expo Go (no dev build yet).
+ * Uses the native scanner bridge in TestFlight and fails honestly when the
+ * native module is unavailable.
  */
 const STATUS_LABEL: Record<ScanStatus, string> = {
   uploading: "Uploading captures…",
@@ -106,7 +107,9 @@ export function InitiateScanButton() {
             Forensic Capture
           </Text>
           <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-ink-dim">
-            {scanner.source === "native" ? "Native bridge" : "JS mock"}
+            {scanner.source === "native"
+              ? "Native bridge"
+              : "Bridge unavailable"}
           </Text>
         </View>
         <Text className="mt-1 text-base font-medium text-ink">{message}</Text>

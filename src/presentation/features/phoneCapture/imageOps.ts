@@ -60,54 +60,26 @@ export interface QualityCheck {
 
 /**
  * Heuristic quality gate. We can't read pixel data without a native module,
- * so we use a probabilistic JS check that always passes in Expo Go but is
- * shaped like the real native check (sharpness + glare scores). When wired
- * to VisionCamera in a dev build, swap the body — keep the signature.
+ * so this only verifies that the capture pipeline produced an image and lets
+ * the user continue. Native image quality should be enforced by the scanner
+ * bridge or backend report pipeline.
  */
-export async function checkCaptureQuality(_uri: string): Promise<QualityCheck> {
+export async function checkCaptureQuality(uri: string): Promise<QualityCheck> {
   // Slight perceptual delay so the busy spinner is visible.
   await new Promise((r) => setTimeout(r, 120));
-  // 90% pass rate — surfaces the retake UX during demos without being annoying.
-  const sharpness = 0.55 + Math.random() * 0.4;
-  const glare = Math.random() * 0.35;
-  if (sharpness < 0.45) {
-    return { ok: false, sharpness, glare, reason: "Too blurry — hold steady & retake" };
+  if (!uri.trim()) {
+    return { ok: false, sharpness: 0, glare: 0, reason: "Capture failed — retake this angle" };
   }
-  if (glare > 0.55) {
-    return { ok: false, sharpness, glare, reason: "Too much glare — angle away from light" };
-  }
-  return { ok: true, sharpness, glare };
+  return { ok: true, sharpness: 1, glare: 0 };
 }
 
 /**
- * Best-effort OCR for the card's front face. In Expo Go we return a
- * confident mock derived from a tiny dictionary so the review UI is fully
- * exercisable; in a dev build this is swapped for ML Kit Text Recognition.
+ * Best-effort OCR for the card's front face.
+ *
+ * No fabricated fallback: until native/backend OCR is wired into this phone
+ * capture path, return `null` and let the user type the card name manually.
  */
-export async function recognizeCardText(_uri: string): Promise<OcrSuggestion> {
-  await new Promise((r) => setTimeout(r, 600));
-  const samples: OcrSuggestion[] = [
-    {
-      title: "Charizard — Holo",
-      set: "Pokemon Base Set",
-      year: 1999,
-      confidence: 0.91,
-      rawLines: ["CHARIZARD", "Stage 2 · 120 HP", "© 1999 WIZARDS"],
-    },
-    {
-      title: "Black Lotus",
-      set: "Magic Alpha",
-      year: 1993,
-      confidence: 0.82,
-      rawLines: ["Black Lotus", "Mox · Artifact", "Illus. Christopher Rush"],
-    },
-    {
-      title: "Mbappé — Hat-Trick",
-      set: "2026 World Cup Goals",
-      year: 2026,
-      confidence: 0.74,
-      rawLines: ["MBAPPÉ", "FRANCE · 10", "WORLD CUP 2026"],
-    },
-  ];
-  return samples[Math.floor(Math.random() * samples.length)]!;
+export async function recognizeCardText(_uri: string): Promise<OcrSuggestion | null> {
+  await new Promise((r) => setTimeout(r, 250));
+  return null;
 }

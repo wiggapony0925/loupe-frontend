@@ -5,10 +5,6 @@
  * "market" notification. Scan/system categories will light up once those
  * event sources land server-side; until then they simply have no rows
  * (no mocks, no fabricated values).
- *
- * The empty state previews three faint "ghost" rows so users can read the
- * eventual layout before any real notification has arrived — much friendlier
- * than an isolated icon-in-a-card.
  */
 
 import React, { useMemo, useState } from "react";
@@ -394,77 +390,6 @@ function EmptyState({
         <Text className="mt-1 text-center text-[13px] leading-[19px] text-ink-muted">
           We'll ping you here when a forensic scan finishes, a watched comp
           moves more than your threshold, or Loupe ships an update worth a look.
-        </Text>
-      </View>
-
-      {/* Preview section — three ghost rows show what real notifications
-          will look like. They're non-interactive and dimmed so users
-          read them as samples, not as live items. */}
-      <Text className="mt-9 px-1 text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-        Preview · sample alerts
-      </Text>
-      <View
-        className="mt-2 overflow-hidden rounded-2xl border border-line bg-bg-elevated"
-        pointerEvents="none"
-      >
-        <GhostRow
-          category="scan"
-          title="Forensic report ready"
-          body="Charizard 1999 Holo · Grade 9.5 · 92% confidence"
-          when="2m"
-        />
-        <GhostRow
-          category="market"
-          title="Watched comp moved"
-          body="PSA 10 Pikachu Illustrator · +4.2% in the last 24h"
-          when="1h"
-        />
-        <GhostRow
-          category="system"
-          title="Loupe scanner firmware v1.2"
-          body="Faster light cycle and a sharper macro lens profile."
-          when="2d"
-          isLast
-        />
-      </View>
-    </View>
-  );
-}
-
-function GhostRow({
-  category,
-  title,
-  body,
-  when,
-  isLast = false,
-}: {
-  category: Exclude<Category, "all">;
-  title: string;
-  body: string;
-  when: string;
-  isLast?: boolean;
-}) {
-  const p = useThemedPalette();
-  const meta = CATEGORY_META[category];
-  const tint = p.accent[meta.tint];
-  return (
-    <View
-      className={`flex-row items-start gap-3 px-4 py-3.5 ${isLast ? "" : "border-b border-line"}`}
-      style={{ opacity: 0.55 }}
-    >
-      <View
-        className="h-9 w-9 items-center justify-center rounded-full"
-        style={{ backgroundColor: withAlpha(tint, 0.14) }}
-      >
-        <meta.Icon size={15} color={tint} />
-      </View>
-      <View className="flex-1">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-[14px] font-semibold text-ink">{title}</Text>
-          <Text className="text-[11px] text-ink-dim">{when}</Text>
-        </View>
-        <Text numberOfLines={2} className="mt-0.5 text-[12px] leading-[17px] text-ink-muted">
-          {body}
         </Text>
       </View>
     </View>

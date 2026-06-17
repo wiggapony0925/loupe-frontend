@@ -6,7 +6,7 @@
  * self-contained queries inside the route.
  */
 import React from "react";
-import { Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { Linking, Pressable, Text, View } from "react-native";
 import {
   Clock,
   ExternalLink,
@@ -570,8 +570,9 @@ export function SectionHeader({ label, badge }: { label: string; badge?: string 
       style={{
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "space-between",
         gap: 8,
-        marginBottom: 8,
+        marginBottom: 10,
       }}
     >
       <Text
@@ -585,7 +586,11 @@ export function SectionHeader({ label, badge }: { label: string; badge?: string 
       >
         {label}
       </Text>
-      {badge ? <Text style={{ color: p.ink.muted, fontSize: 11 }}>· {badge}</Text> : null}
+      {badge ? (
+        <Text numberOfLines={1} style={{ color: p.ink.muted, fontSize: 11, flexShrink: 1 }}>
+          {badge}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -682,14 +687,13 @@ export function LiveListingsSection({
   cardId: string;
   card?: CardSearchResult | null;
 }) {
-  const p = useThemedPalette();
   const q = useCardListings(cardId, { limit: 12 });
   const listings = q.data?.listings ?? [];
   const fallbackQuery = q.data?.query?.trim() || buildListingQuery(card);
   const fallbacks = marketplaceFallbacks(fallbackQuery);
 
   return (
-    <View style={{ gap: spacing.sm }}>
+    <View style={{ gap: spacing.md }}>
       <SectionHeader
         label="Live Listings"
         badge={q.isError ? "Unavailable" : sourceBadge(listings)}
@@ -705,18 +709,13 @@ export function LiveListingsSection({
       ) : (
         <View
           style={{
-            borderRadius: radius.lg,
-            borderWidth: 1,
-            borderColor: p.line.default,
-            backgroundColor: p.bg.elevated,
-            overflow: "hidden",
+            gap: spacing.md,
           }}
         >
           {listings.map((l, i) => (
-            <ListingRow
+            <ListingCard
               key={`${l.source}:${l.url || i}`}
               listing={l}
-              isLast={i === listings.length - 1}
             />
           ))}
         </View>
@@ -738,8 +737,8 @@ function MarketplaceFallbackRail({
   return (
     <View
       style={{
-        gap: spacing.md,
-        padding: spacing.md,
+        gap: spacing.lg,
+        padding: spacing.lg,
         borderRadius: radius.lg,
         borderWidth: 1,
         borderColor: providerError ? withAlpha(p.accent.amber, 0.4) : p.line.default,
@@ -769,25 +768,19 @@ function MarketplaceFallbackRail({
           </Text>
           <Text style={{ color: p.ink.muted, fontSize: 12, lineHeight: 17 }}>
             {providerError
-              ? "Provider results did not load. Marketplace search is still available."
-              : "No provider returned active listings for this card."}
+              ? "The live provider did not return results. Use the real marketplace searches below."
+              : "No provider returned active listings for this card. Use the real marketplace searches below."}
           </Text>
           <Text numberOfLines={1} style={{ color: p.ink.dim, fontSize: 11, lineHeight: 15 }}>
             {query}
           </Text>
         </View>
       </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: spacing.sm, paddingRight: 2 }}
-      >
-        <View style={{ flexDirection: "row", gap: spacing.sm }}>
-          {links.map((link) => (
-            <MarketplaceFallbackCard key={link.title} link={link} />
-          ))}
-        </View>
-      </ScrollView>
+      <View style={{ gap: spacing.sm }}>
+        {links.map((link) => (
+          <MarketplaceFallbackCard key={link.title} link={link} />
+        ))}
+      </View>
     </View>
   );
 }
@@ -802,35 +795,38 @@ function MarketplaceFallbackCard({ link }: { link: MarketplaceFallback }) {
       accessibilityRole="link"
       accessibilityLabel={`Open ${link.title}`}
       style={({ pressed }) => ({
-        width: 136,
-        minHeight: 82,
-        padding: spacing.md,
+        minHeight: 56,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.md,
         borderRadius: radius.md,
         backgroundColor: p.bg.sunken,
         borderWidth: 1,
         borderColor: withAlpha(accent, 0.32),
-        justifyContent: "space-between",
-        gap: spacing.sm,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.md,
         opacity: pressed ? 0.78 : 1,
       })}
     >
       <View
         style={{
-          flexDirection: "row",
           alignItems: "center",
-          justifyContent: "space-between",
-          gap: spacing.sm,
+          justifyContent: "center",
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          backgroundColor: withAlpha(accent, 0.13),
         }}
       >
         <Icon size={15} color={accent} strokeWidth={2.25} />
-        <ExternalLink size={13} color={p.ink.dim} strokeWidth={2.25} />
       </View>
-      <View style={{ gap: 3 }}>
-        <Text numberOfLines={1} style={{ color: p.ink.default, fontSize: 12, fontWeight: "800" }}>
+      <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+        <Text numberOfLines={1} style={{ color: p.ink.default, fontSize: 13, fontWeight: "800" }}>
           {link.title}
         </Text>
         <Text style={{ color: accent, fontSize: 10, fontWeight: "800" }}>{link.label}</Text>
       </View>
+      <ExternalLink size={15} color={p.ink.dim} strokeWidth={2.25} />
     </Pressable>
   );
 }
@@ -852,10 +848,11 @@ function ListingMetaPill({
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
-        paddingHorizontal: 7,
-        paddingVertical: 3,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
         borderRadius: 999,
         backgroundColor: withAlpha(color, 0.12),
+        maxWidth: "100%",
       }}
     >
       {Icon ? <Icon size={10} color={color} strokeWidth={2.25} /> : null}
@@ -866,7 +863,7 @@ function ListingMetaPill({
   );
 }
 
-function ListingRow({ listing, isLast }: { listing: ListingWire; isLast: boolean }) {
+function ListingCard({ listing }: { listing: ListingWire }) {
   const p = useThemedPalette();
   const timeLeft = listing.is_auction ? formatTimeLeft(listing.time_left_seconds) : null;
   const onPress = () => {
@@ -879,91 +876,103 @@ function ListingRow({ listing, isLast }: { listing: ListingWire; isLast: boolean
       accessibilityRole={listing.url ? "link" : undefined}
       accessibilityLabel={`Open ${listing.title || "marketplace listing"}`}
       style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
         gap: spacing.md,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.md,
-        borderBottomWidth: isLast ? 0 : 1,
-        borderBottomColor: p.line.default,
-        backgroundColor: pressed ? withAlpha(p.ink.default, 0.04) : "transparent",
+        padding: spacing.lg,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: p.line.default,
+        backgroundColor: pressed ? withAlpha(p.ink.default, 0.05) : p.bg.elevated,
         opacity: pressed ? 0.82 : 1,
       })}
     >
-      {listing.image_url ? (
-        <CardImage
-          uri={listing.image_url}
-          width={58}
-          height={58}
-          rounded={radius.md}
-          contentFit="cover"
-          priority="low"
-          recyclingKey={listing.image_url ?? listing.url}
-          alt={listing.title ?? "listing"}
-        />
-      ) : (
-        <View
-          style={{
-            width: 58,
-            height: 58,
-            borderRadius: radius.md,
-            backgroundColor: p.bg.sunken,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <ShoppingBag size={18} color={p.ink.dim} strokeWidth={2.25} />
-        </View>
-      )}
-      <View
-        style={{
-          flex: 1,
-          minWidth: 0,
-          gap: spacing.sm,
-        }}
-      >
-        <Text
-          numberOfLines={2}
-          style={{
-            color: p.ink.default,
-            fontSize: 12,
-            fontWeight: "700",
-            lineHeight: 16,
-          }}
-        >
-          {listing.title || "Marketplace listing"}
-        </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-          <ListingMetaPill label={formatListingSource(listing.source)} />
-          {listing.condition ? (
-            <ListingMetaPill label={listing.condition} icon={Tag} tone="mint" />
-          ) : null}
-          {listing.is_auction ? (
-            <ListingMetaPill label="Auction" icon={Gavel} tone="amber" />
-          ) : null}
-          {timeLeft ? <ListingMetaPill label={timeLeft} icon={Clock} tone="amber" /> : null}
+      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: spacing.md }}>
+        {listing.image_url ? (
+          <CardImage
+            uri={listing.image_url}
+            width={72}
+            height={72}
+            rounded={radius.md}
+            contentFit="cover"
+            priority="low"
+            recyclingKey={listing.image_url ?? listing.url}
+            alt={listing.title ?? "listing"}
+          />
+        ) : (
+          <View
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: radius.md,
+              backgroundColor: p.bg.sunken,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <ShoppingBag size={20} color={p.ink.dim} strokeWidth={2.25} />
+          </View>
+        )}
+        <View style={{ flex: 1, minWidth: 0, gap: spacing.sm }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <ListingMetaPill label={formatListingSource(listing.source)} />
+            {listing.is_auction ? (
+              <ListingMetaPill label="Auction" icon={Gavel} tone="amber" />
+            ) : null}
+            {timeLeft ? <ListingMetaPill label={timeLeft} icon={Clock} tone="amber" /> : null}
+          </View>
+          <Text
+            numberOfLines={3}
+            style={{
+              color: p.ink.default,
+              fontSize: 14,
+              fontWeight: "800",
+              lineHeight: 19,
+            }}
+          >
+            {listing.title || "Marketplace listing"}
+          </Text>
         </View>
       </View>
-      <View style={{ alignItems: "flex-end", gap: spacing.sm, minWidth: 76 }}>
-        <Price
-          usd={listing.price.amount}
-          compact={false}
-          style={{ color: p.ink.default, fontSize: 15, fontWeight: "800" }}
-        />
+
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: spacing.md,
+          paddingTop: spacing.md,
+          borderTopWidth: 1,
+          borderTopColor: withAlpha(p.line.default, 0.7),
+        }}
+      >
+        <View style={{ flex: 1, minWidth: 0, gap: spacing.sm }}>
+          <Price
+            usd={listing.price.amount}
+            compact={false}
+            style={{ color: p.ink.default, fontSize: 18, fontWeight: "900" }}
+          />
+          {listing.condition ? (
+            <View style={{ alignSelf: "flex-start", maxWidth: "100%" }}>
+              <ListingMetaPill label={listing.condition} icon={Tag} tone="mint" />
+            </View>
+          ) : null}
+        </View>
         {listing.url ? (
           <View
             style={{
-              width: 30,
-              height: 30,
-              borderRadius: 15,
+              flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: withAlpha(p.ink.default, 0.06),
+              gap: 6,
+              minHeight: 38,
+              paddingHorizontal: spacing.md,
+              borderRadius: 19,
+              backgroundColor: withAlpha(p.accent.blue, 0.11),
               borderWidth: 1,
-              borderColor: p.line.default,
+              borderColor: withAlpha(p.accent.blue, 0.28),
             }}
           >
-            <ExternalLink size={14} color={p.ink.muted} strokeWidth={2.25} />
+            <Text style={{ color: p.accent.blue, fontSize: 12, fontWeight: "900" }}>Open</Text>
+            <ExternalLink size={14} color={p.accent.blue} strokeWidth={2.25} />
           </View>
         ) : (
           <Text style={{ color: p.ink.dim, fontSize: 10, fontWeight: "700" }}>LIVE</Text>

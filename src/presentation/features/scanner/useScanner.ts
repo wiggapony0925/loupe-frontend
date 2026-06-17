@@ -4,8 +4,8 @@
  * with automatic retry of any bad frame before handing the captures off
  * for upload.
  *
- * In Expo Go the underlying bridge is a JS mock, so this hook works
- * everywhere — production-grade once the dev build is generated.
+ * Production/TestFlight uses the native scanner bridge. Development can
+ * opt into a local bridge stub through config when Expo Go needs to boot.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -14,6 +14,7 @@ import {
   type CapturedFrame,
   type ImageQualityReport,
   type ScannerInfo,
+  type ScannerBridgeSource,
   type ScannerStateChangePayload,
 } from "@/infrastructure/native";
 import type { PhotometricCapture } from "@/domain";
@@ -38,7 +39,7 @@ export interface ScannerHookState {
   progress: CaptureProgressPayload | null;
   lastQuality: ImageQualityReport | null;
   errorMessage: string | null;
-  source: "native" | "mock";
+  source: ScannerBridgeSource;
 }
 
 const initialState: ScannerHookState = {

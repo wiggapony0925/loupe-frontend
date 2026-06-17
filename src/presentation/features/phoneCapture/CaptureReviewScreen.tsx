@@ -61,7 +61,7 @@ export function CaptureReviewScreen({
       .then((res) => {
         if (cancelled) return;
         setOcr(res);
-        setTitle(res.title ?? "");
+        setTitle(res?.title ?? "");
         setLoading(false);
       })
       .catch(() => {
@@ -122,7 +122,7 @@ export function CaptureReviewScreen({
           <View className="flex-row items-center gap-2">
             <Sparkles size={14} color={p.accent.mint} />
             <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-              Auto-detected
+              Card name
             </Text>
             {ocr ? (
               <View
@@ -141,7 +141,7 @@ export function CaptureReviewScreen({
           {loading ? (
             <View className="flex-row items-center gap-2 py-2">
               <ActivityIndicator color={p.accent.mint} />
-              <Text className="text-sm text-ink-muted">Reading card text…</Text>
+              <Text className="text-sm text-ink-muted">Preparing review…</Text>
             </View>
           ) : (
             <>

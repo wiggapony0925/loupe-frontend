@@ -27,7 +27,8 @@ import { useScannerConnection } from "./useScannerConnection";
  *   - REST `/scanner/status` (transport, signal, scans remaining, temp)
  *   - Native bridge `scannerBridge` (battery, firmware, BLE connection)
  *
- * In Expo Go the bridge runs as a JS mock so the panel still renders
+ * In TestFlight the bridge must be native. When the native module is missing,
+ * the panel reports that honestly instead of simulating hardware.
  * realistic data while the dev build isn't generated yet.
  */
 export function HardwareStatusWidget() {
@@ -150,7 +151,11 @@ export function HardwareStatusWidget() {
         </Text>
         <View className="flex-row items-center gap-2">
           <Badge
-            label={scanner.source === "native" ? "Native" : "Mock"}
+            label={
+              scanner.source === "native"
+                ? "Native"
+                : "Unavailable"
+            }
             tone={scanner.source === "native" ? "mint" : "neutral"}
           />
           <Badge label={isOnline ? "Online" : "Disconnected"} tone={isOnline ? "mint" : "rose"} />

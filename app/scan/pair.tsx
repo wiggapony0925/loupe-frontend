@@ -60,8 +60,7 @@ export default function PairScannerScreen() {
     setErrorMessage(null);
     try {
       // The native bridge handles discovery internally and resolves with
-      // the first advertising Loupe. In Expo Go the mock bridge resolves
-      // immediately with a fake device so the flow stays demoable.
+      // the first advertising Loupe.
       const info = await scanner.connect();
       await pairScanner({
         deviceId: info.id,

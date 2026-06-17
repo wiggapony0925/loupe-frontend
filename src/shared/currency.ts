@@ -1,9 +1,9 @@
 /**
  * Loupe's currency catalog — fiat + crypto.
  *
- * Rates are quoted as "1 USD = X <code>". For a real backend we'd refresh
- * these from a provider (FX: ECB / OpenExchangeRates · Crypto: CoinGecko).
- * For now they're static so the UI behaves deterministically in mock mode.
+ * Rates are quoted as "1 USD = X <code>". These app-side conversion
+ * constants keep display formatting deterministic; market prices still
+ * come from the backend.
  */
 
 export type CurrencyKind = "fiat" | "crypto";
