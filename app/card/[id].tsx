@@ -54,10 +54,7 @@ import { QuickAddBanner } from "@/presentation/components/QuickAddBanner";
 import { PriceAlertSheet } from "@/presentation/features/alerts/PriceAlertSheet";
 import { RecentSoldPanel } from "@/presentation/features/market/RecentSoldPanel";
 import { CardAttributesPanel } from "@/presentation/features/cardAttributes/CardAttributesPanel";
-import {
-  GradeSummaryPills,
-  MarketplaceChipsRow,
-} from "@/presentation/features/cardDetail/CardDetailSections";
+import { GradeSummaryPills } from "@/presentation/features/cardDetail/CardDetailSections";
 import {
   CardDetailsBlock,
   GradeRow,
@@ -156,9 +153,7 @@ export default function CardDetailScreen() {
       { cardId, grade: 9, house: "loupe", condition: "nm" },
       {
         onSuccess: () => {
-          Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success,
-          ).catch(() => {});
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
           setBanner({
             title: "Added to vault",
             subtitle: `${cardQ.data?.name ?? "Card"} · Raw · NM`,
@@ -166,9 +161,7 @@ export default function CardDetailScreen() {
           });
         },
         onError: () => {
-          Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Error,
-          ).catch(() => {});
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
           setBanner({
             title: "Couldn't add to vault",
             subtitle: "Tap to open the full form instead.",
@@ -181,9 +174,7 @@ export default function CardDetailScreen() {
 
   const [range, setRange] = useState<CardRangeKey>("1Y");
   const [house, setHouse] = useState<HouseId | "all">("all");
-  const [selectedGradeLabel, setSelectedGradeLabel] = useState<string | null>(
-    null,
-  );
+  const [selectedGradeLabel, setSelectedGradeLabel] = useState<string | null>(null);
   /**
    * When a `GradeRow` is tapped the chart scales to that (house, grade)
    * tier via the backend's drift × multiplier math. `null` = raw market.
@@ -207,8 +198,33 @@ export default function CardDetailScreen() {
   const imageUrl = pickCardImageUrl(card, "large");
   const blurhash = pickCardBlurhash(card);
 
+  const verifiedGradeRowsAll = useMemo(
+    () => flattenHouses(snapshot?.houses ?? [], "all").filter((row) => row.source === "real"),
+    [snapshot?.houses],
+  );
+  const hasVerifiedGradeRows = verifiedGradeRowsAll.length > 0;
+  const verifiedGradedAvg = useMemo(() => {
+    if (verifiedGradeRowsAll.length === 0) return null;
+    const total = verifiedGradeRowsAll.reduce((sum, row) => sum + row.market.amount, 0);
+    return total / verifiedGradeRowsAll.length;
+  }, [verifiedGradeRowsAll]);
+  const verifiedPopTotal = useMemo(() => {
+    const total = verifiedGradeRowsAll.reduce(
+      (sum, row) => sum + (Number.isFinite(row.population) ? row.population : 0),
+      0,
+    );
+    return total > 0 ? total : null;
+  }, [verifiedGradeRowsAll]);
+  const verifiedTopAmount = verifiedGradeRowsAll[0]?.market.amount ?? null;
+  const hasRealHistory = useMemo(
+    () =>
+      Object.values(snapshot?.history ?? {}).some((history) =>
+        (history.points ?? []).some((point) => point.source !== "synthetic"),
+      ),
+    [snapshot?.history],
+  );
   const rows = useMemo(
-    () => flattenHouses(snapshot?.houses ?? [], house),
+    () => flattenHouses(snapshot?.houses ?? [], house).filter((row) => row.source === "real"),
     [snapshot?.houses, house],
   );
 
@@ -229,10 +245,7 @@ export default function CardDetailScreen() {
           Market
         </Text>
         <View className="flex-row gap-2">
-          <IconBtn
-            label={isWatching ? "Remove favorite" : "Save favorite"}
-            onPress={toggleWatch}
-          >
+          <IconBtn label={isWatching ? "Remove favorite" : "Save favorite"} onPress={toggleWatch}>
             <Heart
               size={16}
               color={isWatching ? p.accent.rose : p.ink.muted}
@@ -324,10 +337,7 @@ export default function CardDetailScreen() {
                   </View>
                 </Pressable>
                 <View style={{ flex: 1, justifyContent: "center", gap: 6 }}>
-                  <Text
-                    className="text-xl font-semibold text-ink"
-                    numberOfLines={2}
-                  >
+                  <Text className="text-xl font-semibold text-ink" numberOfLines={2}>
                     {card.name}
                   </Text>
                   <Text
@@ -460,10 +470,7 @@ export default function CardDetailScreen() {
                   >
                     Showing {chartFilter.label}
                   </Text>
-                  <Pressable
-                    onPress={() => setChartFilter(null)}
-                    hitSlop={8}
-                  >
+                  <Pressable onPress={() => setChartFilter(null)} hitSlop={8}>
                     <Text
                       style={{
                         color: p.ink.muted,
@@ -476,152 +483,173 @@ export default function CardDetailScreen() {
                   </Pressable>
                 </View>
               ) : null}
-              <InteractiveCardChart
-                history={snapshot?.history}
-                range={range}
-                onRangeChange={setRange}
-                fallbackAmount={snapshot?.summary.pop_top?.amount ?? null}
-                cardId={cardId}
-                houseFilter={chartFilter?.house}
-                gradeFilter={chartFilter?.grade}
-                bleedX={20}
-                onScrubbingChange={handleChartScrubbing}
-              />
+              {hasRealHistory ? (
+                <InteractiveCardChart
+                  history={snapshot?.history}
+                  range={range}
+                  onRangeChange={setRange}
+                  fallbackAmount={snapshot?.summary.raw?.amount ?? null}
+                  cardId={cardId}
+                  houseFilter={chartFilter?.house}
+                  gradeFilter={chartFilter?.grade}
+                  bleedX={20}
+                  onScrubbingChange={handleChartScrubbing}
+                />
+              ) : (
+                <View
+                  style={{
+                    borderTopWidth: 1,
+                    borderBottomWidth: 1,
+                    borderColor: withAlpha(p.line.default, 0.72),
+                    paddingVertical: 18,
+                    gap: 4,
+                  }}
+                >
+                  <Text style={{ color: p.ink.default, fontSize: 14, fontWeight: "800" }}>
+                    Price history unavailable
+                  </Text>
+                  <Text style={{ color: p.ink.muted, fontSize: 12, lineHeight: 18 }}>
+                    Loupe will chart this card once a provider returns real historical points.
+                  </Text>
+                </View>
+              )}
 
               {/* 4b. Market signals row (52w hi/lo, trend, arbitrage,
                   auctions) — renders nothing when no signals fire. */}
-              <CardMarketSignals snapshot={snapshot} cardId={cardId} />
+              {hasRealHistory ? <CardMarketSignals snapshot={snapshot} cardId={cardId} /> : null}
 
               {/* 4c. Owned-card P/L vs purchase price. */}
               <CardCostBasisStrip
                 ownedGrade={ownedGrade}
-                marketAmount={snapshot?.summary.pop_top?.amount ?? null}
+                marketAmount={verifiedTopAmount ?? snapshot?.summary.raw?.amount ?? null}
               />
 
               {/* 5. Quick-stats row (spread, volatility, liquidity,
                   last-sale freshness). */}
-              <CardQuickStats snapshot={snapshot} cardId={cardId} />
+              {hasRealHistory ? <CardQuickStats snapshot={snapshot} cardId={cardId} /> : null}
 
               {/* Active alerts the user has on this card. */}
               <CardActiveAlerts cardId={cardId} />
 
               {/* 6. Three-up flat strip (Robinhood Open·High·Low style) */}
               <View style={{ flexDirection: "row", marginHorizontal: -12 }}>
-                <StatTile
-                  label="Raw"
-                  amount={snapshot?.summary.raw?.amount ?? null}
-                />
-                <StatTile
-                  label="Graded Avg"
-                  amount={snapshot?.summary.graded_avg?.amount ?? null}
-                  showDivider
-                />
+                <StatTile label="Raw" amount={snapshot?.summary.raw?.amount ?? null} />
+                <StatTile label="Graded Avg" amount={verifiedGradedAvg} showDivider />
                 <StatTile
                   label="Population"
                   amount={null}
-                  text={
-                    snapshot?.summary.pop_total
-                      ? snapshot.summary.pop_total.toLocaleString()
-                      : "—"
-                  }
+                  text={verifiedPopTotal ? verifiedPopTotal.toLocaleString() : "—"}
                   showDivider
                 />
               </View>
 
-              {/* Marketplace chips — cheapest live price per provider */}
-              <MarketplaceChipsRow cardId={cardId} />
-
-              {/* 7. Section header */}
-              <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-                Graded Prices
-              </Text>
-
-              {/* Price-by-grade pivot pills */}
-              <GradeSummaryPills
-                cardId={cardId}
-                value={selectedGradeLabel}
-                onChange={setSelectedGradeLabel}
-              />
-
-              {/* 8. House filter tabs (Robinhood-style underline) */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  gap: 18,
-                  flexWrap: "wrap",
-                  borderBottomWidth: 1,
-                  borderBottomColor: withAlpha(p.line.default, 0.6),
-                }}
-              >
-                <HouseChip
-                  id="all"
-                  label="ALL"
-                  active={house === "all"}
-                  onPress={() => setHouse("all")}
-                />
-                {HOUSE_ORDER.map((h) => (
-                  <HouseChip
-                    key={h}
-                    id={h}
-                    label={HOUSE_LABEL[h] ?? h.toUpperCase()}
-                    color={houseColor(h, p)}
-                    active={house === h}
-                    onPress={() => setHouse(h)}
-                  />
-                ))}
-              </View>
-
-              {/* 9. House × grade rows — flat, hairlines only */}
-              <View>
-                {rows.length === 0 ? (
-                  <View style={{ paddingVertical: 16, alignItems: "center" }}>
-                    <Text className="text-[12px] text-ink-muted">
-                      No graded comps yet
-                    </Text>
-                  </View>
-                ) : (
-                  rows.map((r, i) => {
-                    const isActive =
-                      chartFilter?.house === r.house &&
-                      chartFilter?.grade === r.grade_label;
-                    return (
-                      <GradeRow
-                        key={`${r.house}-${r.grade_label}-${i}`}
-                        row={r}
-                        isLast={i === rows.length - 1}
-                        active={isActive}
-                        onPress={() => {
-                          if (isActive) {
-                            setChartFilter(null);
-                          } else {
-                            const houseLabel =
-                              HOUSE_LABEL[r.house] ?? r.house.toUpperCase();
-                            setChartFilter({
-                              house: r.house,
-                              grade: r.grade_label,
-                              label: `${houseLabel} ${r.grade_label}`,
-                            });
-                          }
-                        }}
-                      />
-                    );
-                  })
-                )}
-              </View>
-
-              {/* Live marketplace data + sold comps (real data, gracefully empty) */}
+              {/* Real marketplace data + sold comps. */}
               <LiveListingsSection cardId={cardId} card={card} />
               <RecentSoldPanel cardId={cardId} cardName={card?.name ?? null} />
+
+              {hasVerifiedGradeRows ? (
+                <>
+                  {/* 7. Section header */}
+                  <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+                    Verified Graded Prices
+                  </Text>
+
+                  {/* Price-by-grade pivot pills */}
+                  <GradeSummaryPills
+                    cardId={cardId}
+                    value={selectedGradeLabel}
+                    onChange={setSelectedGradeLabel}
+                  />
+
+                  {/* 8. House filter tabs (Robinhood-style underline) */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: 18,
+                      flexWrap: "wrap",
+                      borderBottomWidth: 1,
+                      borderBottomColor: withAlpha(p.line.default, 0.6),
+                    }}
+                  >
+                    <HouseChip
+                      id="all"
+                      label="ALL"
+                      active={house === "all"}
+                      onPress={() => setHouse("all")}
+                    />
+                    {HOUSE_ORDER.map((h) => (
+                      <HouseChip
+                        key={h}
+                        id={h}
+                        label={HOUSE_LABEL[h] ?? h.toUpperCase()}
+                        color={houseColor(h, p)}
+                        active={house === h}
+                        onPress={() => setHouse(h)}
+                      />
+                    ))}
+                  </View>
+
+                  {/* 9. House × grade rows — flat, hairlines only */}
+                  <View>
+                    {rows.length === 0 ? (
+                      <View style={{ paddingVertical: 16, alignItems: "center" }}>
+                        <Text className="text-[12px] text-ink-muted">
+                          No verified comps for this house
+                        </Text>
+                      </View>
+                    ) : (
+                      rows.map((r, i) => {
+                        const isActive =
+                          chartFilter?.house === r.house && chartFilter?.grade === r.grade_label;
+                        return (
+                          <GradeRow
+                            key={`${r.house}-${r.grade_label}-${i}`}
+                            row={r}
+                            isLast={i === rows.length - 1}
+                            active={isActive}
+                            onPress={() => {
+                              if (isActive) {
+                                setChartFilter(null);
+                              } else {
+                                const houseLabel = HOUSE_LABEL[r.house] ?? r.house.toUpperCase();
+                                setChartFilter({
+                                  house: r.house,
+                                  grade: r.grade_label,
+                                  label: `${houseLabel} ${r.grade_label}`,
+                                });
+                              }
+                            }}
+                          />
+                        );
+                      })
+                    )}
+                  </View>
+                </>
+              ) : (
+                <View
+                  style={{
+                    borderTopWidth: 1,
+                    borderBottomWidth: 1,
+                    borderColor: withAlpha(p.line.default, 0.72),
+                    paddingVertical: 16,
+                    gap: 4,
+                  }}
+                >
+                  <Text style={{ color: p.ink.default, fontSize: 14, fontWeight: "800" }}>
+                    No verified graded comps yet
+                  </Text>
+                  <Text style={{ color: p.ink.muted, fontSize: 12, lineHeight: 18 }}>
+                    Loupe is hiding estimated grade rows until a sold-comp provider returns real
+                    data.
+                  </Text>
+                </View>
+              )}
 
               {/* Set-completion progress for this card's set. */}
               <SetProgressForCard setId={card.set?.id ?? null} />
 
               {/* Other prints of this card (same name, other sets). */}
-              <RelatedCardsRail
-                cardId={cardId}
-                cardName={card.name}
-                tcg={card.tcg}
-              />
+              <RelatedCardsRail cardId={cardId} cardName={card.name} tcg={card.tcg} />
 
               {/* Per-game attribute panel — Pokédex / MTG oracle / YGO stats.
                   Driven by the canonical card document; renders nothing for
@@ -678,9 +706,7 @@ export default function CardDetailScreen() {
         title={banner?.title ?? ""}
         subtitle={banner?.subtitle}
         tone={banner?.tone ?? "success"}
-        actionLabel={
-          banner?.tone === "success" && ownedGrade ? "View" : undefined
-        }
+        actionLabel={banner?.tone === "success" && ownedGrade ? "View" : undefined}
         onAction={
           banner?.tone === "success" && ownedGrade
             ? () => router.push(routes.gradeEdit(ownedGrade.id))

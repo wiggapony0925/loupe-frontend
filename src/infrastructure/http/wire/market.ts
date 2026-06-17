@@ -138,15 +138,34 @@ export interface GradeSummaryResponseWire {
 export interface MarketplacePriceRowWire {
   source: string;
   label: string;
+  kind?: "listing" | "market_price";
+  price_kind?: string | null;
   price: Money;
+  market?: {
+    market: Money | null;
+    low: Money | null;
+    mid: Money | null;
+    high: Money | null;
+  } | null;
   url: string | null;
   image_url: string | null;
   is_auction: boolean;
+  updated_at?: string | null;
+  subtitle?: string | null;
   search_url: string | null;
+}
+
+export interface MarketplaceActionWire {
+  source: string;
+  label: string;
+  url: string;
+  kind: "search" | string;
 }
 
 export interface MarketplacePricesResponseWire {
   card_id: string;
   query: string;
+  generated_at?: string;
   providers: MarketplacePriceRowWire[];
+  actions?: MarketplaceActionWire[];
 }
