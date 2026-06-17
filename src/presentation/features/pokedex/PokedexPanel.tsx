@@ -23,7 +23,7 @@ import {
   usePokeApiSpecies,
 } from "@/application/queries/pokeApi/usePokeApi";
 import { pickEnglishFlavorText } from "@/infrastructure/http/pokeApiClient";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 
 const TYPE_COLOR: Record<string, string> = {
   normal: "#a8a878",
@@ -78,12 +78,11 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
   return (
     <View
       style={{
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: withAlpha(p.accent.amber, 0.22),
-        backgroundColor: p.bg.elevated,
-        padding: 14,
-        gap: 12,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: p.line.default,
+        paddingVertical: 14,
+        gap: 10,
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -92,7 +91,7 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
             color: p.accent.amber,
             fontSize: 10,
             fontWeight: "800",
-            letterSpacing: 2,
+            letterSpacing: 3,
           }}
         >
           POKÉDEX
@@ -111,12 +110,12 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
         ) : null}
       </View>
 
-      <View style={{ flexDirection: "row", gap: 12 }}>
+      <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
         <View
           style={{
-            width: 88,
-            height: 88,
-            borderRadius: 12,
+            width: 64,
+            height: 64,
+            borderRadius: 10,
             backgroundColor: p.bg.sunken,
             alignItems: "center",
             justifyContent: "center",
@@ -124,20 +123,25 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
           }}
         >
           {sprite ? (
-            <Image source={{ uri: sprite }} style={{ width: 84, height: 84 }} resizeMode="contain" />
+            <Image source={{ uri: sprite }} style={{ width: 60, height: 60 }} resizeMode="contain" />
           ) : pokemonQ.isLoading || speciesQ.isLoading ? (
             <ActivityIndicator size="small" color={p.accent.amber} />
           ) : null}
         </View>
 
-        <View style={{ flex: 1, gap: 6 }}>
+        <View style={{ flex: 1, gap: 5, minWidth: 0 }}>
           {pokemon?.name ? (
-            <Text style={{ color: p.ink.default, fontSize: 16, fontWeight: "700" }}>
+            <Text
+              numberOfLines={1}
+              style={{ color: p.ink.default, fontSize: 16, fontWeight: "800" }}
+            >
               {titleCase(pokemon.name)}
             </Text>
           ) : null}
           {genus ? (
-            <Text style={{ color: p.ink.muted, fontSize: 12 }}>{genus}</Text>
+            <Text numberOfLines={1} style={{ color: p.ink.muted, fontSize: 12 }}>
+              {genus}
+            </Text>
           ) : null}
 
           {pokemon?.types?.length ? (
@@ -148,16 +152,16 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
                   <View
                     key={t.type.name}
                     style={{
-                      paddingHorizontal: 8,
+                      paddingHorizontal: 7,
                       paddingVertical: 2,
-                      borderRadius: 6,
+                      borderRadius: 5,
                       backgroundColor: bg,
                     }}
                   >
                     <Text
                       style={{
                         color: "#fff",
-                        fontSize: 10,
+                        fontSize: 9,
                         fontWeight: "800",
                         letterSpacing: 0.8,
                       }}
@@ -186,14 +190,14 @@ export function PokedexPanel({ cardName }: { cardName: string | null | undefined
 
       {flavor ? (
         <Text
+          numberOfLines={3}
           style={{
             color: p.ink.muted,
             fontSize: 12,
             lineHeight: 17,
-            fontStyle: "italic",
           }}
         >
-          “{flavor}”
+          {flavor}
         </Text>
       ) : null}
     </View>

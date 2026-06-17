@@ -66,7 +66,6 @@ import {
   HouseChip,
   IconBtn,
   LiveListingsSection,
-  RecentCompsSection,
   StatTile,
   flattenHouses,
   formatTcgName,
@@ -610,9 +609,8 @@ export default function CardDetailScreen() {
                 )}
               </View>
 
-              {/* Live listings + recent comps (real data, gracefully empty) */}
+              {/* Live marketplace data + sold comps (real data, gracefully empty) */}
               <LiveListingsSection cardId={cardId} card={card} />
-              <RecentCompsSection cardId={cardId} />
               <RecentSoldPanel cardId={cardId} cardName={card?.name ?? null} />
 
               {/* Set-completion progress for this card's set. */}
@@ -693,4 +691,3 @@ export default function CardDetailScreen() {
     </SafeAreaView>
   );
 }
-

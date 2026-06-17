@@ -396,45 +396,39 @@ export function SkeletonScannersList({ rows = 3 }: { rows?: number }) {
 export function SkeletonListingsRail({ rows = 4 }: { rows?: number }) {
   const p = useThemedPalette();
   return (
-    <View style={{ gap: spacing.md }}>
+    <View
+      style={{
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: p.line.default,
+        backgroundColor: p.bg.elevated,
+        overflow: "hidden",
+      }}
+    >
       {Array.from({ length: rows }).map((_, i) => (
         <View
           key={i}
           style={{
+            flexDirection: "row",
+            alignItems: "center",
             gap: spacing.md,
-            padding: spacing.lg,
-            borderRadius: radius.lg,
-            borderWidth: 1,
-            borderColor: p.line.default,
-            backgroundColor: p.bg.elevated,
+            paddingHorizontal: spacing.lg,
+            paddingVertical: spacing.md,
+            borderBottomWidth: i === rows - 1 ? 0 : 1,
+            borderBottomColor: p.line.default,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: spacing.md }}>
-            <SkeletonImage width={72} height={72} radius={radius.md} />
-            <View style={{ flex: 1, gap: spacing.sm }}>
-              <View style={{ flexDirection: "row", gap: 6 }}>
-                <SkeletonPill width={54} height={18} />
-                <SkeletonPill width={72} height={18} />
-              </View>
-              <SkeletonText width="86%" height={14} />
-              <SkeletonText width="68%" height={14} />
+          <SkeletonImage width={54} height={54} radius={radius.md} />
+          <View style={{ flex: 1, gap: spacing.sm }}>
+            <SkeletonText width="82%" height={13} />
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <SkeletonPill width={54} height={18} />
+              <SkeletonPill width={72} height={18} />
             </View>
           </View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingTop: spacing.md,
-              borderTopWidth: 1,
-              borderTopColor: p.line.default,
-            }}
-          >
-            <View style={{ gap: spacing.sm }}>
-              <SkeletonText width={76} height={18} />
-              <SkeletonPill width={90} height={20} />
-            </View>
-            <SkeletonPill width={76} height={38} />
+          <View style={{ alignItems: "flex-end", gap: spacing.sm }}>
+            <SkeletonText width={64} height={16} />
+            <SkeletonPill width={44} height={16} />
           </View>
         </View>
       ))}

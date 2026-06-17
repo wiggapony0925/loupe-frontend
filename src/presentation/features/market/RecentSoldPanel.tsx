@@ -10,9 +10,9 @@
  * unconfigured. Each row shows a small source chip for provenance, and the
  * header summarizes which sources contributed.
  *
- * The list under the chart is capped to ten most-recent rows; the
- * "Browse on eBay ↗" link opens the eBay sold-search for the card as a
- * convenience escape hatch to the full firehose.
+ * The list under the chart is capped to ten most-recent rows; the eBay
+ * header action opens sold-search for the card as a convenience escape
+ * hatch to the full firehose.
  */
 
 import React, { useMemo } from "react";
@@ -20,11 +20,7 @@ import { Linking, Pressable, Text, View } from "react-native";
 import Svg, { Circle, Line as SvgLine, Text as SvgText } from "react-native-svg";
 import { useCardComps } from "@/application/queries/catalog/useCardComps";
 import { Skeleton } from "@/presentation/components/Skeleton";
-import {
-  palette,
-  useThemedPalette,
-  withAlpha,
-} from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import type { SoldCompWire } from "@/infrastructure/http";
 
 export interface RecentSoldPanelProps {
@@ -114,7 +110,7 @@ export function RecentSoldPanel({ cardId, cardName }: RecentSoldPanelProps) {
   }
 
   return (
-    <View style={{ gap: 10 }}>
+    <View style={{ gap: 12 }}>
       <View
         style={{
           flexDirection: "row",
@@ -132,17 +128,17 @@ export function RecentSoldPanel({ cardId, cardName }: RecentSoldPanelProps) {
               textTransform: "uppercase",
             }}
           >
-            Recent Sold
+            Recent Sales
           </Text>
-          <Text style={{ color: p.ink.muted, fontSize: 11 }}>
-            · 90d · {comps.length} sales
+          <Text numberOfLines={1} style={{ color: p.ink.muted, fontSize: 11, flexShrink: 1 }}>
+            90d · {comps.length} sales
             {sourceSummary.length > 0 ? ` · ${sourceSummary.join(" + ")}` : ""}
           </Text>
         </View>
         {ebaySearchUrl ? (
           <Pressable onPress={openEbay} hitSlop={8} accessibilityRole="button">
-            <Text style={{ color: palette.accent.mint, fontSize: 11, fontWeight: "700" }}>
-              Browse on eBay ↗
+            <Text style={{ color: p.accent.mint, fontSize: 11, fontWeight: "800" }}>
+              eBay
             </Text>
           </Pressable>
         ) : null}
@@ -153,12 +149,10 @@ export function RecentSoldPanel({ cardId, cardName }: RecentSoldPanelProps) {
       ) : comps.length === 0 ? (
         <View
           style={{
-            padding: 16,
-            borderRadius: 14,
-            borderWidth: 1,
+            paddingVertical: 16,
+            borderTopWidth: 1,
+            borderBottomWidth: 1,
             borderColor: p.line.default,
-            backgroundColor: p.bg.elevated,
-            alignItems: "center",
           }}
         >
           <Text style={{ color: p.ink.muted, fontSize: 12 }}>
@@ -236,14 +230,14 @@ function ScatterChart({
           x2={W - CHART_PAD.right}
           y1={medianY}
           y2={medianY}
-          stroke={withAlpha(palette.accent.mint, 0.5)}
+          stroke={withAlpha(p.accent.mint, 0.5)}
           strokeWidth={1}
           strokeDasharray="3 3"
         />
         <SvgText
           x={W - CHART_PAD.right}
           y={medianY - 4}
-          fill={palette.accent.mint}
+          fill={p.accent.mint}
           fontSize={9}
           fontWeight="700"
           textAnchor="end"
@@ -269,7 +263,7 @@ function ScatterChart({
               cx={x}
               cy={y}
               r={3}
-              fill={palette.accent.mint}
+              fill={p.accent.mint}
               fillOpacity={0.7}
             />
           );
