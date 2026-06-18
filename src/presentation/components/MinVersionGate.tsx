@@ -15,6 +15,7 @@ import { Linking, Platform, Pressable, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAppConfig } from "@/application/queries/ops/useAppConfig";
 import { LoupeMark } from "@/presentation/brand/LoupeMark";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 const APP_STORE_URL = "https://apps.apple.com/app/id6773403045";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=app.loupe.client";
@@ -28,6 +29,7 @@ export function MinVersionGate({ children }: { children: React.ReactNode }) {
 }
 
 function UpdateRequiredScreen() {
+  const p = useThemedPalette();
   const onUpdate = () => {
     const url = Platform.OS === "ios" ? APP_STORE_URL : PLAY_STORE_URL;
     Linking.openURL(url).catch(() => {
@@ -36,7 +38,7 @@ function UpdateRequiredScreen() {
   };
   return (
     <LinearGradient
-      colors={["#0B0B0F", "#121214", "#0B0B0F"] as const}
+      colors={[p.bg.sunken, p.bg.base, p.bg.sunken] as const}
       style={{ flex: 1 }}
     >
       <View
@@ -52,7 +54,7 @@ function UpdateRequiredScreen() {
         </View>
         <Text
           style={{
-            color: "#F5F5F7",
+            color: p.ink.default,
             fontSize: 22,
             fontWeight: "700",
             textAlign: "center",
@@ -63,7 +65,7 @@ function UpdateRequiredScreen() {
         </Text>
         <Text
           style={{
-            color: "#9CA3AF",
+            color: p.ink.muted,
             fontSize: 15,
             lineHeight: 22,
             textAlign: "center",
@@ -79,10 +81,10 @@ function UpdateRequiredScreen() {
             paddingHorizontal: 32,
             paddingVertical: 14,
             borderRadius: 999,
-            backgroundColor: pressed ? "#E5E7EB" : "#F5F5F7",
+            backgroundColor: pressed ? withAlpha(p.ink.default, 0.82) : p.ink.default,
           })}
         >
-          <Text style={{ color: "#0B0B0F", fontSize: 15, fontWeight: "600" }}>
+          <Text style={{ color: p.bg.base, fontSize: 15, fontWeight: "600" }}>
             Open {Platform.OS === "ios" ? "App Store" : "Play Store"}
           </Text>
         </Pressable>

@@ -20,6 +20,8 @@ export { useSets } from "./catalog/useSets";
 export { useCardMarket } from "./catalog/useCardMarket";
 export { useCardListings } from "./catalog/useCardListings";
 export type { UseCardListingsOptions } from "./catalog/useCardListings";
+export { useCardNearbyListings } from "./catalog/useCardNearbyListings";
+export type { UseCardNearbyListingsOptions } from "./catalog/useCardNearbyListings";
 export { useCardComps } from "./catalog/useCardComps";
 export type { UseCardCompsOptions } from "./catalog/useCardComps";
 export { useCardSparklines } from "./catalog/useCardSparklines";

@@ -25,8 +25,9 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { ErrorState } from "@/presentation/components/ErrorState";
 import { LoupeMark } from "@/presentation/brand/LoupeMark";
 import { useApiHealth, useHomeFeed, useTopMovers } from "@/application/queries";
+import { useCardSparklines } from "@/application/queries/catalog/useCardSparklines";
 import { useAuth } from "@/presentation/providers/AuthProvider";
-import { MoversCardRow } from "@/presentation/cards";
+import { MoverSparkRow } from "@/presentation/cards";
 import { compactUsd, greeting, relativeTime } from "@/shared/format";
 import { gradeColor, useThemedPalette } from "@/presentation/theme/tokens";
 import type { RecentScanRow } from "@/infrastructure/repositories/homeRepository";
@@ -572,8 +573,8 @@ function ModeSegment({
 
 /**
  * Real-data Top Movers — composes `useTopMovers` (vault + market enrichment)
- * with the reusable `MoversCardRow` primitive. Renders auth/loading/error/
- * empty states inline so the section never collapses into a blank container.
+ * with the Vault-style `MoverSparkRow` (art · sparkline · price pill). Renders
+ * auth/loading/error/empty states inline so the section never collapses.
  */
 function TopMoversSection({
   movers,
@@ -582,6 +583,10 @@ function TopMoversSection({
   movers: ReturnType<typeof useTopMovers>;
   isAuthenticated: boolean;
 }) {
+  // Real per-card sparklines, keyed by GradedCard.id (== mover.gradeId) — the
+  // same `/v1/grades/sparklines` source the Vault rows use, so Command Center
+  // and Vault draw identical lines. Hook runs before any early return.
+  const { byCardId: sparkByGrade } = useCardSparklines({ enabled: isAuthenticated });
   if (!isAuthenticated) {
     return (
       <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
@@ -642,11 +647,12 @@ function TopMoversSection({
   return (
     <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
       {movers.rows.map((row, i) => (
-        <MoversCardRow
+        <MoverSparkRow
           key={row.card.id}
           card={row.card}
           price={row.price}
           trend={row.trend}
+          spark={sparkByGrade.get(row.gradeId)}
           bordered={i > 0}
         />
       ))}

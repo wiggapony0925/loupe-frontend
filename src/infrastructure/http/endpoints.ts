@@ -43,6 +43,7 @@ export const ENDPOINTS = {
     prices: (id: string) => `${V1}/cards/${id}/prices`,
     market: (id: string) => `${V1}/cards/${id}/market`,
     listings: (id: string) => `${V1}/cards/${id}/listings`,
+    nearbyListings: (id: string) => `${V1}/cards/${id}/nearby-listings`,
     comps: (id: string) => `${V1}/cards/${id}/comps`,
     gradeSummary: (id: string) => `${V1}/cards/${id}/grade-summary`,
     marketplacePrices: (id: string) => `${V1}/cards/${id}/marketplace-prices`,

@@ -68,6 +68,7 @@ import {
   formatTcgName,
   houseColor,
 } from "@/presentation/features/cardDetail/CardDetailParts";
+import { NearbyListingsSection } from "@/presentation/features/cardDetail/NearbyListingsSection";
 import {
   InteractiveCardChart,
   type CardRangeKey,
@@ -545,6 +546,8 @@ export default function CardDetailScreen() {
 
               {/* Real marketplace data + sold comps. */}
               <LiveListingsSection cardId={cardId} card={card} />
+              {/* Facebook Marketplace listings near the user (location-gated). */}
+              <NearbyListingsSection cardId={cardId} card={card} />
               <RecentSoldPanel cardId={cardId} cardName={card?.name ?? null} />
 
               {hasVerifiedGradeRows ? (

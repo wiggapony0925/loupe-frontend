@@ -75,6 +75,28 @@ export interface ListingsResponseWire {
   listings: ListingWire[];
 }
 
+// ─── Nearby Facebook Marketplace listings ──────────────────────────────
+
+/** Mirrors `NearbyListingWire` in `app/schemas/nearby_listings.py`. */
+export interface NearbyListingWire {
+  source: string; // "facebook"
+  title: string;
+  price: Money;
+  url: string;
+  condition: string | null;
+  image_url: string | null;
+  distance_km: number | null;
+  location_label: string | null;
+}
+
+export interface NearbyListingsResponseWire {
+  card_id: string;
+  query: string;
+  center: { lat: number; lng: number };
+  radius_km: number;
+  listings: NearbyListingWire[];
+}
+
 // ─── Sold comps ────────────────────────────────────────────────────────
 
 /** Mirrors `SoldCompWire` in `app/schemas/comps.py`. */

@@ -572,6 +572,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cards/{card_id}/nearby-listings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Nearby Facebook Marketplace listings (public)
+         * @description Facebook Marketplace listings near the user for the viewed card.
+         *
+         *     Powers the "Near You" carousel on the card-detail sheet. ``lat``/``lng``
+         *     come from the device's location (foreground permission). Returns
+         *     ``listings: []`` when Apify is unconfigured or has no matches, so the
+         *     client always renders a clean empty state.
+         */
+        get: operations["get_nearby_listings_v1_cards__card_id__nearby_listings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cards/{card_id}/prices": {
         parameters: {
             query?: never;
@@ -3504,6 +3529,44 @@ export interface operations {
     get_marketplace_prices_v1_cards__card_id__marketplace_prices_get: {
         parameters: {
             query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_nearby_listings_v1_cards__card_id__nearby_listings_get: {
+        parameters: {
+            query: {
+                lat: number;
+                lng: number;
+                radius_km?: number;
                 limit?: number;
             };
             header?: never;

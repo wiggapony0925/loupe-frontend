@@ -29,7 +29,11 @@
       "adaptiveIcon": {
         "backgroundColor": "#121214"
       },
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -41,6 +45,12 @@
         {
           "cameraPermission": "Loupe needs camera access to capture cards for forensic grading.",
           "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Loupe uses your location to find this card for sale near you on Facebook Marketplace."
         }
       ],
       "expo-sharing",
@@ -55,7 +65,8 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true

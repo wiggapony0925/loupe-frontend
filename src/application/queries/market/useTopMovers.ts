@@ -2,14 +2,14 @@
  * useTopMovers — server-rendered Top Movers for the signed-in operator.
  *
  * Thin adapter over `useHomeFeed` (powered by `GET /v1/home/feed`) that
- * shapes the response into the legacy `TopMoverRow` interface so the
- * `MoversCardRow` UI continues to render unchanged.
+ * shapes the response into the `TopMoverRow` interface consumed by the
+ * Command Center's `MoverSparkRow`.
  *
  * Previous implementation fanned out N parallel `/cards/{id}` +
  * `/cards/{id}/market` requests and sorted on the client. The backend
  * now does the deduplication, 1-year change-% computation (from real
  * `price_history`), and ranking — so all that's left here is mapping
- * the wire payload onto the `CardWire` shape `MoversCardRow` expects.
+ * the wire payload onto the `CardWire` shape the movers row expects.
  */
 import { useMemo } from "react";
 import type { CardWire, TrendInfo } from "@/presentation/cards";
@@ -18,6 +18,8 @@ import { useAuth } from "@/presentation/providers/AuthProvider";
 import { useHomeFeed } from "../analytics/useHomeFeed";
 
 export interface TopMoverRow {
+  /** GradedCard.id — keys `/v1/grades/sparklines` for the row's real sparkline. */
+  gradeId: string;
   card: CardWire;
   /** Estimated USD price (`graded.estimated_value_usd`). */
   price: number | null;
@@ -58,7 +60,7 @@ export function useTopMovers({
         id: m.cardId,
         name: m.cardName,
         // Default to pokemon when the backend hasn't classified the tcg
-        // yet (e.g. legacy rows). MoversCardRow doesn't render the tcg
+        // yet (e.g. legacy rows). The movers row doesn't render the tcg
         // badge so this is purely a type-system requirement.
         tcg: (m.cardTcg ?? "pokemon") as TcgKey,
         set_name: m.cardSetName ?? undefined,
@@ -68,6 +70,7 @@ export function useTopMovers({
         source: "vault",
       };
       out.push({
+        gradeId: m.gradeId,
         card,
         price: m.priceUsd,
         trend: m.changePct1y != null ? { pct: m.changePct1y } : null,

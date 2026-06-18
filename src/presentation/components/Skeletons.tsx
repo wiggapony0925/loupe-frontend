@@ -11,12 +11,13 @@
  * Pages:    SkeletonSearchResults, SkeletonCardDetailPage,
  *           SkeletonGradesPage, SkeletonAnalyticsPage,
  *           SkeletonScannersList
+ * Carousels: SkeletonListingsCarousel
  *
  * The legacy `<Skeleton />` in `Skeleton.tsx` re-exports `SkeletonBox`
  * for back-compat.
  */
 import React, { useEffect, useMemo, useRef } from "react";
-import { Animated, Easing, View, type DimensionValue, type ViewStyle } from "react-native";
+import { Animated, Easing, ScrollView, View, type DimensionValue, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   getActiveScheme,
@@ -433,6 +434,49 @@ export function SkeletonListingsRail({ rows = 4 }: { rows?: number }) {
         </View>
       ))}
     </View>
+  );
+}
+
+/**
+ * Horizontal carousel skeleton — matches the `MarketplaceTileCard` layout
+ * (150dp-wide photo-forward tiles in a ScrollView).
+ */
+export function SkeletonListingsCarousel({ count = 4 }: { count?: number }) {
+  const p = useThemedPalette();
+  const TILE_W = 150;
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      scrollEnabled={false}
+      contentContainerStyle={{ gap: 10, paddingBottom: 4 }}
+    >
+      {Array.from({ length: count }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            width: TILE_W,
+            borderRadius: radius.xl,
+            borderWidth: 1,
+            borderColor: p.line.default,
+            backgroundColor: p.bg.elevated,
+            overflow: "hidden",
+          }}
+        >
+          {/* photo */}
+          <SkeletonBox width={TILE_W} height={116} radius={0} />
+          {/* body */}
+          <View style={{ padding: 11, gap: spacing.sm }}>
+            <SkeletonText width="90%" height={12} />
+            <SkeletonText width="55%" height={9} />
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
+              <SkeletonText width={56} height={18} />
+              <SkeletonBox width={14} height={14} radius={3} />
+            </View>
+          </View>
+        </View>
+      ))}
+    </ScrollView>
   );
 }
 

@@ -6,7 +6,7 @@ export {
   CardHorizontalRail,
   type CardHorizontalRailProps,
 } from "./CardHorizontalRail";
-export { MoversCardRow, type MoversCardRowProps } from "./MoversCardRow";
+export { MoverSparkRow, type MoverSparkRowProps } from "./MoverSparkRow";
 export {
   TILE_WIDTH,
   collectionToCardWire,

@@ -4593,6 +4593,97 @@
         ]
       }
     },
+    "/v1/cards/{card_id}/nearby-listings": {
+      "get": {
+        "description": "Facebook Marketplace listings near the user for the viewed card.\n\nPowers the \"Near You\" carousel on the card-detail sheet. ``lat``/``lng``\ncome from the device's location (foreground permission). Returns\n``listings: []`` when Apify is unconfigured or has no matches, so the\nclient always renders a clean empty state.",
+        "operationId": "get_nearby_listings_v1_cards__card_id__nearby_listings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "title": "Card Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lat",
+            "required": true,
+            "schema": {
+              "maximum": 90,
+              "minimum": -90,
+              "title": "Lat",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lng",
+            "required": true,
+            "schema": {
+              "maximum": 180,
+              "minimum": -180,
+              "title": "Lng",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "radius_km",
+            "required": false,
+            "schema": {
+              "default": 40,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Radius Km",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Nearby Listings V1 Cards  Card Id  Nearby Listings Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nearby Facebook Marketplace listings (public)",
+        "tags": [
+          "cards"
+        ]
+      }
+    },
     "/v1/cards/{card_id}/prices": {
       "get": {
         "description": "Return a price history series for the given composite card id.\n\nCurrently synthesizes a deterministic walk around the live market\nprice (seeded by card id) so the chart is stable across refreshes.\nWhen ``house``/``grade`` are supplied the walk is scaled by the same\ndrift \u00d7 multiplier math that drives the per-house market table, so\ntap-a-grade-row \u2192 chart-filters-by-tier works without a second API.",
