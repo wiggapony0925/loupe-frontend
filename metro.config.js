@@ -7,20 +7,13 @@ const { withNativeWind } = require("nativewind/metro");
 
 const config = getDefaultConfig(__dirname);
 
-// ── Monorepo: consume the shared `@loupe/chart` package (pure TS source) ──
-// loupe-frontend is its own repo nested in the Loupe monorepo, so the chart
-// geometry lives one level up at ../packages/chart. Teach Metro to (1) watch
-// that folder and (2) resolve the bare specifier `@loupe/chart` to it. The
-// package's `main` points at ./src/index.ts, which babel-preset-expo transpiles
-// like any other source file.
-const workspaceRoot = path.resolve(__dirname, "..");
-const chartPkg = path.resolve(workspaceRoot, "packages/chart");
-
-config.watchFolders = [...(config.watchFolders ?? []), chartPkg];
-config.resolver.nodeModulesPaths = [
-  path.resolve(__dirname, "node_modules"),
-  path.resolve(workspaceRoot, "node_modules"),
-];
+// ── Shared chart geometry (`@loupe/chart`) ──
+// VENDORED into the repo at vendor/loupe-chart (pure TS, mirrors the monorepo
+// packages/chart) so it survives EAS build staging — the local/cloud builders
+// copy ONLY this project to a temp dir, which drops the monorepo's sibling
+// ../packages. Resolving from an in-repo path is the only thing that survives.
+// Re-sync from the canonical source with `npm run sync:chart`.
+const chartPkg = path.resolve(__dirname, "vendor/loupe-chart");
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules ?? {}),
   "@loupe/chart": chartPkg,

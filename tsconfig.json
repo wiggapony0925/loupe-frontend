@@ -21,8 +21,8 @@
     "ignoreDeprecations": "5.0",
     "paths": {
       "@/*": ["./src/*", "./*"],
-      "@loupe/chart": ["../packages/chart/src"],
-      "@loupe/chart/*": ["../packages/chart/src/*"],
+      "@loupe/chart": ["./vendor/loupe-chart/src"],
+      "@loupe/chart/*": ["./vendor/loupe-chart/src/*"],
       "tailwind.config": ["./tailwind.config.js"]
     },
     "types": ["nativewind/types", "node", "jest"]

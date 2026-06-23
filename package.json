@@ -28,7 +28,8 @@
     "lint:fix": "eslint . --ext .ts,.tsx --cache --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\" --ignore-path .gitignore",
-    "clean": "rm -rf .expo node_modules/.cache .tsbuildinfo && watchman watch-del-all 2>/dev/null || true"
+    "clean": "rm -rf .expo node_modules/.cache .tsbuildinfo && watchman watch-del-all 2>/dev/null || true",
+    "sync:chart": "rm -rf vendor/loupe-chart/src && cp -R ../packages/chart/src vendor/loupe-chart/src && cp ../packages/chart/package.json vendor/loupe-chart/package.json"
   },
   "dependencies": {
     "@expo/html-elements": "^0.10.1",

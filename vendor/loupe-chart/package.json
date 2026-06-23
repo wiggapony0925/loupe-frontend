@@ -1,0 +1,15 @@
+{
+  "name": "@loupe/chart",
+  "version": "0.1.0",
+  "description": "Framework-agnostic chart geometry (pure TS — no React, DOM, or RN). Shared by loupe-web (SVG) and loupe-frontend (react-native-svg) so both render the exact same chart from the same math.",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
