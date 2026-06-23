@@ -31,6 +31,8 @@ export interface MeResponse {
   display_name: string | null;
   avatar_url: string | null;
   created_at: string;
+  /** True when the account is in the admin allowlist — unlocks the portal. */
+  is_admin?: boolean;
 }
 
 // ─── Scanners (paired hardware) ────────────────────────────────────────

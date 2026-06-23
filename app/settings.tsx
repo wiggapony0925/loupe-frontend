@@ -182,6 +182,13 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           subtitle="Loupe scanner, BLE pairing, firmware"
           onPress={() => router.push("/scan/pair")}
         />
+        {user?.is_admin ? (
+          <MenuRow
+            title="Developer portal"
+            subtitle="Admin — users, Pro plan, flags, announcements"
+            onPress={() => router.push("/admin")}
+          />
+        ) : null}
         <MenuRow
           title="Security and privacy"
           subtitle="Captures stay on-device until you grade"

@@ -29,6 +29,7 @@ export const MeResponseSchema = z.object({
   display_name: z.string().nullable(),
   avatar_url: z.string().nullable(),
   created_at: isoDate,
+  is_admin: z.boolean().optional(),
 });
 export type MeResponseValidated = z.infer<typeof MeResponseSchema>;
 
