@@ -72,6 +72,17 @@ export default function CommandCenterScreen() {
       >
         <Header />
 
+        {/* Scan is the app's primary verb — keep it one tap from the top of
+            the dashboard instead of buried below the fold. Goes straight to
+            live identify; price / vault / grade branch on the result sheet. */}
+        <PrimaryButton
+          label="Scan a card"
+          icon={Zap}
+          onPress={() => router.push(routes.scanIdentify())}
+          variant="mint"
+          accessibilityLabel="Open the live card scanner"
+        />
+
         <TodaysDeltaHero />
 
         <PortfolioChart
