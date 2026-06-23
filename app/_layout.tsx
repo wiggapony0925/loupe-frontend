@@ -12,6 +12,7 @@ import { NetworkBanner } from "@/presentation/components/NetworkBanner";
 import { ErrorBoundary } from "@/presentation/components/ErrorBoundary";
 import { MinVersionGate } from "@/presentation/components/MinVersionGate";
 import { ThemeProvider, useTheme } from "@/presentation/theme";
+import { useRecentsSync } from "@/application/hooks/useRecentsSync";
 import { initSentry } from "@/infrastructure/observability/sentry";
 
 // Fire Sentry init once at module evaluation. The helper is a graceful
@@ -73,6 +74,8 @@ function RootStack() {
   const { palette } = useTheme();
   const router = useRouter();
   const segments = useSegments();
+  // Cross-device sync of recent searches (+ preserve recently-viewed).
+  useRecentsSync();
 
   useEffect(() => {
     if (isLoading) return;

@@ -25,6 +25,7 @@ export const ENDPOINTS = {
     root: `${V1}/me`,
     settings: `${V1}/me/settings`,
     grades: `${V1}/grades`,
+    recents: `${V1}/me/recents`,
   },
   scanners: {
     list: `${V1}/scanners`,
