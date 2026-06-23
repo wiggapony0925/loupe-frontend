@@ -20,8 +20,16 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.loupe.client",
+      "usesAppleSignIn": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.714615078104-ta4c6j64ir3rqauqvf593q8llu8i2kr4"
+            ]
+          }
+        ]
       }
     },
     "android": {
@@ -40,6 +48,7 @@
       "expo-asset",
       "expo-font",
       "expo-updates",
+      "expo-apple-authentication",
       [
         "expo-camera",
         {

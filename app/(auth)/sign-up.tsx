@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { UserPlus } from "lucide-react-native";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
+import { SocialSignIn } from "@/presentation/features/auth/SocialSignIn";
 import { AuthScreen } from "@/presentation/features/auth/AuthScreen";
 import { FormInput } from "@/presentation/features/auth/FormInput";
 import { AuthFooter } from "@/presentation/features/auth/AuthFooter";
@@ -99,6 +100,9 @@ export default function SignUpScreen() {
           loading={submitting}
           onPress={onSubmit}
         />
+
+        <SocialSignIn />
+
         <Pressable onPress={() => router.replace("/(auth)/sign-in")}>
           <Text style={[styles.switch, { color: p.ink.muted }]}>
             Already have an account?{" "}

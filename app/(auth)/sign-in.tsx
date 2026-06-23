@@ -15,6 +15,7 @@ import { AuthScreen } from "@/presentation/features/auth/AuthScreen";
 import { FormInput } from "@/presentation/features/auth/FormInput";
 import { AuthFooter } from "@/presentation/features/auth/AuthFooter";
 import { DevPersonaSheet } from "@/presentation/features/auth/DevPersonaSheet";
+import { SocialSignIn } from "@/presentation/features/auth/SocialSignIn";
 import { LoupeMark } from "@/presentation/brand/LoupeMark";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { ApiError } from "@/infrastructure/http/client";
@@ -89,6 +90,11 @@ export default function SignInScreen() {
           loading={submitting}
           onPress={onSubmit}
         />
+
+        {/* Auth-state change → the root layout redirects out of the auth group,
+            same as the email flow, so no explicit navigation needed here. */}
+        <SocialSignIn />
+
         {__DEV__ ? (
           <PrimaryButton
             label="Dev personas (50)"

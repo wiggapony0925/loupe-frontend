@@ -29,7 +29,10 @@ import {
   loginWithEmail as loginWithEmailApi,
   registerWithEmail as registerWithEmailApi,
   refreshSession as refreshSessionApi,
+  signInWithApple as appleSignInApi,
+  signInWithGoogle as googleSignInApi,
 } from "@/infrastructure/repositories/authRepository";
+import type { TokenPair } from "@/infrastructure/http";
 import {
   TOKEN_KEY as TOKEN_STORAGE_KEY,
   REFRESH_KEY as REFRESH_STORAGE_KEY,
@@ -51,8 +54,10 @@ interface AuthContextValue {
   ) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signInWithDevLogin: (email: string, displayName?: string) => Promise<void>;
-  signInWithApple: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  /** Exchange an Apple identity token (from the native SDK) for a session. */
+  signInWithApple: (identityToken: string, fullName?: string) => Promise<void>;
+  /** Exchange a Google id token (from the native SDK) for a session. */
+  signInWithGoogle: (idToken: string) => Promise<void>;
   signOut: () => void;
   setToken: (token: string | null) => void;
   /**
@@ -190,41 +195,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [persistTokens]);
 
-  const signUpWithEmail = useCallback(
-    async (email: string, password: string, displayName?: string) => {
-      const pair = await registerWithEmailApi({
-        email: email.trim().toLowerCase(),
-        password,
-        display_name: displayName?.trim() || null,
-      });
+  // The single place a fresh token pair becomes the active session. Every
+  // sign-in path (email, dev, Apple, Google) funnels through here.
+  const applySession = useCallback(
+    async (pair: TokenPair) => {
       await persistTokens({ access: pair.access_token, refresh: pair.refresh_token });
       setUser(pair.user);
     },
     [persistTokens],
+  );
+
+  const signUpWithEmail = useCallback(
+    async (email: string, password: string, displayName?: string) => {
+      await applySession(
+        await registerWithEmailApi({
+          email: email.trim().toLowerCase(),
+          password,
+          display_name: displayName?.trim() || null,
+        }),
+      );
+    },
+    [applySession],
   );
 
   const signInWithEmail = useCallback(
     async (email: string, password: string) => {
-      const pair = await loginWithEmailApi({
-        email: email.trim().toLowerCase(),
-        password,
-      });
-      await persistTokens({ access: pair.access_token, refresh: pair.refresh_token });
-      setUser(pair.user);
+      await applySession(
+        await loginWithEmailApi({ email: email.trim().toLowerCase(), password }),
+      );
     },
-    [persistTokens],
+    [applySession],
   );
 
   const signInWithDevLogin = useCallback(
     async (email: string, displayName?: string) => {
-      const pair = await devLoginApi({
-        email: email.trim().toLowerCase(),
-        display_name: displayName?.trim() || null,
-      });
-      await persistTokens({ access: pair.access_token, refresh: pair.refresh_token });
-      setUser(pair.user);
+      await applySession(
+        await devLoginApi({
+          email: email.trim().toLowerCase(),
+          display_name: displayName?.trim() || null,
+        }),
+      );
     },
-    [persistTokens],
+    [applySession],
   );
 
   const signOut = useCallback(() => {
@@ -232,14 +244,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, [persistTokens]);
 
-  const signInWithApple = useCallback(async () => {
-    // Fail loudly so QA / call sites notice unwired buttons in any env.
-    throw new Error("signInWithApple is not implemented yet");
-  }, []);
+  const signInWithApple = useCallback(
+    async (identityToken: string, fullName?: string) => {
+      await applySession(
+        await appleSignInApi({
+          identity_token: identityToken,
+          display_name: fullName?.trim() || null,
+        }),
+      );
+    },
+    [applySession],
+  );
 
-  const signInWithGoogle = useCallback(async () => {
-    throw new Error("signInWithGoogle is not implemented yet");
-  }, []);
+  const signInWithGoogle = useCallback(
+    async (idToken: string) => {
+      await applySession(await googleSignInApi({ id_token: idToken }));
+    },
+    [applySession],
+  );
 
   const setToken = useCallback(
     (next: string | null) => {

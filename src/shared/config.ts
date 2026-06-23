@@ -27,6 +27,16 @@ export const config = {
     env.EXPO_PUBLIC_WEB_URL ??
     "https://loupe-web-714615078104.us-central1.run.app",
   /**
+   * OAuth client IDs for native social sign-in. The backend verifies the
+   * resulting token, so these only start the client-side flow.
+   *   • Google needs an **iOS OAuth client id** (Google Cloud Console).
+   *   • Apple uses the app's bundle id as the audience, so no id is required
+   *     for native iOS — this is kept for parity / future web-on-RN.
+   * Empty ⇒ that provider's button is hidden (same gating as the web).
+   */
+  googleIosClientId: env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? "",
+  appleClientId: env.EXPO_PUBLIC_APPLE_CLIENT_ID ?? "",
+  /**
    * Hard-off. The app exclusively talks to the real backend. Kept for
    * back-compat with code paths still referencing the flag; new code
    * should not read it.
