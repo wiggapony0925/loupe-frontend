@@ -56,6 +56,9 @@ export interface MarketChartProps {
   header?: boolean;
   title?: string;
   smoothing?: boolean;
+  /** Fill the area under each line. Off for multi-series compare (lines read
+   *  cleaner without stacked gradients). Default true. */
+  fillArea?: boolean;
   onRangeChange?: (r: RangeKey) => void;
   /**
    * Fired on scrub start (`true`) / end (`false`). The card screen uses this
@@ -80,6 +83,7 @@ export function MarketChart({
   header = true,
   title,
   smoothing = true,
+  fillArea = true,
   onRangeChange,
   onScrubbingChange,
 }: MarketChartProps) {
@@ -318,9 +322,11 @@ export function MarketChart({
               })}
 
               {/* Area fills, then lines on top. */}
-              {geo.built.map((b, i) => (
-                <Path key={`area-${i}`} d={b.area} fill={`url(#grad-${i})`} />
-              ))}
+              {fillArea
+                ? geo.built.map((b, i) => (
+                    <Path key={`area-${i}`} d={b.area} fill={`url(#grad-${i})`} />
+                  ))
+                : null}
               {geo.built.map((b, i) => (
                 <Path
                   key={`line-${i}`}

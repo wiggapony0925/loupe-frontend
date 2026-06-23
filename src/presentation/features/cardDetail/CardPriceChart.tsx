@@ -1,19 +1,25 @@
 /**
  * CardPriceChart (mobile) — the canonical wrapper that feeds a card's price
  * history into the shared `MarketChart`. Mirrors the web `CardPriceChart`:
- * owns the active range, maps it to the backend bucket (1W→7d … ALL→all),
- * and renders the shared chart in controlled mode so web + mobile draw the
- * exact same line.
+ * owns the active range, maps it to the backend bucket (1W→7d … ALL→all), and
+ * renders the shared chart in controlled mode so web + mobile draw the same line.
  *
- * When a (house, grade) filter is active — e.g. the user tapped a graded-row
- * to scope the chart to "PSA 10" — it fetches the scaled per-tier series via
- * `useCardPriceHistory`; otherwise it reads the pre-loaded snapshot buckets.
+ * Primary line = the current tier (raw, or the tapped house/grade filter). When
+ * `compare` tiers are supplied (the "compare grades" chips), each is fetched in
+ * parallel from `/v1/cards/{id}/prices?house&grade` and overlaid as a distinctly
+ * colored line — so you can compare PSA vs BGS vs CGC vs raw at a glance, just
+ * like the web.
  */
 import React, { useMemo, useState } from "react";
+import { useQueries } from "@tanstack/react-query";
 import type { ChartSeries, RangeKey } from "@loupe/chart";
 import { useCardPriceHistory } from "@/application/queries/catalog/useCardPriceHistory";
+import { queryKeys } from "@/application/queries/queryKeys";
+import { apiFetch } from "@/infrastructure/http/client";
+import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import { MarketChart } from "@/presentation/components/MarketChart";
-import type { MarketSnapshotWire } from "@/infrastructure/http";
+import type { MarketSnapshotWire, PriceHistoryWire } from "@/infrastructure/http";
+import type { ComparePreset } from "./compareTiers";
 
 type Bucket = "7d" | "30d" | "90d" | "1y" | "all";
 
@@ -30,6 +36,9 @@ const RANGE_TO_BUCKET: Record<RangeKey, Bucket> = {
   ALL: "all",
 };
 
+/** Color for the primary (your-selection) line when overlaying compares. */
+const PRIMARY_COLOR = "#00F59B";
+
 function formatUsd(v: number): string {
   if (!Number.isFinite(v)) return "—";
   return v.toLocaleString("en-US", {
@@ -39,13 +48,21 @@ function formatUsd(v: number): string {
   });
 }
 
+function toPoints(wire: PriceHistoryWire | undefined) {
+  return (wire?.points ?? [])
+    .filter((pt) => Number.isFinite(pt.price))
+    .map((pt) => ({ t: Date.parse(pt.ts), v: pt.price }));
+}
+
 export interface CardPriceChartProps {
   history: MarketSnapshotWire["history"] | undefined;
   cardId?: string;
-  /** Grading house to scope to ("raw" | "psa" | …). Omit for the raw line. */
+  /** Grading house to scope the primary line to ("raw" | "psa" | …). */
   houseFilter?: string;
   /** Grade within the house (e.g. "10"). */
   gradeFilter?: string;
+  /** Grading-house tiers to overlay as distinct compare lines. */
+  compare?: ComparePreset[];
   defaultRange?: RangeKey;
   height?: number;
   title?: string;
@@ -58,6 +75,7 @@ export function CardPriceChart({
   cardId,
   houseFilter,
   gradeFilter,
+  compare = [],
   defaultRange = "1Y",
   height = 220,
   title,
@@ -65,9 +83,10 @@ export function CardPriceChart({
 }: CardPriceChartProps) {
   const [range, setRange] = useState<RangeKey>(defaultRange);
   const bucket = RANGE_TO_BUCKET[range];
+  const comparing = compare.length > 0;
 
-  // (house, grade) filter → fetch the scaled per-tier series. The raw line
-  // uses the buckets already loaded with the market snapshot (no refetch).
+  // Primary line: (house, grade) filter → fetch the scaled per-tier series; the
+  // raw line uses the buckets already loaded with the market snapshot.
   const filterActive = !!cardId && !!houseFilter && houseFilter !== "raw";
   const filteredQuery = useCardPriceHistory({
     id: filterActive ? cardId : null,
@@ -76,21 +95,49 @@ export function CardPriceChart({
     grade: gradeFilter,
     enabled: filterActive,
   });
+  const primaryWire = filterActive ? filteredQuery.data : history?.[bucket];
 
-  const wire = filterActive ? filteredQuery.data : history?.[bucket];
+  // Compare overlays — fetched in parallel from the per-tier prices endpoint.
+  const compareResults = useQueries({
+    queries: compare.map((t) => ({
+      queryKey: queryKeys.cards.priceHistory(cardId ?? "", bucket, t.house, t.grade),
+      queryFn: () => {
+        const qs = new URLSearchParams({ range: bucket, house: t.house });
+        if (t.grade) qs.set("grade", t.grade);
+        return apiFetch<PriceHistoryWire>(
+          `${ENDPOINTS.cards.prices(cardId!)}?${qs.toString()}`,
+        );
+      },
+      enabled: !!cardId,
+      staleTime: 5 * 60_000,
+    })),
+  });
 
   const series: ChartSeries[] = useMemo(() => {
-    const points = wire?.points ?? [];
-    if (points.length < 2) return [];
-    return [
-      {
-        id: "price",
-        // `ts` is an ISO date; normalizeSeries falls back to index spacing
-        // if any timestamp fails to parse.
-        points: points.map((pt) => ({ t: Date.parse(pt.ts), v: pt.price })),
-      },
-    ];
-  }, [wire]);
+    const out: ChartSeries[] = [];
+    const primaryPts = toPoints(primaryWire);
+    if (primaryPts.length >= 2) {
+      out.push({
+        id: "primary",
+        label:
+          houseFilter && houseFilter !== "raw"
+            ? `${houseFilter.toUpperCase()} ${gradeFilter ?? ""}`.trim()
+            : "Raw",
+        points: primaryPts,
+        // Fixed color only when overlaying; otherwise undefined → MarketChart
+        // applies color-by-change (mint/rose).
+        color: comparing ? PRIMARY_COLOR : undefined,
+      });
+    }
+    compare.forEach((t, i) => {
+      const pts = toPoints(compareResults[i]?.data);
+      if (pts.length >= 2) {
+        out.push({ id: t.key, label: t.label, points: pts, color: t.color });
+      }
+    });
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [primaryWire, compareResults, compare, comparing, houseFilter, gradeFilter]);
 
   return (
     <MarketChart
@@ -102,6 +149,8 @@ export function CardPriceChart({
       onRangeChange={setRange}
       onScrubbingChange={onScrubbingChange}
       format={formatUsd}
+      colorByChange={!comparing}
+      fillArea={!comparing}
     />
   );
 }

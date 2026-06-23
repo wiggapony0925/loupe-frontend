@@ -71,6 +71,7 @@ import {
 } from "@/presentation/features/cardDetail/CardDetailParts";
 import { NearbyListingsSection } from "@/presentation/features/cardDetail/NearbyListingsSection";
 import { CardPriceChart } from "@/presentation/features/cardDetail/CardPriceChart";
+import { buildComparePresets } from "@/presentation/features/cardDetail/compareTiers";
 import {
   CardCostBasisStrip,
   CardMarketSignals,
@@ -180,6 +181,23 @@ export default function CardDetailScreen() {
     grade: string;
     label: string;
   } | null>(null);
+  // "Compare grades" — overlay other grading-house lines on the chart. Keys are
+  // house ids (so a toggled house stays on as the primary grade changes).
+  const [compareKeys, setCompareKeys] = useState<string[]>([]);
+  const comparePresets = useMemo(
+    () =>
+      buildComparePresets(
+        chartFilter
+          ? { house: chartFilter.house, grade: chartFilter.grade }
+          : { house: "raw" },
+      ),
+    [chartFilter],
+  );
+  const compareTiers = comparePresets.filter((c) => compareKeys.includes(c.key));
+  const toggleCompare = (key: string) =>
+    setCompareKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   // Tapping the hero art opens a full-screen 3D-tilt preview (Card3DModal).
@@ -516,14 +534,76 @@ export default function CardDetailScreen() {
                 </View>
               ) : null}
               {hasAnyHistory ? (
-                <CardPriceChart
-                  history={snapshot?.history}
-                  cardId={cardId}
-                  houseFilter={chartFilter?.house}
-                  gradeFilter={chartFilter?.grade}
-                  defaultRange="1Y"
-                  onScrubbingChange={handleChartScrubbing}
-                />
+                <View style={{ gap: 12 }}>
+                  {/* Compare grades — overlay other grading houses' price lines
+                      so PSA vs BGS vs CGC vs raw read at a glance (web parity). */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+                  >
+                    <Text
+                      style={{
+                        color: p.ink.dim,
+                        fontSize: 11,
+                        fontWeight: "700",
+                        alignSelf: "center",
+                        marginRight: 2,
+                      }}
+                    >
+                      Compare
+                    </Text>
+                    {comparePresets.map((c) => {
+                      const on = compareKeys.includes(c.key);
+                      return (
+                        <Pressable
+                          key={c.key}
+                          onPress={() => toggleCompare(c.key)}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            borderColor: on ? c.color : p.line.default,
+                            backgroundColor: on
+                              ? withAlpha(c.color, 0.16)
+                              : "transparent",
+                          }}
+                        >
+                          <View
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: c.color,
+                            }}
+                          />
+                          <Text
+                            style={{
+                              color: on ? c.color : p.ink.muted,
+                              fontSize: 12,
+                              fontWeight: "700",
+                            }}
+                          >
+                            {c.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                  <CardPriceChart
+                    history={snapshot?.history}
+                    cardId={cardId}
+                    houseFilter={chartFilter?.house}
+                    gradeFilter={chartFilter?.grade}
+                    compare={compareTiers}
+                    defaultRange="1Y"
+                    onScrubbingChange={handleChartScrubbing}
+                  />
+                </View>
               ) : (
                 <View
                   style={{
