@@ -38,6 +38,7 @@ import { sealedToCardSearchResult } from "@/presentation/features/search/sealedA
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
+import { SealedRail } from "@/presentation/features/search/SealedRail";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { CardImage } from "@/presentation/components/CardImage";
 import { SkeletonSearchResults } from "@/presentation/components/Skeletons";
@@ -612,6 +613,11 @@ export default function SearchScreen() {
                   title="Trending now"
                 />
                 <TrendingSection tcg={selectedTcg} />
+              </View>
+
+              <View style={{ gap: 8 }}>
+                <SectionHeader eyebrow="Sealed" title="Sealed products" />
+                <SealedRail products={sealed.data ?? []} />
               </View>
 
               {selectedTcg === "all" || selectedTcg === "pokemon" ? (

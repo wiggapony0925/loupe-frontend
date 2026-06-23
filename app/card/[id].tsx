@@ -211,10 +211,22 @@ export default function CardDetailScreen() {
     return total > 0 ? total : null;
   }, [verifiedGradeRowsAll]);
   const verifiedTopAmount = verifiedGradeRowsAll[0]?.market.amount ?? null;
+  // Real (non-synthetic) history gates the market signals + quick stats —
+  // those are meaningless on a modeled walk.
   const hasRealHistory = useMemo(
     () =>
       Object.values(snapshot?.history ?? {}).some((history) =>
         (history.points ?? []).some((point) => point.source !== "synthetic"),
+      ),
+    [snapshot?.history],
+  );
+  // The CHART, though, renders on ANY history (incl. the modeled walk) — same
+  // as the web, which always charts the series. Only truly-empty history shows
+  // the "unavailable" note.
+  const hasAnyHistory = useMemo(
+    () =>
+      Object.values(snapshot?.history ?? {}).some(
+        (history) => (history.points ?? []).length >= 2,
       ),
     [snapshot?.history],
   );
@@ -478,7 +490,7 @@ export default function CardDetailScreen() {
                   </Pressable>
                 </View>
               ) : null}
-              {hasRealHistory ? (
+              {hasAnyHistory ? (
                 <CardPriceChart
                   history={snapshot?.history}
                   cardId={cardId}

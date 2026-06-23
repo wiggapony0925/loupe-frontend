@@ -160,12 +160,12 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         <MenuRow
           title="Loupe Support"
           subtitle="Help center, contact us 24/7, your support chats"
-          onPress={() =>
-            Alert.alert(
-              "Support",
-              "Email support@loupe.app or visit help.loupe.app for 24/7 assistance.",
-            )
-          }
+          onPress={() => router.push("/support")}
+        />
+        <MenuRow
+          title="Device scanner"
+          subtitle="How Loupe scanning works · get started"
+          onPress={() => router.push("/scanner")}
         />
         <MenuRow
           title="Preferences"
