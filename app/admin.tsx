@@ -19,17 +19,37 @@ export default function AdminPortalScreen() {
   const [loading, setLoading] = useState(true);
   const webRef = useRef<WebView>(null);
 
-  const adminUrl = `${config.webUrl}/admin`;
+  const adminUrl = `${config.webUrl}/admin?embed=admin`;
 
   // Runs before the web app's own scripts: seed the access token so the
-  // embedded AuthProvider hydrates an authenticated session immediately.
+  // embedded AuthProvider hydrates an authenticated session immediately, and
+  // flag embedded mode so the web app locks itself to /admin (hides escape
+  // links + bounces non-admin routes — see loupe-web `EmbeddedGuard`).
   const injectedBefore = useMemo(() => {
-    if (!token) return "true;";
+    const tokenLine = token
+      ? `try { window.localStorage.setItem('loupe.auth.token', ${JSON.stringify(token)}); } catch (e) {}`
+      : "";
     return `
-      try { window.localStorage.setItem('loupe.auth.token', ${JSON.stringify(token)}); } catch (e) {}
+      try { window.sessionStorage.setItem('loupe.embed', 'admin'); } catch (e) {}
+      ${tokenLine}
       true;
     `;
   }, [token]);
+
+  // Confine the WebView to the /admin section: block any hard navigation (full
+  // page loads, external links, OAuth pop-outs) that isn't a same-origin
+  // /admin URL. Client-side route changes are handled by the web EmbeddedGuard.
+  const allowOnlyAdmin = (request: { url: string }): boolean => {
+    try {
+      const u = new URL(request.url);
+      const base = new URL(config.webUrl);
+      if (u.protocol !== "https:" && u.protocol !== "http:") return true; // about:blank, data:
+      if (u.origin !== base.origin) return false; // external origin
+      return u.pathname === "/admin" || u.pathname.startsWith("/admin/");
+    } catch {
+      return false;
+    }
+  };
 
   if (!user?.is_admin) {
     return (
@@ -68,6 +88,7 @@ export default function AdminPortalScreen() {
           ref={webRef}
           source={{ uri: adminUrl }}
           injectedJavaScriptBeforeContentLoaded={injectedBefore}
+          onShouldStartLoadWithRequest={allowOnlyAdmin}
           onLoadEnd={() => setLoading(false)}
           startInLoadingState={false}
           originWhitelist={["*"]}
