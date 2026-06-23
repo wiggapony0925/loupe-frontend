@@ -6,6 +6,7 @@
 import React, { useMemo } from "react";
 import { View } from "react-native";
 import Svg, { Line, Path } from "react-native-svg";
+import { buildSparkline } from "@loupe/chart";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 
 interface SparklineProps {
@@ -29,24 +30,13 @@ export function Sparkline({
 
   const { path, baselineY, tint } = useMemo(() => {
     if (values.length < 2) return { path: "", baselineY: 0, tint: p.accent.mint };
-    const lo = Math.min(...values);
-    const hi = Math.max(...values);
-    const PAD = 3;
-    const yScale = (v: number) => {
-      if (hi === lo) return height / 2;
-      return PAD + (1 - (v - lo) / (hi - lo)) * (height - PAD * 2);
-    };
-    const xScale = (i: number) => (i / (values.length - 1)) * width;
-
-    let d = `M ${xScale(0).toFixed(2)} ${yScale(values[0]!).toFixed(2)}`;
-    for (let i = 1; i < values.length; i++) {
-      d += ` L ${xScale(i).toFixed(2)} ${yScale(values[i]!).toFixed(2)}`;
-    }
-    const up = values[values.length - 1]! >= values[0]!;
+    // Geometry from the shared `@loupe/chart` package — the web Sparkline
+    // draws the same path.
+    const geom = buildSparkline({ values, width, height, pad: 3 });
     return {
-      path: d,
-      baselineY: yScale(values[0]!),
-      tint: color ?? (up ? p.accent.mint : p.accent.rose),
+      path: geom.line,
+      baselineY: geom.baselineY,
+      tint: color ?? (geom.direction === "down" ? p.accent.rose : p.accent.mint),
     };
   }, [values, width, height, color, p.accent.mint, p.accent.rose]);
 

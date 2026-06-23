@@ -14,13 +14,11 @@
  * Privacy: coordinates are requested only on tap, never persisted, and sent
  * to our backend over HTTPS only. See `useUserLocation`.
  */
-import React, { useState } from "react";
+import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { MapPin, Navigation, Settings2, ShoppingBag } from "lucide-react-native";
-import {
-  ExternalBrowserSheet,
-  type ExternalBrowserTarget,
-} from "@/presentation/components/ExternalBrowserSheet";
+import type { ExternalBrowserTarget } from "@/presentation/components/ExternalBrowserSheet";
+import { openExternalUrl } from "@/shared/openExternalUrl";
 import {
   MarketplaceTileCard,
   MARKETPLACE_TILE_WIDTH,
@@ -41,7 +39,6 @@ export function NearbyListingsSection({
   cardId: string;
   card?: CardSearchResult | null;
 }) {
-  const [browserTarget, setBrowserTarget] = useState<ExternalBrowserTarget | null>(null);
   const location = useUserLocation();
   const q = useCardNearbyListings(cardId, {
     lat: location.coords?.lat,
@@ -52,40 +49,41 @@ export function NearbyListingsSection({
 
   const granted = location.status === "granted" && !!location.coords;
   const listings = q.data?.listings ?? [];
-  const badge = granted && listings.length > 0 ? `${listings.length} nearby` : null;
+  // If the nearest copy is well outside the search radius, the backend widened
+  // to find the closest — reflect that in the badge instead of "N nearby".
+  const nearestKm = listings.find((l) => l.distance_km != null)?.distance_km ?? null;
+  const expanded = nearestKm != null && nearestKm > 60;
+  const badge =
+    granted && listings.length > 0
+      ? expanded
+        ? "nearest"
+        : `${listings.length} nearby`
+      : null;
 
   return (
-    <>
-      <View style={{ gap: spacing.md }}>
-        <SectionHeader label="Near You" badge={badge} />
+    <View style={{ gap: spacing.md }}>
+      <SectionHeader label="Near You" badge={badge} />
 
-        {!granted ? (
-          <EnableLocationCard
-            loading={location.loading}
-            canOpenSettings={location.canOpenSettings}
-            onPress={location.request}
-          />
-        ) : q.isLoading ? (
-          <SkeletonListingsCarousel count={3} />
-        ) : listings.length > 0 ? (
-          <NearbyListingList
-            listings={listings}
-            cardName={card?.name ?? null}
-            cardImageUrl={pickCardImageUrl(card, "normal") ?? null}
-            cardBlurhash={pickCardBlurhash(card) ?? null}
-            onOpen={setBrowserTarget}
-          />
-        ) : (
-          <NearbyEmptyNote isError={q.isError} />
-        )}
-      </View>
-
-      <ExternalBrowserSheet
-        visible={!!browserTarget}
-        target={browserTarget}
-        onClose={() => setBrowserTarget(null)}
-      />
-    </>
+      {!granted ? (
+        <EnableLocationCard
+          loading={location.loading}
+          canOpenSettings={location.canOpenSettings}
+          onPress={location.request}
+        />
+      ) : q.isLoading ? (
+        <SkeletonListingsCarousel count={3} />
+      ) : listings.length > 0 ? (
+        <NearbyListingList
+          listings={listings}
+          cardName={card?.name ?? null}
+          cardImageUrl={pickCardImageUrl(card, "normal") ?? null}
+          cardBlurhash={pickCardBlurhash(card) ?? null}
+          onOpen={(t) => openExternalUrl(t.url)}
+        />
+      ) : (
+        <NearbyEmptyNote isError={q.isError} />
+      )}
+    </View>
   );
 }
 

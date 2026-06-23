@@ -7,6 +7,7 @@
  */
 import React from "react";
 import { Text, View } from "react-native";
+import { buildBars } from "@loupe/chart";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { compactUsd } from "@/shared/format";
 import type {
@@ -85,15 +86,19 @@ interface YearDistributionProps {
 export function YearDistribution({ buckets }: YearDistributionProps) {
   const p = useThemedPalette();
   if (buckets.length === 0) return null;
-  const maxValue = Math.max(...buckets.map((b) => b.valueUsd));
+  // `fraction` (valueUsd / max) from the shared `@loupe/chart` bar math — the
+  // web BarChart + mobile GradeBars use the same.
+  const { bars } = buildBars({
+    data: buckets.map((b) => ({ label: String(b.decade), value: b.valueUsd })),
+  });
   return (
     <View className="rounded-2xl border border-line bg-bg-elevated p-4">
       <View
         className="flex-row items-end justify-between"
         style={{ height: 110, gap: 8 }}
       >
-        {buckets.map((b) => {
-          const h = maxValue > 0 ? Math.max(6, (b.valueUsd / maxValue) * 96) : 6;
+        {buckets.map((b, i) => {
+          const h = Math.max(6, (bars[i]?.fraction ?? 0) * 96);
           return (
             <View key={b.decade} className="flex-1 items-center" style={{ gap: 6 }}>
               <Text className="text-[10px] font-semibold text-ink-dim">

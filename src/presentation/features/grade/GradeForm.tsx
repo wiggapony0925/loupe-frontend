@@ -6,8 +6,9 @@
  *   • `/grade/new?cardId=…|upstreamId=…` — POST /v1/grades
  *   • `/grade/[id]`                       — PATCH /v1/grades/{id}
  *
- * Field set mirrors the backend write paths in `app/schemas/grade.py`:
- *   grade · house · purchase price · purchase date · estimated value · notes
+ * Field set mirrors the web CollectionForm + backend `app/schemas/grade.py`:
+ *   grade · house · condition (raw) · copies · purchase price ·
+ *   purchase date · estimated value · notes
  *
  * Card identity is shown read-only at the top (thumbnail · title · set /
  * year); the form does not let the user re-pick the card once it's bound.
@@ -156,6 +157,9 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   );
   const [autoFilledFromMarket, setAutoFilledFromMarket] = useState(false);
   const [notes, setNotes] = useState<string>(initial?.notes ?? "");
+  // How many identical holdings to create. Create-mode only — editing a
+  // single holding never changes the count. Mirrors the web CollectionForm.
+  const [copies, setCopies] = useState<string>("1");
   const [submitting, setSubmitting] = useState(false);
 
   // Live market snapshot for the bound card. Only fetched on create —
@@ -203,7 +207,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
     setSubmitting(true);
     try {
       if (mode === "create") {
-        await createMut.mutateAsync({
+        const payload = {
           cardId: card.cardId ?? null,
           upstreamId: card.upstreamId ?? null,
           grade: gradeNum,
@@ -214,7 +218,13 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           estimatedValueUsd:
             estimatedValue === "" ? null : Number(estimatedValue),
           notes: notes.trim() || null,
-        });
+        };
+        // One row per copy — the backend models copies as distinct holdings,
+        // so we POST once each (mirrors the web CollectionForm).
+        const count = Math.max(1, Math.min(99, parseInt(copies, 10) || 1));
+        for (let i = 0; i < count; i++) {
+          await createMut.mutateAsync(payload);
+        }
       } else if (mode === "edit" && gradeId) {
         await updateMut.mutateAsync({
           id: gradeId,
@@ -506,6 +516,26 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
               );
             })}
           </View>
+        </Field>
+      ) : null}
+
+      {/* Copies — create-mode only. Adds N identical holdings in one go,
+          mirroring the web "Copies" field. Editing a single holding never
+          changes the count, so it's hidden in edit mode. */}
+      {mode === "create" ? (
+        <Field
+          label="Copies"
+          hint="How many of this exact card you own. Adds one holding each."
+        >
+          <TextInput
+            value={copies}
+            onChangeText={(t) => setCopies(t.replace(/[^0-9]/g, "").slice(0, 2))}
+            placeholder="1"
+            placeholderTextColor={p.ink.dim}
+            keyboardType="number-pad"
+            inputMode="numeric"
+            style={inputStyle(p)}
+          />
         </Field>
       ) : null}
 

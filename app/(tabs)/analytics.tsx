@@ -22,6 +22,7 @@ import {
   YearDistribution,
 } from "@/presentation/features/analytics/MarketSegments";
 import { CardImage } from "@/presentation/components/CardImage";
+import { DonutChart, type DonutDatum } from "@/presentation/components/DonutChart";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { ErrorState } from "@/presentation/components/ErrorState";
@@ -38,6 +39,11 @@ export default function AnalyticsScreen() {
   const data = q.data;
   const loading = q.isLoading;
   const erroredNormalized = q.isError ? normalizeError(q.error) : null;
+
+  // Value-by-set allocation — same derivation as the web Analytics donut.
+  const allocation: DonutDatum[] = (data?.setIndexes ?? [])
+    .filter((s) => s.totalValueUsd > 0)
+    .map((s) => ({ label: s.setName, value: s.totalValueUsd }));
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
@@ -84,6 +90,26 @@ export default function AnalyticsScreen() {
             <SkeletonBlock height={220} />
           ) : (
             <SetIndexes indexes={data.setIndexes} />
+          )}
+        </View>
+
+        <View>
+          <SectionHeader eyebrow="Allocation" title="Value by set" />
+          {loading || !data ? (
+            <SkeletonBlock height={180} />
+          ) : allocation.length === 0 ? (
+            <Text className="text-[13px] text-ink-dim">
+              Add cards to see how your value is allocated.
+            </Text>
+          ) : (
+            <View className="rounded-2xl border border-line bg-bg-elevated p-4">
+              <DonutChart
+                data={allocation}
+                centerValue={compactUsd(data.stats.totalValueUsd)}
+                centerLabel="total"
+                format={(n) => compactUsd(n)}
+              />
+            </View>
           )}
         </View>
 

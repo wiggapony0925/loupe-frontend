@@ -6,6 +6,7 @@
  */
 import React, { useMemo } from "react";
 import { Text, View } from "react-native";
+import { buildBars } from "@loupe/chart";
 import { gradeColor, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import type { AnalyticsGradeBucket } from "@/infrastructure/repositories/analyticsRepository";
 
@@ -26,8 +27,12 @@ const TINT_CENTER: Record<string, number> = {
 export function GradeBars({ buckets }: GradeBarsProps) {
   const p = useThemedPalette();
   const rows = useMemo(() => {
-    const max = Math.max(1, ...buckets.map((b) => b.count));
-    return buckets.map((b) => ({ ...b, pct: b.count / max }));
+    // `fraction` (count / max) comes from the shared `@loupe/chart` bar math —
+    // the web BarChart uses the same.
+    const { bars } = buildBars({
+      data: buckets.map((b) => ({ label: b.bucket, value: b.count })),
+    });
+    return buckets.map((b, i) => ({ ...b, pct: bars[i]?.fraction ?? 0 }));
   }, [buckets]);
 
   return (

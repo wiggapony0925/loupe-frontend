@@ -69,10 +69,7 @@ import {
   houseColor,
 } from "@/presentation/features/cardDetail/CardDetailParts";
 import { NearbyListingsSection } from "@/presentation/features/cardDetail/NearbyListingsSection";
-import {
-  InteractiveCardChart,
-  type CardRangeKey,
-} from "@/presentation/features/cardDetail/InteractiveCardChart";
+import { CardPriceChart } from "@/presentation/features/cardDetail/CardPriceChart";
 import {
   CardCostBasisStrip,
   CardMarketSignals,
@@ -89,8 +86,6 @@ import { pickCardBlurhash, pickCardImageUrl } from "@/shared/cardImage";
 import { inferBackVariant } from "@/shared/cardBacks";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import type { HouseId } from "@/infrastructure/http";
-
-// ── Range type lives in InteractiveCardChart now ────────────────────
 
 // ─────────────────────────────────────────────────────────────────────
 
@@ -173,7 +168,6 @@ export default function CardDetailScreen() {
     );
   }, [cardId, createGrade, cardQ.data?.name]);
 
-  const [range, setRange] = useState<CardRangeKey>("1Y");
   const [house, setHouse] = useState<HouseId | "all">("all");
   const [selectedGradeLabel, setSelectedGradeLabel] = useState<string | null>(null);
   /**
@@ -485,15 +479,12 @@ export default function CardDetailScreen() {
                 </View>
               ) : null}
               {hasRealHistory ? (
-                <InteractiveCardChart
+                <CardPriceChart
                   history={snapshot?.history}
-                  range={range}
-                  onRangeChange={setRange}
-                  fallbackAmount={snapshot?.summary.raw?.amount ?? null}
                   cardId={cardId}
                   houseFilter={chartFilter?.house}
                   gradeFilter={chartFilter?.grade}
-                  bleedX={20}
+                  defaultRange="1Y"
                   onScrubbingChange={handleChartScrubbing}
                 />
               ) : (

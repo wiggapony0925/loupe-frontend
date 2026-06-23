@@ -10,13 +10,10 @@
  *     wires the queries and the external-browser sheet.
  *   - `RecentCompsSection` — recent sold comps list.
  */
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Linking, Pressable, Text, View } from "react-native";
 import { Activity, Info } from "lucide-react-native";
-import {
-  ExternalBrowserSheet,
-  type ExternalBrowserTarget,
-} from "@/presentation/components/ExternalBrowserSheet";
+import { openExternalUrl } from "@/shared/openExternalUrl";
 import { Price } from "@/presentation/components/Price";
 import { NoteCard } from "@/presentation/components/NoteCard";
 import { SkeletonCompsList, SkeletonListingsCarousel } from "@/presentation/components/Skeletons";
@@ -492,7 +489,6 @@ export function LiveListingsSection({
   cardId: string;
   card?: CardSearchResult | null;
 }) {
-  const [browserTarget, setBrowserTarget] = useState<ExternalBrowserTarget | null>(null);
   const listingsQ = useCardListings(cardId, { limit: 12 });
   const pricesQ = useCardMarketplacePrices(cardId, { limit: 50 });
 
@@ -517,13 +513,12 @@ export function LiveListingsSection({
   );
 
   return (
-    <>
-      <View style={{ gap: spacing.md }}>
-        <SectionHeader label="Marketplaces" badge={marketplaceSummaryBadge(tiles, providerError)} />
-        {isLoading ? (
-          <SkeletonListingsCarousel count={3} />
-        ) : tiles.length > 0 ? (
-          <MarketplaceCarousel tiles={tiles} onOpen={setBrowserTarget} />
+    <View style={{ gap: spacing.md }}>
+      <SectionHeader label="Marketplaces" badge={marketplaceSummaryBadge(tiles, providerError)} />
+      {isLoading ? (
+        <SkeletonListingsCarousel count={3} />
+      ) : tiles.length > 0 ? (
+        <MarketplaceCarousel tiles={tiles} onOpen={(t) => openExternalUrl(t.url)} />
         ) : (
           <NoteCard
             variant={providerError ? "error" : "muted"}
@@ -536,13 +531,7 @@ export function LiveListingsSection({
             }
           />
         )}
-      </View>
-      <ExternalBrowserSheet
-        visible={!!browserTarget}
-        target={browserTarget}
-        onClose={() => setBrowserTarget(null)}
-      />
-    </>
+    </View>
   );
 }
 
