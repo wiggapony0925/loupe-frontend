@@ -29,6 +29,7 @@ import {
   ChevronLeft,
   ChevronUp,
   Expand,
+  Gauge,
   Heart,
   Pencil,
   Plus,
@@ -409,6 +410,30 @@ export default function CardDetailScreen() {
                   >
                     Hold to quick-add as Raw · NM
                   </Text>
+                  {/* Grade path (web parity) — estimate the grade before slabbing. */}
+                  <Pressable
+                    onPress={() => router.push(routes.scanPhone("studio"))}
+                    accessibilityLabel="Grade this card"
+                    style={({ pressed }) => ({
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 7,
+                      paddingVertical: 12,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: withAlpha(p.accent.purple, 0.4),
+                      backgroundColor: withAlpha(p.accent.purple, 0.1),
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Gauge size={16} color={p.accent.purple} />
+                    <Text
+                      style={{ color: p.accent.purple, fontWeight: "700", fontSize: 14 }}
+                    >
+                      Grade this card
+                    </Text>
+                  </Pressable>
                   {ownedCount > 0 ? (
                     <Pressable
                       onPress={() => {
