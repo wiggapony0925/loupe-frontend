@@ -50,6 +50,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Gauge,
   Layers,
   Plus,
   RotateCcw,
@@ -276,6 +277,12 @@ interface LiveIdentifyFlowProps {
     identificationId: string,
   ) => void;
   /**
+   * Called when the user taps "Grade this card" on the locked result sheet —
+   * forks into the photometric grade flow for the recognised card. Distinct
+   * from `onAddToVault` (log it) — this is "estimate the grade".
+   */
+  onGrade?: (candidate: IdentifyCandidate, identificationId: string) => void;
+  /**
    * Called when the user finalizes a batch ("stack") of scanned cards.
    * The host route bulk-adds each candidate to the vault as a RAW
    * (ungraded) holding, then navigates away. When omitted, the batch
@@ -462,6 +469,7 @@ export function LiveIdentifyFlow({
   onClose,
   onConfirm,
   onAddToVault,
+  onGrade,
   onAddBatch,
   onManualSearch,
   initialTcg = null,
@@ -992,6 +1000,14 @@ export function LiveIdentifyFlow({
     [state.identificationId, onAddToVault],
   );
 
+  const handleGrade = useCallback(
+    (candidate: IdentifyCandidate) => {
+      Haptics.selectionAsync().catch(() => {});
+      onGrade?.(candidate, state.identificationId ?? "");
+    },
+    [state.identificationId, onGrade],
+  );
+
   // ─── Batch stack ─────────────────────────────────────────────────
   // Push the current card onto the stack, record positive feedback,
   // then reset the scanner so the next card in the pile can be read.
@@ -1160,6 +1176,7 @@ export function LiveIdentifyFlow({
         }}
         onPickCandidate={handlePick}
         onAddToVault={handleAddToVault}
+        onGrade={handleGrade}
         onAddToBatch={handleAddToBatch}
         onRemoveFromBatch={handleRemoveFromBatch}
         onPickScanSessionItem={handlePickScanSessionItem}
@@ -1201,6 +1218,7 @@ function ScannerOverlay({
   onPickTcg,
   onPickCandidate,
   onAddToVault,
+  onGrade,
   onAddToBatch,
   onRemoveFromBatch,
   onPickScanSessionItem,
@@ -1235,6 +1253,7 @@ function ScannerOverlay({
   onPickTcg: (t: IdentifyTcgHint) => void;
   onPickCandidate: (c: IdentifyCandidate) => void;
   onAddToVault: (c: IdentifyCandidate) => void;
+  onGrade: (c: IdentifyCandidate) => void;
   onAddToBatch: (c: IdentifyCandidate) => void;
   onRemoveFromBatch: (key: string) => void;
   onPickScanSessionItem: (item: ScanSessionItem) => void;
@@ -1283,6 +1302,7 @@ function ScannerOverlay({
         onPickTcg={onPickTcg}
         onPickCandidate={onPickCandidate}
         onAddToVault={onAddToVault}
+        onGrade={onGrade}
         batch={batch}
         scanSession={scanSession}
         batchEnabled={batchEnabled}
@@ -1912,6 +1932,7 @@ function BottomPanel({
   onPickTcg,
   onPickCandidate,
   onAddToVault,
+  onGrade,
   batch,
   scanSession,
   batchEnabled,
@@ -1940,6 +1961,7 @@ function BottomPanel({
   onPickTcg: (t: IdentifyTcgHint) => void;
   onPickCandidate: (c: IdentifyCandidate) => void;
   onAddToVault: (c: IdentifyCandidate) => void;
+  onGrade: (c: IdentifyCandidate) => void;
   batch: IdentifyCandidate[];
   scanSession: ScanSessionItem[];
   batchEnabled: boolean;
@@ -2029,6 +2051,10 @@ function BottomPanel({
           onAddToVault={() => {
             const c = state.candidates[0];
             if (c) onAddToVault(c);
+          }}
+          onGrade={() => {
+            const c = state.candidates[0];
+            if (c) onGrade(c);
           }}
           onAddToBatch={() => {
             const c = state.candidates[0];
@@ -3137,6 +3163,7 @@ function LockedResultSheet({
   onViewDetails,
   onPickAlternate,
   onAddToVault,
+  onGrade,
   onAddToBatch,
   onRescan,
 }: {
@@ -3153,6 +3180,7 @@ function LockedResultSheet({
   onViewDetails: () => void;
   onPickAlternate: (c: IdentifyCandidate) => void;
   onAddToVault: () => void;
+  onGrade: () => void;
   onAddToBatch: () => void;
   onRescan: () => void;
 }) {
@@ -3477,6 +3505,31 @@ function LockedResultSheet({
           </Text>
         </Pressable>
       </View>
+
+      {/* Grade path — the other verb. Take the recognised card into the
+          photometric grade flow (centering / edges / corners / surface). */}
+      <Pressable
+        onPress={onGrade}
+        accessibilityRole="button"
+        accessibilityLabel="Grade this card"
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 7,
+          paddingVertical: 11,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: withAlpha(palette.accent.purple, 0.45),
+          backgroundColor: withAlpha(palette.accent.purple, 0.12),
+          opacity: pressed ? 0.7 : 1,
+        })}
+      >
+        <Gauge size={16} color={palette.accent.purple} />
+        <Text style={{ color: palette.accent.purple, fontWeight: "700", fontSize: 14 }}>
+          Grade this card
+        </Text>
+      </Pressable>
 
       {/* Alternate printings — horizontal thumbnail strip. Lets the user
           correct a reprint-tie lock (right name + number, wrong set) by

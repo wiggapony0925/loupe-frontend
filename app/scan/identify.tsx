@@ -115,6 +115,12 @@ export default function IdentifyScanScreen() {
           }),
         );
       }}
+      onGrade={() => {
+        // "Grade this card" → the photometric Studio capture (measure
+        // centering/edges/corners/surface for a grade estimate). Push so the
+        // user can swipe back to the scanner.
+        router.push(routes.scanPhone("studio"));
+      }}
       onAddBatch={handleAddBatch}
       onManualSearch={() => router.replace("/search")}
     />
