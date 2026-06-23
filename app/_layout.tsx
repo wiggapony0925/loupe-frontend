@@ -132,11 +132,11 @@ function RootStack() {
         options={{ presentation: "card", animation: "slide_from_bottom" }}
       />
       <Stack.Screen
-        name="support"
+        name="sealed/[id]"
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
       <Stack.Screen
-        name="scanner"
+        name="support"
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
     </Stack>

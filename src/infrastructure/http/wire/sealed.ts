@@ -25,6 +25,26 @@ export interface SealedProductWire {
   release_date: ISODate | null;
 }
 
+/** One point on the sealed value line (MSRP-at-release → current market). */
+export interface SealedPricePointWire {
+  ts: ISODate;
+  price: number;
+}
+
+/** Live market snapshot for a sealed product — `/v1/sealed/{id}/market`. */
+export interface SealedMarketWire {
+  product_id: ID;
+  currency: string;
+  msrp_usd: DecimalString | null;
+  market: number | null;
+  low: number | null;
+  mid: number | null;
+  high: number | null;
+  source: string | null;
+  marketplace_url: string | null;
+  points: SealedPricePointWire[];
+}
+
 /**
  * A user's sealed holding plus the joined product columns the vault
  * needs to render a row without an N+1 fetch. `product_*` are nullable

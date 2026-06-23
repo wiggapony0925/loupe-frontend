@@ -26,6 +26,7 @@ export const routes = {
   settings: () => "/settings" as const,
   notifications: () => "/notifications" as const,
   sealed: () => "/sealed" as const,
+  sealedDetail: (productId: string) => `/sealed/${productId}` as const,
   /** Deep link to the standalone price-alert list. */
   watchlist: () => "/watchlist" as const,
   card: (id: string) => `/card/${enc(id)}`,

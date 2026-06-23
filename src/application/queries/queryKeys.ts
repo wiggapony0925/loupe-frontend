@@ -160,6 +160,7 @@ export const queryKeys = {
     search: (q: string, productType: string | null) =>
       ["sealed", "search", q, productType ?? "all"] as const,
     item: (id: string) => ["sealed", "item", id] as const,
+    market: (id: string) => ["sealed", "market", id] as const,
   },
   sealedHoldings: {
     all: ["sealed-holdings"] as const,

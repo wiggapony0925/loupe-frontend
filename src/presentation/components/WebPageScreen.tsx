@@ -34,9 +34,20 @@ export interface WebPageScreenProps {
    * pages don't need it).
    */
   injectToken?: boolean;
+  /**
+   * Same-origin path prefixes the WebView may navigate to. Defaults to the
+   * screen's `path`. Any hard navigation outside these (other app sections,
+   * external origins) is blocked, so the bundled page can't roam the whole app.
+   */
+  confinePaths?: string[];
 }
 
-export function WebPageScreen({ title, path, injectToken = false }: WebPageScreenProps) {
+export function WebPageScreen({
+  title,
+  path,
+  injectToken = false,
+  confinePaths,
+}: WebPageScreenProps) {
   const p = useThemedPalette();
   const { token } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -52,6 +63,24 @@ export function WebPageScreen({ title, path, injectToken = false }: WebPageScree
       true;
     `;
   }, [injectToken, token]);
+
+  // Confine hard navigations to the page's own section + same origin. Blocks
+  // links that would leave the bundled page for the rest of the app or an
+  // external site.
+  const allowed = confinePaths ?? [path];
+  const onShouldStart = (request: { url: string }): boolean => {
+    try {
+      const u = new URL(request.url);
+      const base = new URL(config.webUrl);
+      if (u.protocol !== "https:" && u.protocol !== "http:") return true; // about:blank, data:
+      if (u.origin !== base.origin) return false; // external origin
+      return allowed.some(
+        (a) => u.pathname === a || u.pathname.startsWith(`${a}/`),
+      );
+    } catch {
+      return false;
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: p.bg.base }} edges={["top"]}>
@@ -72,6 +101,7 @@ export function WebPageScreen({ title, path, injectToken = false }: WebPageScree
           ref={webRef}
           source={{ uri }}
           injectedJavaScriptBeforeContentLoaded={injectedBefore}
+          onShouldStartLoadWithRequest={onShouldStart}
           onLoadEnd={() => setLoading(false)}
           startInLoadingState={false}
           originWhitelist={["*"]}

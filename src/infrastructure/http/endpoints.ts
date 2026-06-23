@@ -108,6 +108,7 @@ export const ENDPOINTS = {
   sealed: {
     search: `${V1}/sealed/search`,
     item: (id: string) => `${V1}/sealed/${id}`,
+    market: (id: string) => `${V1}/sealed/${id}/market`,
   },
   sealedHoldings: {
     mine: `${V1}/sealed-holdings`,

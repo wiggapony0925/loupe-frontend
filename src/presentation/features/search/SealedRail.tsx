@@ -30,10 +30,10 @@ export function SealedRail({ products }: { products: SealedProductWire[] }) {
       {products.slice(0, 16).map((s) => (
         <Pressable
           key={s.id}
-          onPress={() => router.push(routes.sealedAdd(s.id))}
+          onPress={() => router.push(routes.sealedDetail(s.id))}
           style={({ pressed }) => ({ width: TILE_W, opacity: pressed ? 0.85 : 1 })}
           accessibilityRole="button"
-          accessibilityLabel={`${s.name}. Sealed product. Add to collection.`}
+          accessibilityLabel={`${s.name}. Sealed product. View details.`}
         >
           <View
             style={{

@@ -20,6 +20,7 @@ import type {
   SealedHoldingCreateWire,
   SealedHoldingUpdateWire,
   SealedHoldingWire,
+  SealedMarketWire,
   SealedProductType,
   SealedProductWire,
 } from "@/infrastructure/http";
@@ -55,6 +56,20 @@ export function useSealedProduct(id: string | undefined) {
   return useQuery<SealedProductWire>({
     queryKey: queryKeys.sealed.item(id ?? ""),
     queryFn: () => apiFetch<SealedProductWire>(ENDPOINTS.sealed.item(id!)),
+    enabled: !!id,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Live market snapshot for a sealed product — low/mid/high/market vs MSRP plus
+ * the value line (`points`: MSRP-at-release → current). Powers the sealed
+ * detail sheet's chart. Public (no auth).
+ */
+export function useSealedMarket(id: string | undefined) {
+  return useQuery<SealedMarketWire>({
+    queryKey: queryKeys.sealed.market(id ?? ""),
+    queryFn: () => apiFetch<SealedMarketWire>(ENDPOINTS.sealed.market(id!)),
     enabled: !!id,
     staleTime: 5 * 60_000,
   });

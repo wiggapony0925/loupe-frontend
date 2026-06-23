@@ -1063,7 +1063,7 @@ function LiveResultsSection({
                 bordered={i > 0}
                 badgeText="SEALED"
                 priceLabel="MSRP"
-                route={routes.sealedAdd(s.id)}
+                route={routes.sealedDetail(s.id)}
                 onPressCapture={() => onResultTap?.(query)}
               />
             ))}

@@ -163,11 +163,6 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           onPress={() => router.push("/support")}
         />
         <MenuRow
-          title="Device scanner"
-          subtitle="How Loupe scanning works · get started"
-          onPress={() => router.push("/scanner")}
-        />
-        <MenuRow
           title="Preferences"
           subtitle="Currency, capture, haptics, notifications"
           onPress={() => onNavigate("general")}
