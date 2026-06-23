@@ -91,12 +91,14 @@ import { pickCardImageUrl, type ImageVariant } from "@/shared/cardImage";
 const CAPTURE_LONG_EDGE = 900;
 const CAPTURE_QUALITY = 0.42;
 /**
- * Min gap between identify calls. Keeps the device cool + bill low.
- * Kept at 1000ms so we stay under the backend's identify rate limit
- * and avoid piling up Google Vision work. Capture/encode can overlap
- * the previous request, but network identify stays single-flight.
+ * Min gap between identify calls. Tightened to 700ms (from 1000ms) for a
+ * snappier "results stream as you hover" feel — the backend identify limit
+ * was raised to 120/min to match, and most real cards now resolve via the
+ * server pHash fast path with no Google Vision call, so the higher cadence
+ * doesn't translate into proportional OCR spend. Capture/encode still
+ * overlaps the previous request; network identify stays single-flight.
  */
-const CAPTURE_INTERVAL_MS = 1000;
+const CAPTURE_INTERVAL_MS = 700;
 /** Confidence at which we fire the success haptic + freeze the carousel. */
 const LOCK_CONFIDENCE = 0.62;
 /** Lowest confidence worth showing as a possible live match. */
@@ -108,11 +110,11 @@ const SESSION_RESULT_CONFIDENCE = 0.2;
 /**
  * Consecutive frames returning zero preview-worthy candidates
  * before we surface the "can't find a match" fallback CTA. At the
- * CAPTURE_INTERVAL_MS (1000ms) cadence — chosen to stay under the
- * backend's 60/min identify rate limit so frames stop getting 429'd
- * mid-scan — this works out to ~6s of camera time before the user gets
- * the escape hatch. The live "Scanning…" pulse keeps the surface feeling
- * alive in the meantime.
+ * CAPTURE_INTERVAL_MS (700ms) cadence — kept under the backend's
+ * 120/min identify rate limit so frames stop getting 429'd mid-scan —
+ * this works out to ~4s of camera time before the user gets the escape
+ * hatch. The live "Scanning…" pulse keeps the surface feeling alive in
+ * the meantime.
  */
 const NO_MATCH_THRESHOLD = 6;
 
