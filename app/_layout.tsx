@@ -9,6 +9,7 @@ import { AppProviders } from "@/presentation/providers/AppProviders";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { BrandSplash } from "@/presentation/brand/BrandSplash";
 import { NetworkBanner } from "@/presentation/components/NetworkBanner";
+import { AnnouncementBanner } from "@/presentation/components/AnnouncementBanner";
 import { ErrorBoundary } from "@/presentation/components/ErrorBoundary";
 import { MinVersionGate } from "@/presentation/components/MinVersionGate";
 import { ThemeProvider, useTheme } from "@/presentation/theme";
@@ -38,6 +39,7 @@ export default function RootLayout() {
               </ErrorBoundary>
               {!splashDone ? <BrandSplash onFinish={() => setSplashDone(true)} /> : null}
               <NetworkBanner />
+              <AnnouncementBanner />
             </ThemedChrome>
           </AppProviders>
         </ThemeProvider>

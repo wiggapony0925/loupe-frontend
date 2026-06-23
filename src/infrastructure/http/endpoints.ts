@@ -13,6 +13,8 @@ export const ENDPOINTS = {
     health: "/health",
     version: "/version",
   },
+  /** Public global announcement banner (no auth) — set in the dev dashboard. */
+  announcement: `${V1}/announcement`,
   auth: {
     register: `${V1}/auth/register`,
     login: `${V1}/auth/login`,
