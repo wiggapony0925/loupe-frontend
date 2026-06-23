@@ -8,7 +8,6 @@ import {
   Bell,
   Camera,
   Settings2,
-  Smartphone,
   Zap,
 } from "lucide-react-native";
 import { queryKeys } from "@/application/queries/queryKeys";
@@ -275,16 +274,6 @@ export default function CommandCenterScreen() {
           <HardwareStatusWidget />
         </View>
 
-        {/* Phone capture sits directly below the hardware section so the
-            two capture surfaces live together: "use the scanner you
-            have" (hardware) and "use the camera you already own"
-            (phone). Per user request — easier to find both capture
-            options grouped at the bottom of the feed than splitting
-            them across the top and bottom of the page. */}
-        <View>
-          <SectionHeader eyebrow="Capture" title="Scan a card" />
-          <PhoneCaptureCard />
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -488,97 +477,6 @@ function KpiPill({
         {value}
       </Text>
     </View>
-  );
-}
-
-/**
- * Secondary capture path — grade a card with just the phone camera.
- * Mirrors the InitiateScanButton card shell, with a segmented mode toggle
- * (Studio = 4-shot, Quick = 2-shot) and a single hero CTA.
- */
-function PhoneCaptureCard() {
-  const p = useThemedPalette();
-  const [mode, setMode] = useState<"studio" | "quick">("studio");
-  const isStudio = mode === "studio";
-
-  return (
-    <View className="mt-3 overflow-hidden rounded-2xl border border-line bg-bg-elevated">
-      <View className="px-5 pt-4">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center gap-1.5">
-            <Smartphone size={11} color={p.ink.dim} />
-            <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-              Phone Camera
-            </Text>
-          </View>
-          <View className="flex-row items-center gap-1 rounded-full border border-line bg-bg p-0.5">
-            <ModeSegment
-              label="Studio"
-              active={isStudio}
-              tint={p.accent.mint}
-              onPress={() => setMode("studio")}
-            />
-            <ModeSegment
-              label="Quick"
-              active={!isStudio}
-              tint={p.accent.blue}
-              onPress={() => setMode("quick")}
-            />
-          </View>
-        </View>
-        <Text className="mt-1 text-base font-medium text-ink">
-          {isStudio ? "Guided 4-shot capture" : "Fast 2-shot triage"}
-        </Text>
-        <Text className="mt-0.5 text-xs text-ink-muted">
-          {isStudio
-            ? "Photometric tilt grades within ±0.5 of certified."
-            : "Front + back snap, ±1.0 estimate in seconds."}
-        </Text>
-      </View>
-
-      <View className="p-4 pt-3">
-        <PrimaryButton
-          label={isStudio ? "Open Studio Capture" : "Open Quick Capture"}
-          icon={isStudio ? Camera : Zap}
-          onPress={() => router.push(routes.scanPhone(mode))}
-          variant={isStudio ? "mint" : "blue"}
-          accessibilityLabel={`Start ${mode} phone capture`}
-        />
-      </View>
-    </View>
-  );
-}
-
-function ModeSegment({
-  label,
-  active,
-  tint,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  tint: string;
-  onPress: () => void;
-}) {
-  const p = useThemedPalette();
-
-  return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={6}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      accessibilityLabel={`${label} mode`}
-      className="rounded-full px-2.5 py-1"
-      style={{ backgroundColor: active ? `${tint}22` : "transparent" }}
-    >
-      <Text
-        className="text-[10px] font-semibold uppercase tracking-[2px]"
-        style={{ color: active ? tint : p.ink.dim }}
-      >
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 
