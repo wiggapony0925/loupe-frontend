@@ -12,6 +12,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import * as Haptics from "expo-haptics";
+import { BlurView } from "expo-blur";
 import { router, Tabs } from "expo-router";
 import {
   BarChart3,
@@ -60,6 +61,7 @@ export default function TabsLayout() {
   const themeMode = useSettings((s) => s.themeMode);
   const systemScheme = useColorScheme();
   const p = useThemedPalette();
+  const insets = useSafeAreaInsets();
   // Resolve to the actual visible scheme so "Auto" mode also remounts the
   // navigator when the device theme flips.
   const resolved = themeMode === "system" ? (systemScheme ?? "dark") : themeMode;
@@ -73,12 +75,19 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: p.accent.mint,
         tabBarInactiveTintColor: p.ink.dim,
+        // Liquid-glass dock: the bar stays in the layout (so screen content is
+        // never hidden behind it), but its surface is a floating, inset,
+        // blurred pill — the iOS "Shop"-style frosted dock. The real glass is
+        // drawn in `tabBarBackground`; the bar frame itself is transparent.
+        tabBarBackground: () => (
+          <GlassDock palette={p} insets={insets} dark={resolved === "dark"} />
+        ),
         tabBarStyle: {
-          backgroundColor: p.bg.elevated,
-          borderTopColor: p.line.default,
-          borderTopWidth: 0.5,
+          backgroundColor: "transparent",
+          borderTopWidth: 0,
+          elevation: 0,
           height: 84,
-          paddingTop: 8,
+          paddingTop: 12,
         },
         // Give each tab item a bit more horizontal breathing room and
         // keep its label on a single line so longer titles
@@ -142,6 +151,75 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+  );
+}
+
+/**
+ * The frosted "liquid glass" dock drawn behind the tab items. A floating,
+ * inset, rounded pill: real `BlurView` glass + a translucent tint of our
+ * elevated surface + a hairline top highlight, with a soft drop shadow. The
+ * outer view owns the shadow (no clipping) and the inner view clips the blur.
+ */
+function GlassDock({
+  palette: p,
+  insets,
+  dark,
+}: {
+  palette: ReturnType<typeof useThemedPalette>;
+  insets: { bottom: number };
+  dark: boolean;
+}) {
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        left: 12,
+        right: 12,
+        top: 4,
+        bottom: Math.max(insets.bottom, 6),
+        borderRadius: 30,
+        shadowColor: "#000",
+        shadowOpacity: dark ? 0.42 : 0.16,
+        shadowRadius: 22,
+        shadowOffset: { width: 0, height: 12 },
+        elevation: 18,
+      }}
+    >
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            borderRadius: 30,
+            overflow: "hidden",
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: withAlpha(p.ink.default, dark ? 0.14 : 0.1),
+          },
+        ]}
+      >
+        <BlurView
+          intensity={dark ? 42 : 64}
+          tint={dark ? "dark" : "light"}
+          style={StyleSheet.absoluteFill}
+        />
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: withAlpha(p.bg.elevated, dark ? 0.55 : 0.6) },
+          ]}
+        />
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: withAlpha(p.ink.default, dark ? 0.18 : 0.5),
+          }}
+        />
+      </View>
+    </View>
   );
 }
 
