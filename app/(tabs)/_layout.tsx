@@ -19,6 +19,7 @@ import {
   ChevronRight,
   Gauge,
   Layers,
+  type LucideIcon,
   Search,
   X,
   Zap,
@@ -54,6 +55,35 @@ interface ScanTabButtonProps {
   palette: ReturnType<typeof useThemedPalette>;
 }
 
+/** A tab icon with a subtle mint pill behind it when active — the polished
+ *  active-state treatment (no glass dock). */
+function TabIcon({
+  Icon,
+  focused,
+  color,
+  palette: p,
+}: {
+  Icon: LucideIcon;
+  focused: boolean;
+  color: string;
+  palette: ReturnType<typeof useThemedPalette>;
+}) {
+  return (
+    <View
+      style={{
+        alignItems: "center",
+        justifyContent: "center",
+        width: 46,
+        height: 30,
+        borderRadius: 999,
+        backgroundColor: focused ? withAlpha(p.accent.mint, 0.14) : "transparent",
+      }}
+    >
+      <Icon size={20} color={color} strokeWidth={focused ? 2.4 : 2} />
+    </View>
+  );
+}
+
 export default function TabsLayout() {
   // Subscribe to theme so the screenOptions object below is rebuilt with
   // the freshly-mutated palette values when the user toggles Light/Dark.
@@ -82,10 +112,15 @@ export default function TabsLayout() {
           backgroundColor: p.bg.base,
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: p.line.default,
-          elevation: 0,
           height: 56 + insets.bottom,
           paddingTop: 8,
           paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
+          // Subtle lift so the bar reads as elevated chrome — not a glass dock.
+          shadowColor: "#000",
+          shadowOpacity: 0.06,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: -3 },
+          elevation: 12,
         },
         tabBarItemStyle: {
           paddingTop: 2,
@@ -104,25 +139,27 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Command",
-          tabBarIcon: ({ color }) => <Gauge size={20} color={color} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon Icon={Gauge} focused={focused} color={color} palette={p} />
+          ),
         }}
       />
       <Tabs.Screen
         name="vault"
         options={{
           title: "Vault",
-          tabBarIcon: ({ color }) => <Layers size={20} color={color} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon Icon={Layers} focused={focused} color={color} palette={p} />
+          ),
         }}
       />
-      {/* Scan — primary verb of the app, but rendered as a normal tab so the
-          bar stays flat and even. The custom button only adds a long-press
-          "choose camera mode" sheet; it renders the default icon + label, so
-          it looks identical to every other tab. */}
+      {/* Scan — the app's primary verb, rendered as a raised circular FAB at the
+          center of the bar (the ScanTabButton). Long-press opens the camera-mode
+          sheet. No label/icon here; the button renders its own. */}
       <Tabs.Screen
         name="scan"
         options={{
           title: "Scan",
-          tabBarIcon: ({ color }) => <Camera size={20} color={color} />,
           tabBarButton: (props) => <ScanTabButton {...props} palette={p} />,
         }}
       />
@@ -130,14 +167,18 @@ export default function TabsLayout() {
         name="search"
         options={{
           title: "Search",
-          tabBarIcon: ({ color }) => <Search size={20} color={color} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon Icon={Search} focused={focused} color={color} palette={p} />
+          ),
         }}
       />
       <Tabs.Screen
         name="analytics"
         options={{
           title: "Analytics",
-          tabBarIcon: ({ color }) => <BarChart3 size={20} color={color} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon Icon={BarChart3} focused={focused} color={color} palette={p} />
+          ),
         }}
       />
     </Tabs>
@@ -145,7 +186,6 @@ export default function TabsLayout() {
 }
 
 function ScanTabButton({
-  children,
   onPress,
   onLongPress,
   style,
@@ -179,20 +219,39 @@ function ScanTabButton({
         }
         accessibilityState={accessibilityState}
         testID={testID}
-        style={({ pressed }) => [
+        style={[
           style,
-          {
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: pressed ? 0.7 : 1,
-          },
+          { flex: 1, alignItems: "center", justifyContent: "flex-start" },
         ]}
       >
-        {/* Renders the default tab content (Camera icon + "Scan" label), so
-            this tab is visually identical to the others — the custom button
-            exists only to add the long-press camera-mode sheet. */}
-        {children}
+        {({ pressed }) => (
+          // Raised circular FAB — Scan is the app's primary verb, so it's the
+          // hero of the bar. Long-press still opens the camera-mode sheet.
+          <View
+            style={[
+              {
+                marginTop: -16,
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                backgroundColor: p.accent.mint,
+                alignItems: "center",
+                justifyContent: "center",
+                // A bg-colored ring "cuts" the FAB out of the bar.
+                borderWidth: 4,
+                borderColor: p.bg.base,
+                shadowColor: p.accent.mint,
+                shadowOpacity: 0.45,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 8,
+              },
+              pressed && { transform: [{ scale: 0.94 }], shadowOpacity: 0.3 },
+            ]}
+          >
+            <Camera size={24} color="#06140d" strokeWidth={2.4} />
+          </View>
+        )}
       </Pressable>
       <Modal
         visible={menuOpen}
