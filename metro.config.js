@@ -14,9 +14,16 @@ const config = getDefaultConfig(__dirname);
 // ../packages. Resolving from an in-repo path is the only thing that survives.
 // Re-sync from the canonical source with `npm run sync:chart`.
 const chartPkg = path.resolve(__dirname, "vendor/loupe-chart");
+// ── Shared design tokens (`@loupe/tokens`) ──
+// Vendored for the same reason as @loupe/chart (survives EAS staging). The
+// single source of truth is the monorepo's packages/tokens; loupe-web's
+// tokens.scss is generated from it and the app builds its NativeWind vars from
+// the same color sets. Re-sync from the canonical source with `npm run sync:tokens`.
+const tokensPkg = path.resolve(__dirname, "vendor/loupe-tokens");
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules ?? {}),
   "@loupe/chart": chartPkg,
+  "@loupe/tokens": tokensPkg,
 };
 
 module.exports = withNativeWind(config, { input: "./global.css" });

@@ -32,6 +32,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\" --ignore-path .gitignore",
     "clean": "rm -rf .expo node_modules/.cache .tsbuildinfo && watchman watch-del-all 2>/dev/null || true",
     "sync:chart": "rm -rf vendor/loupe-chart/src && cp -R ../packages/chart/src vendor/loupe-chart/src && cp ../packages/chart/package.json vendor/loupe-chart/package.json",
+    "sync:tokens": "rm -rf vendor/loupe-tokens/src && cp -R ../packages/tokens/src vendor/loupe-tokens/src && cp ../packages/tokens/package.json vendor/loupe-tokens/package.json",
     "storybook": "storybook dev -p 7007"
   },
   "dependencies": {
