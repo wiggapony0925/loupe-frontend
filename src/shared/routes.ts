@@ -74,10 +74,4 @@ export const routes = {
    */
   sealedAdd: (productId?: string) =>
     productId ? `/sealed/add?productId=${enc(productId)}` : "/sealed/add",
-  compare: (a?: string, b?: string) => {
-    const params = [a && `a=${enc(a)}`, b && `b=${enc(b)}`]
-      .filter(Boolean)
-      .join("&");
-    return params ? `/compare?${params}` : "/compare";
-  },
 } as const;

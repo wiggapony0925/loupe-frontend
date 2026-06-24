@@ -8,11 +8,10 @@
  */
 import type {
   CollectionCard,
-  ForensicReport,
   HardwareStatus,
   PricePoint,
 } from "@/domain";
-import { ApiError, apiFetch } from "@/infrastructure/http/client";
+import { apiFetch } from "@/infrastructure/http/client";
 import {
   AppConfigSchema,
   GradedCardListSchema,
@@ -226,17 +225,6 @@ export async function fetchCollectionSummary(): Promise<CollectionSummary> {
  */
 export async function deleteGradedCard(gradeId: string): Promise<void> {
   await apiFetch<void>(`/v1/grades/${gradeId}`, { method: "DELETE" });
-}
-
-export async function fetchReport(_id: string): Promise<ForensicReport> {
-  // Backend has not yet shipped a forensic report endpoint. Refuse to
-  // fabricate one — surface a clear error so the UI can render an empty
-  // state rather than fake confidence numbers.
-  throw new ApiError("/v1/reports", {
-    code: "report.unavailable",
-    message: "Forensic reports are not yet available from the backend.",
-    status: 501,
-  });
 }
 
 /* ─── Portfolio history & sparklines ─────────────────────────────────── */
