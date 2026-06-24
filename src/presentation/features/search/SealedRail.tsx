@@ -31,7 +31,14 @@ export function SealedRail({ products }: { products: SealedProductWire[] }) {
         <Pressable
           key={s.id}
           onPress={() => router.push(routes.sealedDetail(s.id))}
-          style={({ pressed }) => ({ width: TILE_W, opacity: pressed ? 0.85 : 1 })}
+          style={({ pressed }) => ({
+            width: TILE_W,
+            // Hard-clip so a long product name can't bleed past the tile
+            // into its neighbour (the overflow bug for names like
+            // "Scarlet & Violet — Prismatic Evolutions Super-Premium…").
+            overflow: "hidden",
+            opacity: pressed ? 0.85 : 1,
+          })}
           accessibilityRole="button"
           accessibilityLabel={`${s.name}. Sealed product. View details.`}
         >
@@ -59,7 +66,13 @@ export function SealedRail({ products }: { products: SealedProductWire[] }) {
           </View>
           <Text
             numberOfLines={2}
+            ellipsizeMode="tail"
             style={{
+              // Explicit width so the text engine wraps/ellipsizes against
+              // the tile bounds rather than the intrinsic content width
+              // (which is what let long names render on one line past the
+              // tile edge). Same fix CardTile uses for single cards.
+              width: TILE_W,
               color: p.ink.default,
               fontSize: 12,
               fontWeight: "600",
@@ -71,7 +84,8 @@ export function SealedRail({ products }: { products: SealedProductWire[] }) {
           </Text>
           <Text
             numberOfLines={1}
-            style={{ color: p.ink.dim, fontSize: 11, marginTop: 2 }}
+            ellipsizeMode="tail"
+            style={{ width: TILE_W, color: p.ink.dim, fontSize: 11, marginTop: 2 }}
           >
             {s.set_name ?? "Sealed"}
           </Text>
