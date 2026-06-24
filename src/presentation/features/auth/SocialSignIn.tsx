@@ -86,7 +86,12 @@ export function SocialSignIn({ onSuccess }: { onSuccess?: () => void }) {
           style={({ pressed }) => [
             styles.googleBtn,
             {
-              borderColor: p.line.default,
+              // line.strong (not line.default) so the border is actually
+              // visible — a white button with a faint border on the
+              // near-white light bg read as "no button" next to the solid
+              // Apple pill. The shadow below gives it the same lift a real
+              // Google button has.
+              borderColor: p.line.strong,
               backgroundColor: p.bg.elevated,
               opacity: pressed || busy === "google" ? 0.7 : 1,
             },
@@ -125,6 +130,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
+    // Subtle lift so the (white, in light mode) button reads as a tappable
+    // surface against the near-white background — matches the prominence of
+    // the solid Apple button above it.
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   googleText: { fontSize: 16, fontWeight: "600" },
   error: { fontSize: 13, fontWeight: "500", textAlign: "center" },
