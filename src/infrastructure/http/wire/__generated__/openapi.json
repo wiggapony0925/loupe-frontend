@@ -1,6 +1,503 @@
 {
   "components": {
     "schemas": {
+      "AdminMetrics": {
+        "description": "At-a-glance portal metrics.",
+        "properties": {
+          "admins": {
+            "title": "Admins",
+            "type": "integer"
+          },
+          "applications_new_7d": {
+            "title": "Applications New 7D",
+            "type": "integer"
+          },
+          "applications_total": {
+            "title": "Applications Total",
+            "type": "integer"
+          },
+          "banned": {
+            "title": "Banned",
+            "type": "integer"
+          },
+          "jobs_open": {
+            "title": "Jobs Open",
+            "type": "integer"
+          },
+          "jobs_total": {
+            "title": "Jobs Total",
+            "type": "integer"
+          },
+          "posts_published": {
+            "title": "Posts Published",
+            "type": "integer"
+          },
+          "posts_total": {
+            "title": "Posts Total",
+            "type": "integer"
+          },
+          "users_new_30d": {
+            "title": "Users New 30D",
+            "type": "integer"
+          },
+          "users_new_7d": {
+            "title": "Users New 7D",
+            "type": "integer"
+          },
+          "users_total": {
+            "title": "Users Total",
+            "type": "integer"
+          },
+          "waitlist_total": {
+            "title": "Waitlist Total",
+            "type": "integer"
+          },
+          "waitlist_waiting": {
+            "title": "Waitlist Waiting",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "users_total",
+          "users_new_7d",
+          "users_new_30d",
+          "admins",
+          "banned",
+          "jobs_total",
+          "jobs_open",
+          "applications_total",
+          "applications_new_7d",
+          "posts_total",
+          "posts_published",
+          "waitlist_total",
+          "waitlist_waiting"
+        ],
+        "title": "AdminMetrics",
+        "type": "object"
+      },
+      "AdminPlanUpdate": {
+        "description": "Comp a user to Loupe Pro (or back to free) from the portal.",
+        "properties": {
+          "plan": {
+            "default": "free",
+            "pattern": "^(free|pro)$",
+            "title": "Plan",
+            "type": "string"
+          }
+        },
+        "title": "AdminPlanUpdate",
+        "type": "object"
+      },
+      "AdminRoleUpdate": {
+        "description": "Grant or revoke the DB-backed admin flag.",
+        "properties": {
+          "is_admin": {
+            "title": "Is Admin",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "is_admin"
+        ],
+        "title": "AdminRoleUpdate",
+        "type": "object"
+      },
+      "AdminUserDetail": {
+        "description": "Full per-user record for the detail drawer \u2014 identity + activity.",
+        "properties": {
+          "auth_method": {
+            "default": "unknown",
+            "title": "Auth Method",
+            "type": "string"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "ban_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ban Reason"
+          },
+          "banned": {
+            "default": false,
+            "title": "Banned",
+            "type": "boolean"
+          },
+          "banned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Banned At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deleted": {
+            "default": false,
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "estimated_value_usd": {
+            "default": 0.0,
+            "title": "Estimated Value Usd",
+            "type": "number"
+          },
+          "grades_count": {
+            "default": 0,
+            "title": "Grades Count",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_admin": {
+            "default": false,
+            "title": "Is Admin",
+            "type": "boolean"
+          },
+          "is_super_admin": {
+            "default": false,
+            "title": "Is Super Admin",
+            "type": "boolean"
+          },
+          "plan": {
+            "default": "free",
+            "title": "Plan",
+            "type": "string"
+          },
+          "pro_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pro Expires At"
+          },
+          "scans_count": {
+            "default": 0,
+            "title": "Scans Count",
+            "type": "integer"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "watchlist_count": {
+            "default": 0,
+            "title": "Watchlist Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "created_at"
+        ],
+        "title": "AdminUserDetail",
+        "type": "object"
+      },
+      "AdminUserPage": {
+        "description": "A page of users (server-side search + pagination).",
+        "properties": {
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AdminUserRead"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "AdminUserPage",
+        "type": "object"
+      },
+      "AdminUserRead": {
+        "description": "A user row in the admin user table.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "ban_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ban Reason"
+          },
+          "banned": {
+            "default": false,
+            "title": "Banned",
+            "type": "boolean"
+          },
+          "banned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Banned At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deleted": {
+            "default": false,
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_admin": {
+            "default": false,
+            "title": "Is Admin",
+            "type": "boolean"
+          },
+          "is_super_admin": {
+            "default": false,
+            "title": "Is Super Admin",
+            "type": "boolean"
+          },
+          "plan": {
+            "default": "free",
+            "title": "Plan",
+            "type": "string"
+          },
+          "pro_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pro Expires At"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "created_at"
+        ],
+        "title": "AdminUserRead",
+        "type": "object"
+      },
+      "AnnouncementRead": {
+        "description": "Global banner shown to every user when enabled.",
+        "properties": {
+          "cta_href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Href"
+          },
+          "cta_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Label"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "message": {
+            "default": "",
+            "title": "Message",
+            "type": "string"
+          },
+          "tone": {
+            "default": "info",
+            "title": "Tone",
+            "type": "string"
+          }
+        },
+        "title": "AnnouncementRead",
+        "type": "object"
+      },
+      "AnnouncementUpdate": {
+        "properties": {
+          "cta_href": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Href"
+          },
+          "cta_label": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Label"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "tone": {
+            "anyOf": [
+              {
+                "pattern": "^(info|success|warning|error)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tone"
+          }
+        },
+        "title": "AnnouncementUpdate",
+        "type": "object"
+      },
       "AppleSignInRequest": {
         "description": "Body for ``POST /v1/auth/apple``.",
         "properties": {
@@ -40,6 +537,470 @@
         ],
         "title": "AppleSignInRequest",
         "type": "object"
+      },
+      "ApplicationEventRead": {
+        "description": "One entry in an application's status/communication trail.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "notified": {
+            "default": false,
+            "title": "Notified",
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatusEnum"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "created_at"
+        ],
+        "title": "ApplicationEventRead",
+        "type": "object"
+      },
+      "ApplicationStatusEnum": {
+        "description": "Pipeline stage of a single job application.\n\nEach transition is recorded as an ``ApplicationEvent`` so the\napplicant can be kept informed and the portal shows a full history.",
+        "enum": [
+          "submitted",
+          "reviewing",
+          "interview",
+          "offer",
+          "hired",
+          "rejected",
+          "withdrawn"
+        ],
+        "title": "ApplicationStatusEnum",
+        "type": "string"
+      },
+      "ApplicationStatusUpdate": {
+        "description": "Admin: advance an application and optionally message the applicant.",
+        "properties": {
+          "message": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "notify": {
+            "default": true,
+            "title": "Notify",
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatusEnum"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ApplicationStatusUpdate",
+        "type": "object"
+      },
+      "ApplicationSubmitted": {
+        "description": "Public response after applying \u2014 the reference the applicant tracks with.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_title": {
+            "title": "Job Title",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatusEnum"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "job_title",
+          "created_at"
+        ],
+        "title": "ApplicationSubmitted",
+        "type": "object"
+      },
+      "ApplicationTrackRead": {
+        "description": "Public: an applicant's view of their own application + updates.",
+        "properties": {
+          "applicant_name": {
+            "title": "Applicant Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationEventRead"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_title": {
+            "title": "Job Title",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatusEnum"
+          }
+        },
+        "required": [
+          "id",
+          "job_title",
+          "applicant_name",
+          "status",
+          "created_at"
+        ],
+        "title": "ApplicationTrackRead",
+        "type": "object"
+      },
+      "BanRequest": {
+        "description": "Ban a user with an optional reason shown in the audit trail.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "BanRequest",
+        "type": "object"
+      },
+      "BlogPostCreate": {
+        "description": "Admin: create a post. `slug` derives from the title when omitted.",
+        "properties": {
+          "author": {
+            "default": "The Loupe Team",
+            "maxLength": 120,
+            "title": "Author",
+            "type": "string"
+          },
+          "body": {
+            "default": "",
+            "maxLength": 50000,
+            "title": "Body",
+            "type": "string"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "excerpt": {
+            "default": "",
+            "maxLength": 400,
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "read_minutes": {
+            "default": 3,
+            "maximum": 120.0,
+            "minimum": 1.0,
+            "title": "Read Minutes",
+            "type": "integer"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BlogStatusEnum",
+            "default": "draft"
+          },
+          "tag": {
+            "default": "Update",
+            "maxLength": 60,
+            "title": "Tag",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "BlogPostCreate",
+        "type": "object"
+      },
+      "BlogPostRead": {
+        "description": "Full blog post (admin + public).",
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "read_minutes": {
+            "title": "Read Minutes",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BlogStatusEnum"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "excerpt",
+          "body",
+          "tag",
+          "author",
+          "read_minutes",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "BlogPostRead",
+        "type": "object"
+      },
+      "BlogPostUpdate": {
+        "description": "Admin: partial update. Send only the fields that changed.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 50000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "read_minutes": {
+            "anyOf": [
+              {
+                "maximum": 120.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Minutes"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlogStatusEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "BlogPostUpdate",
+        "type": "object"
+      },
+      "BlogStatusEnum": {
+        "description": "Publication lifecycle of a blog post.",
+        "enum": [
+          "draft",
+          "published"
+        ],
+        "title": "BlogStatusEnum",
+        "type": "string"
       },
       "Body_identify_card_v1_cards_identify_post": {
         "properties": {
@@ -158,6 +1119,19 @@
           "created_at"
         ],
         "title": "CardRead",
+        "type": "object"
+      },
+      "CheckoutRequest": {
+        "description": "Start a Pro checkout for the given billing interval.",
+        "properties": {
+          "interval": {
+            "default": "monthly",
+            "pattern": "^(monthly|yearly)$",
+            "title": "Interval",
+            "type": "string"
+          }
+        },
+        "title": "CheckoutRequest",
         "type": "object"
       },
       "CollectionCreate": {
@@ -421,6 +1395,255 @@
           "password"
         ],
         "title": "EmailSignUpRequest",
+        "type": "object"
+      },
+      "EmploymentTypeEnum": {
+        "description": "Employment basis for a job posting.",
+        "enum": [
+          "full_time",
+          "part_time",
+          "contract",
+          "internship"
+        ],
+        "title": "EmploymentTypeEnum",
+        "type": "string"
+      },
+      "EntitlementsRead": {
+        "description": "Everything the client needs to render gates, badges, and the paywall.",
+        "properties": {
+          "card_count": {
+            "title": "Card Count",
+            "type": "integer"
+          },
+          "features": {
+            "$ref": "#/components/schemas/PlanFeatures"
+          },
+          "is_pro": {
+            "title": "Is Pro",
+            "type": "boolean"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/PlanLimits"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "pro_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pro Expires At"
+          },
+          "pro_since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pro Since"
+          },
+          "subscriptions_enabled": {
+            "title": "Subscriptions Enabled",
+            "type": "boolean"
+          },
+          "trialing": {
+            "default": false,
+            "title": "Trialing",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "plan",
+          "is_pro",
+          "subscriptions_enabled",
+          "card_count",
+          "limits",
+          "features"
+        ],
+        "title": "EntitlementsRead",
+        "type": "object"
+      },
+      "FeatureFlagCreate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "key": {
+            "description": "Stable identifier, e.g. `web_markets`.",
+            "maxLength": 80,
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "FeatureFlagCreate",
+        "type": "object"
+      },
+      "FeatureFlagRead": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "label",
+          "enabled"
+        ],
+        "title": "FeatureFlagRead",
+        "type": "object"
+      },
+      "FeatureFlagUpdate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "title": "FeatureFlagUpdate",
+        "type": "object"
+      },
+      "FeatureFlagUpsert": {
+        "description": "Set a flag's enabled state by key, creating it if missing.\n\nBacks the in-app inspect overlay, which toggles a component's flag\nwithout knowing its id. `label` is used only when the flag is created.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "FeatureFlagUpsert",
         "type": "object"
       },
       "GoogleSignInRequest": {
@@ -1379,6 +2602,669 @@
         "title": "IdentifyResponse",
         "type": "object"
       },
+      "JobApplicationCreate": {
+        "description": "Public: submit an application to an open role.",
+        "properties": {
+          "applicant_email": {
+            "format": "email",
+            "title": "Applicant Email",
+            "type": "string"
+          },
+          "applicant_name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Applicant Name",
+            "type": "string"
+          },
+          "cover_letter": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Letter"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "resume_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Url"
+          }
+        },
+        "required": [
+          "applicant_name",
+          "applicant_email"
+        ],
+        "title": "JobApplicationCreate",
+        "type": "object"
+      },
+      "JobApplicationDetail": {
+        "description": "Admin: an application with its full event trail.",
+        "properties": {
+          "applicant_email": {
+            "format": "email",
+            "title": "Applicant Email",
+            "type": "string"
+          },
+          "applicant_name": {
+            "title": "Applicant Name",
+            "type": "string"
+          },
+          "cover_letter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Letter"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationEventRead"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Title"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "resume_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Url"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatusEnum"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "job_id",
+          "applicant_name",
+          "applicant_email",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JobApplicationDetail",
+        "type": "object"
+      },
+      "JobApplicationRead": {
+        "description": "Admin: an application row (list view).",
+        "properties": {
+          "applicant_email": {
+            "format": "email",
+            "title": "Applicant Email",
+            "type": "string"
+          },
+          "applicant_name": {
+            "title": "Applicant Name",
+            "type": "string"
+          },
+          "cover_letter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Letter"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Title"
+          },
+          "linkedin_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Url"
+          },
+          "resume_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Url"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatusEnum"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "job_id",
+          "applicant_name",
+          "applicant_email",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JobApplicationRead",
+        "type": "object"
+      },
+      "JobPostingCreate": {
+        "description": "Admin: create a job posting. `slug` is derived from the title when omitted.",
+        "properties": {
+          "description": {
+            "default": "",
+            "maxLength": 20000,
+            "title": "Description",
+            "type": "string"
+          },
+          "employment_type": {
+            "$ref": "#/components/schemas/EmploymentTypeEnum",
+            "default": "full_time"
+          },
+          "location": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Location",
+            "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatusEnum",
+            "default": "draft"
+          },
+          "summary": {
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          },
+          "team": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Team",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 160,
+            "minLength": 2,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "team",
+          "location",
+          "summary"
+        ],
+        "title": "JobPostingCreate",
+        "type": "object"
+      },
+      "JobPostingRead": {
+        "description": "Full job posting (admin + public; status drives visibility).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "employment_type": {
+            "$ref": "#/components/schemas/EmploymentTypeEnum"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "location": {
+            "title": "Location",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatusEnum"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "team",
+          "location",
+          "employment_type",
+          "summary",
+          "description",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JobPostingRead",
+        "type": "object"
+      },
+      "JobPostingUpdate": {
+        "description": "Admin: partial update. Send only the fields that changed.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "employment_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmploymentTypeEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobStatusEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "JobPostingUpdate",
+        "type": "object"
+      },
+      "JobStatusEnum": {
+        "description": "Publication lifecycle of a job posting.\n\n``open`` postings are visible on the public careers page and accept\napplications; ``draft`` is admin-only; ``closed`` stays in the portal\nfor record-keeping but no longer accepts applications.",
+        "enum": [
+          "draft",
+          "open",
+          "closed"
+        ],
+        "title": "JobStatusEnum",
+        "type": "string"
+      },
+      "LoginResult": {
+        "description": "Response for ``POST /v1/auth/login``.\n\nBackward-compatible superset of :class:`TokenPair`: on a normal sign-in the\ntoken fields are populated exactly as before (``mfa_required`` is ``False``).\nWhen the account has two-factor enabled, the tokens are withheld and\n``mfa_required``/``mfa_token`` drive a second step at ``/auth/mfa/verify``.",
+        "properties": {
+          "access_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Short-lived JWT bearer token.",
+            "title": "Access Token"
+          },
+          "expires_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Access token lifetime, seconds.",
+            "title": "Expires In"
+          },
+          "mfa_required": {
+            "default": false,
+            "description": "True when a second factor is needed.",
+            "title": "Mfa Required",
+            "type": "boolean"
+          },
+          "mfa_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Short-lived token to POST to /auth/mfa/verify with a code.",
+            "title": "Mfa Token"
+          },
+          "refresh_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Long-lived refresh token.",
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "default": "bearer",
+            "description": "OAuth-style token type.",
+            "title": "Token Type",
+            "type": "string"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "LoginResult",
+        "type": "object"
+      },
+      "MfaCodeRequest": {
+        "description": "Body for enable/disable \u2014 a single TOTP or backup code.",
+        "properties": {
+          "code": {
+            "maxLength": 16,
+            "minLength": 4,
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "MfaCodeRequest",
+        "type": "object"
+      },
+      "MfaEnableResponse": {
+        "description": "One-time backup codes, shown once after enabling MFA.",
+        "properties": {
+          "backup_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Backup Codes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "backup_codes"
+        ],
+        "title": "MfaEnableResponse",
+        "type": "object"
+      },
+      "MfaSetupResponse": {
+        "description": "Enrollment material returned by ``POST /v1/auth/mfa/setup``.",
+        "properties": {
+          "otpauth_uri": {
+            "description": "otpauth:// URI for authenticator apps.",
+            "title": "Otpauth Uri",
+            "type": "string"
+          },
+          "qr_svg": {
+            "description": "Inline data:image/svg+xml QR of the URI.",
+            "title": "Qr Svg",
+            "type": "string"
+          },
+          "secret": {
+            "description": "Base32 TOTP secret (for manual entry).",
+            "title": "Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "otpauth_uri",
+          "qr_svg"
+        ],
+        "title": "MfaSetupResponse",
+        "type": "object"
+      },
+      "MfaStatusResponse": {
+        "description": "Whether the signed-in user has two-factor enabled.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "MfaStatusResponse",
+        "type": "object"
+      },
+      "MfaVerifyRequest": {
+        "description": "Body for ``POST /v1/auth/mfa/verify`` (login second step).",
+        "properties": {
+          "code": {
+            "maxLength": 16,
+            "minLength": 4,
+            "title": "Code",
+            "type": "string"
+          },
+          "mfa_token": {
+            "minLength": 10,
+            "title": "Mfa Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mfa_token",
+          "code"
+        ],
+        "title": "MfaVerifyRequest",
+        "type": "object"
+      },
       "Pagination_CardRead_": {
         "properties": {
           "items": {
@@ -1449,6 +3335,225 @@
         "title": "Pagination[PriceSnapshotRead]",
         "type": "object"
       },
+      "PlanConfigRead": {
+        "description": "The Loupe Pro plan shape the admin controls live.",
+        "properties": {
+          "free_card_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Card Limit"
+          },
+          "free_statement_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Statement Limit"
+          },
+          "gate_full_history": {
+            "default": true,
+            "title": "Gate Full History",
+            "type": "boolean"
+          },
+          "gate_scanner_import": {
+            "default": true,
+            "title": "Gate Scanner Import",
+            "type": "boolean"
+          },
+          "gate_statements": {
+            "default": true,
+            "title": "Gate Statements",
+            "type": "boolean"
+          },
+          "gate_unlimited_alerts": {
+            "default": true,
+            "title": "Gate Unlimited Alerts",
+            "type": "boolean"
+          },
+          "gate_unlimited_cards": {
+            "default": true,
+            "title": "Gate Unlimited Cards",
+            "type": "boolean"
+          }
+        },
+        "title": "PlanConfigRead",
+        "type": "object"
+      },
+      "PlanConfigUpdate": {
+        "properties": {
+          "clear_card_limit": {
+            "default": false,
+            "title": "Clear Card Limit",
+            "type": "boolean"
+          },
+          "clear_statement_limit": {
+            "default": false,
+            "title": "Clear Statement Limit",
+            "type": "boolean"
+          },
+          "free_card_limit": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Card Limit"
+          },
+          "free_statement_limit": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Statement Limit"
+          },
+          "gate_full_history": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gate Full History"
+          },
+          "gate_scanner_import": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gate Scanner Import"
+          },
+          "gate_statements": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gate Statements"
+          },
+          "gate_unlimited_alerts": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gate Unlimited Alerts"
+          },
+          "gate_unlimited_cards": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gate Unlimited Cards"
+          }
+        },
+        "title": "PlanConfigUpdate",
+        "type": "object"
+      },
+      "PlanFeatures": {
+        "description": "Boolean capability gates the UI reads to lock/unlock surfaces.",
+        "properties": {
+          "full_history": {
+            "title": "Full History",
+            "type": "boolean"
+          },
+          "pro_badge": {
+            "title": "Pro Badge",
+            "type": "boolean"
+          },
+          "scanner_import": {
+            "title": "Scanner Import",
+            "type": "boolean"
+          },
+          "statements": {
+            "title": "Statements",
+            "type": "boolean"
+          },
+          "unlimited_alerts": {
+            "title": "Unlimited Alerts",
+            "type": "boolean"
+          },
+          "unlimited_cards": {
+            "title": "Unlimited Cards",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "unlimited_cards",
+          "scanner_import",
+          "full_history",
+          "unlimited_alerts",
+          "statements",
+          "pro_badge"
+        ],
+        "title": "PlanFeatures",
+        "type": "object"
+      },
+      "PlanLimits": {
+        "description": "Hard numeric caps. ``None`` means unlimited.",
+        "properties": {
+          "free_statements": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Statements"
+          },
+          "max_cards": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Cards"
+          }
+        },
+        "title": "PlanLimits",
+        "type": "object"
+      },
       "PresignedUpload": {
         "description": "A single presigned PUT URL the client uses to upload one angle.",
         "properties": {
@@ -1496,9 +3601,16 @@
       "PriceAlertCreate": {
         "properties": {
           "card_id": {
-            "format": "uuid",
-            "title": "Card Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Id"
           },
           "condition": {
             "$ref": "#/components/schemas/PriceAlertCondition"
@@ -1527,10 +3639,21 @@
               }
             ],
             "title": "Threshold Usd"
+          },
+          "upstream_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstream Id"
           }
         },
         "required": [
-          "card_id",
           "condition",
           "threshold_usd"
         ],
@@ -1718,6 +3841,28 @@
         ],
         "title": "RawConditionEnum",
         "type": "string"
+      },
+      "RecentsPayload": {
+        "description": "A user's recents. ``viewed`` items are stored verbatim (the client's\ncamelCase ``{id, name, imageUrl, setName, kind}``), so no field mapping\nis needed in either direction.",
+        "properties": {
+          "searches": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Searches",
+            "type": "array"
+          },
+          "viewed": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Viewed",
+            "type": "array"
+          }
+        },
+        "title": "RecentsPayload",
+        "type": "object"
       },
       "RefreshRequest": {
         "description": "Body for ``POST /v1/auth/refresh``.",
@@ -2703,6 +4848,131 @@
         "title": "SealedHoldingUpdate",
         "type": "object"
       },
+      "SealedMarketRead": {
+        "description": "Live market snapshot for one sealed product (``GET /v1/sealed/{id}/market``).\n\nSealed SKUs have no stored daily history, so the snapshot is a current\nTCGplayer quote (low/mid/high/market) + MSRP. ``points`` is a real value\nline anchored at MSRP-on-release \u2192 current market, so the UI can chart how\nthe product appreciated since launch (no fabricated points).",
+        "properties": {
+          "currency": {
+            "default": "USD",
+            "title": "Currency",
+            "type": "string"
+          },
+          "high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High"
+          },
+          "low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low"
+          },
+          "market": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market"
+          },
+          "marketplace_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marketplace Url"
+          },
+          "mid": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mid"
+          },
+          "msrp_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Msrp Usd"
+          },
+          "points": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SealedPricePoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "product_id"
+        ],
+        "title": "SealedMarketRead",
+        "type": "object"
+      },
+      "SealedPricePoint": {
+        "description": "One point on a sealed product's value line.",
+        "properties": {
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "ts": {
+            "title": "Ts",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ts",
+          "price"
+        ],
+        "title": "SealedPricePoint",
+        "type": "object"
+      },
       "SealedProductRead": {
         "description": "Public catalog row returned by ``GET /v1/sealed/search``.",
         "properties": {
@@ -2806,6 +5076,35 @@
         "title": "SealedProductTypeEnum",
         "type": "string"
       },
+      "SiteConfigRead": {
+        "description": "Everything the developer-portal config page reads in one shot.",
+        "properties": {
+          "announcement": {
+            "$ref": "#/components/schemas/AnnouncementRead"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/PlanConfigRead"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "plan",
+          "announcement"
+        ],
+        "title": "SiteConfigRead",
+        "type": "object"
+      },
       "TcgEnum": {
         "description": "Trading-card games supported by the catalog.",
         "enum": [
@@ -2818,6 +5117,32 @@
         ],
         "title": "TcgEnum",
         "type": "string"
+      },
+      "TestAccountCreated": {
+        "description": "A freshly-minted sandbox account \u2014 the password is shown only once.",
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "password"
+        ],
+        "title": "TestAccountCreated",
+        "type": "object"
       },
       "TokenPair": {
         "description": "Returned by every successful sign-in / refresh.",
@@ -2932,6 +5257,11 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "is_admin": {
+            "default": false,
+            "title": "Is Admin",
+            "type": "boolean"
           }
         },
         "required": [
@@ -3106,6 +5436,230 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "WaitlistEntryRead": {
+        "description": "Admin: one waitlist signup row.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "interest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interest"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "referral_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referral Source"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WaitlistStatusEnum"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "quantity",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "WaitlistEntryRead",
+        "type": "object"
+      },
+      "WaitlistJoin": {
+        "description": "Public: join the scanner waitlist (the checkout CTA payload).",
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "interest": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interest"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "quantity": {
+            "default": 1,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "referral_source": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referral Source"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "WaitlistJoin",
+        "type": "object"
+      },
+      "WaitlistJoined": {
+        "description": "Public response after joining \u2014 the reference + the line position.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WaitlistStatusEnum"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "status",
+          "position",
+          "created_at"
+        ],
+        "title": "WaitlistJoined",
+        "type": "object"
+      },
+      "WaitlistStats": {
+        "description": "Public aggregate \u2014 drives the \"Join N collectors\" social proof.",
+        "properties": {
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "waiting": {
+            "title": "Waiting",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "waiting"
+        ],
+        "title": "WaitlistStats",
+        "type": "object"
+      },
+      "WaitlistStatusEnum": {
+        "description": "Pipeline stage of a Loupe Scanner waitlist signup.\n\n``waiting`` is a fresh signup; ``invited`` means we've reached out with a\npurchase link; ``purchased`` is a converted buyer (set once Stripe / the\nfulfilment provider confirms an order); ``removed`` is an opt-out.",
+        "enum": [
+          "waiting",
+          "invited",
+          "purchased",
+          "removed"
+        ],
+        "title": "WaitlistStatusEnum",
+        "type": "string"
+      },
+      "WaitlistStatusUpdate": {
+        "description": "Admin: advance a signup's pipeline stage.",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/WaitlistStatusEnum"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "WaitlistStatusUpdate",
+        "type": "object"
+      },
       "WatchlistAdd": {
         "properties": {
           "card_id": {
@@ -3236,6 +5790,1565 @@
         "summary": "Minimal text metrics",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/v1/admin/applications": {
+      "get": {
+        "operationId": "list_applications_v1_admin_applications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "job_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Job Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobApplicationRead"
+                  },
+                  "title": "Response List Applications V1 Admin Applications Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List applications",
+        "tags": [
+          "admin-applications"
+        ]
+      }
+    },
+    "/v1/admin/applications/{application_id}": {
+      "get": {
+        "operationId": "get_application_v1_admin_applications__application_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobApplicationDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get an application with its full event trail",
+        "tags": [
+          "admin-applications"
+        ]
+      }
+    },
+    "/v1/admin/applications/{application_id}/status": {
+      "patch": {
+        "operationId": "update_application_status_v1_admin_applications__application_id__status_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationStatusUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobApplicationDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Advance an application and notify the applicant",
+        "tags": [
+          "admin-applications"
+        ]
+      }
+    },
+    "/v1/admin/blog": {
+      "get": {
+        "operationId": "list_posts_v1_admin_blog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BlogPostRead"
+                  },
+                  "title": "Response List Posts V1 Admin Blog Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List all blog posts",
+        "tags": [
+          "admin-blog"
+        ]
+      },
+      "post": {
+        "operationId": "create_post_v1_admin_blog_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlogPostCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create a blog post",
+        "tags": [
+          "admin-blog"
+        ]
+      }
+    },
+    "/v1/admin/blog/{post_id}": {
+      "delete": {
+        "operationId": "delete_post_v1_admin_blog__post_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete a blog post",
+        "tags": [
+          "admin-blog"
+        ]
+      },
+      "get": {
+        "operationId": "get_post_v1_admin_blog__post_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get a blog post",
+        "tags": [
+          "admin-blog"
+        ]
+      },
+      "patch": {
+        "operationId": "update_post_v1_admin_blog__post_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlogPostUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update a blog post",
+        "tags": [
+          "admin-blog"
+        ]
+      }
+    },
+    "/v1/admin/config": {
+      "get": {
+        "operationId": "get_config_v1_admin_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteConfigRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get the site config",
+        "tags": [
+          "admin-config"
+        ]
+      }
+    },
+    "/v1/admin/config/announcement": {
+      "patch": {
+        "operationId": "update_announcement_v1_admin_config_announcement_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteConfigRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update the global announcement banner",
+        "tags": [
+          "admin-config"
+        ]
+      }
+    },
+    "/v1/admin/config/plan": {
+      "patch": {
+        "operationId": "update_plan_v1_admin_config_plan_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanConfigUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteConfigRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update the Pro plan shape (limits + per-feature gating)",
+        "tags": [
+          "admin-config"
+        ]
+      }
+    },
+    "/v1/admin/flags": {
+      "get": {
+        "operationId": "list_flags_v1_admin_flags_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureFlagRead"
+                  },
+                  "title": "Response List Flags V1 Admin Flags Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List all feature flags",
+        "tags": [
+          "admin-flags"
+        ]
+      },
+      "post": {
+        "operationId": "create_flag_v1_admin_flags_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureFlagCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlagRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create a feature flag",
+        "tags": [
+          "admin-flags"
+        ]
+      }
+    },
+    "/v1/admin/flags/key/{key}": {
+      "put": {
+        "operationId": "upsert_flag_v1_admin_flags_key__key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureFlagUpsert"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlagRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set a flag's enabled state by key (create if missing)",
+        "tags": [
+          "admin-flags"
+        ]
+      }
+    },
+    "/v1/admin/flags/{flag_id}": {
+      "delete": {
+        "operationId": "delete_flag_v1_admin_flags__flag_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flag_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Flag Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete a feature flag",
+        "tags": [
+          "admin-flags"
+        ]
+      },
+      "patch": {
+        "operationId": "update_flag_v1_admin_flags__flag_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flag_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Flag Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureFlagUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlagRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update / toggle a flag",
+        "tags": [
+          "admin-flags"
+        ]
+      }
+    },
+    "/v1/admin/jobs": {
+      "get": {
+        "operationId": "list_jobs_v1_admin_jobs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobPostingRead"
+                  },
+                  "title": "Response List Jobs V1 Admin Jobs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List all job postings",
+        "tags": [
+          "admin-jobs"
+        ]
+      },
+      "post": {
+        "operationId": "create_job_v1_admin_jobs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobPostingCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPostingRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create a job posting",
+        "tags": [
+          "admin-jobs"
+        ]
+      }
+    },
+    "/v1/admin/jobs/{job_id}": {
+      "delete": {
+        "operationId": "delete_job_v1_admin_jobs__job_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete a job posting",
+        "tags": [
+          "admin-jobs"
+        ]
+      },
+      "get": {
+        "operationId": "get_job_v1_admin_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPostingRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get a job posting",
+        "tags": [
+          "admin-jobs"
+        ]
+      },
+      "patch": {
+        "operationId": "update_job_v1_admin_jobs__job_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobPostingUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPostingRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update a job posting",
+        "tags": [
+          "admin-jobs"
+        ]
+      }
+    },
+    "/v1/admin/metrics": {
+      "get": {
+        "operationId": "get_metrics_v1_admin_metrics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMetrics"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Portal overview metrics",
+        "tags": [
+          "admin-metrics"
+        ]
+      }
+    },
+    "/v1/admin/users": {
+      "get": {
+        "operationId": "list_users_v1_admin_users_get",
+        "parameters": [
+          {
+            "description": "Search email or name.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search email or name.",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List / search users",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/v1/admin/users/test": {
+      "post": {
+        "operationId": "create_test_account_v1_admin_users_test_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestAccountCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create a sandbox test account",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/v1/admin/users/{user_id}": {
+      "delete": {
+        "operationId": "delete_user_v1_admin_users__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete a user (soft)",
+        "tags": [
+          "admin-users"
+        ]
+      },
+      "get": {
+        "operationId": "get_user_v1_admin_users__user_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get a user's full detail",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/v1/admin/users/{user_id}/ban": {
+      "post": {
+        "operationId": "ban_user_v1_admin_users__user_id__ban_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ban a user",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/v1/admin/users/{user_id}/plan": {
+      "patch": {
+        "operationId": "set_plan_v1_admin_users__user_id__plan_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPlanUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Comp a user to Loupe Pro (or back to free)",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/v1/admin/users/{user_id}/role": {
+      "patch": {
+        "operationId": "set_role_v1_admin_users__user_id__role_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminRoleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Grant/revoke admin",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/v1/admin/users/{user_id}/unban": {
+      "post": {
+        "operationId": "unban_user_v1_admin_users__user_id__unban_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unban a user",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/v1/admin/waitlist": {
+      "get": {
+        "operationId": "list_waitlist_v1_admin_waitlist_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WaitlistEntryRead"
+                  },
+                  "title": "Response List Waitlist V1 Admin Waitlist Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List scanner waitlist signups",
+        "tags": [
+          "admin-waitlist"
+        ]
+      }
+    },
+    "/v1/admin/waitlist/{entry_id}": {
+      "delete": {
+        "operationId": "delete_entry_v1_admin_waitlist__entry_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove a waitlist signup",
+        "tags": [
+          "admin-waitlist"
+        ]
+      }
+    },
+    "/v1/admin/waitlist/{entry_id}/status": {
+      "patch": {
+        "operationId": "update_status_v1_admin_waitlist__entry_id__status_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaitlistStatusUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistEntryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Advance a waitlist signup's stage",
+        "tags": [
+          "admin-waitlist"
         ]
       }
     },
@@ -3405,6 +7518,27 @@
         "summary": "Server-computed analytics rollup",
         "tags": [
           "analytics"
+        ]
+      }
+    },
+    "/v1/announcement": {
+      "get": {
+        "operationId": "get_announcement_v1_announcement_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnouncementRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Global announcement",
+        "tags": [
+          "announcement"
         ]
       }
     },
@@ -3602,7 +7736,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TokenPair"
+                  "$ref": "#/components/schemas/LoginResult"
                 }
               }
             },
@@ -3620,6 +7754,220 @@
           }
         },
         "summary": "Sign in with email + password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "description": "Expire the HttpOnly auth cookie. JS can't clear it, so the web calls this\non sign-out. Bearer clients (mobile) simply drop their stored token.",
+        "operationId": "logout_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Clear the auth cookie (web sign-out)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/logout-all": {
+      "post": {
+        "description": "Bump the user's token epoch, instantly invalidating *all* of their\noutstanding access + refresh tokens (every device). The kill switch for a\nlost device or a stolen token. Also clears this browser's cookie.",
+        "operationId": "logout_all_v1_auth_logout_all_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke every session for the signed-in user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/mfa/disable": {
+      "post": {
+        "operationId": "mfa_disable_v1_auth_mfa_disable_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Disable 2FA after re-verifying a code",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/mfa/enable": {
+      "post": {
+        "operationId": "mfa_enable_v1_auth_mfa_enable_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaEnableResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirm enrollment with a code; returns one-time backup codes",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/mfa/setup": {
+      "post": {
+        "operationId": "mfa_setup_v1_auth_mfa_setup_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaSetupResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Begin 2FA enrollment \u2014 returns a secret + QR",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/mfa/status": {
+      "get": {
+        "operationId": "mfa_status_v1_auth_mfa_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Whether two-factor is enabled for the signed-in user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/mfa/verify": {
+      "post": {
+        "description": "Exchange the login ``mfa_token`` + a TOTP/backup code for a token pair.",
+        "operationId": "mfa_verify_v1_auth_mfa_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Complete sign-in with a 2FA code (login second step)",
         "tags": [
           "auth"
         ]
@@ -3704,6 +8052,133 @@
         "summary": "Create account with email + password",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/v1/billing/webhook": {
+      "post": {
+        "operationId": "stripe_webhook_v1_billing_webhook_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Stripe Webhook V1 Billing Webhook Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Stripe subscription lifecycle webhook",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/blog/posts": {
+      "get": {
+        "operationId": "list_posts_v1_blog_posts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BlogPostRead"
+                  },
+                  "title": "Response List Posts V1 Blog Posts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List published posts",
+        "tags": [
+          "blog"
+        ]
+      }
+    },
+    "/v1/blog/posts/{slug}": {
+      "get": {
+        "operationId": "get_post_v1_blog_posts__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get a published post by slug",
+        "tags": [
+          "blog"
         ]
       }
     },
@@ -4766,6 +9241,225 @@
         ]
       }
     },
+    "/v1/cards/{card_id}/valuation": {
+      "get": {
+        "description": "One equilibrium \"fair value\" for the raw card (blended from sold comps,\nlive listings, and catalog market), the transparent input signals, and the\nper-grade price ladder (PSA 10 / BGS 9.5 / \u2026) \u2014 in a single round-trip.",
+        "operationId": "get_valuation_v1_cards__card_id__valuation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Valuation V1 Cards  Card Id  Valuation Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Loupe Value \u2014 equilibrium fair value + per-grade ladder (public)",
+        "tags": [
+          "cards"
+        ]
+      }
+    },
+    "/v1/careers/applications/{application_id}": {
+      "get": {
+        "operationId": "track_v1_careers_applications__application_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "application_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The email used to apply.",
+            "in": "query",
+            "name": "email",
+            "required": true,
+            "schema": {
+              "description": "The email used to apply.",
+              "title": "Email",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationTrackRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Track an application (gated on the applicant's email)",
+        "tags": [
+          "careers"
+        ]
+      }
+    },
+    "/v1/careers/jobs": {
+      "get": {
+        "operationId": "list_jobs_v1_careers_jobs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobPostingRead"
+                  },
+                  "title": "Response List Jobs V1 Careers Jobs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List open roles",
+        "tags": [
+          "careers"
+        ]
+      }
+    },
+    "/v1/careers/jobs/{job_id}/apply": {
+      "post": {
+        "operationId": "apply_v1_careers_jobs__job_id__apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobApplicationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationSubmitted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Apply to an open role",
+        "tags": [
+          "careers"
+        ]
+      }
+    },
+    "/v1/careers/jobs/{slug}": {
+      "get": {
+        "operationId": "get_job_v1_careers_jobs__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPostingRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get an open role by slug",
+        "tags": [
+          "careers"
+        ]
+      }
+    },
     "/v1/collections": {
       "get": {
         "operationId": "list_mine_v1_collections_get",
@@ -5097,6 +9791,31 @@
         "summary": "Remove Item",
         "tags": [
           "collections"
+        ]
+      }
+    },
+    "/v1/flags": {
+      "get": {
+        "operationId": "get_flags_v1_flags_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Get Flags V1 Flags Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Public feature-flag map",
+        "tags": [
+          "flags"
         ]
       }
     },
@@ -5803,6 +10522,249 @@
         ]
       }
     },
+    "/v1/me/billing/checkout": {
+      "post": {
+        "operationId": "start_checkout_v1_me_billing_checkout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Checkout V1 Me Billing Checkout Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Begin a hosted Loupe Pro checkout",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/v1/me/billing/config": {
+      "get": {
+        "operationId": "get_billing_config_v1_me_billing_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Billing Config V1 Me Billing Config Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Pricing + checkout availability",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/v1/me/billing/portal": {
+      "post": {
+        "operationId": "billing_portal_v1_me_billing_portal_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Billing Portal V1 Me Billing Portal Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Open the Stripe customer portal (manage/cancel Pro)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/v1/me/billing/subscribe": {
+      "post": {
+        "operationId": "subscribe_v1_me_billing_subscribe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Subscribe V1 Me Billing Subscribe Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create a subscription for the in-app Payment Element",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/v1/me/entitlements": {
+      "get": {
+        "operationId": "get_entitlements_v1_me_entitlements_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntitlementsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The signed-in user's effective Loupe Pro access",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/v1/me/recents": {
+      "get": {
+        "operationId": "get_recents_v1_me_recents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentsPayload"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My recent searches + recently-viewed",
+        "tags": [
+          "users"
+        ]
+      },
+      "put": {
+        "operationId": "put_recents_v1_me_recents_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecentsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentsPayload"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace my recents (client sends the merged, capped list)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/v1/me/settings": {
       "get": {
         "operationId": "get_settings_v1_me_settings_get",
@@ -6066,6 +11028,374 @@
         "summary": "Real-data provider status (public)",
         "tags": [
           "providers"
+        ]
+      }
+    },
+    "/v1/public/browse": {
+      "get": {
+        "description": "Page through an entire game's upstream catalog (real ``total`` for paging),\nsorted server-side. With ``set`` (e.g. ``pokemontcg:base1``) the page is scoped\nto a single set. Unsupported games return an empty page rather than an error.",
+        "operationId": "public_browse_v1_public_browse_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "game",
+            "required": false,
+            "schema": {
+              "default": "pokemon",
+              "pattern": "^(pokemon|magic|yugioh|lorcana|onepiece|digimon|all)$",
+              "title": "Game",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "set",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Set"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "name",
+              "pattern": "^(name|newest|price_asc|price_desc)$",
+              "title": "Sort",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Browse V1 Public Browse Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Browse a whole game catalog (paginated thousands of cards)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/search": {
+      "get": {
+        "description": "Search (or, with no query, browse trending) with all derivation done here.\n\nReturns the paginated slice plus ``total`` and ``facets`` so the client\nrenders directly \u2014 no client-side filtering/sorting/pagination.",
+        "operationId": "public_search_v1_public_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 120,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tcg",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "pattern": "^(pokemon|magic|yugioh|onepiece|lorcana|sports|all)$",
+              "title": "Tcg",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rarity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rarity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "set",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Set"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "best",
+              "pattern": "^(best|price_asc|price_desc|name)$",
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 60,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Search V1 Public Search Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Public storefront search (server-side filter / sort / paginate / facets)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/sparklines": {
+      "get": {
+        "description": "A tiny trend series per id so list rows (search dropdown, rails) can\nshow a Robinhood-style sparkline without one request per card.\n\nReuses the cached, synthesized price history, so a batch of visible ids\nresolves from cache after the first hit. Capped to keep the fan-out small.",
+        "operationId": "public_sparklines_v1_public_sparklines_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ids",
+            "required": true,
+            "schema": {
+              "maxLength": 2000,
+              "title": "Ids",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "default": "7d",
+              "pattern": "^(7d|30d|90d)$",
+              "title": "Range",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Sparklines V1 Public Sparklines Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Batch mini price series for a set of cards (list-row sparklines)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/trending": {
+      "get": {
+        "description": "Trending feed with the cut applied server-side.\n\n``sort=value`` (\"most valuable\") draws from a dedicated high-priced source \u2014\nnot a re-sort of the newest-cards pool \u2014 so the rail is genuinely valuable.\nEvery returned card is guaranteed to have a price *and* art, so the UI never\nrenders a \"\u2014\" priceless tile or a bare image.",
+        "operationId": "public_trending_v1_public_trending_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tcg",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "pattern": "^(pokemon|magic|yugioh|all)$",
+              "title": "Tcg",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "trending",
+              "pattern": "^(trending|value)$",
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_price",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Price"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Trending V1 Public Trending Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Public trending (server-side sort / price ceiling)",
+        "tags": [
+          "public"
         ]
       }
     },
@@ -7226,6 +12556,50 @@
         ]
       }
     },
+    "/v1/sealed/{product_id}/market": {
+      "get": {
+        "description": "Current low/mid/high/market for one sealed product, plus its MSRP. The headline market comes from TCGplayer (richest quote) and falls back to PriceCharting's structured per-SKU match when TCGplayer's fuzzy catalog name doesn't resolve. Sealed SKUs have no stored history, so this is a point-in-time snapshot; price fields are null when no source resolves a quote.",
+        "operationId": "get_market_v1_sealed__product_id__market_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SealedMarketRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Live market snapshot for a sealed product",
+        "tags": [
+          "sealed"
+        ]
+      }
+    },
     "/v1/sets": {
       "get": {
         "operationId": "list_sets_v1_sets_get",
@@ -7301,6 +12675,73 @@
         "summary": "Set-completion progress for the signed-in user",
         "tags": [
           "sets"
+        ]
+      }
+    },
+    "/v1/waitlist": {
+      "post": {
+        "operationId": "join_v1_waitlist_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaitlistJoin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistJoined"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Join the Loupe Scanner waitlist",
+        "tags": [
+          "waitlist"
+        ]
+      }
+    },
+    "/v1/waitlist/stats": {
+      "get": {
+        "operationId": "stats_v1_waitlist_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistStats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Aggregate waitlist counts (for social proof)",
+        "tags": [
+          "waitlist"
         ]
       }
     },

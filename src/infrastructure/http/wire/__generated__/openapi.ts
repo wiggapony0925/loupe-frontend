@@ -41,6 +41,423 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List applications */
+        get: operations["list_applications_v1_admin_applications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/applications/{application_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an application with its full event trail */
+        get: operations["get_application_v1_admin_applications__application_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/applications/{application_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Advance an application and notify the applicant */
+        patch: operations["update_application_status_v1_admin_applications__application_id__status_patch"];
+        trace?: never;
+    };
+    "/v1/admin/blog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all blog posts */
+        get: operations["list_posts_v1_admin_blog_get"];
+        put?: never;
+        /** Create a blog post */
+        post: operations["create_post_v1_admin_blog_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/blog/{post_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a blog post */
+        get: operations["get_post_v1_admin_blog__post_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete a blog post */
+        delete: operations["delete_post_v1_admin_blog__post_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update a blog post */
+        patch: operations["update_post_v1_admin_blog__post_id__patch"];
+        trace?: never;
+    };
+    "/v1/admin/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the site config */
+        get: operations["get_config_v1_admin_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/config/announcement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update the global announcement banner */
+        patch: operations["update_announcement_v1_admin_config_announcement_patch"];
+        trace?: never;
+    };
+    "/v1/admin/config/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update the Pro plan shape (limits + per-feature gating) */
+        patch: operations["update_plan_v1_admin_config_plan_patch"];
+        trace?: never;
+    };
+    "/v1/admin/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all feature flags */
+        get: operations["list_flags_v1_admin_flags_get"];
+        put?: never;
+        /** Create a feature flag */
+        post: operations["create_flag_v1_admin_flags_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/flags/key/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set a flag's enabled state by key (create if missing) */
+        put: operations["upsert_flag_v1_admin_flags_key__key__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/flags/{flag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a feature flag */
+        delete: operations["delete_flag_v1_admin_flags__flag_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update / toggle a flag */
+        patch: operations["update_flag_v1_admin_flags__flag_id__patch"];
+        trace?: never;
+    };
+    "/v1/admin/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all job postings */
+        get: operations["list_jobs_v1_admin_jobs_get"];
+        put?: never;
+        /** Create a job posting */
+        post: operations["create_job_v1_admin_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a job posting */
+        get: operations["get_job_v1_admin_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete a job posting */
+        delete: operations["delete_job_v1_admin_jobs__job_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update a job posting */
+        patch: operations["update_job_v1_admin_jobs__job_id__patch"];
+        trace?: never;
+    };
+    "/v1/admin/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Portal overview metrics */
+        get: operations["get_metrics_v1_admin_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List / search users */
+        get: operations["list_users_v1_admin_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a sandbox test account */
+        post: operations["create_test_account_v1_admin_users_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a user's full detail */
+        get: operations["get_user_v1_admin_users__user_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete a user (soft) */
+        delete: operations["delete_user_v1_admin_users__user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{user_id}/ban": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ban a user */
+        post: operations["ban_user_v1_admin_users__user_id__ban_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{user_id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Comp a user to Loupe Pro (or back to free) */
+        patch: operations["set_plan_v1_admin_users__user_id__plan_patch"];
+        trace?: never;
+    };
+    "/v1/admin/users/{user_id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Grant/revoke admin */
+        patch: operations["set_role_v1_admin_users__user_id__role_patch"];
+        trace?: never;
+    };
+    "/v1/admin/users/{user_id}/unban": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unban a user */
+        post: operations["unban_user_v1_admin_users__user_id__unban_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/waitlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List scanner waitlist signups */
+        get: operations["list_waitlist_v1_admin_waitlist_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/waitlist/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a waitlist signup */
+        delete: operations["delete_entry_v1_admin_waitlist__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/waitlist/{entry_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Advance a waitlist signup's stage */
+        patch: operations["update_status_v1_admin_waitlist__entry_id__status_patch"];
+        trace?: never;
+    };
     "/v1/alerts": {
         parameters: {
             query?: never;
@@ -91,6 +508,23 @@ export interface paths {
          * @description Returns the data the mobile Analytics tab renders, all at once. Stats, set indexes, top movers, concentration, year and grade distributions, and grader split — computed pure-DB from the authenticated user's graded cards. No N+1, no per-card fan-out.
          */
         get: operations["get_overview_v1_analytics_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/announcement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Global announcement */
+        get: operations["get_announcement_v1_announcement_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -192,6 +626,137 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clear the auth cookie (web sign-out)
+         * @description Expire the HttpOnly auth cookie. JS can't clear it, so the web calls this
+         *     on sign-out. Bearer clients (mobile) simply drop their stored token.
+         */
+        post: operations["logout_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/logout-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke every session for the signed-in user
+         * @description Bump the user's token epoch, instantly invalidating *all* of their
+         *     outstanding access + refresh tokens (every device). The kill switch for a
+         *     lost device or a stolen token. Also clears this browser's cookie.
+         */
+        post: operations["logout_all_v1_auth_logout_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/mfa/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disable 2FA after re-verifying a code */
+        post: operations["mfa_disable_v1_auth_mfa_disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/mfa/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm enrollment with a code; returns one-time backup codes */
+        post: operations["mfa_enable_v1_auth_mfa_enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/mfa/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Begin 2FA enrollment — returns a secret + QR */
+        post: operations["mfa_setup_v1_auth_mfa_setup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/mfa/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether two-factor is enabled for the signed-in user */
+        get: operations["mfa_status_v1_auth_mfa_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/mfa/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete sign-in with a 2FA code (login second step)
+         * @description Exchange the login ``mfa_token`` + a TOTP/backup code for a token pair.
+         */
+        post: operations["mfa_verify_v1_auth_mfa_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/refresh": {
         parameters: {
             query?: never;
@@ -220,6 +785,57 @@ export interface paths {
         put?: never;
         /** Create account with email + password */
         post: operations["register_v1_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/billing/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stripe subscription lifecycle webhook */
+        post: operations["stripe_webhook_v1_billing_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/blog/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List published posts */
+        get: operations["list_posts_v1_blog_posts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/blog/posts/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a published post by slug */
+        get: operations["get_post_v1_blog_posts__slug__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -623,6 +1239,96 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cards/{card_id}/valuation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Loupe Value — equilibrium fair value + per-grade ladder (public)
+         * @description One equilibrium "fair value" for the raw card (blended from sold comps,
+         *     live listings, and catalog market), the transparent input signals, and the
+         *     per-grade price ladder (PSA 10 / BGS 9.5 / …) — in a single round-trip.
+         */
+        get: operations["get_valuation_v1_cards__card_id__valuation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/careers/applications/{application_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Track an application (gated on the applicant's email) */
+        get: operations["track_v1_careers_applications__application_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/careers/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List open roles */
+        get: operations["list_jobs_v1_careers_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/careers/jobs/{job_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply to an open role */
+        post: operations["apply_v1_careers_jobs__job_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/careers/jobs/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an open role by slug */
+        get: operations["get_job_v1_careers_jobs__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/collections": {
         parameters: {
             query?: never;
@@ -689,6 +1395,23 @@ export interface paths {
         post?: never;
         /** Remove Item */
         delete: operations["remove_item_v1_collections__collection_id__items__graded_card_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public feature-flag map */
+        get: operations["get_flags_v1_flags_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -873,6 +1596,109 @@ export interface paths {
         patch: operations["patch_me_v1_me_patch"];
         trace?: never;
     };
+    "/v1/me/billing/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Begin a hosted Loupe Pro checkout */
+        post: operations["start_checkout_v1_me_billing_checkout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/billing/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pricing + checkout availability */
+        get: operations["get_billing_config_v1_me_billing_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/billing/portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open the Stripe customer portal (manage/cancel Pro) */
+        post: operations["billing_portal_v1_me_billing_portal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/billing/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a subscription for the in-app Payment Element */
+        post: operations["subscribe_v1_me_billing_subscribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in user's effective Loupe Pro access */
+        get: operations["get_entitlements_v1_me_entitlements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/recents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My recent searches + recently-viewed */
+        get: operations["get_recents_v1_me_recents_get"];
+        /** Replace my recents (client sends the merged, capped list) */
+        put: operations["put_recents_v1_me_recents_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/settings": {
         parameters: {
             query?: never;
@@ -944,6 +1770,100 @@ export interface paths {
          * @description Return per-provider configuration + supported capabilities.
          */
         get: operations["get_status_v1_providers_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/browse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Browse a whole game catalog (paginated thousands of cards)
+         * @description Page through an entire game's upstream catalog (real ``total`` for paging),
+         *     sorted server-side. With ``set`` (e.g. ``pokemontcg:base1``) the page is scoped
+         *     to a single set. Unsupported games return an empty page rather than an error.
+         */
+        get: operations["public_browse_v1_public_browse_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public storefront search (server-side filter / sort / paginate / facets)
+         * @description Search (or, with no query, browse trending) with all derivation done here.
+         *
+         *     Returns the paginated slice plus ``total`` and ``facets`` so the client
+         *     renders directly — no client-side filtering/sorting/pagination.
+         */
+        get: operations["public_search_v1_public_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/sparklines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Batch mini price series for a set of cards (list-row sparklines)
+         * @description A tiny trend series per id so list rows (search dropdown, rails) can
+         *     show a Robinhood-style sparkline without one request per card.
+         *
+         *     Reuses the cached, synthesized price history, so a batch of visible ids
+         *     resolves from cache after the first hit. Capped to keep the fan-out small.
+         */
+        get: operations["public_sparklines_v1_public_sparklines_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/trending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public trending (server-side sort / price ceiling)
+         * @description Trending feed with the cut applied server-side.
+         *
+         *     ``sort=value`` ("most valuable") draws from a dedicated high-priced source —
+         *     not a re-sort of the newest-cards pool — so the rail is genuinely valuable.
+         *     Every returned card is guaranteed to have a price *and* art, so the UI never
+         *     renders a "—" priceless tile or a bare image.
+         */
+        get: operations["public_trending_v1_public_trending_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1249,6 +2169,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sealed/{product_id}/market": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Live market snapshot for a sealed product
+         * @description Current low/mid/high/market for one sealed product, plus its MSRP. The headline market comes from TCGplayer (richest quote) and falls back to PriceCharting's structured per-SKU match when TCGplayer's fuzzy catalog name doesn't resolve. Sealed SKUs have no stored history, so this is a point-in-time snapshot; price fields are null when no source resolves a quote.
+         */
+        get: operations["get_market_v1_sealed__product_id__market_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sets": {
         parameters: {
             query?: never;
@@ -1278,6 +2218,40 @@ export interface paths {
          * @description Returns one entry per set the user owns at least one card from, sorted by completion percent (highest first). Each entry: `{setId, setName, setCode, tcg, imageUrl, owned, total, percent, estimatedValueUsd, missingTop: [{cardId, name, number, imageUrl}]}`. All values are computed from real graded-card data; sets with unknown total fall back to the count of cards we have indexed.
          */
         get: operations["get_progress_v1_sets_progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Join the Loupe Scanner waitlist */
+        post: operations["join_v1_waitlist_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/waitlist/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Aggregate waitlist counts (for social proof) */
+        get: operations["stats_v1_waitlist_stats_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1349,6 +2323,248 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AdminMetrics
+         * @description At-a-glance portal metrics.
+         */
+        AdminMetrics: {
+            /** Admins */
+            admins: number;
+            /** Applications New 7D */
+            applications_new_7d: number;
+            /** Applications Total */
+            applications_total: number;
+            /** Banned */
+            banned: number;
+            /** Jobs Open */
+            jobs_open: number;
+            /** Jobs Total */
+            jobs_total: number;
+            /** Posts Published */
+            posts_published: number;
+            /** Posts Total */
+            posts_total: number;
+            /** Users New 30D */
+            users_new_30d: number;
+            /** Users New 7D */
+            users_new_7d: number;
+            /** Users Total */
+            users_total: number;
+            /** Waitlist Total */
+            waitlist_total: number;
+            /** Waitlist Waiting */
+            waitlist_waiting: number;
+        };
+        /**
+         * AdminPlanUpdate
+         * @description Comp a user to Loupe Pro (or back to free) from the portal.
+         */
+        AdminPlanUpdate: {
+            /**
+             * Plan
+             * @default free
+             */
+            plan: string;
+        };
+        /**
+         * AdminRoleUpdate
+         * @description Grant or revoke the DB-backed admin flag.
+         */
+        AdminRoleUpdate: {
+            /** Is Admin */
+            is_admin: boolean;
+        };
+        /**
+         * AdminUserDetail
+         * @description Full per-user record for the detail drawer — identity + activity.
+         */
+        AdminUserDetail: {
+            /**
+             * Auth Method
+             * @default unknown
+             */
+            auth_method: string;
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Ban Reason */
+            ban_reason?: string | null;
+            /**
+             * Banned
+             * @default false
+             */
+            banned: boolean;
+            /** Banned At */
+            banned_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Deleted
+             * @default false
+             */
+            deleted: boolean;
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Estimated Value Usd
+             * @default 0
+             */
+            estimated_value_usd: number;
+            /**
+             * Grades Count
+             * @default 0
+             */
+            grades_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Is Admin
+             * @default false
+             */
+            is_admin: boolean;
+            /**
+             * Is Super Admin
+             * @default false
+             */
+            is_super_admin: boolean;
+            /**
+             * Plan
+             * @default free
+             */
+            plan: string;
+            /** Pro Expires At */
+            pro_expires_at?: string | null;
+            /**
+             * Scans Count
+             * @default 0
+             */
+            scans_count: number;
+            /** Updated At */
+            updated_at?: string | null;
+            /**
+             * Watchlist Count
+             * @default 0
+             */
+            watchlist_count: number;
+        };
+        /**
+         * AdminUserPage
+         * @description A page of users (server-side search + pagination).
+         */
+        AdminUserPage: {
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Results */
+            results: components["schemas"]["AdminUserRead"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * AdminUserRead
+         * @description A user row in the admin user table.
+         */
+        AdminUserRead: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Ban Reason */
+            ban_reason?: string | null;
+            /**
+             * Banned
+             * @default false
+             */
+            banned: boolean;
+            /** Banned At */
+            banned_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Deleted
+             * @default false
+             */
+            deleted: boolean;
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Is Admin
+             * @default false
+             */
+            is_admin: boolean;
+            /**
+             * Is Super Admin
+             * @default false
+             */
+            is_super_admin: boolean;
+            /**
+             * Plan
+             * @default free
+             */
+            plan: string;
+            /** Pro Expires At */
+            pro_expires_at?: string | null;
+        };
+        /**
+         * AnnouncementRead
+         * @description Global banner shown to every user when enabled.
+         */
+        AnnouncementRead: {
+            /** Cta Href */
+            cta_href?: string | null;
+            /** Cta Label */
+            cta_label?: string | null;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Message
+             * @default
+             */
+            message: string;
+            /**
+             * Tone
+             * @default info
+             */
+            tone: string;
+        };
+        /** AnnouncementUpdate */
+        AnnouncementUpdate: {
+            /** Cta Href */
+            cta_href?: string | null;
+            /** Cta Label */
+            cta_label?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Message */
+            message?: string | null;
+            /** Tone */
+            tone?: string | null;
+        };
+        /**
          * AppleSignInRequest
          * @description Body for ``POST /v1/auth/apple``.
          */
@@ -1366,6 +2582,211 @@ export interface components {
              */
             nonce?: string | null;
         };
+        /**
+         * ApplicationEventRead
+         * @description One entry in an application's status/communication trail.
+         */
+        ApplicationEventRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Message */
+            message?: string | null;
+            /**
+             * Notified
+             * @default false
+             */
+            notified: boolean;
+            status: components["schemas"]["ApplicationStatusEnum"];
+        };
+        /**
+         * ApplicationStatusEnum
+         * @description Pipeline stage of a single job application.
+         *
+         *     Each transition is recorded as an ``ApplicationEvent`` so the
+         *     applicant can be kept informed and the portal shows a full history.
+         * @enum {string}
+         */
+        ApplicationStatusEnum: "submitted" | "reviewing" | "interview" | "offer" | "hired" | "rejected" | "withdrawn";
+        /**
+         * ApplicationStatusUpdate
+         * @description Admin: advance an application and optionally message the applicant.
+         */
+        ApplicationStatusUpdate: {
+            /** Message */
+            message?: string | null;
+            /**
+             * Notify
+             * @default true
+             */
+            notify: boolean;
+            status: components["schemas"]["ApplicationStatusEnum"];
+        };
+        /**
+         * ApplicationSubmitted
+         * @description Public response after applying — the reference the applicant tracks with.
+         */
+        ApplicationSubmitted: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Job Title */
+            job_title: string;
+            status: components["schemas"]["ApplicationStatusEnum"];
+        };
+        /**
+         * ApplicationTrackRead
+         * @description Public: an applicant's view of their own application + updates.
+         */
+        ApplicationTrackRead: {
+            /** Applicant Name */
+            applicant_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Events */
+            events?: components["schemas"]["ApplicationEventRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Job Title */
+            job_title: string;
+            status: components["schemas"]["ApplicationStatusEnum"];
+        };
+        /**
+         * BanRequest
+         * @description Ban a user with an optional reason shown in the audit trail.
+         */
+        BanRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * BlogPostCreate
+         * @description Admin: create a post. `slug` derives from the title when omitted.
+         */
+        BlogPostCreate: {
+            /**
+             * Author
+             * @default The Loupe Team
+             */
+            author: string;
+            /**
+             * Body
+             * @default
+             */
+            body: string;
+            /** Cover Image Url */
+            cover_image_url?: string | null;
+            /**
+             * Excerpt
+             * @default
+             */
+            excerpt: string;
+            /**
+             * Read Minutes
+             * @default 3
+             */
+            read_minutes: number;
+            /** Slug */
+            slug?: string | null;
+            /** @default draft */
+            status: components["schemas"]["BlogStatusEnum"];
+            /**
+             * Tag
+             * @default Update
+             */
+            tag: string;
+            /** Title */
+            title: string;
+        };
+        /**
+         * BlogPostRead
+         * @description Full blog post (admin + public).
+         */
+        BlogPostRead: {
+            /** Author */
+            author: string;
+            /** Body */
+            body: string;
+            /** Cover Image Url */
+            cover_image_url?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Excerpt */
+            excerpt: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Published At */
+            published_at?: string | null;
+            /** Read Minutes */
+            read_minutes: number;
+            /** Slug */
+            slug: string;
+            status: components["schemas"]["BlogStatusEnum"];
+            /** Tag */
+            tag: string;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * BlogPostUpdate
+         * @description Admin: partial update. Send only the fields that changed.
+         */
+        BlogPostUpdate: {
+            /** Author */
+            author?: string | null;
+            /** Body */
+            body?: string | null;
+            /** Cover Image Url */
+            cover_image_url?: string | null;
+            /** Excerpt */
+            excerpt?: string | null;
+            /** Read Minutes */
+            read_minutes?: number | null;
+            /** Slug */
+            slug?: string | null;
+            status?: components["schemas"]["BlogStatusEnum"] | null;
+            /** Tag */
+            tag?: string | null;
+            /** Title */
+            title?: string | null;
+        };
+        /**
+         * BlogStatusEnum
+         * @description Publication lifecycle of a blog post.
+         * @enum {string}
+         */
+        BlogStatusEnum: "draft" | "published";
         /** Body_identify_card_v1_cards_identify_post */
         Body_identify_card_v1_cards_identify_post: {
             /**
@@ -1414,6 +2835,17 @@ export interface components {
             tcg: components["schemas"]["TcgEnum"];
             /** Year */
             year?: number | null;
+        };
+        /**
+         * CheckoutRequest
+         * @description Start a Pro checkout for the given billing interval.
+         */
+        CheckoutRequest: {
+            /**
+             * Interval
+             * @default monthly
+             */
+            interval: string;
         };
         /**
          * CollectionCreate
@@ -1531,6 +2963,96 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /**
+         * EmploymentTypeEnum
+         * @description Employment basis for a job posting.
+         * @enum {string}
+         */
+        EmploymentTypeEnum: "full_time" | "part_time" | "contract" | "internship";
+        /**
+         * EntitlementsRead
+         * @description Everything the client needs to render gates, badges, and the paywall.
+         */
+        EntitlementsRead: {
+            /** Card Count */
+            card_count: number;
+            features: components["schemas"]["PlanFeatures"];
+            /** Is Pro */
+            is_pro: boolean;
+            limits: components["schemas"]["PlanLimits"];
+            /** Plan */
+            plan: string;
+            /** Pro Expires At */
+            pro_expires_at?: string | null;
+            /** Pro Since */
+            pro_since?: string | null;
+            /** Subscriptions Enabled */
+            subscriptions_enabled: boolean;
+            /**
+             * Trialing
+             * @default false
+             */
+            trialing: boolean;
+        };
+        /** FeatureFlagCreate */
+        FeatureFlagCreate: {
+            /** Description */
+            description?: string | null;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Key
+             * @description Stable identifier, e.g. `web_markets`.
+             */
+            key: string;
+            /** Label */
+            label: string;
+        };
+        /** FeatureFlagRead */
+        FeatureFlagRead: {
+            /** Description */
+            description?: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** FeatureFlagUpdate */
+        FeatureFlagUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Label */
+            label?: string | null;
+        };
+        /**
+         * FeatureFlagUpsert
+         * @description Set a flag's enabled state by key, creating it if missing.
+         *
+         *     Backs the in-app inspect overlay, which toggles a component's flag
+         *     without knowing its id. `label` is used only when the flag is created.
+         */
+        FeatureFlagUpsert: {
+            /** Description */
+            description?: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Label */
+            label?: string | null;
         };
         /**
          * GoogleSignInRequest
@@ -1876,6 +3398,300 @@ export interface components {
             /** Tcg Inferred */
             tcg_inferred: string;
         };
+        /**
+         * JobApplicationCreate
+         * @description Public: submit an application to an open role.
+         */
+        JobApplicationCreate: {
+            /**
+             * Applicant Email
+             * Format: email
+             */
+            applicant_email: string;
+            /** Applicant Name */
+            applicant_name: string;
+            /** Cover Letter */
+            cover_letter?: string | null;
+            /** Linkedin Url */
+            linkedin_url?: string | null;
+            /** Resume Url */
+            resume_url?: string | null;
+        };
+        /**
+         * JobApplicationDetail
+         * @description Admin: an application with its full event trail.
+         */
+        JobApplicationDetail: {
+            /**
+             * Applicant Email
+             * Format: email
+             */
+            applicant_email: string;
+            /** Applicant Name */
+            applicant_name: string;
+            /** Cover Letter */
+            cover_letter?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Events */
+            events?: components["schemas"]["ApplicationEventRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Job Title */
+            job_title?: string | null;
+            /** Linkedin Url */
+            linkedin_url?: string | null;
+            /** Resume Url */
+            resume_url?: string | null;
+            status: components["schemas"]["ApplicationStatusEnum"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * JobApplicationRead
+         * @description Admin: an application row (list view).
+         */
+        JobApplicationRead: {
+            /**
+             * Applicant Email
+             * Format: email
+             */
+            applicant_email: string;
+            /** Applicant Name */
+            applicant_name: string;
+            /** Cover Letter */
+            cover_letter?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Job Title */
+            job_title?: string | null;
+            /** Linkedin Url */
+            linkedin_url?: string | null;
+            /** Resume Url */
+            resume_url?: string | null;
+            status: components["schemas"]["ApplicationStatusEnum"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * JobPostingCreate
+         * @description Admin: create a job posting. `slug` is derived from the title when omitted.
+         */
+        JobPostingCreate: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** @default full_time */
+            employment_type: components["schemas"]["EmploymentTypeEnum"];
+            /** Location */
+            location: string;
+            /** Slug */
+            slug?: string | null;
+            /** @default draft */
+            status: components["schemas"]["JobStatusEnum"];
+            /** Summary */
+            summary: string;
+            /** Team */
+            team: string;
+            /** Title */
+            title: string;
+        };
+        /**
+         * JobPostingRead
+         * @description Full job posting (admin + public; status drives visibility).
+         */
+        JobPostingRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string;
+            employment_type: components["schemas"]["EmploymentTypeEnum"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Location */
+            location: string;
+            /** Slug */
+            slug: string;
+            status: components["schemas"]["JobStatusEnum"];
+            /** Summary */
+            summary: string;
+            /** Team */
+            team: string;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * JobPostingUpdate
+         * @description Admin: partial update. Send only the fields that changed.
+         */
+        JobPostingUpdate: {
+            /** Description */
+            description?: string | null;
+            employment_type?: components["schemas"]["EmploymentTypeEnum"] | null;
+            /** Location */
+            location?: string | null;
+            /** Slug */
+            slug?: string | null;
+            status?: components["schemas"]["JobStatusEnum"] | null;
+            /** Summary */
+            summary?: string | null;
+            /** Team */
+            team?: string | null;
+            /** Title */
+            title?: string | null;
+        };
+        /**
+         * JobStatusEnum
+         * @description Publication lifecycle of a job posting.
+         *
+         *     ``open`` postings are visible on the public careers page and accept
+         *     applications; ``draft`` is admin-only; ``closed`` stays in the portal
+         *     for record-keeping but no longer accepts applications.
+         * @enum {string}
+         */
+        JobStatusEnum: "draft" | "open" | "closed";
+        /**
+         * LoginResult
+         * @description Response for ``POST /v1/auth/login``.
+         *
+         *     Backward-compatible superset of :class:`TokenPair`: on a normal sign-in the
+         *     token fields are populated exactly as before (``mfa_required`` is ``False``).
+         *     When the account has two-factor enabled, the tokens are withheld and
+         *     ``mfa_required``/``mfa_token`` drive a second step at ``/auth/mfa/verify``.
+         */
+        LoginResult: {
+            /**
+             * Access Token
+             * @description Short-lived JWT bearer token.
+             */
+            access_token?: string | null;
+            /**
+             * Expires In
+             * @description Access token lifetime, seconds.
+             */
+            expires_in?: number | null;
+            /**
+             * Mfa Required
+             * @description True when a second factor is needed.
+             * @default false
+             */
+            mfa_required: boolean;
+            /**
+             * Mfa Token
+             * @description Short-lived token to POST to /auth/mfa/verify with a code.
+             */
+            mfa_token?: string | null;
+            /**
+             * Refresh Token
+             * @description Long-lived refresh token.
+             */
+            refresh_token?: string | null;
+            /**
+             * Token Type
+             * @description OAuth-style token type.
+             * @default bearer
+             */
+            token_type: string;
+            user?: components["schemas"]["UserRead"] | null;
+        };
+        /**
+         * MfaCodeRequest
+         * @description Body for enable/disable — a single TOTP or backup code.
+         */
+        MfaCodeRequest: {
+            /** Code */
+            code: string;
+        };
+        /**
+         * MfaEnableResponse
+         * @description One-time backup codes, shown once after enabling MFA.
+         */
+        MfaEnableResponse: {
+            /** Backup Codes */
+            backup_codes: string[];
+        };
+        /**
+         * MfaSetupResponse
+         * @description Enrollment material returned by ``POST /v1/auth/mfa/setup``.
+         */
+        MfaSetupResponse: {
+            /**
+             * Otpauth Uri
+             * @description otpauth:// URI for authenticator apps.
+             */
+            otpauth_uri: string;
+            /**
+             * Qr Svg
+             * @description Inline data:image/svg+xml QR of the URI.
+             */
+            qr_svg: string;
+            /**
+             * Secret
+             * @description Base32 TOTP secret (for manual entry).
+             */
+            secret: string;
+        };
+        /**
+         * MfaStatusResponse
+         * @description Whether the signed-in user has two-factor enabled.
+         */
+        MfaStatusResponse: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /**
+         * MfaVerifyRequest
+         * @description Body for ``POST /v1/auth/mfa/verify`` (login second step).
+         */
+        MfaVerifyRequest: {
+            /** Code */
+            code: string;
+            /** Mfa Token */
+            mfa_token: string;
+        };
         /** Pagination[CardRead] */
         Pagination_CardRead_: {
             /**
@@ -1929,6 +3745,96 @@ export interface components {
             total: number;
         };
         /**
+         * PlanConfigRead
+         * @description The Loupe Pro plan shape the admin controls live.
+         */
+        PlanConfigRead: {
+            /** Free Card Limit */
+            free_card_limit?: number | null;
+            /** Free Statement Limit */
+            free_statement_limit?: number | null;
+            /**
+             * Gate Full History
+             * @default true
+             */
+            gate_full_history: boolean;
+            /**
+             * Gate Scanner Import
+             * @default true
+             */
+            gate_scanner_import: boolean;
+            /**
+             * Gate Statements
+             * @default true
+             */
+            gate_statements: boolean;
+            /**
+             * Gate Unlimited Alerts
+             * @default true
+             */
+            gate_unlimited_alerts: boolean;
+            /**
+             * Gate Unlimited Cards
+             * @default true
+             */
+            gate_unlimited_cards: boolean;
+        };
+        /** PlanConfigUpdate */
+        PlanConfigUpdate: {
+            /**
+             * Clear Card Limit
+             * @default false
+             */
+            clear_card_limit: boolean;
+            /**
+             * Clear Statement Limit
+             * @default false
+             */
+            clear_statement_limit: boolean;
+            /** Free Card Limit */
+            free_card_limit?: number | null;
+            /** Free Statement Limit */
+            free_statement_limit?: number | null;
+            /** Gate Full History */
+            gate_full_history?: boolean | null;
+            /** Gate Scanner Import */
+            gate_scanner_import?: boolean | null;
+            /** Gate Statements */
+            gate_statements?: boolean | null;
+            /** Gate Unlimited Alerts */
+            gate_unlimited_alerts?: boolean | null;
+            /** Gate Unlimited Cards */
+            gate_unlimited_cards?: boolean | null;
+        };
+        /**
+         * PlanFeatures
+         * @description Boolean capability gates the UI reads to lock/unlock surfaces.
+         */
+        PlanFeatures: {
+            /** Full History */
+            full_history: boolean;
+            /** Pro Badge */
+            pro_badge: boolean;
+            /** Scanner Import */
+            scanner_import: boolean;
+            /** Statements */
+            statements: boolean;
+            /** Unlimited Alerts */
+            unlimited_alerts: boolean;
+            /** Unlimited Cards */
+            unlimited_cards: boolean;
+        };
+        /**
+         * PlanLimits
+         * @description Hard numeric caps. ``None`` means unlimited.
+         */
+        PlanLimits: {
+            /** Free Statements */
+            free_statements?: number | null;
+            /** Max Cards */
+            max_cards?: number | null;
+        };
+        /**
          * PresignedUpload
          * @description A single presigned PUT URL the client uses to upload one angle.
          */
@@ -1953,16 +3859,15 @@ export interface components {
         PriceAlertCondition: "above" | "below";
         /** PriceAlertCreate */
         PriceAlertCreate: {
-            /**
-             * Card Id
-             * Format: uuid
-             */
-            card_id: string;
+            /** Card Id */
+            card_id?: string | null;
             condition: components["schemas"]["PriceAlertCondition"];
             /** Note */
             note?: string | null;
             /** Threshold Usd */
             threshold_usd: number | string;
+            /** Upstream Id */
+            upstream_id?: string | null;
         };
         /** PriceAlertRead */
         PriceAlertRead: {
@@ -2046,6 +3951,20 @@ export interface components {
          * @enum {string}
          */
         RawConditionEnum: "nm" | "lp" | "mp" | "hp" | "dmg";
+        /**
+         * RecentsPayload
+         * @description A user's recents. ``viewed`` items are stored verbatim (the client's
+         *     camelCase ``{id, name, imageUrl, setName, kind}``), so no field mapping
+         *     is needed in either direction.
+         */
+        RecentsPayload: {
+            /** Searches */
+            searches?: string[];
+            /** Viewed */
+            viewed?: {
+                [key: string]: unknown;
+            }[];
+        };
         /**
          * RefreshRequest
          * @description Body for ``POST /v1/auth/refresh``.
@@ -2425,6 +4344,56 @@ export interface components {
             quantity?: number | null;
         };
         /**
+         * SealedMarketRead
+         * @description Live market snapshot for one sealed product (``GET /v1/sealed/{id}/market``).
+         *
+         *     Sealed SKUs have no stored daily history, so the snapshot is a current
+         *     TCGplayer quote (low/mid/high/market) + MSRP. ``points`` is a real value
+         *     line anchored at MSRP-on-release → current market, so the UI can chart how
+         *     the product appreciated since launch (no fabricated points).
+         */
+        SealedMarketRead: {
+            /**
+             * Currency
+             * @default USD
+             */
+            currency: string;
+            /** High */
+            high?: number | null;
+            /** Low */
+            low?: number | null;
+            /** Market */
+            market?: number | null;
+            /** Marketplace Url */
+            marketplace_url?: string | null;
+            /** Mid */
+            mid?: number | null;
+            /** Msrp Usd */
+            msrp_usd?: string | null;
+            /**
+             * Points
+             * @default []
+             */
+            points: components["schemas"]["SealedPricePoint"][];
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Source */
+            source?: string | null;
+        };
+        /**
+         * SealedPricePoint
+         * @description One point on a sealed product's value line.
+         */
+        SealedPricePoint: {
+            /** Price */
+            price: number;
+            /** Ts */
+            ts: string;
+        };
+        /**
          * SealedProductRead
          * @description Public catalog row returned by ``GET /v1/sealed/search``.
          */
@@ -2461,11 +4430,39 @@ export interface components {
          */
         SealedProductTypeEnum: "booster_box" | "booster_pack" | "etb" | "collection_box" | "premium_collection" | "tin" | "blister" | "bundle" | "case" | "other";
         /**
+         * SiteConfigRead
+         * @description Everything the developer-portal config page reads in one shot.
+         */
+        SiteConfigRead: {
+            announcement: components["schemas"]["AnnouncementRead"];
+            plan: components["schemas"]["PlanConfigRead"];
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /**
          * TcgEnum
          * @description Trading-card games supported by the catalog.
          * @enum {string}
          */
         TcgEnum: "pokemon" | "magic" | "yugioh" | "onepiece" | "lorcana" | "sports";
+        /**
+         * TestAccountCreated
+         * @description A freshly-minted sandbox account — the password is shown only once.
+         */
+        TestAccountCreated: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Password */
+            password: string;
+        };
         /**
          * TokenPair
          * @description Returned by every successful sign-in / refresh.
@@ -2546,6 +4543,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Is Admin
+             * @default false
+             */
+            is_admin: boolean;
         };
         /**
          * UserSettingsRead
@@ -2611,6 +4613,116 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * WaitlistEntryRead
+         * @description Admin: one waitlist signup row.
+         */
+        WaitlistEntryRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Interest */
+            interest?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Quantity */
+            quantity: number;
+            /** Referral Source */
+            referral_source?: string | null;
+            status: components["schemas"]["WaitlistStatusEnum"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** User Id */
+            user_id?: string | null;
+        };
+        /**
+         * WaitlistJoin
+         * @description Public: join the scanner waitlist (the checkout CTA payload).
+         */
+        WaitlistJoin: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Interest */
+            interest?: string | null;
+            /** Name */
+            name?: string | null;
+            /**
+             * Quantity
+             * @default 1
+             */
+            quantity: number;
+            /** Referral Source */
+            referral_source?: string | null;
+        };
+        /**
+         * WaitlistJoined
+         * @description Public response after joining — the reference + the line position.
+         */
+        WaitlistJoined: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Position */
+            position: number;
+            status: components["schemas"]["WaitlistStatusEnum"];
+        };
+        /**
+         * WaitlistStats
+         * @description Public aggregate — drives the "Join N collectors" social proof.
+         */
+        WaitlistStats: {
+            /** Total */
+            total: number;
+            /** Waiting */
+            waiting: number;
+        };
+        /**
+         * WaitlistStatusEnum
+         * @description Pipeline stage of a Loupe Scanner waitlist signup.
+         *
+         *     ``waiting`` is a fresh signup; ``invited`` means we've reached out with a
+         *     purchase link; ``purchased`` is a converted buyer (set once Stripe / the
+         *     fulfilment provider confirms an order); ``removed`` is an opt-out.
+         * @enum {string}
+         */
+        WaitlistStatusEnum: "waiting" | "invited" | "purchased" | "removed";
+        /**
+         * WaitlistStatusUpdate
+         * @description Admin: advance a signup's pipeline stage.
+         */
+        WaitlistStatusUpdate: {
+            status: components["schemas"]["WaitlistStatusEnum"];
         };
         /** WatchlistAdd */
         WatchlistAdd: {
@@ -2699,6 +4811,1003 @@ export interface operations {
                     "application/json": {
                         [key: string]: number;
                     };
+                };
+            };
+        };
+    };
+    list_applications_v1_admin_applications_get: {
+        parameters: {
+            query?: {
+                job_id?: string | null;
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobApplicationRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_application_v1_admin_applications__application_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobApplicationDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_application_status_v1_admin_applications__application_id__status_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobApplicationDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_posts_v1_admin_blog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlogPostRead"][];
+                };
+            };
+        };
+    };
+    create_post_v1_admin_blog_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlogPostCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlogPostRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_post_v1_admin_blog__post_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlogPostRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_post_v1_admin_blog__post_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_post_v1_admin_blog__post_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlogPostUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlogPostRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_config_v1_admin_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteConfigRead"];
+                };
+            };
+        };
+    };
+    update_announcement_v1_admin_config_announcement_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnouncementUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_plan_v1_admin_config_plan_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_flags_v1_admin_flags_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagRead"][];
+                };
+            };
+        };
+    };
+    create_flag_v1_admin_flags_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeatureFlagCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upsert_flag_v1_admin_flags_key__key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeatureFlagUpsert"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_flag_v1_admin_flags__flag_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_flag_v1_admin_flags__flag_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeatureFlagUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_jobs_v1_admin_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobPostingRead"][];
+                };
+            };
+        };
+    };
+    create_job_v1_admin_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobPostingCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobPostingRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_v1_admin_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobPostingRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_job_v1_admin_jobs__job_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_job_v1_admin_jobs__job_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobPostingUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobPostingRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_metrics_v1_admin_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMetrics"];
+                };
+            };
+        };
+    };
+    list_users_v1_admin_users_get: {
+        parameters: {
+            query?: {
+                /** @description Search email or name. */
+                q?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_test_account_v1_admin_users_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestAccountCreated"];
+                };
+            };
+        };
+    };
+    get_user_v1_admin_users__user_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_user_v1_admin_users__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ban_user_v1_admin_users__user_id__ban_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_plan_v1_admin_users__user_id__plan_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminPlanUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_role_v1_admin_users__user_id__role_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminRoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unban_user_v1_admin_users__user_id__unban_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_waitlist_v1_admin_waitlist_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistEntryRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_entry_v1_admin_waitlist__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_status_v1_admin_waitlist__entry_id__status_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaitlistStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistEntryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2815,6 +5924,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    get_announcement_v1_announcement_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnouncementRead"];
                 };
             };
         };
@@ -2970,6 +6099,179 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["LoginResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    logout_all_v1_auth_logout_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    mfa_disable_v1_auth_mfa_disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mfa_enable_v1_auth_mfa_enable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaEnableResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mfa_setup_v1_auth_mfa_setup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaSetupResponse"];
+                };
+            };
+        };
+    };
+    mfa_status_v1_auth_mfa_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaStatusResponse"];
+                };
+            };
+        };
+    };
+    mfa_verify_v1_auth_mfa_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": components["schemas"]["TokenPair"];
                 };
             };
@@ -3037,6 +6339,91 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TokenPair"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stripe_webhook_v1_billing_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+        };
+    };
+    list_posts_v1_blog_posts_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlogPostRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_post_v1_blog_posts__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlogPostRead"];
                 };
             };
             /** @description Validation Error */
@@ -3636,6 +7023,159 @@ export interface operations {
             };
         };
     };
+    get_valuation_v1_cards__card_id__valuation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    track_v1_careers_applications__application_id__get: {
+        parameters: {
+            query: {
+                /** @description The email used to apply. */
+                email: string;
+            };
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationTrackRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_jobs_v1_careers_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobPostingRead"][];
+                };
+            };
+        };
+    };
+    apply_v1_careers_jobs__job_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobApplicationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationSubmitted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_v1_careers_jobs__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobPostingRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_mine_v1_collections_get: {
         parameters: {
             query?: never;
@@ -3847,6 +7387,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_flags_v1_flags_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
                 };
             };
         };
@@ -4252,6 +7814,193 @@ export interface operations {
             };
         };
     };
+    start_checkout_v1_me_billing_checkout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_billing_config_v1_me_billing_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    billing_portal_v1_me_billing_portal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    subscribe_v1_me_billing_subscribe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_entitlements_v1_me_entitlements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitlementsRead"];
+                };
+            };
+        };
+    };
+    get_recents_v1_me_recents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentsPayload"];
+                };
+            };
+        };
+    };
+    put_recents_v1_me_recents_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecentsPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentsPayload"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_settings_v1_me_settings_get: {
         parameters: {
             query?: never;
@@ -4393,6 +8142,152 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    public_browse_v1_public_browse_get: {
+        parameters: {
+            query?: {
+                game?: string;
+                set?: string | null;
+                page?: number;
+                page_size?: number;
+                sort?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_search_v1_public_search_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                tcg?: string;
+                rarity?: string | null;
+                set?: string | null;
+                sort?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_sparklines_v1_public_sparklines_get: {
+        parameters: {
+            query: {
+                ids: string;
+                range?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_trending_v1_public_trending_get: {
+        parameters: {
+            query?: {
+                tcg?: string;
+                sort?: string;
+                max_price?: number | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -5109,6 +9004,37 @@ export interface operations {
             };
         };
     };
+    get_market_v1_sealed__product_id__market_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SealedMarketRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_sets_v1_sets_get: {
         parameters: {
             query?: {
@@ -5160,6 +9086,59 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+        };
+    };
+    join_v1_waitlist_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaitlistJoin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistJoined"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stats_v1_waitlist_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistStats"];
                 };
             };
         };

@@ -14,6 +14,8 @@ module.exports = {
     "android/",
     "components/ui/", // gluestack-ui generated scaffolding
     "modules/loupe-scanner-bridge/build/",
+    "vendor/", // @loupe/chart and other vendored sources — owned upstream, synced in
+    "**/__generated__/", // OpenAPI schema + TS types generated from the backend
     "*.config.js",
     "*.config.ts",
   ],
