@@ -108,9 +108,10 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
 
 function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   const p = useThemedPalette();
-  const { user, signOut } = useAuth();
+  const { user, signOut, signOutEverywhere } = useAuth();
   const version = Constants.expoConfig?.version ?? "0.1.0";
   const [copied, setCopied] = useState(false);
+  const [signingOutAll, setSigningOutAll] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (copyTimer.current) clearTimeout(copyTimer.current);
@@ -267,6 +268,45 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           <LogOut size={16} color={p.accent.rose} />
           <Text className="text-base font-bold" style={{ color: p.accent.rose }}>
             Log out
+          </Text>
+        </Pressable>
+
+        {/* Secondary: revoke every device/session (kill switch for a lost
+            device or stolen token). Subtle text link under the main pill. */}
+        <Pressable
+          onPress={() =>
+            Alert.alert(
+              "Sign out everywhere?",
+              "Revoke every device and active session. Use this if you've lost a device or think your account is compromised.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Sign out everywhere",
+                  style: "destructive",
+                  onPress: async () => {
+                    setSigningOutAll(true);
+                    await signOutEverywhere();
+                    router.replace("/");
+                  },
+                },
+              ],
+            )
+          }
+          disabled={signingOutAll}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out everywhere"
+          style={({ pressed }) => ({
+            opacity: pressed || signingOutAll ? 0.6 : 1,
+            marginTop: 16,
+            alignItems: "center",
+          })}
+        >
+          <Text
+            className="text-[13px] font-semibold text-ink-muted"
+            style={{ textDecorationLine: "underline" }}
+          >
+            {signingOutAll ? "Signing out…" : "Sign out everywhere"}
           </Text>
         </Pressable>
       </View>
