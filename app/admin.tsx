@@ -4,7 +4,7 @@
  * into the web app's localStorage before its JS runs, so the portal boots
  * straight into the dashboard. Admin-gated; non-admins see a notice.
  */
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -12,9 +12,11 @@ import { WebView } from "react-native-webview";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { config } from "@/shared/config";
 import { useThemedPalette } from "@/presentation/theme/tokens";
+import { useTheme } from "@/presentation/theme";
 
 export default function AdminPortalScreen() {
   const p = useThemedPalette();
+  const { scheme } = useTheme();
   const { token, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const webRef = useRef<WebView>(null);
@@ -29,12 +31,25 @@ export default function AdminPortalScreen() {
     const tokenLine = token
       ? `try { window.localStorage.setItem('loupe.auth.token', ${JSON.stringify(token)}); } catch (e) {}`
       : "";
+    // Carry the app's theme into the portal so it boots in the same scheme the
+    // user is in. The web app reads `loupe.theme` (theme-init.js) and observes
+    // `<html data-theme>` (useActiveTheme), so setting both keeps them in sync.
+    const themeLine = `try { window.localStorage.setItem('loupe.theme', ${JSON.stringify(scheme)}); document.documentElement.setAttribute('data-theme', ${JSON.stringify(scheme)}); } catch (e) {}`;
     return `
       try { window.sessionStorage.setItem('loupe.embed', 'admin'); } catch (e) {}
+      ${themeLine}
       ${tokenLine}
       true;
     `;
-  }, [token]);
+  }, [token, scheme]);
+
+  // Keep the portal in sync if the app theme changes while it's open — the web
+  // app's MutationObserver (useActiveTheme) picks up the data-theme change live.
+  useEffect(() => {
+    webRef.current?.injectJavaScript(
+      `try { document.documentElement.setAttribute('data-theme', ${JSON.stringify(scheme)}); window.localStorage.setItem('loupe.theme', ${JSON.stringify(scheme)}); } catch (e) {} true;`,
+    );
+  }, [scheme]);
 
   // Confine the WebView to the /admin section: block any hard navigation (full
   // page loads, external links, OAuth pop-outs) that isn't a same-origin
