@@ -11,6 +11,7 @@ import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { LineChart } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import { useAnalyticsOverview } from "@/application/queries";
 import { GradeBars, PortfolioChart } from "@/presentation/features/analytics";
@@ -26,6 +27,7 @@ import { DonutChart, type DonutDatum } from "@/presentation/components/DonutChar
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { ErrorState } from "@/presentation/components/ErrorState";
+import { EmptyState } from "@/presentation/components/EmptyState";
 import { ReportsSection } from "@/presentation/features/reports";
 import { COPY } from "@/shared/copy";
 import { normalizeError } from "@/shared/errors";
@@ -39,6 +41,11 @@ export default function AnalyticsScreen() {
   const data = q.data;
   const loading = q.isLoading;
   const erroredNormalized = q.isError ? normalizeError(q.error) : null;
+  // A loaded-but-empty collection used to render the whole widget stack as a
+  // wall of "—"/"No … yet" placeholders. Detect zero holdings and show one
+  // clean empty state with a path to add a card instead.
+  const isEmptyCollection =
+    !loading && !erroredNormalized && !!data && data.stats.holdings === 0;
 
   // Value-by-set allocation — same derivation as the web Analytics donut.
   const allocation: DonutDatum[] = (data?.setIndexes ?? [])
@@ -74,6 +81,16 @@ export default function AnalyticsScreen() {
           />
         ) : null}
 
+        {isEmptyCollection ? (
+          <EmptyState
+            icon={LineChart}
+            title="No analytics yet"
+            message="Add your first card and Loupe will chart your portfolio value, movers, allocation, and grade mix right here."
+            secondaryActionLabel="Scan a card"
+            onSecondaryAction={() => router.push("/scan")}
+          />
+        ) : (
+          <>
         <PortfolioChart
           fallbackTotal={data?.stats.totalValueUsd ?? 0}
           bleedX={20}
@@ -159,6 +176,8 @@ export default function AnalyticsScreen() {
         </View>
 
         <ReportsSection />
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
