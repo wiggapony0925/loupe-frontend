@@ -43,6 +43,7 @@ import {
 } from "@/infrastructure/repositories/forensicRepository";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { EmptyState } from "@/presentation/components/EmptyState";
+import { ErrorState } from "@/presentation/components/ErrorState";
 import { useMoney } from "@/presentation/components/Price";
 import { COPY } from "@/shared/copy";
 import { queryKeys } from "@/application/queries/queryKeys";
@@ -65,6 +66,8 @@ export default function VaultScreen() {
     cards,
     isLoading,
     isFetching,
+    isError,
+    refetch,
     copiesByCardId,
     uniqueCount,
     loupeGradedCount,
@@ -390,6 +393,23 @@ export default function VaultScreen() {
                       </View>
                     </View>
                   ))}
+            </View>
+          ) : isError ? (
+            // A failed load used to fall through to the "Add a card" empty
+            // state — making a network/server error look like an empty
+            // vault. Surface a real error with retry instead.
+            <View
+              style={{
+                paddingTop: 16,
+                paddingHorizontal: viewMode === "grid" ? 0 : 14,
+              }}
+            >
+              <ErrorState
+                title="Couldn't load your vault"
+                message="We hit a snag fetching your collection. Check your connection and try again."
+                onRetry={() => void refetch()}
+                compact
+              />
             </View>
           ) : (
             <View
