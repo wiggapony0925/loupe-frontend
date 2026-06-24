@@ -1,0 +1,5 @@
+# Maestro workspace config — applies to every flow in this folder.
+# Run all:           maestro test .maestro
+# Run by tag:        maestro test .maestro --include-tags=smoke
+flows:
+  - "flows/*.yaml"

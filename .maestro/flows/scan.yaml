@@ -1,0 +1,16 @@
+# Open the card scanner. TEMPLATE — tune selectors to your scan entry point.
+# Camera permission is auto-granted on simulators/emulators; on a real device
+# Maestro can tap the system dialog (see commented step).
+appId: app.loupe.client
+tags:
+  - scan
+---
+- launchApp
+- tapOn:
+    id: "tab-scan" # ← add testID="tab-scan" to the scan tab / entry button
+# - tapOn:                       # real device only: accept the camera prompt
+#     text: "Allow"
+#     optional: true
+- assertVisible:
+    id: "scanner-viewfinder" # ← add testID to the camera viewfinder container
+- takeScreenshot: scanner

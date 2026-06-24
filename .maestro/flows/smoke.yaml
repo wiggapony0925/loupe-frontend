@@ -1,0 +1,10 @@
+# Smoke: the app launches and renders without crashing. The most robust E2E
+# check — no UI-text assumptions, so it won't go stale. Fails if the bundle
+# throws on boot (the class of regression that ships silently).
+appId: app.loupe.client
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: true
+- takeScreenshot: launch

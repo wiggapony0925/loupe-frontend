@@ -1,0 +1,28 @@
+# Email + password sign-in. TEMPLATE — tune the selectors to your AuthScreen.
+# Prefer stable testIDs over visible text: add `testID="auth-email"` etc. to the
+# inputs/buttons so this flow doesn't break on copy changes.
+appId: app.loupe.client
+tags:
+  - auth
+env:
+  EMAIL: "demo@loupe.app"
+  PASSWORD: "password123"
+---
+- launchApp:
+    clearState: true
+# Reach the email/password form (skip if AuthScreen shows it immediately).
+- tapOn:
+    text: "Sign in"
+    optional: true
+- tapOn:
+    id: "auth-email" # ← add testID="auth-email" to the email TextInput
+- inputText: ${EMAIL}
+- tapOn:
+    id: "auth-password" # ← add testID="auth-password" to the password TextInput
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: "auth-submit" # ← add testID="auth-submit" to the submit button
+# A post-login element — adjust to a real one (e.g. a tab label).
+- assertVisible:
+    text: "Vault"
