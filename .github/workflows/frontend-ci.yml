@@ -41,3 +41,6 @@ jobs:
 
       - name: Test
         run: npm run test:ci
+
+      - name: Integration tests (Vitest + MSW)
+        run: npm run test:integration
