@@ -12,14 +12,33 @@ interface Options {
   tcg?: TrendingTcg;
   limit?: number;
   enabled?: boolean;
+  /**
+   * Server-side ordering. `"trending"` (default) is the movement feed;
+   * `"value"` sorts by current market price (the reliable feed — see
+   * `useMixedTrending`). Forwarded as `?sort=`.
+   */
+  sort?: "trending" | "value";
+  /** Cap results to cards at/under this USD price. Forwarded as `?max_price=`. */
+  maxPrice?: number;
 }
 
-export function useTrendingCards({ tcg = "all", limit = 24, enabled = true }: Options = {}) {
+export function useTrendingCards({
+  tcg = "all",
+  limit = 24,
+  enabled = true,
+  sort = "trending",
+  maxPrice,
+}: Options = {}) {
   const query = useQuery<TrendingResponseWire>({
-    queryKey: queryKeys.cards.trending(tcg, limit),
+    queryKey: queryKeys.cards.trending(tcg, limit, sort, maxPrice ?? null),
     queryFn: () =>
       apiFetch<TrendingResponseWire>(ENDPOINTS.cards.trending, {
-        query: { tcg, limit },
+        query: {
+          tcg,
+          limit,
+          sort,
+          ...(maxPrice != null ? { max_price: maxPrice } : {}),
+        },
         skipAuth: true,
       }),
     enabled,

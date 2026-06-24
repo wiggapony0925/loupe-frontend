@@ -15,7 +15,9 @@ import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRe
 import { HardwareStatusWidget, useScannerConnection } from "@/presentation/features/scanner";
 import { PortfolioChart, TodaysDeltaHero } from "@/presentation/features/analytics";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
-import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
+import { MixedTrendingRail } from "@/presentation/features/search/MixedTrendingRail";
+import { SealedRail } from "@/presentation/features/search/SealedRail";
+import { useSealedSearch } from "@/application/queries/collection/useSealed";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { EmptyState } from "@/presentation/components/EmptyState";
@@ -37,6 +39,12 @@ export default function CommandCenterScreen() {
   const feed = useHomeFeed({ topMovers: 5, recentScans: 6 });
   const hardware = useScannerConnection();
   const movers = useTopMovers({ enrichLimit: 12, limit: 5 });
+  // Discovery rails at the bottom mirror the web home page's carousels
+  // (Trending now ▸ Most valuable right now ▸ Sealed products ▸ Steals
+  // under $5). Sealed is the only one we gate on data, since its rail
+  // renders nothing when empty (leaving a lone header otherwise).
+  const sealed = useSealedSearch("");
+  const hasSealed = (sealed.data?.length ?? 0) > 0;
 
   // Manual-only refresh flag — using TanStack's `isFetching` made the
   // RefreshControl spin on initial mount, which pushed the screen header
@@ -208,16 +216,17 @@ export default function CommandCenterScreen() {
           )}
         </View>
 
-        {/* Pokémon Chase rares — the single discovery rail we keep on
-            home. Pokémon is the dominant TCG for most users, and a
-            curated "what's hot right now" peek next to the personal
-            feed gives the home screen a heartbeat without re-bloating
-            it back into the old discovery dashboard. Full discovery
-            (Yu-Gi-Oh!, Magic, Trending) still lives in Search. */}
+        {/* Discovery carousels — the same rails the web home page shows,
+            in the same order: Trending now ▸ Most valuable right now ▸
+            Sealed products ▸ Steals under $5. These give the home screen a
+            "what's out there" heartbeat below the personal feed. The mixed
+            rails interleave Pokémon · Magic · Yu-Gi-Oh! (with a value
+            fallback) so they stay populated even when a trending upstream
+            times out. Full discovery still lives in the Search tab. */}
         <View>
           <SectionHeader
-            eyebrow="Pokémon"
-            title="Chase rares"
+            eyebrow="Live"
+            title="Trending now"
             trailing={
               <Pressable
                 onPress={() => router.push("/search")}
@@ -231,7 +240,39 @@ export default function CommandCenterScreen() {
               </Pressable>
             }
           />
-          <HotRightNowRail tcg="pokemon" limit={12} />
+          <MixedTrendingRail sort="trending" limit={12} />
+        </View>
+
+        <View>
+          <SectionHeader eyebrow="Market" title="Most valuable right now" />
+          <MixedTrendingRail sort="value" limit={12} />
+        </View>
+
+        {hasSealed ? (
+          <View>
+            <SectionHeader
+              eyebrow="Sealed"
+              title="Sealed products"
+              trailing={
+                <Pressable
+                  onPress={() => router.push(routes.sealed())}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="See all sealed products"
+                  className="flex-row items-center gap-1"
+                >
+                  <Text className="text-xs font-medium text-ink-muted">More</Text>
+                  <ArrowUpRight size={14} color={p.ink.muted} />
+                </Pressable>
+              }
+            />
+            <SealedRail products={sealed.data ?? []} />
+          </View>
+        ) : null}
+
+        <View>
+          <SectionHeader eyebrow="Under $5" title="Steals under $5" />
+          <MixedTrendingRail sort="value" maxPrice={5} limit={12} />
         </View>
 
         {/* Hardware scanner status pushed below the personal feed —
