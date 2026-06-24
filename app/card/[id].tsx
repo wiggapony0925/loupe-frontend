@@ -268,8 +268,23 @@ export default function CardDetailScreen() {
         >
           <ChevronLeft size={18} color={p.ink.default} />
         </Pressable>
-        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-          Market
+        {/* Contextual title — reflects the card you're viewing once it
+            loads (falls back to a neutral label while the catalog row is
+            still in flight) instead of a generic "MARKET" eyebrow. */}
+        <Text
+          numberOfLines={1}
+          style={{
+            flex: 1,
+            marginHorizontal: 12,
+            textAlign: "center",
+            color: card ? p.ink.default : p.ink.dim,
+            fontSize: card ? 14 : 10,
+            fontWeight: card ? "700" : "600",
+            letterSpacing: card ? 0 : 3,
+            textTransform: card ? "none" : "uppercase",
+          }}
+        >
+          {card?.name ?? "Market"}
         </Text>
         <View className="flex-row gap-2">
           <IconBtn label={isWatching ? "Remove favorite" : "Save favorite"} onPress={toggleWatch}>
@@ -490,7 +505,30 @@ export default function CardDetailScreen() {
                     </Pressable>
                   ) : null}
                 </View>
-              ) : null}
+              ) : (
+                /* Guests previously saw no add/track affordance in the body
+                   (the whole action block was auth-gated), leaving the card
+                   a dead end. Surface a clear sign-in CTA instead. */
+                <View style={{ gap: 8 }}>
+                  <PrimaryButton
+                    label="Sign in to add & track"
+                    icon={Plus}
+                    variant="mint"
+                    onPress={() => router.push("/(auth)/sign-in")}
+                    accessibilityLabel="Sign in to add this card to your collection"
+                  />
+                  <Text
+                    style={{
+                      color: p.ink.dim,
+                      fontSize: 11,
+                      fontWeight: "600",
+                      textAlign: "center",
+                    }}
+                  >
+                    Track its price, set alerts, and build your vault.
+                  </Text>
+                </View>
+              )}
 
               {/* 3. (BigPrice removed — chart hero already shows live
                   $/Δ, Robinhood-style.) */}
