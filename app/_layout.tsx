@@ -89,6 +89,15 @@ function RootStack() {
     }
   }, [isAuthenticated, isLoading, segments, router]);
 
+  // Don't mount any screen until the stored token has hydrated and been
+  // attached to the HTTP client. Mounting the tabs first meant their queries
+  // fired token-less on cold boot, cached an empty/401 result, and only a
+  // pull-to-refresh recovered (the "$0.00 / No history yet until I swipe"
+  // bug). The BrandSplash overlays this gap, so the user just sees the splash.
+  if (isLoading) {
+    return <View style={{ flex: 1, backgroundColor: palette.bg.base }} />;
+  }
+
   return (
     <Stack
       screenOptions={{

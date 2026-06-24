@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchCollection, fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { useVaultFilters } from "@/application/stores/vaultStore";
+import { useAuth } from "@/presentation/providers/AuthProvider";
 import type { CardSet } from "@/domain";
 
 /**
@@ -26,6 +27,7 @@ import type { CardSet } from "@/domain";
 const DEBOUNCE_MS = 250;
 
 export function useFilteredCollection() {
+  const { isAuthenticated } = useAuth();
   const { set, minGrade, type, query: searchTerm } = useVaultFilters();
   const setSet = useVaultFilters((s) => s.setSet);
 
@@ -65,6 +67,9 @@ export function useFilteredCollection() {
   const query = useQuery({
     queryKey: queryKeys.collection.list(params),
     queryFn: () => fetchCollection(params),
+    // Gate on auth so it doesn't fire before the stored token is attached on
+    // cold boot (that race returned an empty vault until a pull-to-refresh).
+    enabled: isAuthenticated,
     // Keep previous data visible while a new filter is in flight so the
     // list doesn't blank to a skeleton on every keystroke — feels much
     // closer to "instant" even on a slow network.
@@ -74,6 +79,7 @@ export function useFilteredCollection() {
   const summaryQuery = useQuery({
     queryKey: queryKeys.collection.summary(),
     queryFn: fetchCollectionSummary,
+    enabled: isAuthenticated,
   });
 
   // Per-card copy counts — currently we only have the *filtered* page
