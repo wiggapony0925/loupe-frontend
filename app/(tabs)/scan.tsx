@@ -17,19 +17,18 @@
  * screen for a feature most users won't configure, and it now lives
  * behind the bell where it belongs.
  */
-import React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, Easing, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import {
+  Camera,
+  ChevronRight,
   Gauge,
-  Layers,
   PlusCircle,
   Smartphone,
   Sparkles,
-  Zap,
 } from "lucide-react-native";
-import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { useScannerConnection } from "@/presentation/features/scanner";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
@@ -52,30 +51,20 @@ export default function ScanTabScreen() {
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: p.bg.base }}>
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 64, gap: 24 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 64, gap: 22 }}
         showsVerticalScrollIndicator={false}
       >
-        <View>
-          <Text className="text-[11px] font-semibold uppercase tracking-[3px] text-ink-dim">
-            Capture · primary
-          </Text>
-          <Text className="mt-1 text-[28px] font-bold tracking-tight text-ink">
-            Scan a card
-          </Text>
-          <Text className="mt-1 text-[13px] text-ink-muted">
-            Point your camera at a card — we identify it and show the price.
-            Then add it to your vault or grade it.
-          </Text>
-        </View>
+        <Text className="text-[11px] font-semibold uppercase tracking-[3px] text-ink-dim">
+          Capture
+        </Text>
 
-        {/* The one primary action: live identify. The result sheet branches
-            into price / vault / grade once a card is recognised. */}
-        <PrimaryButton
-          label="Scan a card"
-          icon={Zap}
+        {/* The one primary action, dressed as a live viewfinder so the tap
+            target previews exactly what scanning looks like — corner
+            brackets + a glowing shutter — instead of a flat button. The
+            result sheet branches into price / vault / grade after a lock. */}
+        <ScanHero
+          palette={p}
           onPress={() => router.push(routes.scanIdentify())}
-          variant="mint"
-          accessibilityLabel="Open the live card scanner"
         />
 
         {/* Deliberate secondary paths — grade (its own verb), add a card you
@@ -135,6 +124,220 @@ export default function ScanTabScreen() {
   );
 }
 
+/**
+ * ScanHero — the primary "Scan a card" affordance, styled as a live
+ * viewfinder: a tall framed surface with mint corner brackets, a soft
+ * scan-line shimmer, and a glowing shutter button. Pressing anywhere
+ * launches the live identifier. Echoes the real scanner's reticle so the
+ * jump into the camera feels continuous.
+ */
+function ScanHero({
+  palette,
+  onPress,
+}: {
+  palette: ReturnType<typeof useThemedPalette>;
+  onPress: () => void;
+}) {
+  const p = palette;
+  const shimmer = useRef(new Animated.Value(0)).current;
+  const glow = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    const sweep = Animated.loop(
+      Animated.timing(shimmer, {
+        toValue: 1,
+        duration: 2600,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    );
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, {
+          toValue: 1,
+          duration: 1100,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(glow, {
+          toValue: 0.5,
+          duration: 1100,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    sweep.start();
+    pulse.start();
+    return () => {
+      sweep.stop();
+      pulse.stop();
+    };
+  }, [shimmer, glow]);
+
+  const HERO_H = 268;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Open the live card scanner"
+      style={({ pressed }) => ({
+        height: HERO_H,
+        borderRadius: 24,
+        overflow: "hidden",
+        backgroundColor: p.bg.elevated,
+        borderWidth: 1,
+        borderColor: withAlpha(p.accent.mint, 0.22),
+        alignItems: "center",
+        justifyContent: "center",
+        transform: [{ scale: pressed ? 0.985 : 1 }],
+      })}
+    >
+      {/* Mint wash so the surface reads "camera", not "card". */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: withAlpha(p.accent.mint, 0.05),
+        }}
+      />
+
+      {/* Travelling scan line. */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          left: 24,
+          right: 24,
+          height: 2,
+          borderRadius: 2,
+          backgroundColor: withAlpha(p.accent.mint, 0.7),
+          shadowColor: p.accent.mint,
+          shadowOpacity: 0.9,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 0 },
+          opacity: shimmer.interpolate({
+            inputRange: [0, 0.1, 0.9, 1],
+            outputRange: [0, 0.9, 0.9, 0],
+          }),
+          transform: [
+            {
+              translateY: shimmer.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-HERO_H / 2 + 28, HERO_H / 2 - 28],
+              }),
+            },
+          ],
+        }}
+      />
+
+      {/* Corner brackets — same rounded-L aesthetic as the live reticle. */}
+      {(["tl", "tr", "bl", "br"] as const).map((c) => (
+        <HeroBracket key={c} corner={c} color={withAlpha(p.accent.mint, 0.85)} />
+      ))}
+
+      {/* Glowing shutter. */}
+      <View style={{ alignItems: "center", gap: 14 }}>
+        <View style={{ width: 84, height: 84, alignItems: "center", justifyContent: "center" }}>
+          <Animated.View
+            style={{
+              position: "absolute",
+              width: 84,
+              height: 84,
+              borderRadius: 42,
+              backgroundColor: withAlpha(p.accent.mint, 0.18),
+              opacity: glow,
+              transform: [
+                { scale: glow.interpolate({ inputRange: [0.5, 1], outputRange: [0.9, 1.12] }) },
+              ],
+            }}
+          />
+          <View
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              backgroundColor: p.accent.mint,
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: p.accent.mint,
+              shadowOpacity: 0.5,
+              shadowRadius: 16,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 8,
+            }}
+          >
+            <Camera size={28} color="#06140d" strokeWidth={2.2} />
+          </View>
+        </View>
+
+        <View style={{ alignItems: "center", gap: 3 }}>
+          <Text style={{ color: p.ink.default, fontSize: 19, fontWeight: "800", letterSpacing: -0.3 }}>
+            Scan a card
+          </Text>
+          <Text style={{ color: p.ink.muted, fontSize: 12.5 }}>
+            Point your camera — we identify it instantly
+          </Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+function HeroBracket({
+  corner,
+  color,
+}: {
+  corner: "tl" | "tr" | "bl" | "br";
+  color: string;
+}) {
+  const SIZE = 34;
+  const THICK = 3;
+  const RADIUS = 18;
+  const INSET = 16;
+  const base = {
+    position: "absolute" as const,
+    width: SIZE,
+    height: SIZE,
+    borderColor: color,
+  };
+  switch (corner) {
+    case "tl":
+      return (
+        <View
+          pointerEvents="none"
+          style={{ ...base, top: INSET, left: INSET, borderTopWidth: THICK, borderLeftWidth: THICK, borderTopLeftRadius: RADIUS }}
+        />
+      );
+    case "tr":
+      return (
+        <View
+          pointerEvents="none"
+          style={{ ...base, top: INSET, right: INSET, borderTopWidth: THICK, borderRightWidth: THICK, borderTopRightRadius: RADIUS }}
+        />
+      );
+    case "bl":
+      return (
+        <View
+          pointerEvents="none"
+          style={{ ...base, bottom: INSET, left: INSET, borderBottomWidth: THICK, borderLeftWidth: THICK, borderBottomLeftRadius: RADIUS }}
+        />
+      );
+    case "br":
+      return (
+        <View
+          pointerEvents="none"
+          style={{ ...base, bottom: INSET, right: INSET, borderBottomWidth: THICK, borderRightWidth: THICK, borderBottomRightRadius: RADIUS }}
+        />
+      );
+  }
+}
+
 interface SecondaryRowProps {
   icon: React.ComponentType<{ size?: number; color?: string }>;
   tint: string;
@@ -180,7 +383,7 @@ function SecondaryRow({ icon: Icon, tint, label, detail, onPress }: SecondaryRow
           {detail}
         </Text>
       </View>
-      <Layers size={14} color={p.ink.dim} />
+      <ChevronRight size={16} color={p.ink.dim} />
     </Pressable>
   );
 }

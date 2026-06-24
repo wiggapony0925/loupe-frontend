@@ -47,6 +47,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import {
+  Camera,
+  CameraOff,
   Check,
   ChevronDown,
   ChevronRight,
@@ -1092,32 +1094,68 @@ export function LiveIdentifyFlow({
     return (
       <SafeAreaView
         edges={["top", "bottom"]}
-        style={{ flex: 1, backgroundColor: p.bg.base, padding: 24, justifyContent: "center" }}
+        style={{ flex: 1, backgroundColor: p.bg.base, padding: 24, justifyContent: "center", alignItems: "center" }}
       >
-        <Text className="text-2xl font-semibold text-ink">Camera access</Text>
-        <Text className="mt-2 text-sm text-ink-muted">
-          {mustOpenSettings
-            ? "Camera access was denied. Open Settings → Loupe and enable Camera, then come back."
-            : "Loupe needs the camera to identify cards. Grant access to continue."}
-        </Text>
-        <View style={{ height: 24 }} />
-        <PrimaryButton
-          label={mustOpenSettings ? "Open Settings" : "Allow camera"}
-          onPress={async () => {
-            if (mustOpenSettings) {
-              Linking.openSettings().catch(() => {});
-              return;
-            }
-            const next = await requestPermission();
-            // If the OS still won't ask (user denied in the dialog),
-            // bounce them to Settings on the next tap.
-            if (!next.granted && !next.canAskAgain) {
-              Linking.openSettings().catch(() => {});
-            }
+        {/* Close stays reachable top-left even on the gate. */}
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close scanner"
+          hitSlop={12}
+          style={{ position: "absolute", top: 8, left: 16, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+        >
+          <X size={26} color={p.ink.muted} strokeWidth={2.2} />
+        </Pressable>
+
+        <View
+          style={{
+            width: 88,
+            height: 88,
+            borderRadius: 44,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: withAlpha(p.accent.mint, 0.12),
+            borderWidth: 1,
+            borderColor: withAlpha(p.accent.mint, 0.28),
           }}
-        />
-        <View style={{ height: 12 }} />
-        <PrimaryButton label="Close" variant="ghost" onPress={onClose} />
+        >
+          {mustOpenSettings ? (
+            <CameraOff size={36} color={p.accent.mint} strokeWidth={1.8} />
+          ) : (
+            <Camera size={36} color={p.accent.mint} strokeWidth={1.8} />
+          )}
+        </View>
+
+        <Text style={{ marginTop: 20, color: p.ink.default, fontSize: 22, fontWeight: "800", textAlign: "center" }}>
+          {mustOpenSettings ? "Turn on camera access" : "Let Loupe see your cards"}
+        </Text>
+        <Text style={{ marginTop: 8, color: p.ink.muted, fontSize: 14, lineHeight: 20, textAlign: "center", maxWidth: 300 }}>
+          {mustOpenSettings
+            ? "Camera access is off. Open Settings → Loupe → Camera to switch it on, then come back."
+            : "Point your camera at a card and Loupe identifies it instantly — set, number, and live price. Nothing is uploaded until you save a card."}
+        </Text>
+
+        <View style={{ height: 28 }} />
+        <View style={{ alignSelf: "stretch", maxWidth: 360, width: "100%", gap: 12 }}>
+          <PrimaryButton
+            label={mustOpenSettings ? "Open Settings" : "Allow camera"}
+            icon={Camera}
+            variant="mint"
+            onPress={async () => {
+              if (mustOpenSettings) {
+                Linking.openSettings().catch(() => {});
+                return;
+              }
+              const next = await requestPermission();
+              // If the OS still won't ask (user denied in the dialog),
+              // bounce them to Settings on the next tap.
+              if (!next.granted && !next.canAskAgain) {
+                Linking.openSettings().catch(() => {});
+              }
+            }}
+          />
+          <PrimaryButton label="Not now" variant="ghost" onPress={onClose} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -2617,9 +2655,25 @@ function NoMatchCard({
 
 function CenterMessage({ label }: { label: string }) {
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#000" }}>
-      <ActivityIndicator color="#fff" />
-      <Text style={{ color: "#fff", marginTop: 12, fontSize: 13 }}>{label}</Text>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#000", gap: 18 }}>
+      <View
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: 36,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: withAlpha(palette.accent.mint, 0.12),
+          borderWidth: 1,
+          borderColor: withAlpha(palette.accent.mint, 0.25),
+        }}
+      >
+        <Camera size={30} color={palette.accent.mint} strokeWidth={1.8} />
+      </View>
+      <View style={{ alignItems: "center", gap: 10 }}>
+        <ActivityIndicator color="#fff" />
+        <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, fontWeight: "600" }}>{label}</Text>
+      </View>
     </View>
   );
 }
