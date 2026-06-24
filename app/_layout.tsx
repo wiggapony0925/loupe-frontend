@@ -139,6 +139,34 @@ function RootStack() {
         name="support"
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
+      {/* Primary push destinations — register them so they use the same
+          iOS-standard slide as the rest of the stack instead of the
+          default `fade` screenOption (card detail is the most-hit screen
+          in the app and was fading in, which read as a flicker). */}
+      <Stack.Screen
+        name="card/[id]"
+        options={{ presentation: "card", animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="grade/[id]"
+        options={{ presentation: "card", animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="grade/new"
+        options={{ presentation: "card", animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
+        name="scan/identify"
+        options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
+        name="scan/pair"
+        options={{ presentation: "card", animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="admin"
+        options={{ presentation: "card", animation: "slide_from_right" }}
+      />
     </Stack>
   );
 }
