@@ -35,7 +35,15 @@ export default function CommandCenterScreen() {
   const p = useThemedPalette();
   const qc = useQueryClient();
   const { isAuthenticated } = useAuth();
-  const summary = useQuery({ queryKey: queryKeys.collection.summary(), queryFn: fetchCollectionSummary });
+  // Gate on auth so this doesn't fire on cold boot BEFORE the stored token is
+  // attached to the HTTP client — that race returned an empty summary ($0.00)
+  // that only a pull-to-refresh fixed. Enabling on `isAuthenticated` makes it
+  // wait for the token, then auto-fetch (the pattern the other hooks use).
+  const summary = useQuery({
+    queryKey: queryKeys.collection.summary(),
+    queryFn: fetchCollectionSummary,
+    enabled: isAuthenticated,
+  });
   const feed = useHomeFeed({ topMovers: 5, recentScans: 6 });
   const hardware = useScannerConnection();
   const movers = useTopMovers({ enrichLimit: 12, limit: 5 });

@@ -33,6 +33,7 @@ import Svg, {
 import { ChevronDown } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePortfolioHistory, useMarketIndex } from "@/application/queries";
+import { useAuth } from "@/presentation/providers/AuthProvider";
 import {
   PORTFOLIO_TIMEFRAMES,
   clampLabelX,
@@ -120,11 +121,15 @@ export function PortfolioChart({
     if (!hasCost && basis === "cost") setBasis("period");
   }, [hasCost, basis]);
 
-  const history = usePortfolioHistory({ timeframe: range });
+  // Gate on auth so neither query fires before the stored token is attached
+  // on cold boot (that race rendered a permanent "No history yet" until a
+  // pull-to-refresh). They auto-fetch the moment `isAuthenticated` flips true.
+  const { isAuthenticated } = useAuth();
+  const history = usePortfolioHistory({ timeframe: range, enabled: isAuthenticated });
   const overlay = useMarketIndex({
     indexId: "psa10",
     range,
-    enabled: showPsa10Overlay,
+    enabled: showPsa10Overlay && isAuthenticated,
   });
 
   const data = history.data;
