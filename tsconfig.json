@@ -23,6 +23,8 @@
       "@/*": ["./src/*", "./*"],
       "@loupe/chart": ["./vendor/loupe-chart/src"],
       "@loupe/chart/*": ["./vendor/loupe-chart/src/*"],
+      "@loupe/tokens": ["./vendor/loupe-tokens/src"],
+      "@loupe/tokens/*": ["./vendor/loupe-tokens/src/*"],
       "tailwind.config": ["./tailwind.config.js"]
     },
     "types": ["nativewind/types", "node", "jest"]
