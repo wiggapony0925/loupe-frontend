@@ -71,6 +71,7 @@ import {
 } from "@/presentation/features/cardDetail/CardDetailParts";
 import { NearbyListingsSection } from "@/presentation/features/cardDetail/NearbyListingsSection";
 import { CardPriceChart } from "@/presentation/features/cardDetail/CardPriceChart";
+import { ChartEmptyState } from "@/presentation/components/ChartEmptyState";
 import { buildComparePresets } from "@/presentation/features/cardDetail/compareTiers";
 import {
   CardCostBasisStrip,
@@ -605,22 +606,10 @@ export default function CardDetailScreen() {
                   />
                 </View>
               ) : (
-                <View
-                  style={{
-                    borderTopWidth: 1,
-                    borderBottomWidth: 1,
-                    borderColor: withAlpha(p.line.default, 0.72),
-                    paddingVertical: 18,
-                    gap: 4,
-                  }}
-                >
-                  <Text style={{ color: p.ink.default, fontSize: 14, fontWeight: "800" }}>
-                    Price history unavailable
-                  </Text>
-                  <Text style={{ color: p.ink.muted, fontSize: 12, lineHeight: 18 }}>
-                    Loupe will chart this card once a provider returns real historical points.
-                  </Text>
-                </View>
+                <ChartEmptyState
+                  title="Price history unavailable"
+                  subtitle="Loupe will chart this card once a provider returns real historical points."
+                />
               )}
 
               {/* 4b. Market signals row (52w hi/lo, trend, arbitrage,
