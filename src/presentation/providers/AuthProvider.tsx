@@ -59,6 +59,8 @@ interface AuthContextValue {
   /** Exchange a Google id token (from the native SDK) for a session. */
   signInWithGoogle: (idToken: string) => Promise<void>;
   signOut: () => void;
+  /** Revoke every session for this user (all devices), then sign out here. */
+  signOutEverywhere: () => Promise<void>;
   setToken: (token: string | null) => void;
   /**
    * Proactively rotate the access token using the stored refresh
@@ -244,6 +246,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, [persistTokens]);
 
+  // Sign out on every device: revoke all of this user's tokens server-side
+  // (needs the current bearer token, so call it before clearing), then sign
+  // out locally. Best-effort on the network — we always end up signed out here.
+  const signOutEverywhere = useCallback(async () => {
+    try {
+      await apiFetch<null>(ENDPOINTS.auth.logoutAll, { method: "POST" });
+    } catch {
+      /* revoke is best-effort; still clear the local session */
+    }
+    void persistTokens(null);
+    setUser(null);
+  }, [persistTokens]);
+
   const signInWithApple = useCallback(
     async (identityToken: string, fullName?: string) => {
       await applySession(
@@ -282,6 +297,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithApple,
       signInWithGoogle,
       signOut,
+      signOutEverywhere,
       setToken,
       refreshNow: doRefresh,
     }),
@@ -294,6 +310,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithDevLogin,
       signInWithApple,
       signInWithGoogle,
+      signOutEverywhere,
       signOut,
       setToken,
       doRefresh,

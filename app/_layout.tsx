@@ -108,10 +108,6 @@ function RootStack() {
         options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
       />
       <Stack.Screen
-        name="compare"
-        options={{ presentation: "card", animation: "slide_from_right" }}
-      />
-      <Stack.Screen
         name="settings"
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
