@@ -8,7 +8,6 @@ import {
   Bell,
   Camera,
   Settings2,
-  Zap,
 } from "lucide-react-native";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
@@ -17,7 +16,6 @@ import { HardwareStatusWidget, useScannerConnection } from "@/presentation/featu
 import { PortfolioChart, TodaysDeltaHero } from "@/presentation/features/analytics";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
-import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { EmptyState } from "@/presentation/components/EmptyState";
@@ -70,17 +68,6 @@ export default function CommandCenterScreen() {
         }
       >
         <Header />
-
-        {/* Scan is the app's primary verb — keep it one tap from the top of
-            the dashboard instead of buried below the fold. Goes straight to
-            live identify; price / vault / grade branch on the result sheet. */}
-        <PrimaryButton
-          label="Scan a card"
-          icon={Zap}
-          onPress={() => router.push(routes.scanIdentify())}
-          variant="mint"
-          accessibilityLabel="Open the live card scanner"
-        />
 
         <TodaysDeltaHero />
 

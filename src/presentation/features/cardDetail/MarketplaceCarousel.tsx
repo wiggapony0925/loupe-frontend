@@ -109,7 +109,11 @@ export function MarketplaceCarousel({
         return (
           <MarketplaceTileCard
             key={tile.id}
-            imageUrl={tile.imageUrl}
+            // Only real seller listings carry their own photo. Market-price and
+            // shop tiles all repeat the SAME card art, which reads as clutter
+            // (three identical images in a row) — render them as clean brand
+            // tiles instead, closer to the web's marketplace rows.
+            imageUrl={tile.kind === "listing" ? tile.imageUrl : null}
             blurhash={tile.blurhash}
             fallbackIcon={tileIcon(tile)}
             accent={accent}
