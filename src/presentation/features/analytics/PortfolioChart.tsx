@@ -481,6 +481,7 @@ export function PortfolioChart({
         ) : (
           <ChartPlaceholder
             height={CHART_HEIGHT}
+            width={width}
             loading={history.isLoading}
             tint={tint}
           />
@@ -643,10 +644,12 @@ function BasisToggle({
  */
 function ChartPlaceholder({
   height,
+  width,
   loading,
   tint,
 }: {
   height: number;
+  width: number;
   loading: boolean;
   tint: string;
 }) {
@@ -673,6 +676,25 @@ function ChartPlaceholder({
     loop.start();
     return () => loop.stop();
   }, [loading, sweep]);
+
+  // A faint, neutral "ghost" curve so the empty chart reads as a chart awaiting
+  // data — not a dead box. Deliberately gray (not the brand mint) so it never
+  // looks like real data, and dashed to signal "placeholder".
+  const ghost = useMemo(() => {
+    if (width === 0) return { line: "", area: "" };
+    const norm = [0.62, 0.54, 0.66, 0.5, 0.58, 0.44, 0.38];
+    const PAD_Y = 26;
+    const coords = norm.map(
+      (y, i) =>
+        [
+          (i / (norm.length - 1)) * width,
+          PAD_Y + y * (height - PAD_Y * 2),
+        ] as const,
+    );
+    const line = monotoneCubic(coords);
+    const area = line + ` L ${width} ${height} L 0 ${height} Z`;
+    return { line, area };
+  }, [width, height]);
 
   const gridLine = withAlpha(p.ink.dim, 0.18);
   const shimmerOpacity = sweep.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.7] });
@@ -706,6 +728,33 @@ function ChartPlaceholder({
         />
       ))}
 
+      {/* Ghost curve (only when there's room to draw it) sits behind the copy. */}
+      {!loading && width > 0 && ghost.line ? (
+        <Svg
+          width={width}
+          height={height}
+          style={{ position: "absolute", left: 0, top: 0 }}
+          pointerEvents="none"
+        >
+          <Defs>
+            <SvgGradient id="ghostFill" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor={p.ink.dim} stopOpacity="0.12" />
+              <Stop offset="100%" stopColor={p.ink.dim} stopOpacity="0" />
+            </SvgGradient>
+          </Defs>
+          <Path d={ghost.area} fill="url(#ghostFill)" />
+          <Path
+            d={ghost.line}
+            stroke={withAlpha(p.ink.dim, 0.5)}
+            strokeWidth={2}
+            strokeDasharray="5,6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </Svg>
+      ) : null}
+
       {loading ? (
         <Animated.View
           pointerEvents="none"
@@ -720,7 +769,7 @@ function ChartPlaceholder({
           }}
         />
       ) : (
-        <>
+        <View pointerEvents="none" style={{ alignItems: "center", paddingHorizontal: 16 }}>
           <Text
             style={{
               color: p.ink.muted,
@@ -742,7 +791,7 @@ function ChartPlaceholder({
           >
             Scan a card to start charting your portfolio.
           </Text>
-        </>
+        </View>
       )}
     </View>
   );

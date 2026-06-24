@@ -353,7 +353,6 @@ function Header() {
       <Text className="mt-5 text-xs uppercase tracking-[3px] text-ink-dim">
         {greeting()}, operator
       </Text>
-      <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">Command Center</Text>
     </View>
   );
 }
