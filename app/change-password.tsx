@@ -13,6 +13,11 @@ import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { ApiError } from "@/infrastructure/http/client";
 import { useThemedPalette } from "@/presentation/theme/tokens";
+import {
+  canSubmitPasswordChange,
+  newPasswordTooShort,
+  passwordsMismatch,
+} from "@/domain/auth/passwordChange";
 
 export default function ChangePasswordScreen() {
   const p = useThemedPalette();
@@ -23,10 +28,10 @@ export default function ChangePasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const tooShort = next.length > 0 && next.length < 8;
-  const mismatch = confirm.length > 0 && next !== confirm;
+  const tooShort = newPasswordTooShort(next);
+  const mismatch = passwordsMismatch(next, confirm);
   const canSubmit =
-    current.length > 0 && next.length >= 8 && next === confirm && !submitting;
+    canSubmitPasswordChange({ current, next, confirm }) && !submitting;
 
   const onSubmit = async () => {
     if (!canSubmit) return;
