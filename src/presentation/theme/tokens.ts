@@ -25,9 +25,11 @@ import {
   spacing as tokenSpacing,
   type ColorSet,
 } from "@loupe/tokens";
+import { THEME_MODE, type ThemeMode } from "@loupe/theme";
 import { useSettings } from "@/application/stores/settingsStore";
 
-export type Scheme = "dark" | "light";
+/** Resolved color scheme — the shared `ThemeMode` core (matches web). */
+export type Scheme = ThemeMode;
 
 /**
  * Map the shared `ColorSet` → the app's palette shape (the subset RN
@@ -49,10 +51,10 @@ export const lightPalette: typeof darkPalette = toPalette(lightColors);
 /** Live palette — mutated by `applyTheme`. Initial value: dark. */
 export const palette: typeof darkPalette = toPalette(darkColors);
 
-let activeScheme: Scheme = "dark";
+let activeScheme: Scheme = THEME_MODE.DARK;
 
 export function applyTheme(scheme: Scheme): void {
-  const next = scheme === "light" ? lightPalette : darkPalette;
+  const next = scheme === THEME_MODE.LIGHT ? lightPalette : darkPalette;
   Object.assign(palette.bg, next.bg);
   Object.assign(palette.line, next.line);
   Object.assign(palette.ink, next.ink);
