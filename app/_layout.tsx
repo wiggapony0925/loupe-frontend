@@ -169,6 +169,10 @@ function RootStack() {
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
       <Stack.Screen
+        name="grade/measure"
+        options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
         name="scan/identify"
         options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
       />
