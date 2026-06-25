@@ -186,6 +186,11 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           />
         ) : null}
         <MenuRow
+          title="Change password"
+          subtitle="Update your password · signs out other devices"
+          onPress={() => router.push("/change-password")}
+        />
+        <MenuRow
           title="Security and privacy"
           subtitle="Captures stay on-device until you grade"
           onPress={() =>

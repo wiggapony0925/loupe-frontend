@@ -53,6 +53,8 @@ interface AuthContextValue {
     displayName?: string,
   ) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
+  /** Change password (verifies current, revokes other sessions, keeps this one). */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   signInWithDevLogin: (email: string, displayName?: string) => Promise<void>;
   /** Exchange an Apple identity token (from the native SDK) for a session. */
   signInWithApple: (identityToken: string, fullName?: string) => Promise<void>;
@@ -229,6 +231,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [applySession],
   );
 
+  // Change password: the server verifies the current one, revokes every OTHER
+  // session, and returns a fresh pair stamped with the new token epoch. Adopt it
+  // so this device stays signed in while all others are signed out.
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      const pair = await apiFetch<TokenPair>(ENDPOINTS.auth.changePassword, {
+        method: "POST",
+        json: { current_password: currentPassword, new_password: newPassword },
+      });
+      await applySession(pair);
+    },
+    [applySession],
+  );
+
   const signInWithDevLogin = useCallback(
     async (email: string, displayName?: string) => {
       await applySession(
@@ -293,6 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       signUpWithEmail,
       signInWithEmail,
+      changePassword,
       signInWithDevLogin,
       signInWithApple,
       signInWithGoogle,
@@ -307,6 +324,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       signUpWithEmail,
       signInWithEmail,
+      changePassword,
       signInWithDevLogin,
       signInWithApple,
       signInWithGoogle,

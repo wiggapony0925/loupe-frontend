@@ -570,6 +570,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change password (revokes other sessions)
+         * @description Set a new password after verifying the current one. Bumps the token epoch
+         *     so every *other* session is revoked, then re-issues a fresh pair for this
+         *     device — so the user stays signed in here but is signed out everywhere else.
+         */
+        post: operations["change_password_v1_auth_change_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/dev-login": {
         parameters: {
             query?: never;
@@ -2835,6 +2857,16 @@ export interface components {
             tcg: components["schemas"]["TcgEnum"];
             /** Year */
             year?: number | null;
+        };
+        /**
+         * ChangePasswordRequest
+         * @description Body for ``POST /v1/auth/change-password`` (signed-in users).
+         */
+        ChangePasswordRequest: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
         };
         /**
          * CheckoutRequest
@@ -5991,6 +6023,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AppleSignInRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenPair"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_password_v1_auth_change_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
             };
         };
         responses: {

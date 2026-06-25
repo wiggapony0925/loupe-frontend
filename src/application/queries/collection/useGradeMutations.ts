@@ -17,7 +17,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type { GradedCard, GradeHouse, RawCondition } from "@/infrastructure/http";
-import { queryKeys } from "../queryKeys";
+import { invalidateHoldingCaches } from "../invalidateHoldings";
 
 export interface CreateGradeInput {
   /** Resolved local catalog UUID. Mutually exclusive with `upstreamId`. */
@@ -55,14 +55,6 @@ function toCreateBody(input: CreateGradeInput): Record<string, unknown> {
   return body;
 }
 
-function invalidateGradeCaches(qc: ReturnType<typeof useQueryClient>) {
-  void qc.invalidateQueries({ queryKey: queryKeys.me.grades() });
-  void qc.invalidateQueries({ queryKey: queryKeys.collection.all });
-  void qc.invalidateQueries({ queryKey: queryKeys.cards.sparklines() });
-  void qc.invalidateQueries({ queryKey: queryKeys.portfolio.all });
-  void qc.invalidateQueries({ queryKey: queryKeys.sets.progress() });
-}
-
 export function useCreateGrade() {
   const qc = useQueryClient();
   return useMutation<GradedCard, Error, CreateGradeInput>({
@@ -71,7 +63,7 @@ export function useCreateGrade() {
         method: "POST",
         json: toCreateBody(input),
       }),
-    onSuccess: () => invalidateGradeCaches(qc),
+    onSuccess: () => invalidateHoldingCaches(qc),
   });
 }
 
@@ -108,7 +100,7 @@ export function useUpdateGrade() {
         method: "PATCH",
         json: toUpdateBody({ id, ...rest }),
       }),
-    onSuccess: () => invalidateGradeCaches(qc),
+    onSuccess: () => invalidateHoldingCaches(qc),
   });
 }
 
@@ -119,6 +111,6 @@ export function useDeleteGrade() {
       apiFetch<void>(ENDPOINTS.grades.item(id), {
         method: "DELETE",
       }),
-    onSuccess: () => invalidateGradeCaches(qc),
+    onSuccess: () => invalidateHoldingCaches(qc),
   });
 }

@@ -23,6 +23,7 @@ export const ENDPOINTS = {
     google: `${V1}/auth/google`,
     refresh: `${V1}/auth/refresh`,
     logoutAll: `${V1}/auth/logout-all`,
+    changePassword: `${V1}/auth/change-password`,
   },
   me: {
     root: `${V1}/me`,
