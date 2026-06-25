@@ -31,6 +31,7 @@ import { ErrorState } from "@/presentation/components/ErrorState";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { COPY } from "@/shared/copy";
 import { useRecentSearches } from "@/application/stores/recentSearchesStore";
+import { useAuth } from "@/presentation/providers/AuthProvider";
 import { useCardSearch, useTrendingCards } from "@/application/queries";
 import { useSealedSearch } from "@/application/queries/collection/useSealed";
 import type { SealedProductWire } from "@/infrastructure/http";
@@ -150,10 +151,18 @@ export default function SearchScreen() {
   const removeRecent = useRecentSearches((s) => s.remove);
   const [inputFocused, setInputFocused] = useState(false);
 
-  const collection = useQuery({ queryKey: queryKeys.collection.list(), queryFn: () => fetchCollection() });
+  // Both fetch the signed-in user's own data — gate so they don't run while
+  // signed out (and don't fire token-less before auth hydrates).
+  const { isAuthenticated } = useAuth();
+  const collection = useQuery({
+    queryKey: queryKeys.collection.list(),
+    queryFn: () => fetchCollection(),
+    enabled: isAuthenticated,
+  });
   const sparks = useQuery({
     queryKey: queryKeys.cards.sparklines(),
     queryFn: fetchCardSparklines,
+    enabled: isAuthenticated,
     staleTime: 60_000,
   });
   const catalog = useQuery({

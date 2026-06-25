@@ -44,6 +44,7 @@ import {
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { ErrorState } from "@/presentation/components/ErrorState";
+import { useAuth } from "@/presentation/providers/AuthProvider";
 import { useMoney } from "@/presentation/components/Price";
 import { COPY } from "@/shared/copy";
 import { queryKeys } from "@/application/queries/queryKeys";
@@ -74,6 +75,7 @@ export default function VaultScreen() {
     availableSets,
     summary,
   } = useFilteredCollection();
+  const { isAuthenticated } = useAuth();
   const sealedHoldings = useMySealedHoldings({ includeOpened: false });
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
@@ -137,6 +139,7 @@ export default function VaultScreen() {
   const sparks = useQuery({
     queryKey: queryKeys.cards.sparklines(),
     queryFn: fetchCardSparklines,
+    enabled: isAuthenticated,
     staleTime: 60_000,
   });
   const sparkMap = useMemo(
