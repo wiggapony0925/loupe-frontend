@@ -80,6 +80,13 @@ export default function ScanTabScreen() {
               onPress={() => router.push(routes.scanPhone("studio"))}
             />
             <SecondaryRow
+              icon={Sparkles}
+              tint={p.accent.mint}
+              label="Loupe Playground"
+              detail="Score it by eye — get a PSA-style grade estimate instantly."
+              onPress={() => router.push(routes.gradePlayground())}
+            />
+            <SecondaryRow
               icon={PlusCircle}
               tint={p.accent.amber}
               label="Add by catalog"

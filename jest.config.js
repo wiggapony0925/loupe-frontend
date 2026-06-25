@@ -18,6 +18,11 @@ const moduleNameMapper = {
     path.join(__dirname, "src/$1"),
     path.join(__dirname, "$1"),
   ],
+  // Vendored shared packages (Metro resolves these via extraNodeModules; jest
+  // needs them mapped explicitly so the shared engines are unit-testable).
+  "^@loupe/grade$": path.join(__dirname, "vendor/loupe-grade/src/index.ts"),
+  "^@loupe/chart$": path.join(__dirname, "vendor/loupe-chart/src/index.ts"),
+  "^@loupe/tokens$": path.join(__dirname, "vendor/loupe-tokens/src/index.ts"),
 };
 
 // `babel-preset-expo` rewrites `process.env.EXPO_PUBLIC_*` reads into

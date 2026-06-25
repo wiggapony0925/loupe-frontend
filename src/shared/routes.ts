@@ -74,4 +74,6 @@ export const routes = {
    */
   sealedAdd: (productId?: string) =>
     productId ? `/sealed/add?productId=${enc(productId)}` : "/sealed/add",
+  /** Loupe Grade playground — manual sub-grade → estimate (native /grade). */
+  gradePlayground: () => "/grade/playground" as const,
 } as const;
