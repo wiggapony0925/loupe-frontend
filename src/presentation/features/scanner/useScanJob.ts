@@ -9,7 +9,7 @@ import {
   streamScanProgress,
   uploadCaptures,
 } from "@/infrastructure/repositories/scanRepository";
-import { queryKeys } from "@/application/queries/queryKeys";
+import { invalidateHoldingCaches } from "@/application/queries/invalidateHoldings";
 import { useScannerStore } from "@/application/stores/scannerStore";
 import type {
   ScanJob as ScanJobWire,
@@ -155,11 +155,7 @@ export function useScanJob() {
       settledRef.current = true;
       cleanupRef.current?.();
       cleanupRef.current = null;
-      qc.invalidateQueries({ queryKey: queryKeys.me.grades() });
-      qc.invalidateQueries({ queryKey: queryKeys.collection.all });
-      qc.invalidateQueries({ queryKey: queryKeys.cards.sparklines() });
-      qc.invalidateQueries({ queryKey: queryKeys.portfolio.all });
-      qc.invalidateQueries({ queryKey: queryKeys.sets.progress() });
+      invalidateHoldingCaches(qc);
       if (job.reportId) {
         finishScan(job.reportId);
         router.push(routes.scan(job.reportId));

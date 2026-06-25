@@ -45,6 +45,7 @@ import { Skeleton } from "@/presentation/components/Skeleton";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { ErrorState } from "@/presentation/components/ErrorState";
 import { useAuth } from "@/presentation/providers/AuthProvider";
+import { invalidateHoldingCaches } from "@/application/queries/invalidateHoldings";
 import { useMoney } from "@/presentation/components/Price";
 import { COPY } from "@/shared/copy";
 import { queryKeys } from "@/application/queries/queryKeys";
@@ -98,13 +99,9 @@ export default function VaultScreen() {
       if (failed > 0) throw new Error(`${failed} card(s) could not be removed.`);
     },
     onSettled: () => {
-      // Refresh both the list and any cached summary / sparkline data
-      // so the hero, pills, and tiles all reflect the smaller vault.
-      qc.invalidateQueries({ queryKey: queryKeys.me.grades() });
-      qc.invalidateQueries({ queryKey: queryKeys.collection.all });
-      qc.invalidateQueries({ queryKey: queryKeys.cards.sparklines() });
-      qc.invalidateQueries({ queryKey: queryKeys.portfolio.all });
-      qc.invalidateQueries({ queryKey: queryKeys.sets.progress() });
+      // Refresh every holding-derived cache (list, hero, pills, tiles,
+      // analytics, home feed) so they all reflect the smaller vault.
+      invalidateHoldingCaches(qc);
     },
   });
 
@@ -204,10 +201,7 @@ export default function VaultScreen() {
   }, [sealedHoldings.data]);
 
   const onRefresh = useCallback(() => {
-    qc.invalidateQueries({ queryKey: queryKeys.collection.all });
-    qc.invalidateQueries({ queryKey: queryKeys.cards.sparklines() });
-    qc.invalidateQueries({ queryKey: queryKeys.portfolio.all });
-    qc.invalidateQueries({ queryKey: queryKeys.sets.progress() });
+    invalidateHoldingCaches(qc);
   }, [qc]);
 
   const headerPadX = viewMode === "grid" ? 0 : 14;
