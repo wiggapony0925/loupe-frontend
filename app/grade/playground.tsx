@@ -18,9 +18,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Camera, ChevronLeft, RotateCcw } from "lucide-react-native";
+import { Camera, ChevronLeft, Crosshair, RotateCcw } from "lucide-react-native";
 import { loupeGrade, type SubGrades } from "@loupe/grade";
 import { routes } from "@/shared/routes";
+import {
+  DEFAULT_SUBS,
+  useGradePlaygroundStore,
+} from "@/application/stores/gradePlaygroundStore";
 import { gradeColor, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 const SUB_META: { key: keyof SubGrades; label: string; hint: string }[] = [
@@ -30,11 +34,13 @@ const SUB_META: { key: keyof SubGrades; label: string; hint: string }[] = [
   { key: "surface", label: "Surface", hint: "No scratches, print lines, or dents" },
 ];
 
-const DEFAULT_SUBS: SubGrades = { centering: 8, corners: 8, edges: 8, surface: 8 };
-
 export default function GradePlaygroundScreen() {
   const p = useThemedPalette();
-  const [subs, setSubs] = useState<SubGrades>(DEFAULT_SUBS);
+  // Lifted into a store so the camera "measure centering" screen can write the
+  // measured value back without route-param gymnastics.
+  const subs = useGradePlaygroundStore((s) => s.subs);
+  const setSub = useGradePlaygroundStore((s) => s.setSub);
+  const reset = useGradePlaygroundStore((s) => s.reset);
   const result = useMemo(() => loupeGrade(subs), [subs]);
   const tint = gradeColor(result.estimate);
   const dirty =
@@ -61,7 +67,7 @@ export default function GradePlaygroundScreen() {
         </Text>
         {dirty ? (
           <Pressable
-            onPress={() => setSubs(DEFAULT_SUBS)}
+            onPress={() => reset()}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Reset sub-grades"
@@ -133,16 +139,39 @@ export default function GradePlaygroundScreen() {
               hint={hint}
               value={subs[key]}
               palette={p}
-              onChange={(v) => setSubs((s) => ({ ...s, [key]: v }))}
+              onChange={(v) => setSub(key, v)}
             />
           ))}
         </View>
 
-        {/* Camera path */}
+        {/* Measure centering from a photo — taps the print border, runs the
+            shared measureCentering(), and writes the result back here. */}
+        <Pressable
+          onPress={() => router.push(routes.gradeMeasure())}
+          accessibilityRole="button"
+          accessibilityLabel="Measure centering from a photo"
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            paddingVertical: 14,
+            borderRadius: 14,
+            backgroundColor: p.accent.mint,
+            opacity: pressed ? 0.85 : 1,
+          })}
+        >
+          <Crosshair size={18} color="#06140d" />
+          <Text style={{ color: "#06140d", fontWeight: "800", fontSize: 14 }}>
+            Measure centering from a photo
+          </Text>
+        </Pressable>
+
+        {/* Secondary: the full photometric Studio capture (server grade). */}
         <Pressable
           onPress={() => router.push(routes.scanPhone("studio"))}
           accessibilityRole="button"
-          accessibilityLabel="Measure with the camera"
+          accessibilityLabel="Open the Studio photometric capture"
           style={({ pressed }) => ({
             flexDirection: "row",
             alignItems: "center",
@@ -158,7 +187,7 @@ export default function GradePlaygroundScreen() {
         >
           <Camera size={18} color={p.accent.mint} />
           <Text style={{ color: p.accent.mint, fontWeight: "800", fontSize: 14 }}>
-            Measure centering with the camera
+            Full Studio capture (all four sub-grades)
           </Text>
         </Pressable>
 

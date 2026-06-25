@@ -76,4 +76,6 @@ export const routes = {
     productId ? `/sealed/add?productId=${enc(productId)}` : "/sealed/add",
   /** Loupe Grade playground — manual sub-grade → estimate (native /grade). */
   gradePlayground: () => "/grade/playground" as const,
+  /** Camera centering measurement — tap the print border → measureCentering. */
+  gradeMeasure: () => "/grade/measure" as const,
 } as const;
