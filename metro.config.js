@@ -20,10 +20,15 @@ const chartPkg = path.resolve(__dirname, "vendor/loupe-chart");
 // tokens.scss is generated from it and the app builds its NativeWind vars from
 // the same color sets. Re-sync from the canonical source with `npm run sync:tokens`.
 const tokensPkg = path.resolve(__dirname, "vendor/loupe-tokens");
+// ── Shared grade engine (`@loupe/grade`) ──
+// Vendored like the others (survives EAS staging). Pure-TS rubric math shared
+// with loupe-web's /grade playground. Re-sync with `npm run sync:grade`.
+const gradePkg = path.resolve(__dirname, "vendor/loupe-grade");
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules ?? {}),
   "@loupe/chart": chartPkg,
   "@loupe/tokens": tokensPkg,
+  "@loupe/grade": gradePkg,
 };
 
 module.exports = withNativeWind(config, { input: "./global.css" });

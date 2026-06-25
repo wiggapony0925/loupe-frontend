@@ -1,0 +1,15 @@
+{
+  "name": "@loupe/grade",
+  "version": "0.1.0",
+  "description": "Framework-agnostic Loupe Grade rubric engine (pure TS — no DOM, React, or RN). Shared by loupe-web (/grade playground) and loupe-frontend (native playground) so both compute the same centering + sub-grade estimate.",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
