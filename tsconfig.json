@@ -27,6 +27,8 @@
       "@loupe/tokens/*": ["./vendor/loupe-tokens/src/*"],
       "@loupe/grade": ["./vendor/loupe-grade/src"],
       "@loupe/grade/*": ["./vendor/loupe-grade/src/*"],
+      "@loupe/theme": ["./vendor/loupe-theme/src"],
+      "@loupe/theme/*": ["./vendor/loupe-theme/src/*"],
       "tailwind.config": ["./tailwind.config.js"]
     },
     "types": ["nativewind/types", "node", "jest"]

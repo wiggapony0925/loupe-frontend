@@ -24,11 +24,13 @@ const tokensPkg = path.resolve(__dirname, "vendor/loupe-tokens");
 // Vendored like the others (survives EAS staging). Pure-TS rubric math shared
 // with loupe-web's /grade playground. Re-sync with `npm run sync:grade`.
 const gradePkg = path.resolve(__dirname, "vendor/loupe-grade");
+const themePkg = path.resolve(__dirname, "vendor/loupe-theme");
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules ?? {}),
   "@loupe/chart": chartPkg,
   "@loupe/tokens": tokensPkg,
   "@loupe/grade": gradePkg,
+  "@loupe/theme": themePkg,
 };
 
 module.exports = withNativeWind(config, { input: "./global.css" });

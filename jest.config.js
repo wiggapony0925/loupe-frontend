@@ -21,6 +21,7 @@ const moduleNameMapper = {
   // Vendored shared packages (Metro resolves these via extraNodeModules; jest
   // needs them mapped explicitly so the shared engines are unit-testable).
   "^@loupe/grade$": path.join(__dirname, "vendor/loupe-grade/src/index.ts"),
+  "^@loupe/theme$": path.join(__dirname, "vendor/loupe-theme/src/index.ts"),
   "^@loupe/chart$": path.join(__dirname, "vendor/loupe-chart/src/index.ts"),
   "^@loupe/tokens$": path.join(__dirname, "vendor/loupe-tokens/src/index.ts"),
 };

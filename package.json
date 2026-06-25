@@ -34,6 +34,7 @@
     "sync:chart": "rm -rf vendor/loupe-chart/src && cp -R ../packages/chart/src vendor/loupe-chart/src && cp ../packages/chart/package.json vendor/loupe-chart/package.json",
     "sync:tokens": "rm -rf vendor/loupe-tokens/src && cp -R ../packages/tokens/src vendor/loupe-tokens/src && cp ../packages/tokens/package.json vendor/loupe-tokens/package.json",
     "sync:grade": "rm -rf vendor/loupe-grade/src && cp -R ../packages/grade/src vendor/loupe-grade/src && cp ../packages/grade/package.json vendor/loupe-grade/package.json",
+    "sync:theme": "rm -rf vendor/loupe-theme/src && cp -R ../packages/theme/src vendor/loupe-theme/src && cp ../packages/theme/package.json vendor/loupe-theme/package.json",
     "storybook": "storybook dev -p 7007"
   },
   "dependencies": {
