@@ -8,6 +8,7 @@
 export * from "./identity";
 export * from "./catalog";
 export * from "./market";
+export * from "./analytics";
 export * from "./grading";
 export * from "./scan";
 export * from "./collection";
