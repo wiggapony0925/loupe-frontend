@@ -78,6 +78,8 @@ import {
   CardMarketSignals,
   CardQuickStats,
 } from "@/presentation/features/cardDetail/CardInsights";
+import { CardOwnershipSection } from "@/presentation/features/cardDetail/CardOwnershipSection";
+import { CardAnalyticsSection } from "@/presentation/features/cardDetail/CardAnalyticsSection";
 import {
   CardActiveAlerts,
   RelatedCardsRail,
@@ -660,9 +662,18 @@ export default function CardDetailScreen() {
                 marketAmount={verifiedTopAmount ?? snapshot?.summary.raw?.amount ?? null}
               />
 
+              {/* 4d. The user's own copies — per-holding grade/acquisition/P-L
+                  + rolled-up totals (server-composed; renders nothing for
+                  guests/non-owners). */}
+              <CardOwnershipSection cardId={cardId} />
+
               {/* 5. Quick-stats row (spread, volatility, liquidity,
                   last-sale freshness). */}
               {hasRealHistory ? <CardQuickStats snapshot={snapshot} cardId={cardId} /> : null}
+
+              {/* 5b. Derived market analytics — market cap, momentum, volatility,
+                  grade premium, ATH/ATL (server-composed; hidden until priced). */}
+              <CardAnalyticsSection cardId={cardId} />
 
               {/* Active alerts the user has on this card. */}
               <CardActiveAlerts cardId={cardId} />
