@@ -48,6 +48,8 @@ export const queryKeys = {
       maxPrice: number | null = null,
     ) => ["cards", "trending", tcg, limit, sort, maxPrice] as const,
     market: (id: string) => ["cards", "market", id] as const,
+    analytics: (id: string) => ["cards", "analytics", id] as const,
+    ownership: (id: string) => ["cards", "ownership", id] as const,
     listings: (id: string, limit: number) =>
       ["cards", "listings", id, limit] as const,
     nearbyListings: (

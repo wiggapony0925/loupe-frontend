@@ -92,6 +92,40 @@ export interface paths {
         patch: operations["update_application_status_v1_admin_applications__application_id__status_patch"];
         trace?: never;
     };
+    "/v1/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Paginated, filterable audit log */
+        get: operations["list_audit_v1_admin_audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/audit/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Filter dropdown values */
+        get: operations["audit_facets_v1_admin_audit_facets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/blog": {
         parameters: {
             query?: never;
@@ -127,6 +161,108 @@ export interface paths {
         head?: never;
         /** Update a blog post */
         patch: operations["update_post_v1_admin_blog__post_id__patch"];
+        trace?: never;
+    };
+    "/v1/admin/cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search the local card catalog */
+        get: operations["search_cards_v1_admin_cards_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/cards/{card_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Full card record + prices */
+        get: operations["get_card_v1_admin_cards__card_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/cards/{card_id}/price": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a manual price override (super-admin) */
+        post: operations["add_price_override_v1_admin_cards__card_id__price_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalog coverage by game */
+        get: operations["get_catalog_v1_admin_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/cloud": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cloud Run + Cloud SQL status */
+        get: operations["get_cloud_v1_admin_cloud_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/cloud/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent Cloud Run log entries (newest first) */
+        get: operations["get_logs_v1_admin_cloud_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/admin/config": {
@@ -178,6 +314,74 @@ export interface paths {
         head?: never;
         /** Update the Pro plan shape (limits + per-feature gating) */
         patch: operations["update_plan_v1_admin_config_plan_patch"];
+        trace?: never;
+    };
+    "/v1/admin/database/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Foreign-key relationship graph (nodes + edges) */
+        get: operations["get_graph_v1_admin_database_graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/database/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** All tables with column/FK counts and row estimates */
+        get: operations["list_tables_v1_admin_database_tables_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/database/tables/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Columns, indexes, and relationships for one table */
+        get: operations["get_table_v1_admin_database_tables__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/engagement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Engagement & retention */
+        get: operations["get_engagement_v1_admin_engagement_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/admin/flags": {
@@ -233,6 +437,74 @@ export interface paths {
         patch: operations["update_flag_v1_admin_flags__flag_id__patch"];
         trace?: never;
     };
+    "/v1/admin/grades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Grade-review queue */
+        get: operations["list_grades_v1_admin_grades_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** System health report */
+        get: operations["get_health_v1_admin_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/insights/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask a question of the database (read-only, super-admin) */
+        post: operations["ask_v1_admin_insights_ask_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/insights/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether natural-language queries are configured */
+        get: operations["insights_status_v1_admin_insights_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/jobs": {
         parameters: {
             query?: never;
@@ -279,6 +551,74 @@ export interface paths {
         };
         /** Portal overview metrics */
         get: operations["get_metrics_v1_admin_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/pulse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent activity across the app */
+        get: operations["get_pulse_v1_admin_pulse_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cohort retention triangle */
+        get: operations["get_retention_v1_admin_retention_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/revenue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Subscription revenue summary */
+        get: operations["get_revenue_v1_admin_revenue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/scanner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scan + identify funnel metrics */
+        get: operations["get_scanner_stats_v1_admin_scanner_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -356,6 +696,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/users/{user_id}/impersonate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Get a short-lived token to view the app as a user (super-admin) */
+        post: operations["impersonate_v1_admin_users__user_id__impersonate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/users/{user_id}/plan": {
         parameters: {
             query?: never;
@@ -373,6 +730,40 @@ export interface paths {
         patch: operations["set_plan_v1_admin_users__user_id__plan_patch"];
         trace?: never;
     };
+    "/v1/admin/users/{user_id}/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refund a user's latest charge (super-admin) */
+        post: operations["refund_latest_v1_admin_users__user_id__refund_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{user_id}/revoke-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign a user out of every device (revoke all tokens) */
+        post: operations["revoke_sessions_v1_admin_users__user_id__revoke_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/users/{user_id}/role": {
         parameters: {
             query?: never;
@@ -388,6 +779,23 @@ export interface paths {
         head?: never;
         /** Grant/revoke admin */
         patch: operations["set_role_v1_admin_users__user_id__role_patch"];
+        trace?: never;
+    };
+    "/v1/admin/users/{user_id}/subscription/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a user's Stripe subscription (super-admin) */
+        post: operations["cancel_subscription_v1_admin_users__user_id__subscription_cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/admin/users/{user_id}/unban": {
@@ -1069,6 +1477,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cards/{card_id}/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Card derived analytics (public)
+         * @description Derived market metrics for a card — market cap, momentum, volatility,
+         *     grade premium, all-time high/low, and liquidity — composed from the market
+         *     snapshot + recent comps so every client shows the same numbers.
+         */
+        get: operations["get_analytics_v1_cards__card_id__analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cards/{card_id}/canonical": {
         parameters: {
             query?: never;
@@ -1227,6 +1657,28 @@ export interface paths {
          *     client always renders a clean empty state.
          */
         get: operations["get_nearby_listings_v1_cards__card_id__nearby_listings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/{card_id}/ownership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My ownership of this card (signed-in)
+         * @description Per-user ownership context: every copy the signed-in user owns of this
+         *     card, with grade/scan data and rolled-up cost basis, holding value, and
+         *     unrealized P/L. Returns ``owned=false`` when they own none.
+         */
+        get: operations["get_ownership_v1_cards__card_id__ownership_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2345,6 +2797,88 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AcquisitionSourceEnum
+         * @description How a :class:`~app.models.grade.GradedCard` entered a user's collection.
+         * @enum {string}
+         */
+        AcquisitionSourceEnum: "scan" | "manual" | "import";
+        /**
+         * AdminCardDetail
+         * @description Full card record — catalog fields, provider refs, and the price ladder.
+         */
+        AdminCardDetail: {
+            /** Card Metadata */
+            card_metadata?: {
+                [key: string]: unknown;
+            } | null;
+            /** External Refs */
+            external_refs: components["schemas"]["ExternalRefRead"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Image Phash */
+            image_phash?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /** Name */
+            name: string;
+            /** Number */
+            number?: string | null;
+            /** Prices */
+            prices: components["schemas"]["app__schemas__card_admin__PriceSnapshotRead"][];
+            /** Rarity */
+            rarity?: string | null;
+            /**
+             * Set Id
+             * Format: uuid
+             */
+            set_id: string;
+            /** Set Name */
+            set_name?: string | null;
+            /** Tcg */
+            tcg: string;
+            /** Year */
+            year?: number | null;
+        };
+        /** AdminCardPage */
+        AdminCardPage: {
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Results */
+            results: components["schemas"]["AdminCardRow"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * AdminCardRow
+         * @description A card row in the admin explorer search results.
+         */
+        AdminCardRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Image Url */
+            image_url?: string | null;
+            /** Name */
+            name: string;
+            /** Number */
+            number?: string | null;
+            /** Rarity */
+            rarity?: string | null;
+            /** Set Name */
+            set_name?: string | null;
+            /** Tcg */
+            tcg: string;
+            /** Year */
+            year?: number | null;
+        };
+        /**
          * AdminMetrics
          * @description At-a-glance portal metrics.
          */
@@ -2444,6 +2978,11 @@ export interface components {
              */
             grades_count: number;
             /**
+             * Has Subscription
+             * @default false
+             */
+            has_subscription: boolean;
+            /**
              * Id
              * Format: uuid
              */
@@ -2465,6 +3004,11 @@ export interface components {
             plan: string;
             /** Pro Expires At */
             pro_expires_at?: string | null;
+            /**
+             * Pro Trialing
+             * @default false
+             */
+            pro_trialing: boolean;
             /**
              * Scans Count
              * @default 0
@@ -2526,6 +3070,11 @@ export interface components {
              */
             email: string;
             /**
+             * Has Subscription
+             * @default false
+             */
+            has_subscription: boolean;
+            /**
              * Id
              * Format: uuid
              */
@@ -2547,6 +3096,11 @@ export interface components {
             plan: string;
             /** Pro Expires At */
             pro_expires_at?: string | null;
+            /**
+             * Pro Trialing
+             * @default false
+             */
+            pro_trialing: boolean;
         };
         /**
          * AnnouncementRead
@@ -2693,6 +3247,94 @@ export interface components {
             job_title: string;
             status: components["schemas"]["ApplicationStatusEnum"];
         };
+        /** AskRequest */
+        AskRequest: {
+            /** Question */
+            question: string;
+        };
+        /** AskResponse */
+        AskResponse: {
+            /**
+             * Columns
+             * @default []
+             */
+            columns: string[];
+            /** Configured */
+            configured: boolean;
+            /** Error */
+            error?: string | null;
+            /** Question */
+            question: string;
+            /**
+             * Row Count
+             * @default 0
+             */
+            row_count: number;
+            /**
+             * Rows
+             * @default []
+             */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            /** Sql */
+            sql?: string | null;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+        };
+        /** AuditEntry */
+        AuditEntry: {
+            /** Action */
+            action: string;
+            /** Actor Email */
+            actor_email?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Ip Address */
+            ip_address?: string | null;
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            } | null;
+            /** Target Id */
+            target_id?: string | null;
+            /** Target Table */
+            target_table?: string | null;
+            /** User Id */
+            user_id?: string | null;
+        };
+        /**
+         * AuditFacets
+         * @description Distinct values for the viewer's filter dropdowns.
+         */
+        AuditFacets: {
+            /** Actions */
+            actions: string[];
+            /** Tables */
+            tables: string[];
+        };
+        /** AuditPage */
+        AuditPage: {
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Results */
+            results: components["schemas"]["AuditEntry"][];
+            /** Total */
+            total: number;
+        };
         /**
          * BanRequest
          * @description Ban a user with an optional reason shown in the audit trail.
@@ -2823,6 +3465,122 @@ export interface components {
             tcg?: string | null;
         };
         /**
+         * CardAnalytics
+         * @description Derived market metrics for one card (public, read-only).
+         */
+        CardAnalytics: {
+            /** All Time High Usd */
+            all_time_high_usd?: string | null;
+            /** All Time Low Usd */
+            all_time_low_usd?: string | null;
+            /** Card Id */
+            card_id: string;
+            /** Grade Premium */
+            grade_premium?: number | null;
+            /** Graded Avg Usd */
+            graded_avg_usd?: string | null;
+            /**
+             * Liquidity 30D
+             * @default 0
+             */
+            liquidity_30d: number;
+            /** Market Cap Usd */
+            market_cap_usd?: string | null;
+            /** Market Price Usd */
+            market_price_usd?: string | null;
+            /** Momentum 1Y */
+            momentum_1y?: number | null;
+            /** Momentum 30D */
+            momentum_30d?: number | null;
+            /** Momentum 7D */
+            momentum_7d?: number | null;
+            /** Momentum 90D */
+            momentum_90d?: number | null;
+            /** Pct Off Ath */
+            pct_off_ath?: number | null;
+            /**
+             * Population
+             * @default 0
+             */
+            population: number;
+            /** Volatility Pct */
+            volatility_pct?: number | null;
+        };
+        /**
+         * CardHolding
+         * @description One owned copy of a card (a `GradedCard`), with derived figures.
+         */
+        CardHolding: {
+            acquired_via?: components["schemas"]["AcquisitionSourceEnum"] | null;
+            condition?: components["schemas"]["RawConditionEnum"] | null;
+            /** Days Held */
+            days_held?: number | null;
+            /** Estimated Value Usd */
+            estimated_value_usd?: string | null;
+            /** Fingerprint Hash */
+            fingerprint_hash?: string | null;
+            /** Grade */
+            grade: string;
+            /**
+             * Graded At
+             * Format: date-time
+             */
+            graded_at: string;
+            /**
+             * Holding Id
+             * Format: uuid
+             */
+            holding_id: string;
+            house: components["schemas"]["GradeHouseEnum"];
+            /** Is Graded */
+            is_graded: boolean;
+            /** Notes */
+            notes?: string | null;
+            /** Purchase Date */
+            purchase_date?: string | null;
+            /** Purchase Price Usd */
+            purchase_price_usd?: string | null;
+            /** Scan Job Id */
+            scan_job_id?: string | null;
+            /** Subgrades */
+            subgrades?: {
+                [key: string]: unknown;
+            } | null;
+            /** Unrealized Pl Pct */
+            unrealized_pl_pct?: number | null;
+            /** Unrealized Pl Usd */
+            unrealized_pl_usd?: string | null;
+        };
+        /**
+         * CardOwnership
+         * @description Rolled-up ownership of one card for the signed-in user.
+         */
+        CardOwnership: {
+            /**
+             * Copies
+             * @default 0
+             */
+            copies: number;
+            /** Cost Basis Usd */
+            cost_basis_usd?: string | null;
+            /** Holding Value Usd */
+            holding_value_usd?: string | null;
+            /**
+             * Holdings
+             * @default []
+             */
+            holdings: components["schemas"]["CardHolding"][];
+            /**
+             * Owned
+             * @default false
+             */
+            owned: boolean;
+            /** Unrealized Pl Pct */
+            unrealized_pl_pct?: number | null;
+            /** Unrealized Pl Usd */
+            unrealized_pl_usd?: string | null;
+        };
+        /**
          * CardRead
          * @description Public representation of a card.
          */
@@ -2858,6 +3616,23 @@ export interface components {
             /** Year */
             year?: number | null;
         };
+        /** CatalogCoverage */
+        CatalogCoverage: {
+            /** Games */
+            games: components["schemas"]["GameCoverage"][];
+            /** Phash Coverage Pct */
+            phash_coverage_pct: number;
+            /** Price By Source */
+            price_by_source: {
+                [key: string]: number;
+            };
+            /** Price Snapshots */
+            price_snapshots: number;
+            /** Total Cards */
+            total_cards: number;
+            /** Total Sets */
+            total_sets: number;
+        };
         /**
          * ChangePasswordRequest
          * @description Body for ``POST /v1/auth/change-password`` (signed-in users).
@@ -2878,6 +3653,75 @@ export interface components {
              * @default monthly
              */
             interval: string;
+        };
+        /** CloudLogEntry */
+        CloudLogEntry: {
+            /** Message */
+            message: string;
+            /** Service */
+            service?: string | null;
+            /** Severity */
+            severity: string;
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
+        };
+        /** CloudService */
+        CloudService: {
+            /** Commit Sha */
+            commit_sha?: string | null;
+            /** Image */
+            image?: string | null;
+            /** Name */
+            name: string;
+            /** Region */
+            region?: string | null;
+            /** Revision */
+            revision?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "deploying" | "error" | "unknown";
+            /** Updated At */
+            updated_at?: string | null;
+            /** Url */
+            url?: string | null;
+        };
+        /** CloudSqlInstance */
+        CloudSqlInstance: {
+            /** Name */
+            name: string;
+            /** Region */
+            region?: string | null;
+            /** State */
+            state: string;
+        };
+        /** CloudStatus */
+        CloudStatus: {
+            /** Configured */
+            configured: boolean;
+            /** Detail */
+            detail: string;
+            /** Project Id */
+            project_id?: string | null;
+            /** Region */
+            region?: string | null;
+            /** Services */
+            services: components["schemas"]["CloudService"][];
+            /** Sql Instances */
+            sql_instances: components["schemas"]["CloudSqlInstance"][];
+        };
+        /** CohortRow */
+        CohortRow: {
+            /** Cohort */
+            cohort: string;
+            /** Retention */
+            retention: number[];
+            /** Size */
+            size: number;
         };
         /**
          * CollectionCreate
@@ -2955,6 +3799,28 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** ColumnInfo */
+        ColumnInfo: {
+            /** Foreign Key */
+            foreign_key?: string | null;
+            /** Name */
+            name: string;
+            /** Nullable */
+            nullable: boolean;
+            /** Primary Key */
+            primary_key: boolean;
+            /** Type */
+            type: string;
+        };
+        /** DatabaseOverview */
+        DatabaseOverview: {
+            /** Dialect */
+            dialect: string;
+            /** Table Count */
+            table_count: number;
+            /** Tables */
+            tables: components["schemas"]["TableSummary"][];
+        };
         /**
          * DevLoginRequest
          * @description Body for ``POST /v1/auth/dev-login`` (dev/test only, no password).
@@ -3002,6 +3868,29 @@ export interface components {
          * @enum {string}
          */
         EmploymentTypeEnum: "full_time" | "part_time" | "contract" | "internship";
+        /** EngagementSummary */
+        EngagementSummary: {
+            /** Activated Users */
+            activated_users: number;
+            /** Activation Rate */
+            activation_rate: number;
+            /** Active 30D */
+            active_30d: number;
+            /** Active 7D */
+            active_7d: number;
+            /** Active 90D */
+            active_90d: number;
+            /** Funnel */
+            funnel: components["schemas"]["FunnelStep"][];
+            /** New Users By Week */
+            new_users_by_week: components["schemas"]["WeekPoint"][];
+            /** Pro Rate */
+            pro_rate: number;
+            /** Pro Users */
+            pro_users: number;
+            /** Total Users */
+            total_users: number;
+        };
         /**
          * EntitlementsRead
          * @description Everything the client needs to render gates, badges, and the paywall.
@@ -3026,6 +3915,15 @@ export interface components {
              * @default false
              */
             trialing: boolean;
+        };
+        /** ExternalRefRead */
+        ExternalRefRead: {
+            /** Confidence */
+            confidence?: number | null;
+            /** External Id */
+            external_id: string;
+            /** Source */
+            source: string;
         };
         /** FeatureFlagCreate */
         FeatureFlagCreate: {
@@ -3086,6 +3984,39 @@ export interface components {
             /** Label */
             label?: string | null;
         };
+        /** ForeignKeyInfo */
+        ForeignKeyInfo: {
+            /** Columns */
+            columns: string[];
+            /** References Columns */
+            references_columns: string[];
+            /** References Table */
+            references_table: string;
+        };
+        /** FunnelStep */
+        FunnelStep: {
+            /** Count */
+            count: number;
+            /** Label */
+            label: string;
+        };
+        /** GameCoverage */
+        GameCoverage: {
+            /** Backed */
+            backed: boolean;
+            /** Cards */
+            cards: number;
+            /** Label */
+            label: string;
+            /** Phash Cards */
+            phash_cards: number;
+            /** Phash Pct */
+            phash_pct: number;
+            /** Sets */
+            sets: number;
+            /** Tcg */
+            tcg: string;
+        };
         /**
          * GoogleSignInRequest
          * @description Body for ``POST /v1/auth/google``.
@@ -3105,6 +4036,54 @@ export interface components {
          * @enum {string}
          */
         GradeHouseEnum: "psa" | "cgc" | "bgs" | "sgc" | "tag" | "loupe";
+        /** GradeReviewPage */
+        GradeReviewPage: {
+            /** Houses */
+            houses: string[];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Results */
+            results: components["schemas"]["GradeReviewRow"][];
+            /** Total */
+            total: number;
+        };
+        /** GradeReviewRow */
+        GradeReviewRow: {
+            /** Acquired Via */
+            acquired_via?: string | null;
+            /** Card Image Url */
+            card_image_url?: string | null;
+            /** Card Name */
+            card_name?: string | null;
+            /** Condition */
+            condition?: string | null;
+            /** Estimated Value Usd */
+            estimated_value_usd?: number | null;
+            /** Grade */
+            grade: number;
+            /**
+             * Graded At
+             * Format: date-time
+             */
+            graded_at: string;
+            /** House */
+            house: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Set Name */
+            set_name?: string | null;
+            /** Subgrades */
+            subgrades?: {
+                [key: string]: unknown;
+            } | null;
+            /** User Email */
+            user_email?: string | null;
+        };
         /**
          * GradedCardCreate
          * @description Body for manually creating a graded card (admin / import flows).
@@ -3251,6 +4230,43 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HealthCheck
+         * @description One probe in the health report (DB, migrations, Redis, a provider, …).
+         */
+        HealthCheck: {
+            /** Category */
+            category: string;
+            /** Detail */
+            detail: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "warn" | "down" | "unconfigured";
+        };
+        /**
+         * HealthReport
+         * @description Aggregate health — the worst check sets the headline status.
+         */
+        HealthReport: {
+            /** Checks */
+            checks: components["schemas"]["HealthCheck"][];
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "warn" | "down";
         };
         /**
          * IdentifyByTextRequest
@@ -3429,6 +4445,30 @@ export interface components {
             primary_source: string;
             /** Tcg Inferred */
             tcg_inferred: string;
+        };
+        /**
+         * ImpersonateResult
+         * @description A short-lived access token for viewing the app as another user.
+         */
+        ImpersonateResult: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Expires In */
+            expires_in: number;
+            /** Token */
+            token: string;
+        };
+        /** IndexInfo */
+        IndexInfo: {
+            /** Columns */
+            columns: string[];
+            /** Name */
+            name: string;
+            /** Unique */
+            unique: boolean;
         };
         /**
          * JobApplicationCreate
@@ -3756,7 +4796,7 @@ export interface components {
              * Items
              * @description Page of items.
              */
-            items?: components["schemas"]["PriceSnapshotRead"][];
+            items?: components["schemas"]["app__schemas__price__PriceSnapshotRead"][];
             /**
              * Page
              * @description 1-based page index.
@@ -3938,33 +4978,18 @@ export interface components {
             user_id: string;
         };
         /**
-         * PriceSnapshotRead
-         * @description Public representation of a single price observation.
+         * PriceOverrideRequest
+         * @description Manually record a price point (stored as a `manual`-source snapshot).
          */
-        PriceSnapshotRead: {
-            /**
-             * Card Id
-             * Format: uuid
-             */
-            card_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
+        PriceOverrideRequest: {
             /** Grade */
-            grade: string;
+            grade: number;
+            /** @default loupe */
             house: components["schemas"]["GradeHouseEnum"];
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
             /** Price Usd */
-            price_usd: string;
+            price_usd: number;
             /** Sale Date */
             sale_date?: string | null;
-            source: components["schemas"]["PriceSourceEnum"];
         };
         /**
          * PriceSourceEnum
@@ -3972,6 +4997,34 @@ export interface components {
          * @enum {string}
          */
         PriceSourceEnum: "ebay" | "tcgplayer" | "pricecharting" | "sci" | "manual";
+        /** PulseEvent */
+        PulseEvent: {
+            /** Actor */
+            actor?: string | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Detail */
+            detail?: string | null;
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "signup" | "scan" | "acquisition" | "admin";
+            /** Value Usd */
+            value_usd?: number | null;
+        };
+        /** PulseFeed */
+        PulseFeed: {
+            /** Events */
+            events: components["schemas"]["PulseEvent"][];
+        };
         /**
          * RawConditionEnum
          * @description PSA-style condition grades for RAW (ungraded) cards.
@@ -4004,6 +5057,22 @@ export interface components {
         RefreshRequest: {
             /** Refresh Token */
             refresh_token: string;
+        };
+        /**
+         * RefundResult
+         * @description The outcome of refunding a user's latest charge.
+         */
+        RefundResult: {
+            /** Amount Usd */
+            amount_usd: number;
+            /** Charge Id */
+            charge_id: string;
+            /** Currency */
+            currency: string;
+            /** Refund Id */
+            refund_id: string;
+            /** Status */
+            status: string;
         };
         /**
          * ReportDownloadResponse
@@ -4122,6 +5191,59 @@ export interface components {
              * @description Existing local Card UUID.
              */
             uuid?: string | null;
+        };
+        /** RetentionReport */
+        RetentionReport: {
+            /** Cohorts */
+            cohorts: components["schemas"]["CohortRow"][];
+            /** Weeks */
+            weeks: number;
+        };
+        /**
+         * RevenueMonthPoint
+         * @description New Pro members that started in a given month (YYYY-MM).
+         */
+        RevenueMonthPoint: {
+            /** Month */
+            month: string;
+            /** New Pro */
+            new_pro: number;
+        };
+        /** RevenueSummary */
+        RevenueSummary: {
+            /** Billing Configured */
+            billing_configured: boolean;
+            /** Churn Rate 30D */
+            churn_rate_30d: number;
+            /** Churned 30D */
+            churned_30d: number;
+            /** Comped */
+            comped: number;
+            /**
+             * Currency
+             * @default USD
+             */
+            currency: string;
+            /** Est Arr Usd */
+            est_arr_usd: number;
+            /** Est Mrr Usd */
+            est_mrr_usd: number;
+            /** Free */
+            free: number;
+            /** New Pro 30D */
+            new_pro_30d: number;
+            /** Paying */
+            paying: number;
+            /** Price Monthly Usd */
+            price_monthly_usd: number;
+            /** Price Yearly Usd */
+            price_yearly_usd: number;
+            /** Pro By Month */
+            pro_by_month: components["schemas"]["RevenueMonthPoint"][];
+            /** Total Users */
+            total_users: number;
+            /** Trialing */
+            trialing: number;
         };
         /**
          * ScanJobCompleteRequest
@@ -4254,6 +5376,47 @@ export interface components {
             name?: string | null;
             transport: components["schemas"]["ScannerTransportEnum"];
         };
+        /** ScannerStats */
+        ScannerStats: {
+            /** By Provider */
+            by_provider: {
+                [key: string]: number;
+            };
+            /** By Source */
+            by_source: {
+                [key: string]: number;
+            };
+            /** By Tcg */
+            by_tcg: {
+                [key: string]: number;
+            };
+            /** Correct Feedback */
+            correct_feedback: number;
+            /** Fast Path Rate */
+            fast_path_rate: number;
+            /** Latency P50 Ms */
+            latency_p50_ms: number;
+            /** Latency P95 Ms */
+            latency_p95_ms: number;
+            /** Mean Confidence */
+            mean_confidence: number;
+            /** Scans By Status */
+            scans_by_status: {
+                [key: string]: number;
+            };
+            /** Scans Total */
+            scans_total: number;
+            /** Top1 Accuracy */
+            top1_accuracy: number;
+            /** Total Cost Usd */
+            total_cost_usd: number;
+            /** Total Feedback */
+            total_feedback: number;
+            /** Total Identifications */
+            total_identifications: number;
+            /** Window Days */
+            window_days: number;
+        };
         /**
          * ScannerTransportEnum
          * @description Transport protocol used by a scanner device.
@@ -4272,6 +5435,29 @@ export interface components {
             /** Name */
             name?: string | null;
             transport?: components["schemas"]["ScannerTransportEnum"] | null;
+        };
+        /** SchemaGraph */
+        SchemaGraph: {
+            /** Edges */
+            edges: components["schemas"]["SchemaGraphEdge"][];
+            /** Nodes */
+            nodes: components["schemas"]["SchemaGraphNode"][];
+        };
+        /** SchemaGraphEdge */
+        SchemaGraphEdge: {
+            /** Label */
+            label: string;
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+        };
+        /** SchemaGraphNode */
+        SchemaGraphNode: {
+            /** Columns */
+            columns: number;
+            /** Table */
+            table: string;
         };
         /**
          * SealedHoldingCreate
@@ -4470,6 +5656,43 @@ export interface components {
             plan: components["schemas"]["PlanConfigRead"];
             /** Updated At */
             updated_at?: string | null;
+        };
+        /**
+         * SubscriptionCancelRequest
+         * @description Cancel a user's subscription; defaults to end-of-period (keeps Pro).
+         */
+        SubscriptionCancelRequest: {
+            /**
+             * Immediately
+             * @default false
+             */
+            immediately: boolean;
+        };
+        /** TableDetail */
+        TableDetail: {
+            /** Columns */
+            columns: components["schemas"]["ColumnInfo"][];
+            /** Foreign Keys */
+            foreign_keys: components["schemas"]["ForeignKeyInfo"][];
+            /** Indexes */
+            indexes: components["schemas"]["IndexInfo"][];
+            /** Name */
+            name: string;
+            /** Referenced By */
+            referenced_by: string[];
+            /** Row Estimate */
+            row_estimate: number;
+        };
+        /** TableSummary */
+        TableSummary: {
+            /** Columns */
+            columns: number;
+            /** Foreign Keys */
+            foreign_keys: number;
+            /** Name */
+            name: string;
+            /** Row Estimate */
+            row_estimate: number;
         };
         /**
          * TcgEnum
@@ -4794,6 +6017,65 @@ export interface components {
              */
             user_id: string;
         };
+        /** WeekPoint */
+        WeekPoint: {
+            /** New Users */
+            new_users: number;
+            /** Week */
+            week: string;
+        };
+        /** PriceSnapshotRead */
+        app__schemas__card_admin__PriceSnapshotRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Grade */
+            grade: number;
+            /** House */
+            house: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Price Usd */
+            price_usd: number;
+            /** Sale Date */
+            sale_date?: string | null;
+            /** Source */
+            source: string;
+        };
+        /**
+         * PriceSnapshotRead
+         * @description Public representation of a single price observation.
+         */
+        app__schemas__price__PriceSnapshotRead: {
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Grade */
+            grade: string;
+            house: components["schemas"]["GradeHouseEnum"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Price Usd */
+            price_usd: string;
+            /** Sale Date */
+            sale_date?: string | null;
+            source: components["schemas"]["PriceSourceEnum"];
+        };
     };
     responses: never;
     parameters: never;
@@ -4941,6 +6223,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_audit_v1_admin_audit_get: {
+        parameters: {
+            query?: {
+                action?: string | null;
+                target_table?: string | null;
+                actor?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    audit_facets_v1_admin_audit_facets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditFacets"];
                 };
             };
         };
@@ -5093,6 +6430,177 @@ export interface operations {
             };
         };
     };
+    search_cards_v1_admin_cards_get: {
+        parameters: {
+            query?: {
+                /** @description Name, number, or set. */
+                q?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCardPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_card_v1_admin_cards__card_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCardDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_price_override_v1_admin_cards__card_id__price_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__card_admin__PriceSnapshotRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_catalog_v1_admin_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogCoverage"];
+                };
+            };
+        };
+    };
+    get_cloud_v1_admin_cloud_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudStatus"];
+                };
+            };
+        };
+    };
+    get_logs_v1_admin_cloud_logs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudLogEntry"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_config_v1_admin_config_get: {
         parameters: {
             query?: never;
@@ -5175,6 +6683,97 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_graph_v1_admin_database_graph_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchemaGraph"];
+                };
+            };
+        };
+    };
+    list_tables_v1_admin_database_tables_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatabaseOverview"];
+                };
+            };
+        };
+    };
+    get_table_v1_admin_database_tables__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_engagement_v1_admin_engagement_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EngagementSummary"];
                 };
             };
         };
@@ -5327,6 +6926,115 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_grades_v1_admin_grades_get: {
+        parameters: {
+            query?: {
+                /** @description A grading house, or 'all'. */
+                house?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GradeReviewPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_health_v1_admin_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthReport"];
+                };
+            };
+        };
+    };
+    ask_v1_admin_insights_ask_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    insights_status_v1_admin_insights_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
                 };
             };
         };
@@ -5499,6 +7207,108 @@ export interface operations {
             };
         };
     };
+    get_pulse_v1_admin_pulse_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PulseFeed"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_retention_v1_admin_retention_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionReport"];
+                };
+            };
+        };
+    };
+    get_revenue_v1_admin_revenue_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueSummary"];
+                };
+            };
+        };
+    };
+    get_scanner_stats_v1_admin_scanner_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScannerStats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_users_v1_admin_users_get: {
         parameters: {
             query?: {
@@ -5648,6 +7458,37 @@ export interface operations {
             };
         };
     };
+    impersonate_v1_admin_users__user_id__impersonate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpersonateResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     set_plan_v1_admin_users__user_id__plan_patch: {
         parameters: {
             query?: never;
@@ -5683,6 +7524,68 @@ export interface operations {
             };
         };
     };
+    refund_latest_v1_admin_users__user_id__refund_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_sessions_v1_admin_users__user_id__revoke_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     set_role_v1_admin_users__user_id__role_patch: {
         parameters: {
             query?: never;
@@ -5705,6 +7608,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminUserRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_subscription_v1_admin_users__user_id__subscription_cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionCancelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserDetail"];
                 };
             };
             /** @description Validation Error */
@@ -6804,6 +8742,37 @@ export interface operations {
             };
         };
     };
+    get_analytics_v1_cards__card_id__analytics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardAnalytics"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_canonical_v1_cards__card_id__canonical_get: {
         parameters: {
             query?: never;
@@ -7038,6 +9007,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ownership_v1_cards__card_id__ownership_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardOwnership"];
                 };
             };
             /** @description Validation Error */

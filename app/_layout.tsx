@@ -14,6 +14,7 @@ import { ErrorBoundary } from "@/presentation/components/ErrorBoundary";
 import { MinVersionGate } from "@/presentation/components/MinVersionGate";
 import { ThemeProvider, useTheme } from "@/presentation/theme";
 import { useRecentsSync } from "@/application/hooks/useRecentsSync";
+import { usePushNotifications } from "@/application/hooks/usePushNotifications";
 import { initSentry } from "@/infrastructure/observability/sentry";
 
 // Fire Sentry init once at module evaluation. The helper is a graceful
@@ -78,6 +79,7 @@ function RootStack() {
   const segments = useSegments();
   // Cross-device sync of recent searches (+ preserve recently-viewed).
   useRecentsSync();
+  usePushNotifications();
 
   useEffect(() => {
     if (isLoading) return;

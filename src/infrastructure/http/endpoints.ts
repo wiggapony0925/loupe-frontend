@@ -30,6 +30,8 @@ export const ENDPOINTS = {
     settings: `${V1}/me/settings`,
     grades: `${V1}/grades`,
     recents: `${V1}/me/recents`,
+    pushTokens: `${V1}/me/push-tokens`,
+    pushToken: (token: string) => `${V1}/me/push-tokens/${encodeURIComponent(token)}`,
   },
   scanners: {
     list: `${V1}/scanners`,
@@ -47,6 +49,8 @@ export const ENDPOINTS = {
     item: (id: string) => `${V1}/cards/${id}`,
     prices: (id: string) => `${V1}/cards/${id}/prices`,
     market: (id: string) => `${V1}/cards/${id}/market`,
+    analytics: (id: string) => `${V1}/cards/${id}/analytics`,
+    ownership: (id: string) => `${V1}/cards/${id}/ownership`,
     listings: (id: string) => `${V1}/cards/${id}/listings`,
     nearbyListings: (id: string) => `${V1}/cards/${id}/nearby-listings`,
     comps: (id: string) => `${V1}/cards/${id}/comps`,

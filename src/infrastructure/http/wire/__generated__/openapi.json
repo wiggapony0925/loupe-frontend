@@ -1,6 +1,252 @@
 {
   "components": {
     "schemas": {
+      "AcquisitionSourceEnum": {
+        "description": "How a :class:`~app.models.grade.GradedCard` entered a user's collection.",
+        "enum": [
+          "scan",
+          "manual",
+          "import"
+        ],
+        "title": "AcquisitionSourceEnum",
+        "type": "string"
+      },
+      "AdminCardDetail": {
+        "description": "Full card record \u2014 catalog fields, provider refs, and the price ladder.",
+        "properties": {
+          "card_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Metadata"
+          },
+          "external_refs": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalRefRead"
+            },
+            "title": "External Refs",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image_phash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Phash"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "prices": {
+            "items": {
+              "$ref": "#/components/schemas/app__schemas__card_admin__PriceSnapshotRead"
+            },
+            "title": "Prices",
+            "type": "array"
+          },
+          "rarity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity"
+          },
+          "set_id": {
+            "format": "uuid",
+            "title": "Set Id",
+            "type": "string"
+          },
+          "set_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Name"
+          },
+          "tcg": {
+            "title": "Tcg",
+            "type": "string"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "tcg",
+          "set_id",
+          "external_refs",
+          "prices"
+        ],
+        "title": "AdminCardDetail",
+        "type": "object"
+      },
+      "AdminCardPage": {
+        "properties": {
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AdminCardRow"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "AdminCardPage",
+        "type": "object"
+      },
+      "AdminCardRow": {
+        "description": "A card row in the admin explorer search results.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "rarity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity"
+          },
+          "set_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Name"
+          },
+          "tcg": {
+            "title": "Tcg",
+            "type": "string"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "tcg"
+        ],
+        "title": "AdminCardRow",
+        "type": "object"
+      },
       "AdminMetrics": {
         "description": "At-a-glance portal metrics.",
         "properties": {
@@ -185,6 +431,11 @@
             "title": "Grades Count",
             "type": "integer"
           },
+          "has_subscription": {
+            "default": false,
+            "title": "Has Subscription",
+            "type": "boolean"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -216,6 +467,11 @@
               }
             ],
             "title": "Pro Expires At"
+          },
+          "pro_trialing": {
+            "default": false,
+            "title": "Pro Trialing",
+            "type": "boolean"
           },
           "scans_count": {
             "default": 0,
@@ -348,6 +604,11 @@
             "title": "Email",
             "type": "string"
           },
+          "has_subscription": {
+            "default": false,
+            "title": "Has Subscription",
+            "type": "boolean"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -379,6 +640,11 @@
               }
             ],
             "title": "Pro Expires At"
+          },
+          "pro_trialing": {
+            "default": false,
+            "title": "Pro Trialing",
+            "type": "boolean"
           }
         },
         "required": [
@@ -693,6 +959,237 @@
           "created_at"
         ],
         "title": "ApplicationTrackRead",
+        "type": "object"
+      },
+      "AskRequest": {
+        "properties": {
+          "question": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "AskRequest",
+        "type": "object"
+      },
+      "AskResponse": {
+        "properties": {
+          "columns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "row_count": {
+            "default": 0,
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "rows": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "sql": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sql"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "configured",
+          "question"
+        ],
+        "title": "AskResponse",
+        "type": "object"
+      },
+      "AuditEntry": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Email"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_table": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Table"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "created_at"
+        ],
+        "title": "AuditEntry",
+        "type": "object"
+      },
+      "AuditFacets": {
+        "description": "Distinct values for the viewer's filter dropdowns.",
+        "properties": {
+          "actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "tables": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "actions",
+          "tables"
+        ],
+        "title": "AuditFacets",
+        "type": "object"
+      },
+      "AuditPage": {
+        "properties": {
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntry"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "AuditPage",
         "type": "object"
       },
       "BanRequest": {
@@ -1029,6 +1526,414 @@
         "title": "Body_identify_card_v1_cards_identify_post",
         "type": "object"
       },
+      "CardAnalytics": {
+        "additionalProperties": false,
+        "description": "Derived market metrics for one card (public, read-only).",
+        "properties": {
+          "all_time_high_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "All Time High Usd"
+          },
+          "all_time_low_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "All Time Low Usd"
+          },
+          "card_id": {
+            "title": "Card Id",
+            "type": "string"
+          },
+          "grade_premium": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Premium"
+          },
+          "graded_avg_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graded Avg Usd"
+          },
+          "liquidity_30d": {
+            "default": 0,
+            "title": "Liquidity 30D",
+            "type": "integer"
+          },
+          "market_cap_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Cap Usd"
+          },
+          "market_price_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Price Usd"
+          },
+          "momentum_1y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Momentum 1Y"
+          },
+          "momentum_30d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Momentum 30D"
+          },
+          "momentum_7d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Momentum 7D"
+          },
+          "momentum_90d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Momentum 90D"
+          },
+          "pct_off_ath": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Off Ath"
+          },
+          "population": {
+            "default": 0,
+            "title": "Population",
+            "type": "integer"
+          },
+          "volatility_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volatility Pct"
+          }
+        },
+        "required": [
+          "card_id"
+        ],
+        "title": "CardAnalytics",
+        "type": "object"
+      },
+      "CardHolding": {
+        "additionalProperties": false,
+        "description": "One owned copy of a card (a `GradedCard`), with derived figures.",
+        "properties": {
+          "acquired_via": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AcquisitionSourceEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RawConditionEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "days_held": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Held"
+          },
+          "estimated_value_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Value Usd"
+          },
+          "fingerprint_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fingerprint Hash"
+          },
+          "grade": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Grade",
+            "type": "string"
+          },
+          "graded_at": {
+            "format": "date-time",
+            "title": "Graded At",
+            "type": "string"
+          },
+          "holding_id": {
+            "format": "uuid",
+            "title": "Holding Id",
+            "type": "string"
+          },
+          "house": {
+            "$ref": "#/components/schemas/GradeHouseEnum"
+          },
+          "is_graded": {
+            "title": "Is Graded",
+            "type": "boolean"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "purchase_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Date"
+          },
+          "purchase_price_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Price Usd"
+          },
+          "scan_job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Job Id"
+          },
+          "subgrades": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subgrades"
+          },
+          "unrealized_pl_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrealized Pl Pct"
+          },
+          "unrealized_pl_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrealized Pl Usd"
+          }
+        },
+        "required": [
+          "holding_id",
+          "grade",
+          "house",
+          "is_graded",
+          "graded_at"
+        ],
+        "title": "CardHolding",
+        "type": "object"
+      },
+      "CardOwnership": {
+        "additionalProperties": false,
+        "description": "Rolled-up ownership of one card for the signed-in user.",
+        "properties": {
+          "copies": {
+            "default": 0,
+            "title": "Copies",
+            "type": "integer"
+          },
+          "cost_basis_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Basis Usd"
+          },
+          "holding_value_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holding Value Usd"
+          },
+          "holdings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CardHolding"
+            },
+            "title": "Holdings",
+            "type": "array"
+          },
+          "owned": {
+            "default": false,
+            "title": "Owned",
+            "type": "boolean"
+          },
+          "unrealized_pl_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrealized Pl Pct"
+          },
+          "unrealized_pl_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrealized Pl Usd"
+          }
+        },
+        "title": "CardOwnership",
+        "type": "object"
+      },
       "CardRead": {
         "description": "Public representation of a card.",
         "properties": {
@@ -1121,6 +2026,50 @@
         "title": "CardRead",
         "type": "object"
       },
+      "CatalogCoverage": {
+        "properties": {
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/GameCoverage"
+            },
+            "title": "Games",
+            "type": "array"
+          },
+          "phash_coverage_pct": {
+            "title": "Phash Coverage Pct",
+            "type": "number"
+          },
+          "price_by_source": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Price By Source",
+            "type": "object"
+          },
+          "price_snapshots": {
+            "title": "Price Snapshots",
+            "type": "integer"
+          },
+          "total_cards": {
+            "title": "Total Cards",
+            "type": "integer"
+          },
+          "total_sets": {
+            "title": "Total Sets",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_cards",
+          "total_sets",
+          "phash_coverage_pct",
+          "price_snapshots",
+          "price_by_source",
+          "games"
+        ],
+        "title": "CatalogCoverage",
+        "type": "object"
+      },
       "ChangePasswordRequest": {
         "description": "Body for ``POST /v1/auth/change-password`` (signed-in users).",
         "properties": {
@@ -1155,6 +2104,243 @@
           }
         },
         "title": "CheckoutRequest",
+        "type": "object"
+      },
+      "CloudLogEntry": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp",
+          "severity",
+          "message"
+        ],
+        "title": "CloudLogEntry",
+        "type": "object"
+      },
+      "CloudService": {
+        "properties": {
+          "commit_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Sha"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "deploying",
+              "error",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "name",
+          "status"
+        ],
+        "title": "CloudService",
+        "type": "object"
+      },
+      "CloudSqlInstance": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "state"
+        ],
+        "title": "CloudSqlInstance",
+        "type": "object"
+      },
+      "CloudStatus": {
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/CloudService"
+            },
+            "title": "Services",
+            "type": "array"
+          },
+          "sql_instances": {
+            "items": {
+              "$ref": "#/components/schemas/CloudSqlInstance"
+            },
+            "title": "Sql Instances",
+            "type": "array"
+          }
+        },
+        "required": [
+          "configured",
+          "detail",
+          "services",
+          "sql_instances"
+        ],
+        "title": "CloudStatus",
+        "type": "object"
+      },
+      "CohortRow": {
+        "properties": {
+          "cohort": {
+            "title": "Cohort",
+            "type": "string"
+          },
+          "retention": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Retention",
+            "type": "array"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cohort",
+          "size",
+          "retention"
+        ],
+        "title": "CohortRow",
         "type": "object"
       },
       "CollectionCreate": {
@@ -1337,6 +2523,71 @@
         "title": "CollectionUpdate",
         "type": "object"
       },
+      "ColumnInfo": {
+        "properties": {
+          "foreign_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foreign Key"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nullable": {
+            "title": "Nullable",
+            "type": "boolean"
+          },
+          "primary_key": {
+            "title": "Primary Key",
+            "type": "boolean"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "nullable",
+          "primary_key"
+        ],
+        "title": "ColumnInfo",
+        "type": "object"
+      },
+      "DatabaseOverview": {
+        "properties": {
+          "dialect": {
+            "title": "Dialect",
+            "type": "string"
+          },
+          "table_count": {
+            "title": "Table Count",
+            "type": "integer"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/TableSummary"
+            },
+            "title": "Tables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dialect",
+          "table_count",
+          "tables"
+        ],
+        "title": "DatabaseOverview",
+        "type": "object"
+      },
       "DevLoginRequest": {
         "description": "Body for ``POST /v1/auth/dev-login`` (dev/test only, no password).",
         "properties": {
@@ -1431,6 +2682,70 @@
         "title": "EmploymentTypeEnum",
         "type": "string"
       },
+      "EngagementSummary": {
+        "properties": {
+          "activated_users": {
+            "title": "Activated Users",
+            "type": "integer"
+          },
+          "activation_rate": {
+            "title": "Activation Rate",
+            "type": "number"
+          },
+          "active_30d": {
+            "title": "Active 30D",
+            "type": "integer"
+          },
+          "active_7d": {
+            "title": "Active 7D",
+            "type": "integer"
+          },
+          "active_90d": {
+            "title": "Active 90D",
+            "type": "integer"
+          },
+          "funnel": {
+            "items": {
+              "$ref": "#/components/schemas/FunnelStep"
+            },
+            "title": "Funnel",
+            "type": "array"
+          },
+          "new_users_by_week": {
+            "items": {
+              "$ref": "#/components/schemas/WeekPoint"
+            },
+            "title": "New Users By Week",
+            "type": "array"
+          },
+          "pro_rate": {
+            "title": "Pro Rate",
+            "type": "number"
+          },
+          "pro_users": {
+            "title": "Pro Users",
+            "type": "integer"
+          },
+          "total_users": {
+            "title": "Total Users",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_users",
+          "active_7d",
+          "active_30d",
+          "active_90d",
+          "activated_users",
+          "activation_rate",
+          "pro_users",
+          "pro_rate",
+          "new_users_by_week",
+          "funnel"
+        ],
+        "title": "EngagementSummary",
+        "type": "object"
+      },
       "EntitlementsRead": {
         "description": "Everything the client needs to render gates, badges, and the paywall.",
         "properties": {
@@ -1495,6 +2810,35 @@
           "features"
         ],
         "title": "EntitlementsRead",
+        "type": "object"
+      },
+      "ExternalRefRead": {
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "external_id"
+        ],
+        "title": "ExternalRefRead",
         "type": "object"
       },
       "FeatureFlagCreate": {
@@ -1669,6 +3013,96 @@
         "title": "FeatureFlagUpsert",
         "type": "object"
       },
+      "ForeignKeyInfo": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "references_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "References Columns",
+            "type": "array"
+          },
+          "references_table": {
+            "title": "References Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "columns",
+          "references_table",
+          "references_columns"
+        ],
+        "title": "ForeignKeyInfo",
+        "type": "object"
+      },
+      "FunnelStep": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "count"
+        ],
+        "title": "FunnelStep",
+        "type": "object"
+      },
+      "GameCoverage": {
+        "properties": {
+          "backed": {
+            "title": "Backed",
+            "type": "boolean"
+          },
+          "cards": {
+            "title": "Cards",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "phash_cards": {
+            "title": "Phash Cards",
+            "type": "integer"
+          },
+          "phash_pct": {
+            "title": "Phash Pct",
+            "type": "number"
+          },
+          "sets": {
+            "title": "Sets",
+            "type": "integer"
+          },
+          "tcg": {
+            "title": "Tcg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tcg",
+          "label",
+          "sets",
+          "cards",
+          "phash_cards",
+          "phash_pct",
+          "backed"
+        ],
+        "title": "GameCoverage",
+        "type": "object"
+      },
       "GoogleSignInRequest": {
         "description": "Body for ``POST /v1/auth/google``.",
         "properties": {
@@ -1709,6 +3143,164 @@
         ],
         "title": "GradeHouseEnum",
         "type": "string"
+      },
+      "GradeReviewPage": {
+        "properties": {
+          "houses": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Houses",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/GradeReviewRow"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "total",
+          "page",
+          "page_size",
+          "houses"
+        ],
+        "title": "GradeReviewPage",
+        "type": "object"
+      },
+      "GradeReviewRow": {
+        "properties": {
+          "acquired_via": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acquired Via"
+          },
+          "card_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Image Url"
+          },
+          "card_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Name"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "estimated_value_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Value Usd"
+          },
+          "grade": {
+            "title": "Grade",
+            "type": "number"
+          },
+          "graded_at": {
+            "format": "date-time",
+            "title": "Graded At",
+            "type": "string"
+          },
+          "house": {
+            "title": "House",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "set_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Name"
+          },
+          "subgrades": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subgrades"
+          },
+          "user_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Email"
+          }
+        },
+        "required": [
+          "id",
+          "house",
+          "grade",
+          "graded_at"
+        ],
+        "title": "GradeReviewRow",
+        "type": "object"
       },
       "GradedCardCreate": {
         "description": "Body for manually creating a graded card (admin / import flows).\n\nEither ``card_id`` (an existing local UUID) or ``upstream_id`` (a\ncomposite ``<source>:<external_id>`` from a catalog hit / scan /\ndeep link) must be supplied. When ``upstream_id`` is used, the\nserver materializes the local :class:`Card` + :class:`CardExternalRef`\nvia :func:`card_resolver_service.ensure_local_card` before inserting\nthe grade \u2014 so the user never has to think about ids.",
@@ -2213,6 +3805,79 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HealthCheck": {
+        "description": "One probe in the health report (DB, migrations, Redis, a provider, \u2026).",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "warn",
+              "down",
+              "unconfigured"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "status",
+          "detail",
+          "category"
+        ],
+        "title": "HealthCheck",
+        "type": "object"
+      },
+      "HealthReport": {
+        "description": "Aggregate health \u2014 the worst check sets the headline status.",
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/HealthCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "warn",
+              "down"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "generated_at",
+          "checks"
+        ],
+        "title": "HealthReport",
+        "type": "object"
+      },
       "IdentifyByTextRequest": {
         "description": "``POST /v1/cards/identify/text`` body \u2014 client-side OCR fallback.",
         "properties": {
@@ -2623,6 +4288,57 @@
           "cost_usd"
         ],
         "title": "IdentifyResponse",
+        "type": "object"
+      },
+      "ImpersonateResult": {
+        "description": "A short-lived access token for viewing the app as another user.",
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "email",
+          "expires_in"
+        ],
+        "title": "ImpersonateResult",
+        "type": "object"
+      },
+      "IndexInfo": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unique": {
+            "title": "Unique",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "columns",
+          "unique"
+        ],
+        "title": "IndexInfo",
         "type": "object"
       },
       "JobApplicationCreate": {
@@ -3328,7 +5044,7 @@
           "items": {
             "description": "Page of items.",
             "items": {
-              "$ref": "#/components/schemas/PriceSnapshotRead"
+              "$ref": "#/components/schemas/app__schemas__price__PriceSnapshotRead"
             },
             "title": "Items",
             "type": "array"
@@ -3782,36 +5498,23 @@
         "title": "PriceAlertRead",
         "type": "object"
       },
-      "PriceSnapshotRead": {
-        "description": "Public representation of a single price observation.",
+      "PriceOverrideRequest": {
+        "description": "Manually record a price point (stored as a `manual`-source snapshot).",
         "properties": {
-          "card_id": {
-            "format": "uuid",
-            "title": "Card Id",
-            "type": "string"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
           "grade": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "maximum": 10.0,
+            "minimum": 0.0,
             "title": "Grade",
-            "type": "string"
+            "type": "number"
           },
           "house": {
-            "$ref": "#/components/schemas/GradeHouseEnum"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "$ref": "#/components/schemas/GradeHouseEnum",
+            "default": "loupe"
           },
           "price_usd": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "exclusiveMinimum": 0.0,
             "title": "Price Usd",
-            "type": "string"
+            "type": "number"
           },
           "sale_date": {
             "anyOf": [
@@ -3824,21 +5527,13 @@
               }
             ],
             "title": "Sale Date"
-          },
-          "source": {
-            "$ref": "#/components/schemas/PriceSourceEnum"
           }
         },
         "required": [
-          "id",
-          "card_id",
-          "house",
           "grade",
-          "source",
-          "price_usd",
-          "created_at"
+          "price_usd"
         ],
-        "title": "PriceSnapshotRead",
+        "title": "PriceOverrideRequest",
         "type": "object"
       },
       "PriceSourceEnum": {
@@ -3852,6 +5547,90 @@
         ],
         "title": "PriceSourceEnum",
         "type": "string"
+      },
+      "PulseEvent": {
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "signup",
+              "scan",
+              "acquisition",
+              "admin"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "value_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Usd"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "at",
+          "title"
+        ],
+        "title": "PulseEvent",
+        "type": "object"
+      },
+      "PulseFeed": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/PulseEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "PulseFeed",
+        "type": "object"
       },
       "RawConditionEnum": {
         "description": "PSA-style condition grades for RAW (ungraded) cards.\n\nOptional on every :class:`~app.models.grade.GradedCard` row \u2014 only\nmeaningful when the card has not been slabbed by a third-party grading\nhouse. Mirrors the standard TCG/sports vocabulary collectors and\neBay use so per-condition pricing maps directly.",
@@ -3900,6 +5679,40 @@
           "refresh_token"
         ],
         "title": "RefreshRequest",
+        "type": "object"
+      },
+      "RefundResult": {
+        "description": "The outcome of refunding a user's latest charge.",
+        "properties": {
+          "amount_usd": {
+            "title": "Amount Usd",
+            "type": "number"
+          },
+          "charge_id": {
+            "title": "Charge Id",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "refund_id": {
+            "title": "Refund Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refund_id",
+          "charge_id",
+          "amount_usd",
+          "currency",
+          "status"
+        ],
+        "title": "RefundResult",
         "type": "object"
       },
       "ReportDownloadResponse": {
@@ -4140,6 +5953,132 @@
           }
         },
         "title": "ResolveCardRequest",
+        "type": "object"
+      },
+      "RetentionReport": {
+        "properties": {
+          "cohorts": {
+            "items": {
+              "$ref": "#/components/schemas/CohortRow"
+            },
+            "title": "Cohorts",
+            "type": "array"
+          },
+          "weeks": {
+            "title": "Weeks",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "weeks",
+          "cohorts"
+        ],
+        "title": "RetentionReport",
+        "type": "object"
+      },
+      "RevenueMonthPoint": {
+        "description": "New Pro members that started in a given month (YYYY-MM).",
+        "properties": {
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "new_pro": {
+            "title": "New Pro",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "month",
+          "new_pro"
+        ],
+        "title": "RevenueMonthPoint",
+        "type": "object"
+      },
+      "RevenueSummary": {
+        "properties": {
+          "billing_configured": {
+            "title": "Billing Configured",
+            "type": "boolean"
+          },
+          "churn_rate_30d": {
+            "title": "Churn Rate 30D",
+            "type": "number"
+          },
+          "churned_30d": {
+            "title": "Churned 30D",
+            "type": "integer"
+          },
+          "comped": {
+            "title": "Comped",
+            "type": "integer"
+          },
+          "currency": {
+            "default": "USD",
+            "title": "Currency",
+            "type": "string"
+          },
+          "est_arr_usd": {
+            "title": "Est Arr Usd",
+            "type": "number"
+          },
+          "est_mrr_usd": {
+            "title": "Est Mrr Usd",
+            "type": "number"
+          },
+          "free": {
+            "title": "Free",
+            "type": "integer"
+          },
+          "new_pro_30d": {
+            "title": "New Pro 30D",
+            "type": "integer"
+          },
+          "paying": {
+            "title": "Paying",
+            "type": "integer"
+          },
+          "price_monthly_usd": {
+            "title": "Price Monthly Usd",
+            "type": "number"
+          },
+          "price_yearly_usd": {
+            "title": "Price Yearly Usd",
+            "type": "number"
+          },
+          "pro_by_month": {
+            "items": {
+              "$ref": "#/components/schemas/RevenueMonthPoint"
+            },
+            "title": "Pro By Month",
+            "type": "array"
+          },
+          "total_users": {
+            "title": "Total Users",
+            "type": "integer"
+          },
+          "trialing": {
+            "title": "Trialing",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "billing_configured",
+          "paying",
+          "trialing",
+          "comped",
+          "free",
+          "total_users",
+          "price_monthly_usd",
+          "price_yearly_usd",
+          "est_mrr_usd",
+          "est_arr_usd",
+          "new_pro_30d",
+          "churned_30d",
+          "churn_rate_30d",
+          "pro_by_month"
+        ],
+        "title": "RevenueSummary",
         "type": "object"
       },
       "ScanJobCompleteRequest": {
@@ -4477,6 +6416,101 @@
         "title": "ScannerRead",
         "type": "object"
       },
+      "ScannerStats": {
+        "properties": {
+          "by_provider": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Provider",
+            "type": "object"
+          },
+          "by_source": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Source",
+            "type": "object"
+          },
+          "by_tcg": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Tcg",
+            "type": "object"
+          },
+          "correct_feedback": {
+            "title": "Correct Feedback",
+            "type": "integer"
+          },
+          "fast_path_rate": {
+            "title": "Fast Path Rate",
+            "type": "number"
+          },
+          "latency_p50_ms": {
+            "title": "Latency P50 Ms",
+            "type": "integer"
+          },
+          "latency_p95_ms": {
+            "title": "Latency P95 Ms",
+            "type": "integer"
+          },
+          "mean_confidence": {
+            "title": "Mean Confidence",
+            "type": "number"
+          },
+          "scans_by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Scans By Status",
+            "type": "object"
+          },
+          "scans_total": {
+            "title": "Scans Total",
+            "type": "integer"
+          },
+          "top1_accuracy": {
+            "title": "Top1 Accuracy",
+            "type": "number"
+          },
+          "total_cost_usd": {
+            "title": "Total Cost Usd",
+            "type": "number"
+          },
+          "total_feedback": {
+            "title": "Total Feedback",
+            "type": "integer"
+          },
+          "total_identifications": {
+            "title": "Total Identifications",
+            "type": "integer"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "window_days",
+          "total_identifications",
+          "by_source",
+          "fast_path_rate",
+          "total_feedback",
+          "correct_feedback",
+          "top1_accuracy",
+          "mean_confidence",
+          "latency_p50_ms",
+          "latency_p95_ms",
+          "total_cost_usd",
+          "by_provider",
+          "by_tcg",
+          "scans_total",
+          "scans_by_status"
+        ],
+        "title": "ScannerStats",
+        "type": "object"
+      },
       "ScannerTransportEnum": {
         "description": "Transport protocol used by a scanner device.",
         "enum": [
@@ -4537,6 +6571,71 @@
           }
         },
         "title": "ScannerUpdate",
+        "type": "object"
+      },
+      "SchemaGraph": {
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaGraphEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaGraphNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "SchemaGraph",
+        "type": "object"
+      },
+      "SchemaGraphEdge": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "label"
+        ],
+        "title": "SchemaGraphEdge",
+        "type": "object"
+      },
+      "SchemaGraphNode": {
+        "properties": {
+          "columns": {
+            "title": "Columns",
+            "type": "integer"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "columns"
+        ],
+        "title": "SchemaGraphNode",
         "type": "object"
       },
       "SealedHoldingCreate": {
@@ -5126,6 +7225,96 @@
           "announcement"
         ],
         "title": "SiteConfigRead",
+        "type": "object"
+      },
+      "SubscriptionCancelRequest": {
+        "description": "Cancel a user's subscription; defaults to end-of-period (keeps Pro).",
+        "properties": {
+          "immediately": {
+            "default": false,
+            "title": "Immediately",
+            "type": "boolean"
+          }
+        },
+        "title": "SubscriptionCancelRequest",
+        "type": "object"
+      },
+      "TableDetail": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnInfo"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "foreign_keys": {
+            "items": {
+              "$ref": "#/components/schemas/ForeignKeyInfo"
+            },
+            "title": "Foreign Keys",
+            "type": "array"
+          },
+          "indexes": {
+            "items": {
+              "$ref": "#/components/schemas/IndexInfo"
+            },
+            "title": "Indexes",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "referenced_by": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Referenced By",
+            "type": "array"
+          },
+          "row_estimate": {
+            "title": "Row Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "row_estimate",
+          "columns",
+          "indexes",
+          "foreign_keys",
+          "referenced_by"
+        ],
+        "title": "TableDetail",
+        "type": "object"
+      },
+      "TableSummary": {
+        "properties": {
+          "columns": {
+            "title": "Columns",
+            "type": "integer"
+          },
+          "foreign_keys": {
+            "title": "Foreign Keys",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "row_estimate": {
+            "title": "Row Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "columns",
+          "row_estimate",
+          "foreign_keys"
+        ],
+        "title": "TableSummary",
         "type": "object"
       },
       "TcgEnum": {
@@ -5751,6 +7940,135 @@
         ],
         "title": "WatchlistItemRead",
         "type": "object"
+      },
+      "WeekPoint": {
+        "properties": {
+          "new_users": {
+            "title": "New Users",
+            "type": "integer"
+          },
+          "week": {
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "new_users"
+        ],
+        "title": "WeekPoint",
+        "type": "object"
+      },
+      "app__schemas__card_admin__PriceSnapshotRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "grade": {
+            "title": "Grade",
+            "type": "number"
+          },
+          "house": {
+            "title": "House",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "number"
+          },
+          "sale_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sale Date"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "house",
+          "grade",
+          "source",
+          "price_usd",
+          "created_at"
+        ],
+        "title": "PriceSnapshotRead",
+        "type": "object"
+      },
+      "app__schemas__price__PriceSnapshotRead": {
+        "description": "Public representation of a single price observation.",
+        "properties": {
+          "card_id": {
+            "format": "uuid",
+            "title": "Card Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "grade": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Grade",
+            "type": "string"
+          },
+          "house": {
+            "$ref": "#/components/schemas/GradeHouseEnum"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "price_usd": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "sale_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sale Date"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PriceSourceEnum"
+          }
+        },
+        "required": [
+          "id",
+          "card_id",
+          "house",
+          "grade",
+          "source",
+          "price_usd",
+          "created_at"
+        ],
+        "title": "PriceSnapshotRead",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -5997,6 +8315,141 @@
         ]
       }
     },
+    "/v1/admin/audit": {
+      "get": {
+        "operationId": "list_audit_v1_admin_audit_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_table",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Table"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Paginated, filterable audit log",
+        "tags": [
+          "admin-ops"
+        ]
+      }
+    },
+    "/v1/admin/audit/facets": {
+      "get": {
+        "operationId": "audit_facets_v1_admin_audit_facets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditFacets"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Filter dropdown values",
+        "tags": [
+          "admin-ops"
+        ]
+      }
+    },
     "/v1/admin/blog": {
       "get": {
         "operationId": "list_posts_v1_admin_blog_get",
@@ -6214,6 +8667,298 @@
         ]
       }
     },
+    "/v1/admin/cards": {
+      "get": {
+        "operationId": "search_cards_v1_admin_cards_get",
+        "parameters": [
+          {
+            "description": "Name, number, or set.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Name, number, or set.",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCardPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search the local card catalog",
+        "tags": [
+          "admin-cards"
+        ]
+      }
+    },
+    "/v1/admin/cards/{card_id}": {
+      "get": {
+        "operationId": "get_card_v1_admin_cards__card_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCardDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Full card record + prices",
+        "tags": [
+          "admin-cards"
+        ]
+      }
+    },
+    "/v1/admin/cards/{card_id}/price": {
+      "post": {
+        "operationId": "add_price_override_v1_admin_cards__card_id__price_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceOverrideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__card_admin__PriceSnapshotRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record a manual price override (super-admin)",
+        "tags": [
+          "admin-cards"
+        ]
+      }
+    },
+    "/v1/admin/catalog": {
+      "get": {
+        "operationId": "get_catalog_v1_admin_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogCoverage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Catalog coverage by game",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/v1/admin/cloud": {
+      "get": {
+        "operationId": "get_cloud_v1_admin_cloud_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cloud Run + Cloud SQL status",
+        "tags": [
+          "admin-ops"
+        ]
+      }
+    },
+    "/v1/admin/cloud/logs": {
+      "get": {
+        "operationId": "get_logs_v1_admin_cloud_logs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CloudLogEntry"
+                  },
+                  "title": "Response Get Logs V1 Admin Cloud Logs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Recent Cloud Run log entries (newest first)",
+        "tags": [
+          "admin-ops"
+        ]
+      }
+    },
     "/v1/admin/config": {
       "get": {
         "operationId": "get_config_v1_admin_config_get",
@@ -6329,6 +9074,131 @@
         "summary": "Update the Pro plan shape (limits + per-feature gating)",
         "tags": [
           "admin-config"
+        ]
+      }
+    },
+    "/v1/admin/database/graph": {
+      "get": {
+        "operationId": "get_graph_v1_admin_database_graph_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Foreign-key relationship graph (nodes + edges)",
+        "tags": [
+          "admin-ops"
+        ]
+      }
+    },
+    "/v1/admin/database/tables": {
+      "get": {
+        "operationId": "list_tables_v1_admin_database_tables_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "All tables with column/FK counts and row estimates",
+        "tags": [
+          "admin-ops"
+        ]
+      }
+    },
+    "/v1/admin/database/tables/{name}": {
+      "get": {
+        "operationId": "get_table_v1_admin_database_tables__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Columns, indexes, and relationships for one table",
+        "tags": [
+          "admin-ops"
+        ]
+      }
+    },
+    "/v1/admin/engagement": {
+      "get": {
+        "operationId": "get_engagement_v1_admin_engagement_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngagementSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Engagement & retention",
+        "tags": [
+          "admin-engagement"
         ]
       }
     },
@@ -6557,6 +9427,181 @@
         "summary": "Update / toggle a flag",
         "tags": [
           "admin-flags"
+        ]
+      }
+    },
+    "/v1/admin/grades": {
+      "get": {
+        "operationId": "list_grades_v1_admin_grades_get",
+        "parameters": [
+          {
+            "description": "A grading house, or 'all'.",
+            "in": "query",
+            "name": "house",
+            "required": false,
+            "schema": {
+              "default": "loupe",
+              "description": "A grading house, or 'all'.",
+              "title": "House",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradeReviewPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Grade-review queue",
+        "tags": [
+          "admin-grades"
+        ]
+      }
+    },
+    "/v1/admin/health": {
+      "get": {
+        "operationId": "get_health_v1_admin_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "System health report",
+        "tags": [
+          "admin-ops"
+        ]
+      }
+    },
+    "/v1/admin/insights/ask": {
+      "post": {
+        "operationId": "ask_v1_admin_insights_ask_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ask a question of the database (read-only, super-admin)",
+        "tags": [
+          "admin-insights"
+        ]
+      }
+    },
+    "/v1/admin/insights/status": {
+      "get": {
+        "operationId": "insights_status_v1_admin_insights_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Insights Status V1 Admin Insights Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Whether natural-language queries are configured",
+        "tags": [
+          "admin-insights"
         ]
       }
     },
@@ -6800,6 +9845,158 @@
         "summary": "Portal overview metrics",
         "tags": [
           "admin-metrics"
+        ]
+      }
+    },
+    "/v1/admin/pulse": {
+      "get": {
+        "operationId": "get_pulse_v1_admin_pulse_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 40,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PulseFeed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Recent activity across the app",
+        "tags": [
+          "admin-pulse"
+        ]
+      }
+    },
+    "/v1/admin/retention": {
+      "get": {
+        "operationId": "get_retention_v1_admin_retention_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cohort retention triangle",
+        "tags": [
+          "admin-retention"
+        ]
+      }
+    },
+    "/v1/admin/revenue": {
+      "get": {
+        "operationId": "get_revenue_v1_admin_revenue_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Subscription revenue summary",
+        "tags": [
+          "admin-revenue"
+        ]
+      }
+    },
+    "/v1/admin/scanner": {
+      "get": {
+        "operationId": "get_scanner_stats_v1_admin_scanner_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScannerStats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Scan + identify funnel metrics",
+        "tags": [
+          "admin-scanner"
         ]
       }
     },
@@ -7054,6 +10251,54 @@
         ]
       }
     },
+    "/v1/admin/users/{user_id}/impersonate": {
+      "post": {
+        "operationId": "impersonate_v1_admin_users__user_id__impersonate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpersonateResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get a short-lived token to view the app as a user (super-admin)",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
     "/v1/admin/users/{user_id}/plan": {
       "patch": {
         "operationId": "set_plan_v1_admin_users__user_id__plan_patch",
@@ -7112,6 +10357,102 @@
         ]
       }
     },
+    "/v1/admin/users/{user_id}/refund": {
+      "post": {
+        "operationId": "refund_latest_v1_admin_users__user_id__refund_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Refund a user's latest charge (super-admin)",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/v1/admin/users/{user_id}/revoke-sessions": {
+      "post": {
+        "operationId": "revoke_sessions_v1_admin_users__user_id__revoke_sessions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sign a user out of every device (revoke all tokens)",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
     "/v1/admin/users/{user_id}/role": {
       "patch": {
         "operationId": "set_role_v1_admin_users__user_id__role_patch",
@@ -7165,6 +10506,64 @@
           }
         ],
         "summary": "Grant/revoke admin",
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/v1/admin/users/{user_id}/subscription/cancel": {
+      "post": {
+        "operationId": "cancel_subscription_v1_admin_users__user_id__subscription_cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionCancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel a user's Stripe subscription (super-admin)",
         "tags": [
           "admin-users"
         ]
@@ -8774,6 +12173,49 @@
         ]
       }
     },
+    "/v1/cards/{card_id}/analytics": {
+      "get": {
+        "description": "Derived market metrics for a card \u2014 market cap, momentum, volatility,\ngrade premium, all-time high/low, and liquidity \u2014 composed from the market\nsnapshot + recent comps so every client shows the same numbers.",
+        "operationId": "get_analytics_v1_cards__card_id__analytics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardAnalytics"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Card derived analytics (public)",
+        "tags": [
+          "cards"
+        ]
+      }
+    },
     "/v1/cards/{card_id}/canonical": {
       "get": {
         "description": "Return the single \"holy grail\" :class:`CanonicalCard` document.\n\nComposes catalog identity, set, images, attributes, multi-source\npricing, population, listings, comps, and (for ``psa:<cert>`` ids)\na verified cert into one object the frontend can render directly.\nSection provenance is included so the UI can flag real vs\nsynthesized data.",
@@ -9224,6 +12666,54 @@
           }
         },
         "summary": "Nearby Facebook Marketplace listings (public)",
+        "tags": [
+          "cards"
+        ]
+      }
+    },
+    "/v1/cards/{card_id}/ownership": {
+      "get": {
+        "description": "Per-user ownership context: every copy the signed-in user owns of this\ncard, with grade/scan data and rolled-up cost basis, holding value, and\nunrealized P/L. Returns ``owned=false`` when they own none.",
+        "operationId": "get_ownership_v1_cards__card_id__ownership_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardOwnership"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My ownership of this card (signed-in)",
         "tags": [
           "cards"
         ]

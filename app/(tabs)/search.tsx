@@ -21,7 +21,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { Camera, Clock, Search as SearchIcon, X } from "lucide-react-native";
+import { Camera, ChevronRight, Clock, Search as SearchIcon, X } from "lucide-react-native";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
 import { fetchCardSparklines, fetchCollection } from "@/infrastructure/repositories/forensicRepository";
@@ -620,6 +620,16 @@ export default function SearchScreen() {
                 <SectionHeader
                   eyebrow={selectedTcg === "all" ? "All TCGs" : TCG_CHIPS.find((c) => c.key === selectedTcg)?.label ?? "Trending"}
                   title="Trending now"
+                  trailing={
+                    <Pressable
+                      onPress={() => router.push(routes.markets())}
+                      hitSlop={10}
+                      className="flex-row items-center gap-1"
+                    >
+                      <Text className="text-xs font-medium text-ink-muted">Browse all</Text>
+                      <ChevronRight size={14} color={p.ink.dim} />
+                    </Pressable>
+                  }
                 />
                 <TrendingSection tcg={selectedTcg} />
               </View>
