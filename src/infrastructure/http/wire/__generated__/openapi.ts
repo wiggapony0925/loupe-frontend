@@ -163,6 +163,23 @@ export interface paths {
         patch: operations["update_post_v1_admin_blog__post_id__patch"];
         trace?: never;
     };
+    "/v1/admin/card-tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Card/Set data lineage + price fallback chain */
+        get: operations["get_card_tree_v1_admin_card_tree_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/cards": {
         parameters: {
             query?: never;
@@ -367,6 +384,159 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/email/announce": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a composed announcement — test to yourself, or blast to subscribers */
+        post: operations["send_announcement_v1_admin_email_announce_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/email/announce/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Render a draft announcement or support message (no send) */
+        post: operations["preview_announcement_v1_admin_email_announce_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/email/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Delivery log — every send, queue → delivered/bounced */
+        get: operations["list_log_v1_admin_email_log_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/email/log/{log_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One logged email, including the stored render */
+        get: operations["get_log_entry_v1_admin_email_log__log_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/email/log/{log_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-send a failed (or stuck) email from its stored render */
+        post: operations["retry_log_entry_v1_admin_email_log__log_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/email/support": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a support message to one user (or test it on yourself) */
+        post: operations["send_support_v1_admin_email_support_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/email/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Email template gallery + provider status */
+        get: operations["list_templates_v1_admin_email_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/email/templates/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Render one template with sample data */
+        get: operations["render_template_v1_admin_email_templates__key__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/email/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a template to yourself (real delivery) */
+        post: operations["send_test_v1_admin_email_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/engagement": {
         parameters: {
             query?: never;
@@ -376,6 +546,23 @@ export interface paths {
         };
         /** Engagement & retention */
         get: operations["get_engagement_v1_admin_engagement_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/env": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Environment configuration */
+        get: operations["get_env_v1_admin_env_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -505,6 +692,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/integrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** External-service catalog */
+        get: operations["get_integrations_v1_admin_integrations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/jobs": {
         parameters: {
             query?: never;
@@ -619,6 +823,57 @@ export interface paths {
         };
         /** Scan + identify funnel metrics */
         get: operations["get_scanner_stats_v1_admin_scanner_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/scanner/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scan history log — every scan with its photo + metadata */
+        get: operations["get_scan_history_v1_admin_scanner_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/scanner/history/{scan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One scan — full candidates + raw OCR text */
+        get: operations["get_scan_detail_v1_admin_scanner_history__scan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/scanner/trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daily speed + accuracy trend series */
+        get: operations["get_scanner_trend_v1_admin_scanner_trend_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1022,6 +1277,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email a password-reset link (always 204)
+         * @description Request a reset link. Responds 204 whether or not the account exists,
+         *     so the endpoint can't be used to enumerate emails.
+         */
+        post: operations["forgot_password_v1_auth_forgot_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/google": {
         parameters: {
             query?: never;
@@ -1215,6 +1491,27 @@ export interface paths {
         put?: never;
         /** Create account with email + password */
         post: operations["register_v1_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a new password from an emailed reset token
+         * @description Complete the reset. The token is single-use and revokes every other
+         *     session; a fresh token pair signs this device straight in.
+         */
+        post: operations["reset_password_v1_auth_reset_password_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2155,6 +2452,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/push-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register this device for push notifications
+         * @description Idempotent upsert by token — a device that re-registers (or switches
+         *     accounts) moves to the caller, never duplicates.
+         */
+        post: operations["register_push_token_v1_me_push_tokens_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/push-tokens/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unregister a device (sign-out) */
+        delete: operations["remove_push_token_v1_me_push_tokens__token__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/recents": {
         parameters: {
             query?: never;
@@ -2189,6 +2524,23 @@ export interface paths {
         head?: never;
         /** Update user settings */
         patch: operations["patch_settings_v1_me_settings_patch"];
+        trace?: never;
+    };
+    "/v1/me/verify-email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-send the email-confirmation link */
+        post: operations["resend_verify_email_v1_me_verify_email_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/prices": {
@@ -2274,6 +2626,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/carousels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AI-designed marketplace carousels (recipes) for a game
+         * @description A game's discovery shelves as serializable recipes (theme + filter), AI-
+         *     designed and cached daily. The web compiles each into a real rail and mixes
+         *     them into the rotating storefront; ``source`` says whether the model
+         *     produced them (``ai``) or it fell back to the web's curated pool
+         *     (``curated``).
+         */
+        get: operations["public_carousels_v1_public_carousels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/search": {
         parameters: {
             query?: never;
@@ -2338,6 +2714,41 @@ export interface paths {
          *     renders a "—" priceless tile or a bare image.
          */
         get: operations["public_trending_v1_public_trending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unsubscribe (footer link) */
+        get: operations["unsubscribe_get_v1_public_unsubscribe_get"];
+        put?: never;
+        /** One-click unsubscribe (RFC 8058) */
+        post: operations["unsubscribe_post_v1_public_unsubscribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Confirm an email address */
+        get: operations["verify_email_v1_public_verify_email_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2775,6 +3186,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/webhooks/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend delivery-status webhook */
+        post: operations["resend_webhook_v1_webhooks_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/version": {
         parameters: {
             query?: never;
@@ -3102,6 +3530,27 @@ export interface components {
              */
             pro_trialing: boolean;
         };
+        /** AnnouncementPreviewRequest */
+        AnnouncementPreviewRequest: {
+            /** Body */
+            body: string;
+            /** Cta Label */
+            cta_label?: string | null;
+            /** Cta Url */
+            cta_url?: string | null;
+            /**
+             * Heading
+             * @default
+             */
+            heading: string;
+            /**
+             * Kind
+             * @default announcement
+             */
+            kind: string;
+            /** Subject */
+            subject: string;
+        };
         /**
          * AnnouncementRead
          * @description Global banner shown to every user when enabled.
@@ -3126,6 +3575,33 @@ export interface components {
              * @default info
              */
             tone: string;
+        };
+        /** AnnouncementSendRequest */
+        AnnouncementSendRequest: {
+            /** Body */
+            body: string;
+            /** Cta Label */
+            cta_label?: string | null;
+            /** Cta Url */
+            cta_url?: string | null;
+            /** Heading */
+            heading: string;
+            /**
+             * Mode
+             * @default test
+             */
+            mode: string;
+            /** Subject */
+            subject: string;
+        };
+        /** AnnouncementSendResponse */
+        AnnouncementSendResponse: {
+            /** Detail */
+            detail: string;
+            /** Mode */
+            mode: string;
+            /** Recipients */
+            recipients: number;
         };
         /** AnnouncementUpdate */
         AnnouncementUpdate: {
@@ -3834,6 +4310,81 @@ export interface components {
              */
             email: string;
         };
+        /** EmailLogDetail */
+        EmailLogDetail: {
+            /** Attempts */
+            attempts: number;
+            /** Category */
+            category: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error: string | null;
+            /** From Email */
+            from_email: string | null;
+            /** Html */
+            html: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Provider Id */
+            provider_id: string | null;
+            /** Status */
+            status: string;
+            /** Subject */
+            subject: string;
+            /** Text */
+            text: string | null;
+            /** To Email */
+            to_email: string;
+            /** User Id */
+            user_id: string | null;
+        };
+        /** EmailLogPage */
+        EmailLogPage: {
+            /** Rows */
+            rows: components["schemas"]["EmailLogRow"][];
+            /** Stats */
+            stats: {
+                [key: string]: number;
+            };
+            /** Total */
+            total: number;
+        };
+        /** EmailLogRow */
+        EmailLogRow: {
+            /** Attempts */
+            attempts: number;
+            /** Category */
+            category: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Provider Id */
+            provider_id: string | null;
+            /** Status */
+            status: string;
+            /** Subject */
+            subject: string;
+            /** To Email */
+            to_email: string;
+            /** User Id */
+            user_id: string | null;
+        };
         /**
          * EmailSignInRequest
          * @description Body for ``POST /v1/auth/login`` (email + password).
@@ -3861,6 +4412,55 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** EmailStatus */
+        EmailStatus: {
+            /** Enabled */
+            enabled: boolean;
+            /** From Email */
+            from_email: string;
+            /**
+             * Provider
+             * @default resend
+             */
+            provider: string;
+            /** Reply To */
+            reply_to: string;
+            /**
+             * Subscribers
+             * @default 0
+             */
+            subscribers: number;
+        };
+        /** EmailTemplateRender */
+        EmailTemplateRender: {
+            /** Html */
+            html: string;
+            /** Key */
+            key: string;
+            /** Subject */
+            subject: string;
+            /** Text */
+            text: string;
+        };
+        /** EmailTemplateSummary */
+        EmailTemplateSummary: {
+            /** Description */
+            description: string;
+            /** Group */
+            group: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Subject */
+            subject: string;
+        };
+        /** EmailTemplatesResponse */
+        EmailTemplatesResponse: {
+            status: components["schemas"]["EmailStatus"];
+            /** Templates */
+            templates: components["schemas"]["EmailTemplateSummary"][];
         };
         /**
          * EmploymentTypeEnum
@@ -3915,6 +4515,53 @@ export interface components {
              * @default false
              */
             trialing: boolean;
+        };
+        /**
+         * EnvReport
+         * @description The server-side environment, grouped and safe to render.
+         */
+        EnvReport: {
+            /** App Env */
+            app_env: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Variables */
+            variables: components["schemas"]["EnvVar"][];
+        };
+        /**
+         * EnvVar
+         * @description One environment variable descriptor for the admin env manager.
+         *
+         *     Carries *what it's for* and *whether it's set* — and the value only when it
+         *     is safe to expose. Secrets are NEVER echoed: ``value`` stays ``None`` and we
+         *     surface ``length`` (character count) instead, so an admin can confirm a key
+         *     is present without the bytes ever crossing the wire.
+         */
+        EnvVar: {
+            /** Description */
+            description: string;
+            /** Docs Url */
+            docs_url?: string | null;
+            /** Group */
+            group: string;
+            /** Is Set */
+            is_set: boolean;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Length
+             * @default 0
+             */
+            length: number;
+            /** Secret */
+            secret: boolean;
+            /** Value */
+            value?: string | null;
         };
         /** ExternalRefRead */
         ExternalRefRead: {
@@ -3992,6 +4639,17 @@ export interface components {
             references_columns: string[];
             /** References Table */
             references_table: string;
+        };
+        /**
+         * ForgotPasswordRequest
+         * @description Body for ``POST /v1/auth/forgot-password`` (public, always 204).
+         */
+        ForgotPasswordRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
         };
         /** FunnelStep */
         FunnelStep: {
@@ -4469,6 +5127,58 @@ export interface components {
             name: string;
             /** Unique */
             unique: boolean;
+        };
+        /**
+         * Integration
+         * @description One external service the backend depends on (a provider/API/platform).
+         */
+        Integration: {
+            /**
+             * Capabilities
+             * @default []
+             */
+            capabilities: string[];
+            /** Category */
+            category: string;
+            /** Configured */
+            configured: boolean;
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /** Docs Url */
+            docs_url?: string | null;
+            /** Http Status */
+            http_status?: number | null;
+            /** Id */
+            id: string;
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /** Name */
+            name: string;
+            /** Purpose */
+            purpose: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "live" | "down" | "ready" | "unconfigured";
+        };
+        /**
+         * IntegrationsReport
+         * @description Every external dependency, grouped and (optionally) live-probed.
+         */
+        IntegrationsReport: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Integrations */
+            integrations: components["schemas"]["Integration"][];
+            /** Probed */
+            probed: boolean;
         };
         /**
          * JobApplicationCreate
@@ -5026,6 +5736,19 @@ export interface components {
             events: components["schemas"]["PulseEvent"][];
         };
         /**
+         * PushTokenRegister
+         * @description Body for ``POST /v1/me/push-tokens`` (device registration).
+         */
+        PushTokenRegister: {
+            /**
+             * Platform
+             * @default ios
+             */
+            platform: string;
+            /** Token */
+            token: string;
+        };
+        /**
          * RawConditionEnum
          * @description PSA-style condition grades for RAW (ungraded) cards.
          *
@@ -5153,6 +5876,16 @@ export interface components {
          */
         ReportStatusEnum: "pending" | "ready" | "failed";
         /**
+         * ResetPasswordRequest
+         * @description Body for ``POST /v1/auth/reset-password`` (public, token from email).
+         */
+        ResetPasswordRequest: {
+            /** New Password */
+            new_password: string;
+            /** Token */
+            token: string;
+        };
+        /**
          * ResolveCardRequest
          * @description Body for ``POST /v1/cards/resolve``.
          *
@@ -5244,6 +5977,126 @@ export interface components {
             total_users: number;
             /** Trialing */
             trialing: number;
+        };
+        /**
+         * ScanHistoryCandidate
+         * @description One ranked candidate the scanner returned for a scan.
+         */
+        ScanHistoryCandidate: {
+            /** Card Id */
+            card_id?: string | null;
+            /** Confidence */
+            confidence: number;
+            /** Name */
+            name: string;
+            /** Source */
+            source: string;
+            /** Upstream Id */
+            upstream_id?: string | null;
+        };
+        /**
+         * ScanHistoryDetail
+         * @description Full drill-down for one scan: every candidate + the raw OCR text.
+         */
+        ScanHistoryDetail: {
+            /** Candidate Count */
+            candidate_count: number;
+            /** Candidates */
+            candidates: components["schemas"]["ScanHistoryCandidate"][];
+            /** Cost Usd */
+            cost_usd: number;
+            /** Created At */
+            created_at: string;
+            /** Feedback Correct */
+            feedback_correct?: boolean | null;
+            /** Id */
+            id: string;
+            /** Image Sha256 */
+            image_sha256?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /** Latency Ms */
+            latency_ms: number;
+            /** Ocr Confidence */
+            ocr_confidence: number;
+            /** Ocr Full Text */
+            ocr_full_text?: string | null;
+            /** Ocr Provider */
+            ocr_provider: string;
+            /** Parsed Number */
+            parsed_number?: string | null;
+            /** Parsed Set Code */
+            parsed_set_code?: string | null;
+            /** Parsed Title */
+            parsed_title?: string | null;
+            /** Phash */
+            phash?: string | null;
+            /** Primary Source */
+            primary_source: string;
+            /** Tcg Inferred */
+            tcg_inferred: string;
+            /** Top Confidence */
+            top_confidence: number;
+            /** Top Name */
+            top_name?: string | null;
+            /** Top Upstream Id */
+            top_upstream_id?: string | null;
+            /** User Email */
+            user_email?: string | null;
+            /** User Id */
+            user_id?: string | null;
+        };
+        /**
+         * ScanHistoryItem
+         * @description A single scan for the admin history grid.
+         */
+        ScanHistoryItem: {
+            /** Candidate Count */
+            candidate_count: number;
+            /** Cost Usd */
+            cost_usd: number;
+            /** Created At */
+            created_at: string;
+            /** Feedback Correct */
+            feedback_correct?: boolean | null;
+            /** Id */
+            id: string;
+            /** Image Url */
+            image_url?: string | null;
+            /** Latency Ms */
+            latency_ms: number;
+            /** Ocr Provider */
+            ocr_provider: string;
+            /** Parsed Number */
+            parsed_number?: string | null;
+            /** Parsed Title */
+            parsed_title?: string | null;
+            /** Primary Source */
+            primary_source: string;
+            /** Tcg Inferred */
+            tcg_inferred: string;
+            /** Top Confidence */
+            top_confidence: number;
+            /** Top Name */
+            top_name?: string | null;
+            /** Top Upstream Id */
+            top_upstream_id?: string | null;
+            /** User Email */
+            user_email?: string | null;
+            /** User Id */
+            user_id?: string | null;
+        };
+        /**
+         * ScanHistoryPage
+         * @description A cursor page of scan-history rows (newest first).
+         */
+        ScanHistoryPage: {
+            /** Items */
+            items: components["schemas"]["ScanHistoryItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Total */
+            total: number;
         };
         /**
          * ScanJobCompleteRequest
@@ -5423,6 +6276,31 @@ export interface components {
          * @enum {string}
          */
         ScannerTransportEnum: "ble" | "wifi" | "offline";
+        /** ScannerTrend */
+        ScannerTrend: {
+            /** Points */
+            points: components["schemas"]["ScannerTrendPoint"][];
+            /** Window Days */
+            window_days: number;
+        };
+        /**
+         * ScannerTrendPoint
+         * @description One day of identify activity for the speed + accuracy trend charts.
+         */
+        ScannerTrendPoint: {
+            /** Count */
+            count: number;
+            /** Date */
+            date: string;
+            /** Fast Path Rate */
+            fast_path_rate: number;
+            /** Latency P50 Ms */
+            latency_p50_ms: number;
+            /** Latency P95 Ms */
+            latency_p95_ms: number;
+            /** Mean Confidence */
+            mean_confidence: number;
+        };
         /**
          * ScannerUpdate
          * @description Body for ``PATCH /v1/scanners/{id}``.
@@ -5668,6 +6546,30 @@ export interface components {
              */
             immediately: boolean;
         };
+        /**
+         * SupportSendRequest
+         * @description A one-to-one message from support to a specific user.
+         */
+        SupportSendRequest: {
+            /** Body */
+            body: string;
+            /** Cta Label */
+            cta_label?: string | null;
+            /** Cta Url */
+            cta_url?: string | null;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /**
+             * Mode
+             * @default test
+             */
+            mode: string;
+            /** Subject */
+            subject: string;
+        };
         /** TableDetail */
         TableDetail: {
             /** Columns */
@@ -5717,6 +6619,20 @@ export interface components {
             id: string;
             /** Password */
             password: string;
+        };
+        /** TestSendRequest */
+        TestSendRequest: {
+            /** Template */
+            template: string;
+        };
+        /** TestSendResponse */
+        TestSendResponse: {
+            /** Detail */
+            detail: string;
+            /** Sent */
+            sent: boolean;
+            /** To */
+            to: string;
         };
         /**
          * TokenPair
@@ -5794,6 +6710,11 @@ export interface components {
              */
             email: string;
             /**
+             * Email Verified
+             * @default false
+             */
+            email_verified: boolean;
+            /**
              * Id
              * Format: uuid
              */
@@ -5814,6 +6735,11 @@ export interface components {
              * @default USD
              */
             currency: string;
+            /**
+             * Email Announcements Enabled
+             * @default true
+             */
+            email_announcements_enabled: boolean;
             /**
              * Live Sync Enabled
              * @default true
@@ -5839,6 +6765,8 @@ export interface components {
         UserSettingsUpdate: {
             /** Currency */
             currency?: string | null;
+            /** Email Announcements Enabled */
+            email_announcements_enabled?: boolean | null;
             /** Live Sync Enabled */
             live_sync_enabled?: boolean | null;
             /** Push Notifications Enabled */
@@ -5868,6 +6796,16 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VerifyEmailResendResponse */
+        VerifyEmailResendResponse: {
+            /**
+             * Already Verified
+             * @default false
+             */
+            already_verified: boolean;
+            /** Sent */
+            sent: boolean;
         };
         /**
          * WaitlistEntryRead
@@ -6430,6 +7368,28 @@ export interface operations {
             };
         };
     };
+    get_card_tree_v1_admin_card_tree_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     search_cards_v1_admin_cards_get: {
         parameters: {
             query?: {
@@ -6758,6 +7718,286 @@ export interface operations {
             };
         };
     };
+    send_announcement_v1_admin_email_announce_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnouncementSendRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnouncementSendResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_announcement_v1_admin_email_announce_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnouncementPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateRender"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_log_v1_admin_email_log_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                category?: string | null;
+                q?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailLogPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_log_entry_v1_admin_email_log__log_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                log_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailLogDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_log_entry_v1_admin_email_log__log_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                log_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestSendResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_support_v1_admin_email_support_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportSendRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestSendResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_templates_v1_admin_email_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplatesResponse"];
+                };
+            };
+        };
+    };
+    render_template_v1_admin_email_templates__key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateRender"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_test_v1_admin_email_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestSendRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestSendResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_engagement_v1_admin_engagement_get: {
         parameters: {
             query?: never;
@@ -6774,6 +8014,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EngagementSummary"];
+                };
+            };
+        };
+    };
+    get_env_v1_admin_env_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvReport"];
                 };
             };
         };
@@ -7039,6 +8299,38 @@ export interface operations {
             };
         };
     };
+    get_integrations_v1_admin_integrations_get: {
+        parameters: {
+            query?: {
+                /** @description Live-ping each configured service for reachability. */
+                probe?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationsReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_jobs_v1_admin_jobs_get: {
         parameters: {
             query?: never;
@@ -7296,6 +8588,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScannerStats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_scan_history_v1_admin_scanner_history_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                /** @description Filter to one account. */
+                user_id?: string | null;
+                /** @description "phash" | "text" | "none" | … */
+                source?: string | null;
+                /** @description Inferred game filter. */
+                tcg?: string | null;
+                /** @description OCR provider filter. */
+                provider?: string | null;
+                min_confidence?: number | null;
+                /** @description true = only scans that resolved to a card; false = misses. */
+                matched?: boolean | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanHistoryPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_scan_detail_v1_admin_scanner_history__scan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanHistoryDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_scanner_trend_v1_admin_scanner_trend_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScannerTrend"];
                 };
             };
             /** @description Validation Error */
@@ -8050,6 +9447,37 @@ export interface operations {
             };
         };
     };
+    forgot_password_v1_auth_forgot_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     sign_in_with_google_v1_auth_google_post: {
         parameters: {
             query?: never;
@@ -8337,6 +9765,39 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenPair"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password_v1_auth_reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10013,6 +11474,66 @@ export interface operations {
             };
         };
     };
+    register_push_token_v1_me_push_tokens_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushTokenRegister"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_push_token_v1_me_push_tokens__token__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_recents_v1_me_recents_get: {
         parameters: {
             query?: never;
@@ -10115,6 +11636,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_verify_email_v1_me_verify_email_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyEmailResendResponse"];
                 };
             };
         };
@@ -10248,6 +11789,39 @@ export interface operations {
             };
         };
     };
+    public_carousels_v1_public_carousels_get: {
+        parameters: {
+            query?: {
+                game?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     public_search_v1_public_search_get: {
         parameters: {
             query?: {
@@ -10344,6 +11918,99 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unsubscribe_get_v1_public_unsubscribe_get: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unsubscribe_post_v1_public_unsubscribe_post: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_email_v1_public_verify_email_get: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
                 };
             };
             /** @description Validation Error */
@@ -11286,6 +12953,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_webhook_v1_webhooks_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
                 };
             };
         };

@@ -655,6 +655,64 @@
         "title": "AdminUserRead",
         "type": "object"
       },
+      "AnnouncementPreviewRequest": {
+        "properties": {
+          "body": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "cta_label": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Label"
+          },
+          "cta_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Url"
+          },
+          "heading": {
+            "default": "",
+            "maxLength": 150,
+            "title": "Heading",
+            "type": "string"
+          },
+          "kind": {
+            "default": "announcement",
+            "pattern": "^(announcement|support)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "body"
+        ],
+        "title": "AnnouncementPreviewRequest",
+        "type": "object"
+      },
       "AnnouncementRead": {
         "description": "Global banner shown to every user when enabled.",
         "properties": {
@@ -697,6 +755,88 @@
           }
         },
         "title": "AnnouncementRead",
+        "type": "object"
+      },
+      "AnnouncementSendRequest": {
+        "properties": {
+          "body": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "cta_label": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Label"
+          },
+          "cta_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Url"
+          },
+          "heading": {
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Heading",
+            "type": "string"
+          },
+          "mode": {
+            "default": "test",
+            "pattern": "^(test|send)$",
+            "title": "Mode",
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "heading",
+          "body"
+        ],
+        "title": "AnnouncementSendRequest",
+        "type": "object"
+      },
+      "AnnouncementSendResponse": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "recipients": {
+            "title": "Recipients",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mode",
+          "recipients",
+          "detail"
+        ],
+        "title": "AnnouncementSendResponse",
         "type": "object"
       },
       "AnnouncementUpdate": {
@@ -2615,6 +2755,249 @@
         "title": "DevLoginRequest",
         "type": "object"
       },
+      "EmailLogDetail": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "from_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Email"
+          },
+          "html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Html"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "to_email": {
+            "title": "To Email",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "to_email",
+          "user_id",
+          "category",
+          "subject",
+          "status",
+          "error",
+          "attempts",
+          "provider_id",
+          "html",
+          "text",
+          "from_email"
+        ],
+        "title": "EmailLogDetail",
+        "type": "object"
+      },
+      "EmailLogPage": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/EmailLogRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "stats": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Stats",
+            "type": "object"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rows",
+          "total",
+          "stats"
+        ],
+        "title": "EmailLogPage",
+        "type": "object"
+      },
+      "EmailLogRow": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "to_email": {
+            "title": "To Email",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "to_email",
+          "user_id",
+          "category",
+          "subject",
+          "status",
+          "error",
+          "attempts",
+          "provider_id"
+        ],
+        "title": "EmailLogRow",
+        "type": "object"
+      },
       "EmailSignInRequest": {
         "description": "Body for ``POST /v1/auth/login`` (email + password).",
         "properties": {
@@ -2669,6 +3052,120 @@
           "password"
         ],
         "title": "EmailSignUpRequest",
+        "type": "object"
+      },
+      "EmailStatus": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "from_email": {
+            "title": "From Email",
+            "type": "string"
+          },
+          "provider": {
+            "default": "resend",
+            "title": "Provider",
+            "type": "string"
+          },
+          "reply_to": {
+            "title": "Reply To",
+            "type": "string"
+          },
+          "subscribers": {
+            "default": 0,
+            "title": "Subscribers",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enabled",
+          "from_email",
+          "reply_to"
+        ],
+        "title": "EmailStatus",
+        "type": "object"
+      },
+      "EmailTemplateRender": {
+        "properties": {
+          "html": {
+            "title": "Html",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "subject",
+          "html",
+          "text"
+        ],
+        "title": "EmailTemplateRender",
+        "type": "object"
+      },
+      "EmailTemplateSummary": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "group",
+          "description",
+          "subject"
+        ],
+        "title": "EmailTemplateSummary",
+        "type": "object"
+      },
+      "EmailTemplatesResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/EmailStatus"
+          },
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/EmailTemplateSummary"
+            },
+            "title": "Templates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status",
+          "templates"
+        ],
+        "title": "EmailTemplatesResponse",
         "type": "object"
       },
       "EmploymentTypeEnum": {
@@ -2810,6 +3307,100 @@
           "features"
         ],
         "title": "EntitlementsRead",
+        "type": "object"
+      },
+      "EnvReport": {
+        "description": "The server-side environment, grouped and safe to render.",
+        "properties": {
+          "app_env": {
+            "title": "App Env",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/EnvVar"
+            },
+            "title": "Variables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "app_env",
+          "generated_at",
+          "variables"
+        ],
+        "title": "EnvReport",
+        "type": "object"
+      },
+      "EnvVar": {
+        "description": "One environment variable descriptor for the admin env manager.\n\nCarries *what it's for* and *whether it's set* \u2014 and the value only when it\nis safe to expose. Secrets are NEVER echoed: ``value`` stays ``None`` and we\nsurface ``length`` (character count) instead, so an admin can confirm a key\nis present without the bytes ever crossing the wire.",
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "docs_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docs Url"
+          },
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "is_set": {
+            "title": "Is Set",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "length": {
+            "default": 0,
+            "title": "Length",
+            "type": "integer"
+          },
+          "secret": {
+            "title": "Secret",
+            "type": "boolean"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "group",
+          "secret",
+          "is_set",
+          "description"
+        ],
+        "title": "EnvVar",
         "type": "object"
       },
       "ExternalRefRead": {
@@ -3040,6 +3631,21 @@
           "references_columns"
         ],
         "title": "ForeignKeyInfo",
+        "type": "object"
+      },
+      "ForgotPasswordRequest": {
+        "description": "Body for ``POST /v1/auth/forgot-password`` (public, always 204).",
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest",
         "type": "object"
       },
       "FunnelStep": {
@@ -4341,6 +4947,125 @@
         "title": "IndexInfo",
         "type": "object"
       },
+      "Integration": {
+        "description": "One external service the backend depends on (a provider/API/platform).",
+        "properties": {
+          "capabilities": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "docs_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docs Url"
+          },
+          "http_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Http Status"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "live",
+              "down",
+              "ready",
+              "unconfigured"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "purpose",
+          "configured",
+          "status"
+        ],
+        "title": "Integration",
+        "type": "object"
+      },
+      "IntegrationsReport": {
+        "description": "Every external dependency, grouped and (optionally) live-probed.",
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "integrations": {
+            "items": {
+              "$ref": "#/components/schemas/Integration"
+            },
+            "title": "Integrations",
+            "type": "array"
+          },
+          "probed": {
+            "title": "Probed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "generated_at",
+          "probed",
+          "integrations"
+        ],
+        "title": "IntegrationsReport",
+        "type": "object"
+      },
       "JobApplicationCreate": {
         "description": "Public: submit an application to an open role.",
         "properties": {
@@ -5632,6 +6357,28 @@
         "title": "PulseFeed",
         "type": "object"
       },
+      "PushTokenRegister": {
+        "description": "Body for ``POST /v1/me/push-tokens`` (device registration).",
+        "properties": {
+          "platform": {
+            "default": "ios",
+            "pattern": "^(ios|android)$",
+            "title": "Platform",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "PushTokenRegister",
+        "type": "object"
+      },
       "RawConditionEnum": {
         "description": "PSA-style condition grades for RAW (ungraded) cards.\n\nOptional on every :class:`~app.models.grade.GradedCard` row \u2014 only\nmeaningful when the card has not been slabbed by a third-party grading\nhouse. Mirrors the standard TCG/sports vocabulary collectors and\neBay use so per-condition pricing maps directly.",
         "enum": [
@@ -5879,6 +6626,29 @@
         "title": "ReportStatusEnum",
         "type": "string"
       },
+      "ResetPasswordRequest": {
+        "description": "Body for ``POST /v1/auth/reset-password`` (public, token from email).",
+        "properties": {
+          "new_password": {
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 300,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "ResetPasswordRequest",
+        "type": "object"
+      },
       "ResolveCardRequest": {
         "description": "Body for ``POST /v1/cards/resolve``.\n\nProvide any combination \u2014 first non-empty resolves wins (order:\n``uuid`` \u2192 ``upstream_id`` \u2192 ``phash`` \u2192 ``query``).",
         "properties": {
@@ -6079,6 +6849,426 @@
           "pro_by_month"
         ],
         "title": "RevenueSummary",
+        "type": "object"
+      },
+      "ScanHistoryCandidate": {
+        "description": "One ranked candidate the scanner returned for a scan.",
+        "properties": {
+          "card_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Id"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "upstream_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstream Id"
+          }
+        },
+        "required": [
+          "name",
+          "confidence",
+          "source"
+        ],
+        "title": "ScanHistoryCandidate",
+        "type": "object"
+      },
+      "ScanHistoryDetail": {
+        "description": "Full drill-down for one scan: every candidate + the raw OCR text.",
+        "properties": {
+          "candidate_count": {
+            "title": "Candidate Count",
+            "type": "integer"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ScanHistoryCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "feedback_correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Correct"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "image_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Sha256"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "ocr_confidence": {
+            "title": "Ocr Confidence",
+            "type": "number"
+          },
+          "ocr_full_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Full Text"
+          },
+          "ocr_provider": {
+            "title": "Ocr Provider",
+            "type": "string"
+          },
+          "parsed_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed Number"
+          },
+          "parsed_set_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed Set Code"
+          },
+          "parsed_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed Title"
+          },
+          "phash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phash"
+          },
+          "primary_source": {
+            "title": "Primary Source",
+            "type": "string"
+          },
+          "tcg_inferred": {
+            "title": "Tcg Inferred",
+            "type": "string"
+          },
+          "top_confidence": {
+            "title": "Top Confidence",
+            "type": "number"
+          },
+          "top_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Name"
+          },
+          "top_upstream_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Upstream Id"
+          },
+          "user_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Email"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "top_confidence",
+          "primary_source",
+          "candidate_count",
+          "tcg_inferred",
+          "ocr_provider",
+          "latency_ms",
+          "cost_usd",
+          "ocr_confidence",
+          "candidates"
+        ],
+        "title": "ScanHistoryDetail",
+        "type": "object"
+      },
+      "ScanHistoryItem": {
+        "description": "A single scan for the admin history grid.",
+        "properties": {
+          "candidate_count": {
+            "title": "Candidate Count",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "feedback_correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Correct"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "ocr_provider": {
+            "title": "Ocr Provider",
+            "type": "string"
+          },
+          "parsed_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed Number"
+          },
+          "parsed_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed Title"
+          },
+          "primary_source": {
+            "title": "Primary Source",
+            "type": "string"
+          },
+          "tcg_inferred": {
+            "title": "Tcg Inferred",
+            "type": "string"
+          },
+          "top_confidence": {
+            "title": "Top Confidence",
+            "type": "number"
+          },
+          "top_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Name"
+          },
+          "top_upstream_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Upstream Id"
+          },
+          "user_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Email"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "top_confidence",
+          "primary_source",
+          "candidate_count",
+          "tcg_inferred",
+          "ocr_provider",
+          "latency_ms",
+          "cost_usd"
+        ],
+        "title": "ScanHistoryItem",
+        "type": "object"
+      },
+      "ScanHistoryPage": {
+        "description": "A cursor page of scan-history rows (newest first).",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScanHistoryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ScanHistoryPage",
         "type": "object"
       },
       "ScanJobCompleteRequest": {
@@ -6520,6 +7710,66 @@
         ],
         "title": "ScannerTransportEnum",
         "type": "string"
+      },
+      "ScannerTrend": {
+        "properties": {
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ScannerTrendPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "window_days",
+          "points"
+        ],
+        "title": "ScannerTrend",
+        "type": "object"
+      },
+      "ScannerTrendPoint": {
+        "description": "One day of identify activity for the speed + accuracy trend charts.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "fast_path_rate": {
+            "title": "Fast Path Rate",
+            "type": "number"
+          },
+          "latency_p50_ms": {
+            "title": "Latency P50 Ms",
+            "type": "integer"
+          },
+          "latency_p95_ms": {
+            "title": "Latency P95 Ms",
+            "type": "integer"
+          },
+          "mean_confidence": {
+            "title": "Mean Confidence",
+            "type": "number"
+          }
+        },
+        "required": [
+          "date",
+          "count",
+          "mean_confidence",
+          "latency_p50_ms",
+          "latency_p95_ms",
+          "fast_path_rate"
+        ],
+        "title": "ScannerTrendPoint",
+        "type": "object"
       },
       "ScannerUpdate": {
         "description": "Body for ``PATCH /v1/scanners/{id}``.",
@@ -7239,6 +8489,65 @@
         "title": "SubscriptionCancelRequest",
         "type": "object"
       },
+      "SupportSendRequest": {
+        "description": "A one-to-one message from support to a specific user.",
+        "properties": {
+          "body": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "cta_label": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Label"
+          },
+          "cta_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cta Url"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "mode": {
+            "default": "test",
+            "pattern": "^(test|send)$",
+            "title": "Mode",
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "subject",
+          "body"
+        ],
+        "title": "SupportSendRequest",
+        "type": "object"
+      },
       "TableDetail": {
         "properties": {
           "columns": {
@@ -7356,6 +8665,42 @@
         "title": "TestAccountCreated",
         "type": "object"
       },
+      "TestSendRequest": {
+        "properties": {
+          "template": {
+            "title": "Template",
+            "type": "string"
+          }
+        },
+        "required": [
+          "template"
+        ],
+        "title": "TestSendRequest",
+        "type": "object"
+      },
+      "TestSendResponse": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "boolean"
+          },
+          "to": {
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sent",
+          "to",
+          "detail"
+        ],
+        "title": "TestSendResponse",
+        "type": "object"
+      },
       "TokenPair": {
         "description": "Returned by every successful sign-in / refresh.",
         "properties": {
@@ -7465,6 +8810,11 @@
             "title": "Email",
             "type": "string"
           },
+          "email_verified": {
+            "default": false,
+            "title": "Email Verified",
+            "type": "boolean"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -7491,6 +8841,11 @@
             "default": "USD",
             "title": "Currency",
             "type": "string"
+          },
+          "email_announcements_enabled": {
+            "default": true,
+            "title": "Email Announcements Enabled",
+            "type": "boolean"
           },
           "live_sync_enabled": {
             "default": true,
@@ -7538,6 +8893,17 @@
               }
             ],
             "title": "Currency"
+          },
+          "email_announcements_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Announcements Enabled"
           },
           "live_sync_enabled": {
             "anyOf": [
@@ -7646,6 +9012,24 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VerifyEmailResendResponse": {
+        "properties": {
+          "already_verified": {
+            "default": false,
+            "title": "Already Verified",
+            "type": "boolean"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sent"
+        ],
+        "title": "VerifyEmailResendResponse",
         "type": "object"
       },
       "WaitlistEntryRead": {
@@ -8667,6 +10051,34 @@
         ]
       }
     },
+    "/v1/admin/card-tree": {
+      "get": {
+        "operationId": "get_card_tree_v1_admin_card_tree_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Card Tree V1 Admin Card Tree Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Card/Set data lineage + price fallback chain",
+        "tags": [
+          "admin-card-tree"
+        ]
+      }
+    },
     "/v1/admin/cards": {
       "get": {
         "operationId": "search_cards_v1_admin_cards_get",
@@ -9176,6 +10588,471 @@
         ]
       }
     },
+    "/v1/admin/email/announce": {
+      "post": {
+        "operationId": "send_announcement_v1_admin_email_announce_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementSendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnouncementSendResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send a composed announcement \u2014 test to yourself, or blast to subscribers",
+        "tags": [
+          "admin-email"
+        ]
+      }
+    },
+    "/v1/admin/email/announce/preview": {
+      "post": {
+        "operationId": "preview_announcement_v1_admin_email_announce_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplateRender"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Render a draft announcement or support message (no send)",
+        "tags": [
+          "admin-email"
+        ]
+      }
+    },
+    "/v1/admin/email/log": {
+      "get": {
+        "operationId": "list_log_v1_admin_email_log_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 320,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailLogPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delivery log \u2014 every send, queue \u2192 delivered/bounced",
+        "tags": [
+          "admin-email"
+        ]
+      }
+    },
+    "/v1/admin/email/log/{log_id}": {
+      "get": {
+        "operationId": "get_log_entry_v1_admin_email_log__log_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "log_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Log Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailLogDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One logged email, including the stored render",
+        "tags": [
+          "admin-email"
+        ]
+      }
+    },
+    "/v1/admin/email/log/{log_id}/retry": {
+      "post": {
+        "operationId": "retry_log_entry_v1_admin_email_log__log_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "log_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Log Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSendResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Re-send a failed (or stuck) email from its stored render",
+        "tags": [
+          "admin-email"
+        ]
+      }
+    },
+    "/v1/admin/email/support": {
+      "post": {
+        "operationId": "send_support_v1_admin_email_support_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportSendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSendResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send a support message to one user (or test it on yourself)",
+        "tags": [
+          "admin-email"
+        ]
+      }
+    },
+    "/v1/admin/email/templates": {
+      "get": {
+        "operationId": "list_templates_v1_admin_email_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplatesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Email template gallery + provider status",
+        "tags": [
+          "admin-email"
+        ]
+      }
+    },
+    "/v1/admin/email/templates/{key}": {
+      "get": {
+        "operationId": "render_template_v1_admin_email_templates__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplateRender"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Render one template with sample data",
+        "tags": [
+          "admin-email"
+        ]
+      }
+    },
+    "/v1/admin/email/test": {
+      "post": {
+        "operationId": "send_test_v1_admin_email_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestSendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestSendResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send a template to yourself (real delivery)",
+        "tags": [
+          "admin-email"
+        ]
+      }
+    },
     "/v1/admin/engagement": {
       "get": {
         "operationId": "get_engagement_v1_admin_engagement_get",
@@ -9199,6 +11076,32 @@
         "summary": "Engagement & retention",
         "tags": [
           "admin-engagement"
+        ]
+      }
+    },
+    "/v1/admin/env": {
+      "get": {
+        "operationId": "get_env_v1_admin_env_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Environment configuration",
+        "tags": [
+          "admin-ops"
         ]
       }
     },
@@ -9605,6 +11508,56 @@
         ]
       }
     },
+    "/v1/admin/integrations": {
+      "get": {
+        "operationId": "get_integrations_v1_admin_integrations_get",
+        "parameters": [
+          {
+            "description": "Live-ping each configured service for reachability.",
+            "in": "query",
+            "name": "probe",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Live-ping each configured service for reachability.",
+              "title": "Probe",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationsReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "External-service catalog",
+        "tags": [
+          "admin-ops"
+        ]
+      }
+    },
     "/v1/admin/jobs": {
       "get": {
         "operationId": "list_jobs_v1_admin_jobs_get",
@@ -9995,6 +11948,274 @@
           }
         ],
         "summary": "Scan + identify funnel metrics",
+        "tags": [
+          "admin-scanner"
+        ]
+      }
+    },
+    "/v1/admin/scanner/history": {
+      "get": {
+        "operationId": "get_scan_history_v1_admin_scanner_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 40,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter to one account.",
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to one account.",
+              "title": "User Id"
+            }
+          },
+          {
+            "description": "\"phash\" | \"text\" | \"none\" | \u2026",
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "\"phash\" | \"text\" | \"none\" | \u2026",
+              "title": "Source"
+            }
+          },
+          {
+            "description": "Inferred game filter.",
+            "in": "query",
+            "name": "tcg",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inferred game filter.",
+              "title": "Tcg"
+            }
+          },
+          {
+            "description": "OCR provider filter.",
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "OCR provider filter.",
+              "title": "Provider"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_confidence",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Confidence"
+            }
+          },
+          {
+            "description": "true = only scans that resolved to a card; false = misses.",
+            "in": "query",
+            "name": "matched",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "true = only scans that resolved to a card; false = misses.",
+              "title": "Matched"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanHistoryPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Scan history log \u2014 every scan with its photo + metadata",
+        "tags": [
+          "admin-scanner"
+        ]
+      }
+    },
+    "/v1/admin/scanner/history/{scan_id}": {
+      "get": {
+        "operationId": "get_scan_detail_v1_admin_scanner_history__scan_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanHistoryDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One scan \u2014 full candidates + raw OCR text",
+        "tags": [
+          "admin-scanner"
+        ]
+      }
+    },
+    "/v1/admin/scanner/trend": {
+      "get": {
+        "operationId": "get_scanner_trend_v1_admin_scanner_trend_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 180,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScannerTrend"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Daily speed + accuracy trend series",
         "tags": [
           "admin-scanner"
         ]
@@ -11146,6 +13367,41 @@
         ]
       }
     },
+    "/v1/auth/forgot-password": {
+      "post": {
+        "description": "Request a reset link. Responds 204 whether or not the account exists,\nso the endpoint can't be used to enumerate emails.",
+        "operationId": "forgot_password_v1_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Email a password-reset link (always 204)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/v1/auth/google": {
       "post": {
         "operationId": "sign_in_with_google_v1_auth_google_post",
@@ -11519,6 +13775,48 @@
           }
         },
         "summary": "Create account with email + password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/reset-password": {
+      "post": {
+        "description": "Complete the reset. The token is single-use and revokes every other\nsession; a fresh token pair signs this device straight in.",
+        "operationId": "reset_password_v1_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set a new password from an emailed reset token",
         "tags": [
           "auth"
         ]
@@ -14255,6 +16553,86 @@
         ]
       }
     },
+    "/v1/me/push-tokens": {
+      "post": {
+        "description": "Idempotent upsert by token \u2014 a device that re-registers (or switches\naccounts) moves to the caller, never duplicates.",
+        "operationId": "register_push_token_v1_me_push_tokens_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushTokenRegister"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Register this device for push notifications",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/v1/me/push-tokens/{token}": {
+      "delete": {
+        "operationId": "remove_push_token_v1_me_push_tokens__token__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unregister a device (sign-out)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/v1/me/recents": {
       "get": {
         "operationId": "get_recents_v1_me_recents_get",
@@ -14390,6 +16768,32 @@
           }
         ],
         "summary": "Update user settings",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/v1/me/verify-email/resend": {
+      "post": {
+        "operationId": "resend_verify_email_v1_me_verify_email_resend_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyEmailResendResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Re-send the email-confirmation link",
         "tags": [
           "users"
         ]
@@ -14689,6 +17093,53 @@
         ]
       }
     },
+    "/v1/public/carousels": {
+      "get": {
+        "description": "A game's discovery shelves as serializable recipes (theme + filter), AI-\ndesigned and cached daily. The web compiles each into a real rail and mixes\nthem into the rotating storefront; ``source`` says whether the model\nproduced them (``ai``) or it fell back to the web's curated pool\n(``curated``).",
+        "operationId": "public_carousels_v1_public_carousels_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "game",
+            "required": false,
+            "schema": {
+              "default": "pokemon",
+              "pattern": "^(pokemon|magic|yugioh|onepiece|digimon)$",
+              "title": "Game",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Carousels V1 Public Carousels Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "AI-designed marketplace carousels (recipes) for a game",
+        "tags": [
+          "public"
+        ]
+      }
+    },
     "/v1/public/search": {
       "get": {
         "description": "Search (or, with no query, browse trending) with all derivation done here.\n\nReturns the paginated slice plus ``total`` and ``facets`` so the client\nrenders directly \u2014 no client-side filtering/sorting/pagination.",
@@ -14711,7 +17162,7 @@
             "required": false,
             "schema": {
               "default": "all",
-              "pattern": "^(pokemon|magic|yugioh|onepiece|lorcana|sports|all)$",
+              "pattern": "^(pokemon|magic|yugioh|digimon|onepiece|lorcana|sports|all)$",
               "title": "Tcg",
               "type": "string"
             }
@@ -14883,7 +17334,7 @@
             "required": false,
             "schema": {
               "default": "all",
-              "pattern": "^(pokemon|magic|yugioh|all)$",
+              "pattern": "^(pokemon|magic|yugioh|digimon|onepiece|all)$",
               "title": "Tcg",
               "type": "string"
             }
@@ -14954,6 +17405,136 @@
           }
         },
         "summary": "Public trending (server-side sort / price ceiling)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/unsubscribe": {
+      "get": {
+        "operationId": "unsubscribe_get_v1_public_unsubscribe_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 10,
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unsubscribe (footer link)",
+        "tags": [
+          "public"
+        ]
+      },
+      "post": {
+        "operationId": "unsubscribe_post_v1_public_unsubscribe_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 10,
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One-click unsubscribe (RFC 8058)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/verify-email": {
+      "get": {
+        "operationId": "verify_email_v1_public_verify_email_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 10,
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm an email address",
         "tags": [
           "public"
         ]
@@ -16170,7 +18751,7 @@
             "required": false,
             "schema": {
               "default": "magic",
-              "pattern": "^(pokemon|magic|yugioh|all)$",
+              "pattern": "^(pokemon|magic|yugioh|digimon|onepiece|all)$",
               "title": "Tcg",
               "type": "string"
             }
@@ -16419,6 +19000,31 @@
         "summary": "Unpin a card from my watchlist",
         "tags": [
           "watchlist"
+        ]
+      }
+    },
+    "/v1/webhooks/resend": {
+      "post": {
+        "operationId": "resend_webhook_v1_webhooks_resend_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Resend Webhook V1 Webhooks Resend Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Resend delivery-status webhook",
+        "tags": [
+          "webhooks"
         ]
       }
     },
