@@ -21,6 +21,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "app.loupe.client",
       "usesAppleSignIn": true,
+      "entitlements": {
+        "aps-environment": "production"
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleURLTypes": [

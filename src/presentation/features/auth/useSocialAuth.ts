@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
-import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { useAuth } from "@/presentation/providers/AuthProvider";
-import { config } from "@/shared/config";
 
 // Lets the in-app browser dismiss + hand the redirect back to JS on return.
 WebBrowser.maybeCompleteAuthSession();
-
-export type SocialProvider = "apple" | "google";
 
 export interface UseSocialAuthOptions {
   onSuccess?: () => void;
@@ -19,27 +15,27 @@ export interface UseSocialAuthOptions {
 export interface SocialAuthState {
   /** Apple Sign In is iOS 13+ only. */
   appleAvailable: boolean;
-  /** Google needs a configured iOS OAuth client id (else hidden, like web). */
-  googleAvailable: boolean;
-  /** Which provider's flow is in flight (drives per-button spinners). */
-  busy: SocialProvider | null;
+  /** The Apple flow is in flight (drives the button spinner). */
+  busy: boolean;
   signInWithApple: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
 }
 
 /**
- * Reusable native social sign-in. Wraps the Apple + Google SDK flows and hands
- * the resulting identity / id token to {@link useAuth} for the backend
- * exchange — the same `/auth/apple` + `/auth/google` endpoints the web uses.
- * Each provider self-gates (Apple by OS support, Google by a configured client
- * id), so the buttons only appear where they can actually work.
+ * Apple sign-in flow, shared by the Sign In + Sign Up screens. Hands the
+ * identity token to {@link useAuth} for the backend exchange — the same
+ * `/auth/apple` endpoint the web uses.
+ *
+ * Google deliberately does NOT live here: its `Google.useAuthRequest` hook
+ * throws during render when no client id is configured, so it's isolated in
+ * `GoogleSignInButton`, which callers render only when configured. Keeping it
+ * out of this always-mounted hook is what keeps the auth screens crash-proof
+ * when the build is missing `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`.
  */
 export function useSocialAuth(opts: UseSocialAuthOptions = {}): SocialAuthState {
   const { onSuccess, onError } = opts;
   const auth = useAuth();
-  const [busy, setBusy] = useState<SocialProvider | null>(null);
+  const [busy, setBusy] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
-  const googleAvailable = !!config.googleIosClientId;
 
   useEffect(() => {
     let alive = true;
@@ -53,39 +49,8 @@ export function useSocialAuth(opts: UseSocialAuthOptions = {}): SocialAuthState 
     };
   }, []);
 
-  // ── Google (expo-auth-session) ──
-  const [, googleResponse, promptGoogle] = Google.useAuthRequest({
-    iosClientId: config.googleIosClientId || undefined,
-  });
-
-  useEffect(() => {
-    if (!googleResponse) return;
-    if (googleResponse.type === "success") {
-      const idToken =
-        googleResponse.params?.id_token ?? googleResponse.authentication?.idToken;
-      if (!idToken) {
-        setBusy(null);
-        onError?.("Google sign-in didn’t return a token. Please try again.");
-        return;
-      }
-      auth
-        .signInWithGoogle(idToken)
-        .then(() => onSuccess?.())
-        .catch(() => onError?.("Google sign-in failed. Please try again."))
-        .finally(() => setBusy(null));
-    } else {
-      // error / dismiss / cancel — clear the spinner, stay quiet on cancel.
-      setBusy(null);
-      if (googleResponse.type === "error") {
-        onError?.("Google sign-in failed. Please try again.");
-      }
-    }
-    // auth/onSuccess/onError are stable enough; re-run only on a new response.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleResponse]);
-
   const signInWithApple = useCallback(async () => {
-    setBusy("apple");
+    setBusy(true);
     try {
       const cred = await AppleAuthentication.signInAsync({
         requestedScopes: [
@@ -107,20 +72,9 @@ export function useSocialAuth(opts: UseSocialAuthOptions = {}): SocialAuthState 
         onError?.("Apple sign-in failed. Please try again.");
       }
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }, [auth, onSuccess, onError]);
 
-  const signInWithGoogle = useCallback(async () => {
-    setBusy("google");
-    await promptGoogle(); // result lands in the googleResponse effect above
-  }, [promptGoogle]);
-
-  return {
-    appleAvailable,
-    googleAvailable,
-    busy,
-    signInWithApple,
-    signInWithGoogle,
-  };
+  return { appleAvailable, busy, signInWithApple };
 }
