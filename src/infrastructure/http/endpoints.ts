@@ -30,6 +30,8 @@ export const ENDPOINTS = {
     settings: `${V1}/me/settings`,
     grades: `${V1}/grades`,
     recents: `${V1}/me/recents`,
+    pushTokens: `${V1}/me/push-tokens`,
+    pushToken: (token: string) => `${V1}/me/push-tokens/${encodeURIComponent(token)}`,
   },
   scanners: {
     list: `${V1}/scanners`,

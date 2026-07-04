@@ -22,6 +22,7 @@ import { WebView } from "react-native-webview";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { config } from "@/shared/config";
 import { useThemedPalette } from "@/presentation/theme/tokens";
+import { useTheme } from "@/presentation/theme";
 
 export interface WebPageScreenProps {
   /** Header title. */
@@ -40,6 +41,15 @@ export interface WebPageScreenProps {
    * external origins) is blocked, so the bundled page can't roam the whole app.
    */
   confinePaths?: string[];
+  /**
+   * Embed scope handed to the web app (`?embed=`). "app" makes the web shell
+   * hide its own chrome (TopBar / tab bar / public header+footer) and render
+   * content edge-to-edge, so the native screen provides the chrome — the
+   * YouTube-in-app pattern. Default "app".
+   */
+  embed?: "app" | "admin";
+  /** Hide the native header (for tab-level surfaces with their own title). */
+  showHeader?: boolean;
 }
 
 export function WebPageScreen({
@@ -47,22 +57,33 @@ export function WebPageScreen({
   path,
   injectToken = false,
   confinePaths,
+  embed = "app",
+  showHeader = true,
 }: WebPageScreenProps) {
   const p = useThemedPalette();
+  const { scheme } = useTheme();
   const { token } = useAuth();
   const [loading, setLoading] = useState(true);
   const webRef = useRef<WebView>(null);
 
-  const uri = `${config.webUrl}${path}`;
+  const sep = path.includes("?") ? "&" : "?";
+  const uri = `${config.webUrl}${path}${sep}embed=${embed}`;
 
-  // Runs before the web app's own scripts (mirrors the dev-portal screen).
+  // Runs before the web app's own scripts (mirrors the dev-portal screen):
+  // seed embed scope + native theme + (optionally) the session token so the
+  // page boots chrome-less, in-scheme, and signed in.
   const injectedBefore = useMemo(() => {
-    if (!injectToken || !token) return "true;";
+    const tokenLine =
+      injectToken && token
+        ? `try { window.localStorage.setItem('loupe.auth.token', ${JSON.stringify(token)}); } catch (e) {}`
+        : "";
     return `
-      try { window.localStorage.setItem('loupe.auth.token', ${JSON.stringify(token)}); } catch (e) {}
+      try { window.sessionStorage.setItem('loupe.embed', ${JSON.stringify(embed)}); } catch (e) {}
+      try { window.localStorage.setItem('loupe.theme', ${JSON.stringify(scheme)}); document.documentElement.setAttribute('data-theme', ${JSON.stringify(scheme)}); } catch (e) {}
+      ${tokenLine}
       true;
     `;
-  }, [injectToken, token]);
+  }, [embed, injectToken, scheme, token]);
 
   // Confine hard navigations to the page's own section + same origin. Blocks
   // links that would leave the bundled page for the rest of the app or an
@@ -84,6 +105,7 @@ export function WebPageScreen({
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: p.bg.base }} edges={["top"]}>
+      {showHeader && (
       <View style={[styles.header, { borderBottomColor: p.line.default }]}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
           <Text style={{ color: p.accent.mint, fontSize: 16, fontWeight: "700" }}>
@@ -95,6 +117,7 @@ export function WebPageScreen({
         </Text>
         <View style={{ width: 44 }} />
       </View>
+      )}
 
       <View style={{ flex: 1 }}>
         <WebView
