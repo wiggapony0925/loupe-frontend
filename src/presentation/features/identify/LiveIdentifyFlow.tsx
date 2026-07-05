@@ -160,18 +160,24 @@ const CROP_JPEG_QUALITY = 0.7;
  * surface used to mix. GLASS = floating pills/controls, GLASS_STRONG =
  * result cards that need to stay legible over busy backgrounds.
  */
-const GLASS = "rgba(7,10,12,0.52)";
-const GLASS_STRONG = "rgba(5,8,10,0.88)";
-const HAIRLINE = "rgba(255,255,255,0.08)";
+// Overlay surfaces are SOLID, not see-through — camera controls have to read
+// as real, tappable widgets over a busy, bright viewfinder. GLASS = floating
+// pills/controls; GLASS_STRONG = result cards over the busiest backgrounds;
+// HAIRLINE = the crisp edge that separates a control from the camera behind it.
+const GLASS = "rgba(18,20,25,0.90)";
+const GLASS_STRONG = "rgba(9,11,14,0.96)";
+const HAIRLINE = "rgba(255,255,255,0.16)";
 
-/** Circular camera overlay button. Kept simple and actually round on iOS. */
+/** Circular camera overlay button — a solid dark disc with a crisp edge and
+ *  a soft drop shadow so it lifts cleanly off the viewfinder (no more
+ *  floating, background-less icons). */
 function GlassCircle({
   children,
   onPress,
   accessibilityLabel,
-  tint = "transparent",
-  borderColor = "transparent",
-  size = 38,
+  tint = GLASS,
+  borderColor = HAIRLINE,
+  size = 44,
 }: {
   children: React.ReactNode;
   onPress: () => void;
@@ -184,19 +190,21 @@ function GlassCircle({
     <Pressable
       onPress={onPress}
       hitSlop={12}
+      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => ({
         width: size,
         height: size,
         borderRadius: size / 2,
         overflow: "hidden",
-        borderWidth: 1,
+        borderWidth: StyleSheet.hairlineWidth * 2,
         borderColor,
-        opacity: pressed ? 0.7 : 1,
+        opacity: pressed ? 0.82 : 1,
+        transform: [{ scale: pressed ? 0.94 : 1 }],
         shadowColor: "#000",
-        shadowOpacity: 0.45,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
       })}
     >
       <View
@@ -477,6 +485,7 @@ export function LiveIdentifyFlow({
   initialTcg = null,
 }: LiveIdentifyFlowProps) {
   const p = useThemedPalette();
+  const insets = useSafeAreaInsets();
   const formatUsd = useCompactUsd();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
@@ -1096,16 +1105,13 @@ export function LiveIdentifyFlow({
         edges={["top", "bottom"]}
         style={{ flex: 1, backgroundColor: p.bg.base, padding: 24, justifyContent: "center", alignItems: "center" }}
       >
-        {/* Close stays reachable top-left even on the gate. */}
-        <Pressable
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Close scanner"
-          hitSlop={12}
-          style={{ position: "absolute", top: 8, left: 16, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
-        >
-          <X size={26} color={p.ink.muted} strokeWidth={2.2} />
-        </Pressable>
+        {/* Close stays reachable top-left even on the gate — a solid disc,
+            pushed clear of the notch/Dynamic Island. */}
+        <View style={{ position: "absolute", top: insets.top + 8, left: 16 }}>
+          <GlassCircle onPress={onClose} accessibilityLabel="Close scanner" size={44}>
+            <X size={24} color="#fff" strokeWidth={2.4} />
+          </GlassCircle>
+        </View>
 
         <View
           style={{
@@ -1422,62 +1428,58 @@ function TopBar({
       : "Looking for a card…";
 
   return (
-    <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 }}>
+    <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 }}>
       <View className="flex-row items-center justify-between">
-        <GlassCircle
-          onPress={onClose}
-          accessibilityLabel="Close scanner"
-          size={44}
-        >
-          <X size={24} color="#fff" strokeWidth={2.2} />
+        <GlassCircle onPress={onClose} accessibilityLabel="Close scanner" size={46}>
+          <X size={24} color="#fff" strokeWidth={2.4} />
         </GlassCircle>
 
-        {/* Centered title + live status. Top = current mode, bottom panel
+        {/* Centered title + live status pill. Top = current mode, bottom panel
             = the actual result, so they never duplicate. */}
-        <View style={{ alignItems: "center", gap: 3 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 7,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 999,
+            backgroundColor: GLASS,
+            borderWidth: StyleSheet.hairlineWidth * 2,
+            borderColor: HAIRLINE,
+          }}
+        >
+          <Animated.View
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: 3.5,
+              backgroundColor:
+                locked || hasMatch ? palette.accent.mint : "rgba(255,255,255,0.85)",
+              opacity: dot,
+            }}
+          />
           <Text
             style={{
               color: "#fff",
-              fontSize: 15.5,
+              fontSize: 13,
               fontWeight: "700",
-              letterSpacing: 0,
-              textShadowColor: "rgba(0,0,0,0.72)",
-              textShadowRadius: 10,
-              textShadowOffset: { width: 0, height: 2 },
+              letterSpacing: 0.1,
             }}
           >
-            Scan a card
+            {status}
           </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Animated.View
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: palette.accent.mint,
-                opacity: dot,
-              }}
-            />
-            <Text
-              style={{
-                color: "rgba(255,255,255,0.6)",
-                fontSize: 11.5,
-                fontWeight: "600",
-                letterSpacing: 0.2,
-              }}
-            >
-              {status}
-            </Text>
-          </View>
         </View>
 
         <GlassCircle
           onPress={onToggleFlash}
           accessibilityLabel={flashOn ? "Turn flash off" : "Turn flash on"}
-          size={44}
+          size={46}
+          tint={flashOn ? withAlpha(palette.accent.amber, 0.22) : GLASS}
+          borderColor={flashOn ? withAlpha(palette.accent.amber, 0.55) : HAIRLINE}
         >
           {flashOn ? (
-            <Zap size={23} color={palette.accent.amber} strokeWidth={2.2} />
+            <Zap size={23} color={palette.accent.amber} strokeWidth={2.4} />
           ) : (
             <ZapOff size={23} color="#fff" strokeWidth={2.2} />
           )}
@@ -1656,21 +1658,19 @@ function ReticleArea({
   const CARD_W = Math.round(Math.min(winW * 0.8, maxCardHeight * cardAspect, 336));
   const CARD_H = Math.round(CARD_W * (3.5 / 2.5));
 
-  // No scrim. The user wants the live camera fully visible — the corner
-  // brackets + thin card-window border do all the framing, no grey wash
-  // over the feed.
-  const scrim = "transparent";
+  // A subtle cutout scrim darkens everything OUTSIDE the card window so the
+  // eye lands squarely on the card and the floating controls read cleanly —
+  // the Collectr / Google Lens frame. Kept gentle (not a heavy grey wash) so
+  // the live feed stays clearly visible; it lifts slightly once we lock.
+  const scrim = withAlpha("#000000", locked || hasMatch ? 0.2 : 0.34);
 
   return (
     <Pressable
       onPress={handleTap}
       style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
     >
-      {/* Dimmed cutout scrim — darkens everything outside the card
-          window so the eye (and the user) lands squarely on the card,
-          the way Collectr / Google Lens frame a scan. Built from four
-          panels around an explicitly-sized clear window so it needs no
-          masking library and stays pixel-aligned with the brackets. */}
+      {/* Four panels around an explicitly-sized clear window — no masking
+          library needed, stays pixel-aligned with the brackets. */}
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <View style={{ flex: 1, backgroundColor: scrim }} />
         <View style={{ flexDirection: "row", height: CARD_H }}>
@@ -1679,8 +1679,8 @@ function ReticleArea({
             style={{
               width: CARD_W,
               borderRadius: 18,
-              borderWidth: 1,
-              borderColor: withAlpha("#FFFFFF", locked || hasMatch ? 0 : 0.18),
+              borderWidth: 1.5,
+              borderColor: withAlpha("#FFFFFF", locked || hasMatch ? 0 : 0.5),
             }}
           />
           <View style={{ flex: 1, backgroundColor: scrim }} />
@@ -2277,21 +2277,23 @@ function BottomPanel({
             accessibilityLabel="Search the catalog manually"
             disabled={!onManualSearch}
             style={({ pressed }) => ({
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              overflow: "hidden",
+              width: 52,
+              height: 52,
+              borderRadius: 26,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "transparent",
-              opacity: pressed ? 0.7 : onManualSearch ? 1 : 0.4,
+              backgroundColor: GLASS,
+              borderWidth: StyleSheet.hairlineWidth * 2,
+              borderColor: HAIRLINE,
+              opacity: pressed ? 0.82 : onManualSearch ? 1 : 0.4,
+              transform: [{ scale: pressed ? 0.94 : 1 }],
               shadowColor: "#000",
-              shadowOpacity: 0.42,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.5,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 4 },
             })}
           >
-            <Search size={29} color="rgba(255,255,255,0.94)" strokeWidth={2.1} />
+            <Search size={25} color="#fff" strokeWidth={2.2} />
           </Pressable>
         </View>
       </View>
