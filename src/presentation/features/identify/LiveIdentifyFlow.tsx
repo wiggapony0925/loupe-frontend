@@ -22,7 +22,7 @@
  * prior. Closing without picking is silent (no negative signal — they
  * might have just abandoned).
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -1321,6 +1321,9 @@ function ScannerOverlay({
         locked={state.locked}
         hasMatch={hasMatch}
         onToggleFlash={onToggleFlash}
+        tcgHint={tcgHint}
+        onOpenTcgPicker={onOpenTcgPicker}
+        palette={themed}
       />
 
       <ReticleArea
@@ -1341,7 +1344,6 @@ function ScannerOverlay({
         detectorHint={detectorHint}
         tcgHint={tcgHint}
         tcgPickerOpen={tcgPickerOpen}
-        onOpenTcgPicker={onOpenTcgPicker}
         onCloseTcgPicker={onCloseTcgPicker}
         onPickTcg={onPickTcg}
         onPickCandidate={onPickCandidate}
@@ -1386,12 +1388,18 @@ function TopBar({
   locked,
   hasMatch,
   onToggleFlash,
+  tcgHint,
+  onOpenTcgPicker,
+  palette: themed,
 }: {
   onClose: () => void;
   flashOn: boolean;
   locked: boolean;
   hasMatch: boolean;
   onToggleFlash: () => void;
+  tcgHint: IdentifyTcgHint;
+  onOpenTcgPicker: () => void;
+  palette: ReturnType<typeof useThemedPalette>;
 }) {
   // Breathing status dot — gives the header a quiet "alive" pulse while
   // hunting, then snaps solid mint the moment we have a match/lock.
@@ -1421,6 +1429,8 @@ function TopBar({
     return () => anim.stop();
   }, [locked, hasMatch, dot]);
 
+  const tcgOption = TCG_OPTIONS.find((o) => o.key === tcgHint) ?? TCG_OPTIONS[0]!;
+  const tcgColor = themed.accent[tcgOption.accent];
   const status = locked
     ? "Locked in"
     : hasMatch
@@ -1428,62 +1438,107 @@ function TopBar({
       : "Looking for a card…";
 
   return (
-    <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 }}>
+    <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, gap: 10 }}>
       <View className="flex-row items-center justify-between">
         <GlassCircle onPress={onClose} accessibilityLabel="Close scanner" size={46}>
           <X size={24} color="#fff" strokeWidth={2.4} />
         </GlassCircle>
 
-        {/* Centered title + live status pill. Top = current mode, bottom panel
-            = the actual result, so they never duplicate. */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 7,
-            paddingHorizontal: 14,
-            paddingVertical: 8,
-            borderRadius: 999,
-            backgroundColor: GLASS,
-            borderWidth: StyleSheet.hairlineWidth * 2,
-            borderColor: HAIRLINE,
-          }}
+        {/* Game selector — front and center, the way a pro scanner leads with
+            "what am I scanning?" (Collectr's "Trading Card Games ▼"). Tapping
+            opens the picker sheet mounted in the bottom panel. */}
+        <Pressable
+          onPress={onOpenTcgPicker}
+          accessibilityRole="button"
+          accessibilityLabel={`Game: ${tcgOption.label}. Tap to change.`}
+          hitSlop={8}
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.85 : 1,
+            transform: [{ scale: pressed ? 0.97 : 1 }],
+          })}
         >
-          <Animated.View
+          <View
             style={{
-              width: 7,
-              height: 7,
-              borderRadius: 3.5,
-              backgroundColor:
-                locked || hasMatch ? palette.accent.mint : "rgba(255,255,255,0.85)",
-              opacity: dot,
-            }}
-          />
-          <Text
-            style={{
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: "700",
-              letterSpacing: 0.1,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              paddingLeft: 14,
+              paddingRight: 12,
+              paddingVertical: 10,
+              borderRadius: 999,
+              backgroundColor: GLASS,
+              borderWidth: StyleSheet.hairlineWidth * 2,
+              borderColor: HAIRLINE,
+              shadowColor: "#000",
+              shadowOpacity: 0.4,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 3 },
             }}
           >
-            {status}
-          </Text>
-        </View>
+            <View
+              style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tcgColor }}
+            />
+            <Text
+              style={{
+                color: "#fff",
+                fontWeight: "800",
+                fontSize: 14.5,
+                letterSpacing: 0.1,
+              }}
+            >
+              {tcgOption.label}
+            </Text>
+            <ChevronDown size={16} color="rgba(255,255,255,0.7)" strokeWidth={2.4} />
+          </View>
+        </Pressable>
 
         <GlassCircle
           onPress={onToggleFlash}
           accessibilityLabel={flashOn ? "Turn flash off" : "Turn flash on"}
           size={46}
-          tint={flashOn ? withAlpha(palette.accent.amber, 0.22) : GLASS}
-          borderColor={flashOn ? withAlpha(palette.accent.amber, 0.55) : HAIRLINE}
+          tint={flashOn ? withAlpha(themed.accent.amber, 0.22) : GLASS}
+          borderColor={flashOn ? withAlpha(themed.accent.amber, 0.55) : HAIRLINE}
         >
           {flashOn ? (
-            <Zap size={23} color={palette.accent.amber} strokeWidth={2.4} />
+            <Zap size={23} color={themed.accent.amber} strokeWidth={2.4} />
           ) : (
             <ZapOff size={23} color="#fff" strokeWidth={2.2} />
           )}
         </GlassCircle>
+      </View>
+
+      {/* Slim live-status line under the header — subtle feedback, doesn't
+          compete with the game selector or the bottom result card. */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+        }}
+      >
+        <Animated.View
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor:
+              locked || hasMatch ? themed.accent.mint : "rgba(255,255,255,0.8)",
+            opacity: dot,
+          }}
+        />
+        <Text
+          style={{
+            color: "rgba(255,255,255,0.72)",
+            fontSize: 12,
+            fontWeight: "600",
+            letterSpacing: 0.2,
+            textShadowColor: "rgba(0,0,0,0.6)",
+            textShadowRadius: 6,
+          }}
+        >
+          {status}
+        </Text>
       </View>
     </View>
   );
@@ -1965,7 +2020,6 @@ function BottomPanel({
   detectorHint,
   tcgHint,
   tcgPickerOpen,
-  onOpenTcgPicker,
   onCloseTcgPicker,
   onPickTcg,
   onPickCandidate,
@@ -1994,7 +2048,6 @@ function BottomPanel({
   detectorHint: string | null;
   tcgHint: IdentifyTcgHint;
   tcgPickerOpen: boolean;
-  onOpenTcgPicker: () => void;
   onCloseTcgPicker: () => void;
   onPickTcg: (t: IdentifyTcgHint) => void;
   onPickCandidate: (c: IdentifyCandidate) => void;
@@ -2018,12 +2071,6 @@ function BottomPanel({
   formatUsd: (v: number) => string;
   palette: ReturnType<typeof useThemedPalette>;
 }) {
-  const tcgOption = useMemo(
-    () => TCG_OPTIONS.find((o) => o.key === tcgHint) ?? TCG_OPTIONS[0]!,
-    [tcgHint],
-  );
-  const tcgLabel = tcgOption.label;
-  const tcgColor = themed.accent[tcgOption.accent];
   const shutterLocked = state.locked;
   const { height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -2133,53 +2180,10 @@ function BottomPanel({
       ) : null}
 
       <View style={{ height: 76, justifyContent: "center", paddingTop: 2 }}>
-        {/* Left utility cluster. The shutter is centered independently
-          so label width can never pull it off-axis. */}
-        <View style={{ position: "absolute", left: 2, top: 14, alignItems: "flex-start" }}>
-          {/* TCG selector pill — glassy dark to sit quietly on the camera
-              surface (the shutter is the only bright element), with a
-              per-game color dot so a wrong auto-detect is obvious. */}
-          <Pressable
-            onPress={onOpenTcgPicker}
-            accessibilityRole="button"
-            accessibilityLabel="Change TCG hint"
-            style={({ pressed }) => ({
-              borderRadius: 999,
-              overflow: "hidden",
-              borderWidth: 1,
-              borderColor: HAIRLINE,
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <BlurView
-              intensity={24}
-              tint="dark"
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 7,
-                paddingLeft: 11,
-                paddingRight: 12,
-                paddingVertical: 10,
-                backgroundColor: GLASS,
-              }}
-            >
-              <View
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: 4,
-                  backgroundColor: tcgColor,
-                }}
-              />
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>{tcgLabel}</Text>
-              <ChevronDown size={14} color="rgba(255,255,255,0.6)" />
-            </BlurView>
-          </Pressable>
-        </View>
-
         {/* Manual shutter — the single bright focal point. Picks up a mint
-            ring + glow the instant we lock so the control reflects state. */}
+            ring + glow the instant we lock so the control reflects state.
+            The game selector now lives in the top bar, so the shutter owns
+            the center and the search escape hatch sits on the right. */}
         <View style={{ width: 68, height: 68, alignSelf: "center", alignItems: "center", justifyContent: "center" }}>
           {shutterLocked ? (
             <Animated.View
@@ -2504,7 +2508,7 @@ function PreviewMatchCard({
           alignItems: "center",
           gap: 10,
           padding: 10,
-          backgroundColor: "rgba(10,11,13,0.76)",
+          backgroundColor: GLASS_STRONG,
         }}
       >
       <View
