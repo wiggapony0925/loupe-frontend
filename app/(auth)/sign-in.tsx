@@ -80,6 +80,16 @@ export default function SignInScreen() {
           placeholder="••••••••"
           error={error}
         />
+        <Pressable
+          onPress={() => router.push("/(auth)/forgot-password")}
+          hitSlop={8}
+          style={styles.forgot}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.forgotText, { color: p.accent.mint }]}>
+            Forgot password?
+          </Text>
+        </Pressable>
       </View>
 
       <View style={styles.actions}>
@@ -130,6 +140,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 32, fontWeight: "800", letterSpacing: -0.5 },
   subtitle: { fontSize: 15 },
   form: { gap: 16 },
+  forgot: { alignSelf: "flex-end", marginTop: -4 },
+  forgotText: { fontSize: 13, fontWeight: "600" },
   actions: { gap: 16, alignItems: "center" },
   switch: { fontSize: 14, textAlign: "center" },
 });

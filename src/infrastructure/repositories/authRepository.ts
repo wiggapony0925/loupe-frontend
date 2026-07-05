@@ -96,3 +96,16 @@ export function refreshSession(body: RefreshRequest): Promise<TokenPair> {
 export function getMe(): Promise<MeResponse> {
   return apiFetch<MeResponse>(ENDPOINTS.me.root, { method: "GET" });
 }
+
+/**
+ * Request a password-reset email. Public and always resolves (the backend
+ * returns 204 whether or not the address exists — no account enumeration).
+ * The email carries a link to the web reset page, which completes the reset.
+ */
+export function requestPasswordReset(email: string): Promise<void> {
+  return apiFetch<void>(ENDPOINTS.auth.forgotPassword, {
+    method: "POST",
+    json: { email },
+    skipAuth: true,
+  });
+}

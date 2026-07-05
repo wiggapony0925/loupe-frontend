@@ -24,6 +24,7 @@ export const ENDPOINTS = {
     refresh: `${V1}/auth/refresh`,
     logoutAll: `${V1}/auth/logout-all`,
     changePassword: `${V1}/auth/change-password`,
+    forgotPassword: `${V1}/auth/forgot-password`,
   },
   me: {
     root: `${V1}/me`,
