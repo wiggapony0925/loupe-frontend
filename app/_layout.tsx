@@ -150,6 +150,14 @@ function RootStack() {
         name="support"
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
+      <Stack.Screen
+        name="sets/index"
+        options={{ presentation: "card", animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="blog/index"
+        options={{ presentation: "card", animation: "slide_from_right" }}
+      />
       {/* Primary push destinations — register them so they use the same
           iOS-standard slide as the rest of the stack instead of the
           default `fade` screenOption (card detail is the most-hit screen

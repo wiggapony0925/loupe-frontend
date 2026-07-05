@@ -32,6 +32,10 @@ export const routes = {
   card: (id: string) => `/card/${enc(id)}`,
   /** The full web marketplace, bundled in-app (rails, search, browse). */
   markets: () => "/market" as const,
+  /** Sets explorer (browse the set catalog → a set's cards), bundled in-app. */
+  sets: () => "/sets" as const,
+  /** The Loupe blog, bundled in-app. */
+  blog: () => "/blog" as const,
   /** Legacy alias. Market data now lives on the unified card detail page. */
   market: (id: string) => `/card/${enc(id)}`,
   scan: (id: string) => `/scan/${enc(id)}`,

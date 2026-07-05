@@ -9,9 +9,11 @@
 
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import Svg, { Circle } from "react-native-svg";
 import { useSetProgress } from "@/application/queries/catalog/useSetProgress";
+import { routes } from "@/shared/routes";
 import { SetLogo } from "@/presentation/brand/SetLogo";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { Skeleton } from "@/presentation/components/Skeleton";
@@ -57,7 +59,22 @@ export function SetProgressCarousel() {
 
   return (
     <View style={{ gap: 12 }}>
-      <SectionHeader eyebrow="Progress" title="Sets" />
+      <SectionHeader
+        eyebrow="Progress"
+        title="Sets"
+        trailing={
+          <Pressable
+            onPress={() => router.push(routes.sets())}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Browse all sets"
+          >
+            <Text style={{ color: p.accent.mint, fontSize: 13, fontWeight: "600" }}>
+              Browse all
+            </Text>
+          </Pressable>
+        }
+      />
       {isLoading ? (
         <View
           style={{
@@ -104,14 +121,16 @@ function SetProgressTile({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${item.setName}, ${item.owned} of ${item.total} cards, ${item.percent.toFixed(0)} percent complete`}
-      style={{
+      onPress={() => router.push(routes.sets())}
+      style={({ pressed }) => ({
         width: TILE_W,
         borderRadius: 14,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: line,
         backgroundColor: bgElev,
         overflow: "hidden",
-      }}
+        opacity: pressed ? 0.85 : 1,
+      })}
     >
       {/* Set artwork hero — Robinhood-style: large logo breathing on a
           near-neutral surface, no chunky tinted fill. Keeps the tile

@@ -168,6 +168,11 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           onPress={() => router.push("/support")}
         />
         <MenuRow
+          title="Blog"
+          subtitle="Product news, set drops, and collecting guides"
+          onPress={() => router.push("/blog")}
+        />
+        <MenuRow
           title="Preferences"
           subtitle="Currency, capture, haptics, notifications"
           onPress={() => onNavigate("general")}
