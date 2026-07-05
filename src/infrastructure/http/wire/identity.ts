@@ -21,7 +21,18 @@ export interface UserSettings {
   theme: "system" | "light" | "dark";
   live_sync_enabled: boolean;
   push_notifications_enabled: boolean;
+  /** Opt-in for product-update + blog emails; security/account emails always send. */
+  email_announcements_enabled: boolean;
   updated_at: ISODate | null;
+}
+
+/** Body for `PATCH /v1/me/settings` — mirrors `UserSettingsUpdate`; omitted fields unchanged. */
+export interface UserSettingsUpdate {
+  currency?: string;
+  theme?: "system" | "light" | "dark";
+  live_sync_enabled?: boolean;
+  push_notifications_enabled?: boolean;
+  email_announcements_enabled?: boolean;
 }
 
 /** Response from `GET /v1/me` — identical to `User`, kept distinct for clarity. */

@@ -18,28 +18,24 @@ interface SettingsState {
   // Capture
   autoOcr: boolean;
   qualityGate: boolean;
-  // Notifications
-  scanCompleteAlerts: boolean;
-  priceDropAlerts: boolean;
 
   setThemeMode: (m: ThemeMode) => void;
   setCurrency: (c: Currency) => void;
   toggleHaptics: () => void;
   toggleAutoOcr: () => void;
   toggleQualityGate: () => void;
-  toggleScanCompleteAlerts: () => void;
-  togglePriceDropAlerts: () => void;
   reset: () => void;
 }
 
+// Notification opt-outs live on the SERVER now (`push_notifications_enabled` /
+// `email_announcements_enabled` via /v1/me/settings) so the backend can honor
+// them — see useUserSettings. They deliberately no longer live here.
 const DEFAULTS = {
   themeMode: "light" as ThemeMode,
   currency: "USD" as Currency,
   hapticsEnabled: true,
   autoOcr: true,
   qualityGate: true,
-  scanCompleteAlerts: true,
-  priceDropAlerts: false,
 };
 
 /**
@@ -55,8 +51,6 @@ export const useSettings = create<SettingsState>()(
       toggleHaptics: () => set((s) => ({ hapticsEnabled: !s.hapticsEnabled })),
       toggleAutoOcr: () => set((s) => ({ autoOcr: !s.autoOcr })),
       toggleQualityGate: () => set((s) => ({ qualityGate: !s.qualityGate })),
-      toggleScanCompleteAlerts: () => set((s) => ({ scanCompleteAlerts: !s.scanCompleteAlerts })),
-      togglePriceDropAlerts: () => set((s) => ({ priceDropAlerts: !s.priceDropAlerts })),
       reset: () => set({ ...DEFAULTS }),
     }),
     {

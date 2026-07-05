@@ -9,10 +9,10 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
-  CircleDollarSign,
   Github,
   Info,
   LogOut,
+  Mail,
   Monitor,
   Moon,
   RotateCcw,
@@ -25,6 +25,10 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import { useSettings, type Currency, type ThemeMode } from "@/application/stores/settingsStore";
+import {
+  useUpdateUserSettings,
+  useUserSettings,
+} from "@/application/queries/auth/useUserSettings";
 import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
 import { getCurrency } from "@/shared/currency";
 import { useThemedPalette } from "@/presentation/theme/tokens";
@@ -424,10 +428,11 @@ function ToggleRow(
   props: Omit<Parameters<typeof Row>[0], "trailing"> & {
     value: boolean;
     onValueChange: (v: boolean) => void;
+    disabled?: boolean;
   },
 ) {
   const p = useThemedPalette();
-  const { value, onValueChange, ...rest } = props;
+  const { value, onValueChange, disabled, ...rest } = props;
   return (
     <Row
       {...rest}
@@ -435,6 +440,7 @@ function ToggleRow(
         <Switch
           value={value}
           onValueChange={onValueChange}
+          disabled={disabled}
           trackColor={{ false: p.line.default, true: p.accent.mint }}
           thumbColor="#FFFFFF"
           ios_backgroundColor={p.line.default}
@@ -487,25 +493,7 @@ function GeneralTab() {
         />
       </Section>
 
-      <Section title="Notifications">
-        <ToggleRow
-          icon={Bell}
-          iconTint={p.accent.mint}
-          label="Scan complete"
-          description="Notify when a forensic report finishes processing."
-          value={s.scanCompleteAlerts}
-          onValueChange={s.toggleScanCompleteAlerts}
-        />
-        <ToggleRow
-          icon={CircleDollarSign}
-          iconTint={p.accent.blue}
-          label="Price drops"
-          description="Alert when a vault card moves more than 10%."
-          value={s.priceDropAlerts}
-          onValueChange={s.togglePriceDropAlerts}
-          isLast
-        />
-      </Section>
+      <NotificationsSection />
 
       <Pressable
         onPress={() =>
@@ -525,6 +513,52 @@ function GeneralTab() {
         </Text>
       </Pressable>
     </>
+  );
+}
+
+/**
+ * Notifications — the toggles that live on the SERVER because the backend
+ * acts on them (unlike the device-only capture/haptic prefs above). The push
+ * switch gates whether the price worker sends alerts to this device; the email
+ * switch gates product/blog emails. Optimistic via {@link useUpdateUserSettings}.
+ */
+function NotificationsSection() {
+  const p = useThemedPalette();
+  const { data: settings } = useUserSettings();
+  const update = useUpdateUserSettings();
+  const pending = update.isPending;
+  const patch = update.variables;
+
+  // Show the in-flight value while a patch is round-tripping, else the cache.
+  const push = pending
+    ? (patch?.push_notifications_enabled ?? settings?.push_notifications_enabled ?? true)
+    : (settings?.push_notifications_enabled ?? true);
+  const emails = pending
+    ? (patch?.email_announcements_enabled ?? settings?.email_announcements_enabled ?? true)
+    : (settings?.email_announcements_enabled ?? true);
+
+  return (
+    <Section title="Notifications">
+      <ToggleRow
+        icon={Bell}
+        iconTint={p.accent.mint}
+        label="Push notifications"
+        description="Price alerts and scan results delivered to this device."
+        value={push}
+        disabled={!settings}
+        onValueChange={(next) => update.mutate({ push_notifications_enabled: next })}
+      />
+      <ToggleRow
+        icon={Mail}
+        iconTint={p.accent.blue}
+        label="Product updates & blog"
+        description="Occasional emails about new features. Account emails always send."
+        value={emails}
+        disabled={!settings}
+        onValueChange={(next) => update.mutate({ email_announcements_enabled: next })}
+        isLast
+      />
+    </Section>
   );
 }
 
