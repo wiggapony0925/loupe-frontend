@@ -39,6 +39,11 @@ export const ENDPOINTS = {
     recents: `${V1}/me/recents`,
     pushTokens: `${V1}/me/push-tokens`,
     pushToken: (token: string) => `${V1}/me/push-tokens/${encodeURIComponent(token)}`,
+    /** Loupe Pro — computed entitlements + Stripe billing. */
+    entitlements: `${V1}/me/entitlements`,
+    billingConfig: `${V1}/me/billing/config`,
+    billingCheckout: `${V1}/me/billing/checkout`,
+    billingPortal: `${V1}/me/billing/portal`,
   },
   scanners: {
     list: `${V1}/scanners`,

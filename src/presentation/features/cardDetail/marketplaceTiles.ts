@@ -112,6 +112,9 @@ export interface MarketplaceTile {
   /** Listing photo, falling back to the card art. `null` ⇒ icon block. */
   imageUrl: string | null;
   blurhash: string | null;
+  /** True only when the tile carries its OWN listing photo (not card art) —
+   *  drives the photo-vs-brand tile layout in the carousel. */
+  hasOwnPhoto: boolean;
   /** Primary line — listing title or card name. */
   title: string;
   /** Kind caption ("Buy now" / "Auction" / "Market" / "Search" / "Web shop"). */
@@ -165,6 +168,7 @@ export function buildMarketplaceTiles(
         : null,
       imageUrl: listing.image_url ?? cardImageUrl,
       blurhash: hasOwnPhoto ? null : cardBlurhash,
+      hasOwnPhoto,
       title: (listing.title ?? "").trim() || cardName || sourceLabel,
       caption: listing.is_auction ? "Auction" : "Buy now",
       priceText: formatNativeMoney(listing.price.amount, listing.price.currency),
@@ -194,6 +198,7 @@ export function buildMarketplaceTiles(
       target: url ? { title: sourceLabel, subtitle: row.subtitle ?? "Market price", url } : null,
       imageUrl: cardImageUrl,
       blurhash: cardBlurhash,
+      hasOwnPhoto: false,
       title: cardName || sourceLabel,
       caption: row.price_kind ? titleCase(row.price_kind) : "Market",
       priceText: formatNativeMoney(row.price.amount, row.price.currency),
@@ -218,6 +223,7 @@ export function buildMarketplaceTiles(
       target: { title: sourceLabel, subtitle: "Search marketplace", url: action.url },
       imageUrl: cardImageUrl,
       blurhash: cardBlurhash,
+      hasOwnPhoto: false,
       title: cardName || sourceLabel,
       caption: action.label === "Google Shopping" ? "Web shop" : "Search",
       priceText: null,

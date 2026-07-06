@@ -1,19 +1,49 @@
 /**
- * SearchResultRow — rich row used in the live search rail.
+ * SearchResultRow — the one row style for live search results.
  *
- * 56×80 card thumbnail with blurhash placeholder, name + set / number /
- * year line, TCG badge, rarity, and a right-aligned market price.
- * Tap-to-navigate routes to the card detail page (`/card/[id]`).
+ * Flat, Robinhood-style: no card containers, just a roomy 64×90 thumbnail,
+ * a two-line identity block (name · set/number/year), a per-game tinted
+ * badge, and a right-aligned market price. Parents separate rows with
+ * hairlines; the row itself stays transparent so the list reads as one
+ * continuous surface instead of stacked white blocks.
  */
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
+import { ChevronRight } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import type { CardSearchResult } from "@/infrastructure/http";
 import { CardImage } from "@/presentation/components/CardImage";
 import { Price } from "@/presentation/components/Price";
 import { pickCardBlurhash, pickCardImageUrl } from "@/shared/cardImage";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha, type Palette } from "@/presentation/theme/tokens";
+
+/** Brand tint per game so the badge (and only the badge) carries the TCG. */
+function tcgTint(tcg: string, p: Palette): string {
+  switch (tcg) {
+    case "pokemon":
+      return p.accent.amber;
+    case "magic":
+      return p.accent.blue;
+    case "yugioh":
+      return p.accent.purple;
+    default:
+      return p.accent.mint;
+  }
+}
+
+function tcgLabel(tcg: string): string {
+  switch (tcg) {
+    case "pokemon":
+      return "Pokémon";
+    case "magic":
+      return "Magic";
+    case "yugioh":
+      return "Yu-Gi-Oh!";
+    default:
+      return tcg.toUpperCase();
+  }
+}
 
 interface SearchResultRowProps {
   card: CardSearchResult;
@@ -24,9 +54,9 @@ interface SearchResultRowProps {
   onPressCapture?: () => void;
   /** Override the default `/card/[id]` destination (used by sealed). */
   route?: Href;
-  /** Override the upper-left chip label (defaults to TCG). */
+  /** Override the badge label (defaults to the TCG name). */
   badgeText?: string;
-  /** Override the right-column eyebrow (defaults to "MARKET"). */
+  /** Override the right-column eyebrow (defaults to "Market"). */
   priceLabel?: string;
 }
 
@@ -37,77 +67,126 @@ export function SearchResultRow({
   onPressCapture,
   route,
   badgeText,
-  priceLabel = "MARKET",
+  priceLabel = "Market",
 }: SearchResultRowProps) {
   const p = useThemedPalette();
   const market = card.pricing_summary?.market?.amount ?? null;
   const small = pickCardImageUrl(card, "small");
   const normal = pickCardImageUrl(card, "normal");
+  const tint = tcgTint(card.tcg, p);
+  const meta = [card.set_name, card.number ? `#${card.number}` : null, card.year]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <Pressable
       onPress={() => {
         onPressCapture?.();
         router.push(route ?? routes.card(card.id));
       }}
-      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-      className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
+      accessibilityRole="button"
+      accessibilityLabel={`${card.name}, ${meta || card.tcg}`}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 4,
+        borderTopWidth: bordered ? 1 : 0,
+        borderTopColor: withAlpha(p.line.default, 0.6),
+        backgroundColor: pressed ? p.bg.elevated : "transparent",
+        borderRadius: pressed ? 12 : 0,
+      })}
     >
-      <CardImage
-        uri={small ?? normal}
-        fallbackUri={small && normal && small !== normal ? normal : undefined}
-        blurhash={pickCardBlurhash(card)}
-        width={56}
-        height={80}
-        rounded={8}
-        priority={priority}
-        recyclingKey={card.id}
-        alt={card.name}
-      />
+      <View
+        style={{
+          width: 64,
+          height: 90,
+          borderRadius: 10,
+          overflow: "hidden",
+          backgroundColor: p.bg.sunken,
+        }}
+      >
+        <CardImage
+          uri={small ?? normal}
+          fallbackUri={small && normal && small !== normal ? normal : undefined}
+          blurhash={pickCardBlurhash(card)}
+          width={64}
+          height={90}
+          rounded={0}
+          contentFit="cover"
+          priority={priority}
+          recyclingKey={card.id}
+          alt={card.name}
+        />
+      </View>
 
-      <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} className="text-sm font-semibold text-ink">
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text
+          numberOfLines={1}
+          style={{
+            color: p.ink.default,
+            fontSize: 15,
+            fontWeight: "700",
+            letterSpacing: -0.2,
+          }}
+        >
           {card.name}
         </Text>
-        <Text numberOfLines={1} className="mt-0.5 text-[11px] text-ink-muted">
-          {[card.set_name, card.number, card.year].filter(Boolean).join(" · ") || "—"}
-        </Text>
-        <View className="mt-1 flex-row items-center gap-1.5">
+        {meta ? (
+          <Text numberOfLines={1} style={{ color: p.ink.muted, fontSize: 12 }}>
+            {meta}
+          </Text>
+        ) : null}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
           <View
             style={{
-              paddingHorizontal: 6,
-              paddingVertical: 2,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 4,
+              paddingHorizontal: 7,
+              paddingVertical: 2.5,
               borderRadius: 999,
-              backgroundColor: withAlpha(p.accent.mint, 0.14),
+              backgroundColor: withAlpha(tint, 0.12),
             }}
           >
+            <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: tint }} />
             <Text
               style={{
-                color: p.accent.mint,
-                fontSize: 9,
+                color: tint,
+                fontSize: 9.5,
                 fontWeight: "800",
-                letterSpacing: 0.8,
+                letterSpacing: 0.4,
               }}
             >
-              {(badgeText ?? card.tcg).toUpperCase()}
+              {badgeText ?? tcgLabel(card.tcg)}
             </Text>
           </View>
           {card.rarity ? (
-            <Text className="text-[10px] text-ink-muted" numberOfLines={1}>
+            <Text
+              numberOfLines={1}
+              style={{ flexShrink: 1, color: p.ink.dim, fontSize: 10.5, fontWeight: "600" }}
+            >
               {card.rarity}
             </Text>
           ) : null}
         </View>
       </View>
 
-      <View style={{ minWidth: 72, alignItems: "flex-end" }}>
+      <View style={{ alignItems: "flex-end", gap: 2, minWidth: 74 }}>
         {market !== null ? (
           <Price
             usd={market}
-            className="text-sm font-semibold text-ink"
             numberOfLines={1}
+            style={{
+              color: p.ink.default,
+              fontSize: 15,
+              fontWeight: "800",
+              letterSpacing: -0.3,
+            }}
           />
         ) : (
-          <Text className="text-sm font-semibold text-ink-muted">—</Text>
+          <Text style={{ color: p.ink.dim, fontSize: 15, fontWeight: "700" }}>—</Text>
         )}
         <Text
           style={{
@@ -115,12 +194,14 @@ export function SearchResultRow({
             fontSize: 9,
             fontWeight: "700",
             letterSpacing: 1,
-            marginTop: 2,
+            textTransform: "uppercase",
           }}
         >
           {priceLabel}
         </Text>
       </View>
+
+      <ChevronRight size={15} color={withAlpha(p.ink.dim, 0.7)} />
     </Pressable>
   );
 }

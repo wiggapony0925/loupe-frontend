@@ -15,7 +15,7 @@ import { router } from "expo-router";
 import { routes } from "@/shared/routes";
 import { CardImage } from "@/presentation/components/CardImage";
 import { useThemedPalette } from "@/presentation/theme/tokens";
-import { compactUsd } from "@/shared/format";
+import { useMoney } from "@/presentation/components/Price";
 import type { CollectionCard } from "@/domain";
 
 interface HoldingRowProps {
@@ -26,6 +26,7 @@ interface HoldingRowProps {
 
 export function HoldingRow({ card, spark, deltaPct = 0 }: HoldingRowProps) {
   const p = useThemedPalette();
+  const { format } = useMoney();
   const up = deltaPct >= 0;
   const tint = up ? p.accent.mint : p.accent.rose;
 
@@ -67,7 +68,7 @@ export function HoldingRow({ card, spark, deltaPct = 0 }: HoldingRowProps) {
 
       <View className="items-end" style={{ minWidth: 78 }}>
         <Text className="text-[15px] font-semibold tracking-tight text-ink">
-          {compactUsd(card.estimatedValueUsd)}
+          {format(card.estimatedValueUsd)}
         </Text>
         <Text className="text-[11px] font-semibold" style={{ color: tint }}>
           {up ? "+" : ""}

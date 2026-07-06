@@ -23,17 +23,25 @@ import {
   Text,
   View,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
+import { Sparkles } from "lucide-react-native";
 import {
   fetchReportDownloadUrl,
+  useGenerateReport,
   useReports,
   useUpcomingReports,
 } from "@/application/queries";
+import { apiUrl, getAuthToken } from "@/infrastructure/http/client";
+import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type {
   UpcomingReportWire,
   UserReportWire,
 } from "@/infrastructure/http";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { Skeleton } from "@/presentation/components/Skeleton";
+import { ProWall, usePro, useProFeature } from "@/presentation/features/pro";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 // ─── helpers ─────────────────────────────────────────────────────────────
@@ -90,10 +98,44 @@ function formatCloseDate(iso: string): string {
 
 // ─── component ───────────────────────────────────────────────────────────
 
+/**
+ * Fallback download path (webapp parity): when object storage can't presign
+ * a URL, stream the authenticated `/v1/reports/{id}/file` endpoint to a local
+ * PDF and hand it to the OS share sheet (Save to Files / AirDrop / print).
+ */
+async function downloadAndShareViaStream(report: UserReportWire): Promise<void> {
+  const token = getAuthToken();
+  const safeName = periodLabel(report).replace(/[^\w]+/g, "_");
+  const target = `${FileSystem.cacheDirectory}Loupe_Statement_${safeName}.pdf`;
+  const res = await FileSystem.downloadAsync(
+    apiUrl(ENDPOINTS.reports.file(report.id)),
+    target,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
+  if (res.status !== 200) {
+    throw new Error(`Download failed (${res.status})`);
+  }
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(res.uri, {
+      mimeType: "application/pdf",
+      UTI: "com.adobe.pdf",
+      dialogTitle: `Loupe statement · ${periodLabel(report)}`,
+    });
+  } else {
+    await Linking.openURL(res.uri);
+  }
+}
+
 export function ReportsSection() {
   const p = useThemedPalette();
+  // Free users keep their latest statement(s); Pro unlocks the full archive
+  // + on-demand generation. The backend entitlements decide the split.
+  const { allowed, requirePro } = useProFeature("statements");
+  const { entitlements } = usePro();
+  const freeLimit = entitlements?.limits.free_statements ?? 1;
   const list = useReports();
   const upcoming = useUpcomingReports();
+  const generate = useGenerateReport();
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
 
   const onDownload = React.useCallback(async (report: UserReportWire) => {
@@ -101,15 +143,26 @@ export function ReportsSection() {
     try {
       const { download_url } = await fetchReportDownloadUrl(report.id);
       if (!download_url) {
-        Alert.alert(
-          "Download unavailable",
-          "Your statement is ready but the download backend isn't reachable right now.",
-        );
+        // No presigned URL → stream the authenticated file endpoint
+        // instead (same fallback the webapp uses), so the download
+        // works even when presigning isn't configured.
+        await downloadAndShareViaStream(report);
         return;
       }
-      const ok = await Linking.canOpenURL(download_url);
-      if (ok) await Linking.openURL(download_url);
-      else Alert.alert("Can't open URL", download_url);
+      // In-app browser (SFSafariViewController / Custom Tab): the PDF
+      // renders inline with native share/print, and closing it drops the
+      // user right back on this screen — no bounce out to Safari.
+      try {
+        await WebBrowser.openBrowserAsync(download_url, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+          dismissButtonStyle: "done",
+        });
+      } catch {
+        // Rare fallback (e.g. another in-app browser already open).
+        const ok = await Linking.canOpenURL(download_url);
+        if (ok) await Linking.openURL(download_url);
+        else Alert.alert("Can't open URL", download_url);
+      }
     } catch (e) {
       Alert.alert(
         "Download failed",
@@ -120,14 +173,63 @@ export function ReportsSection() {
     }
   }, []);
 
+  const onGenerateLastMonth = React.useCallback(() => {
+    const now = new Date();
+    const prev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+    generate.mutate(
+      { period: "monthly", year: prev.getUTCFullYear(), month: prev.getUTCMonth() + 1 },
+      {
+        onError: (e) =>
+          Alert.alert(
+            "Couldn't generate",
+            e instanceof Error ? e.message : "Please try again shortly.",
+          ),
+      },
+    );
+  }, [generate]);
+
   const reports = list.data ?? [];
+  // Free tier sees only its latest `freeLimit` statement(s); the rest are walled.
+  const visibleReports = allowed ? reports : reports.slice(0, freeLimit);
+  const lockedCount = allowed ? 0 : Math.max(0, reports.length - visibleReports.length);
   const upcomingRows = upcoming.data ?? [];
   const nextMonthly = upcomingRows.find((r) => r.period === "monthly");
   const nextYearly = upcomingRows.find((r) => r.period === "yearly");
 
   return (
     <View>
-      <SectionHeader eyebrow="Statements" title="Reports" />
+      <SectionHeader
+        eyebrow="Statements"
+        title="Reports"
+        trailing={
+          <Pressable
+            onPress={allowed ? onGenerateLastMonth : () => requirePro()}
+            disabled={generate.isPending}
+            accessibilityRole="button"
+            accessibilityLabel="Generate last month's statement"
+            hitSlop={8}
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 999,
+              backgroundColor: withAlpha(p.accent.mint, 0.12),
+              opacity: pressed || generate.isPending ? 0.7 : 1,
+            })}
+          >
+            {generate.isPending ? (
+              <ActivityIndicator size="small" color={p.accent.mint} />
+            ) : (
+              <Sparkles size={12} color={p.accent.mint} strokeWidth={2.5} />
+            )}
+            <Text style={{ color: p.accent.mint, fontSize: 11, fontWeight: "800" }}>
+              {generate.isPending ? "Generating…" : "Generate last month"}
+            </Text>
+          </Pressable>
+        }
+      />
 
       <NextStatementHeroCard
         nextMonthly={nextMonthly}
@@ -150,7 +252,7 @@ export function ReportsSection() {
               className="overflow-hidden rounded-2xl border border-line"
               style={{ backgroundColor: p.bg.elevated }}
             >
-              {reports.map((r, i) => (
+              {visibleReports.map((r, i) => (
                 <View
                   key={r.id}
                   className={i > 0 ? "border-t border-line" : ""}
@@ -165,6 +267,24 @@ export function ReportsSection() {
             </View>
           )}
         </View>
+
+        {/* Free tier: latest statement is downloadable above; the full
+            archive + automatic monthly closes are Loupe Pro (web parity). */}
+        {!allowed ? (
+          <View className="mt-3">
+            <ProWall
+              feature="statements"
+              title={
+                lockedCount > 0
+                  ? `${lockedCount} more statement${lockedCount > 1 ? "s" : ""} in your archive`
+                  : "Your full statement history, automated"
+              }
+              description="Free includes your latest statement. Loupe Pro unlocks the entire archive forever, on-demand generation, and an auto-closed PDF every month."
+              cta="Unlock with Pro"
+              onUpgrade={() => requirePro()}
+            />
+          </View>
+        ) : null}
       </View>
     </View>
   );

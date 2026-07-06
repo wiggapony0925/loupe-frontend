@@ -226,7 +226,12 @@ export default function GradeMeasureScreen() {
                 : "Centering measured ✓"}
           </Text>
           {placed.length > 0 ? (
-            <Pressable onPress={undo} hitSlop={8} accessibilityLabel="Undo last tap">
+            <Pressable
+              onPress={undo}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Undo last tap"
+            >
               <Undo2 size={16} color={p.ink.muted} />
             </Pressable>
           ) : null}

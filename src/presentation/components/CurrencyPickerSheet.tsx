@@ -124,6 +124,8 @@ export function CurrencyPickerSheet({
             <Pressable
               onPress={onClose}
               hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Close currency picker"
               className="h-9 w-9 items-center justify-center rounded-full border border-line"
               style={{ backgroundColor: p.bg.elevated }}
             >

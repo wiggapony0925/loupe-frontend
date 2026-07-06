@@ -31,7 +31,6 @@ import {
   Expand,
   Gauge,
   Heart,
-  Pencil,
   Plus,
 } from "lucide-react-native";
 import { useCard } from "@/application/queries/catalog/useCard";
@@ -45,6 +44,8 @@ import {
   useRemoveFromWatchlist,
 } from "@/application/queries/collection/useWatchlist";
 import { useAuth } from "@/presentation/providers/AuthProvider";
+import { usePro } from "@/presentation/features/pro";
+import { ApiError } from "@/infrastructure/http/client";
 import type { GradedCard } from "@/infrastructure/http";
 import { routes } from "@/shared/routes";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
@@ -102,6 +103,7 @@ export default function CardDetailScreen() {
   const canonicalQ = useCanonicalCard(cardId);
   const p = useThemedPalette();
   const { isAuthenticated } = useAuth();
+  const { openPaywall } = usePro();
   const navigation = useNavigation();
   // While the user is dragging on the price chart, suspend the
   // navigator's swipe-back gesture so a left→right scrub reveals the
@@ -161,7 +163,13 @@ export default function CardDetailScreen() {
             tone: "success",
           });
         },
-        onError: () => {
+        onError: (err) => {
+          // Free-tier cap reached → open the Loupe Pro paywall instead of a
+          // dead-end error banner. The backend 402 is the source of truth.
+          if (err instanceof ApiError && err.status === 402) {
+            openPaywall("card_limit");
+            return;
+          }
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
           setBanner({
             title: "Couldn't add to vault",
@@ -171,7 +179,7 @@ export default function CardDetailScreen() {
         },
       },
     );
-  }, [cardId, createGrade, cardQ.data?.name]);
+  }, [cardId, createGrade, cardQ.data?.name, openPaywall]);
 
   const [house, setHouse] = useState<HouseId | "all">("all");
   const [selectedGradeLabel, setSelectedGradeLabel] = useState<string | null>(null);
@@ -411,31 +419,58 @@ export default function CardDetailScreen() {
                 </View>
               </View>
 
-              {/* Add to collection CTA — always the primary green action
-                  so users can add another copy (different grade / house).
-                  When the card is already owned we surface a tappable
-                  subtitle pointing at "Manage" to edit the existing
-                  holding(s). */}
+              {/* Action row — Robinhood-style side-by-side pair: the primary
+                  "Add" CTA plus a compact "Grade" companion (pre-screen the
+                  grade before slabbing). Replaces the old stacked purple
+                  banner that dominated the fold. */}
               {isAuthenticated ? (
                 <View style={{ gap: 8 }}>
-                  <PrimaryButton
-                    label="Add to collection"
-                    icon={Plus}
-                    variant="mint"
-                    onPress={() => {
-                      router.push(
-                        routes.gradeNew({
-                          cardId,
-                          cardName: card.name,
-                          cardImage: imageUrl ?? undefined,
-                          cardSet: card.set_name ?? undefined,
-                          cardYear: card.year ?? undefined,
-                        }),
-                      );
-                    }}
-                    onLongPress={handleQuickAdd}
-                    accessibilityLabel="Add to collection. Press and hold to quick-add as a raw card."
-                  />
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <PrimaryButton
+                        label="Add to collection"
+                        icon={Plus}
+                        variant="mint"
+                        onPress={() => {
+                          router.push(
+                            routes.gradeNew({
+                              cardId,
+                              cardName: card.name,
+                              cardImage: imageUrl ?? undefined,
+                              cardSet: card.set_name ?? undefined,
+                              cardYear: card.year ?? undefined,
+                            }),
+                          );
+                        }}
+                        onLongPress={handleQuickAdd}
+                        accessibilityLabel="Add to collection. Press and hold to quick-add as a raw card."
+                      />
+                    </View>
+                    <Pressable
+                      onPress={() => router.push(routes.scanPhone("studio"))}
+                      accessibilityRole="button"
+                      accessibilityLabel="Grade this card"
+                      style={({ pressed }) => ({
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        paddingHorizontal: 18,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: p.line.default,
+                        backgroundColor: p.bg.elevated,
+                        opacity: pressed ? 0.7 : 1,
+                      })}
+                    >
+                      <Gauge size={16} color={p.ink.default} strokeWidth={2.25} />
+                      <Text
+                        style={{ color: p.ink.default, fontWeight: "700", fontSize: 14 }}
+                      >
+                        Grade
+                      </Text>
+                    </Pressable>
+                  </View>
                   <Text
                     style={{
                       color: p.ink.dim,
@@ -445,67 +480,10 @@ export default function CardDetailScreen() {
                     }}
                   >
                     Hold to quick-add as Raw · NM
+                    {ownedCount > 0
+                      ? ` · ${ownedCount} ${ownedCount === 1 ? "copy" : "copies"} in your vault`
+                      : ""}
                   </Text>
-                  {/* Grade path (web parity) — estimate the grade before slabbing. */}
-                  <Pressable
-                    onPress={() => router.push(routes.scanPhone("studio"))}
-                    accessibilityLabel="Grade this card"
-                    style={({ pressed }) => ({
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 7,
-                      paddingVertical: 12,
-                      borderRadius: 14,
-                      borderWidth: 1,
-                      borderColor: withAlpha(p.accent.purple, 0.4),
-                      backgroundColor: withAlpha(p.accent.purple, 0.1),
-                      opacity: pressed ? 0.7 : 1,
-                    })}
-                  >
-                    <Gauge size={16} color={p.accent.purple} />
-                    <Text
-                      style={{ color: p.accent.purple, fontWeight: "700", fontSize: 14 }}
-                    >
-                      Grade this card
-                    </Text>
-                  </Pressable>
-                  {ownedCount > 0 ? (
-                    <Pressable
-                      onPress={() => {
-                        if (ownedGrade) {
-                          router.push(routes.gradeEdit(ownedGrade.id));
-                        }
-                      }}
-                      hitSlop={8}
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Pencil size={11} color={p.ink.muted} />
-                      <Text
-                        style={{
-                          color: p.ink.muted,
-                          fontSize: 12,
-                          fontWeight: "600",
-                        }}
-                      >
-                        You have {ownedCount} already in the vault
-                      </Text>
-                      <Text
-                        style={{
-                          color: p.accent.mint,
-                          fontSize: 12,
-                          fontWeight: "700",
-                        }}
-                      >
-                        Manage
-                      </Text>
-                    </Pressable>
-                  ) : null}
                 </View>
               ) : (
                 /* Guests previously saw no add/track affordance in the body

@@ -26,10 +26,7 @@ import {
   TrendingUp,
   type LucideIcon,
 } from "lucide-react-native";
-import {
-  MarketplaceTileCard,
-  MARKETPLACE_TILE_WIDTH,
-} from "@/presentation/components/MarketplaceTileCard";
+import { MarketplaceTileCard } from "@/presentation/components/MarketplaceTileCard";
 import type { ExternalBrowserTarget } from "@/presentation/components/ExternalBrowserSheet";
 import { spacing, useThemedPalette, type Palette } from "@/presentation/theme/tokens";
 import { normalizeSource, type MarketplaceTile, type TileToneKey } from "./marketplaceTiles";
@@ -100,8 +97,6 @@ export function MarketplaceCarousel({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ gap: TILE_GAP, paddingBottom: 4, paddingRight: 4 }}
       decelerationRate="fast"
-      snapToInterval={MARKETPLACE_TILE_WIDTH + TILE_GAP}
-      snapToAlignment="start"
     >
       {tiles.map((tile) => {
         const accent = toneColor(p, tile.toneKey);
@@ -109,11 +104,11 @@ export function MarketplaceCarousel({
         return (
           <MarketplaceTileCard
             key={tile.id}
-            // Only real seller listings carry their own photo. Market-price and
-            // shop tiles all repeat the SAME card art, which reads as clutter
-            // (three identical images in a row) — render them as clean brand
-            // tiles instead, closer to the web's marketplace rows.
-            imageUrl={tile.kind === "listing" ? tile.imageUrl : null}
+            // Real seller photos get the horizontal photo card; market
+            // prices and shop links render as flat brand-quote tiles (they'd
+            // otherwise all repeat the same card art, which reads as clutter).
+            layout={tile.hasOwnPhoto ? "photo" : "brand"}
+            imageUrl={tile.hasOwnPhoto ? tile.imageUrl : null}
             blurhash={tile.blurhash}
             fallbackIcon={tileIcon(tile)}
             accent={accent}

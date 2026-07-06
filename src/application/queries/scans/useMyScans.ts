@@ -10,5 +10,8 @@ export function useMyScans<T = unknown>() {
     queryKey: queryKeys.scans.mine(),
     queryFn: () => apiFetch<T>(ENDPOINTS.scans.list),
     enabled: isAuthenticated,
+    // NOT covered by invalidateHoldingCaches — a short staleTime is the only
+    // thing that surfaces a new scan here, so keep it at the 30s tier.
+    staleTime: 30_000,
   });
 }

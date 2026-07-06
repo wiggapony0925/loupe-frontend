@@ -58,6 +58,19 @@ export type CroppedCard = {
   bytes: number;
 };
 
+/**
+ * On-device OCR result from Apple's Vision framework
+ * (`VNRecognizeTextRequest`, accurate mode, language correction off).
+ * `text` is newline-joined recognized lines; empty when nothing was
+ * read. `confidence` is the mean top-candidate confidence in [0,1].
+ * iOS only today — Android callers fall back to ML Kit.
+ */
+export type RecognizedCardText = {
+  text: string;
+  confidence: number;
+  lineCount: number;
+};
+
 export type HapticPattern = "tick" | "success" | "warning" | "failure";
 
 // ───── Native event payloads ─────

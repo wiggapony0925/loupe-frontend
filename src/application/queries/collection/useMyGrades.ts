@@ -10,5 +10,7 @@ export function useMyGrades<T = unknown>() {
     queryKey: queryKeys.me.grades(),
     queryFn: () => apiFetch<T>(ENDPOINTS.me.grades),
     enabled: isAuthenticated,
+    // Writes invalidate via invalidateHoldingCaches; 30s only covers drift.
+    staleTime: 30_000,
   });
 }

@@ -1,18 +1,32 @@
 /**
  * CardOwnershipSection — the signed-in user's own copies of a card ("Your
  * copies"), from the server-composed `GET /v1/cards/{id}/ownership` (auth).
- * Mirrors the web OwnershipPanel: per-copy grade, graded-vs-raw, acquisition
- * source, days held, cost/value/P-L, plus a rolled-up summary.
+ *
+ * Big collections stay readable: copies are CONSOLIDATED by grade tier
+ * (house + grade + condition). Fifteen PSA-10s collapse into one "PSA 10 ×15"
+ * row with rolled-up value/P-L; tapping a tier expands its individual copies,
+ * and tapping a copy opens that holding's editor (`/grade/[id]`).
  *
  * Renders nothing for guests, non-owners, or before the endpoint returns —
  * safe to mount unconditionally.
  */
-import React from "react";
-import { Text, View } from "react-native";
-import { Layers, ScanLine, PencilLine, Upload, ShieldCheck } from "lucide-react-native";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-import { Price } from "@/presentation/components/Price";
+import React, { useMemo, useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { router } from "expo-router";
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Layers,
+  PencilLine,
+  ScanLine,
+  ShieldCheck,
+  Upload,
+} from "lucide-react-native";
+import { useThemedPalette, withAlpha, gradeColor } from "@/presentation/theme/tokens";
+import { Price, useMoney } from "@/presentation/components/Price";
 import { useCardOwnership } from "@/application/queries/collection/useCardOwnership";
+import { routes } from "@/shared/routes";
 import type { AcquisitionSource, CardHoldingWire } from "@/infrastructure/http";
 
 function num(v: string | null): number | null {
@@ -21,8 +35,8 @@ function num(v: string | null): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function gradeLabel(house: string, grade: string, condition: string | null): string {
-  if (house === "loupe") return `RAW${condition ? ` ${condition.toUpperCase()}` : ""}`;
+function tierLabel(house: string, grade: string, condition: string | null): string {
+  if (house === "loupe") return `Raw${condition ? ` · ${condition.toUpperCase()}` : ""}`;
   const n = Number(grade);
   const g = Number.isInteger(n) ? String(n) : n.toFixed(1);
   return `${house.toUpperCase()} ${g}`;
@@ -34,19 +48,77 @@ const ACQUIRED: Record<AcquisitionSource, { label: string; Icon: typeof ScanLine
   import: { label: "Imported", Icon: Upload },
 };
 
+interface HoldingTier {
+  key: string;
+  label: string;
+  house: string;
+  grade: string;
+  isGraded: boolean;
+  holdings: CardHoldingWire[];
+  valueUsd: number | null;
+  costUsd: number | null;
+  plUsd: number | null;
+}
+
+/** Group holdings into grade tiers, best tier first (graded > raw, high grade first). */
+function buildTiers(holdings: CardHoldingWire[]): HoldingTier[] {
+  const map = new Map<string, HoldingTier>();
+  for (const h of holdings) {
+    const key = `${h.house}:${h.grade}:${h.condition ?? ""}`;
+    let tier = map.get(key);
+    if (!tier) {
+      tier = {
+        key,
+        label: tierLabel(h.house, h.grade, h.condition),
+        house: h.house,
+        grade: h.grade,
+        isGraded: h.is_graded,
+        holdings: [],
+        valueUsd: null,
+        costUsd: null,
+        plUsd: null,
+      };
+      map.set(key, tier);
+    }
+    tier.holdings.push(h);
+    const v = num(h.estimated_value_usd);
+    const c = num(h.purchase_price_usd);
+    const pl = num(h.unrealized_pl_usd);
+    if (v != null) tier.valueUsd = (tier.valueUsd ?? 0) + v;
+    if (c != null) tier.costUsd = (tier.costUsd ?? 0) + c;
+    if (pl != null) tier.plUsd = (tier.plUsd ?? 0) + pl;
+  }
+  return [...map.values()].sort((a, b) => {
+    if (a.isGraded !== b.isGraded) return a.isGraded ? -1 : 1;
+    return Number(b.grade) - Number(a.grade);
+  });
+}
+
 export function CardOwnershipSection({ cardId }: { cardId: string }) {
   const p = useThemedPalette();
   const { data } = useCardOwnership(cardId);
+  const [openTiers, setOpenTiers] = useState<Set<string>>(new Set());
 
-  if (!data || !data.owned || data.holdings.length === 0) return null;
+  const holdings = data?.holdings;
+  const tiers = useMemo(() => buildTiers(holdings ?? []), [holdings]);
+
+  if (!data || !data.owned || !holdings || holdings.length === 0) return null;
 
   const costBasis = num(data.cost_basis_usd);
   const value = num(data.holding_value_usd);
   const pl = num(data.unrealized_pl_usd);
   const plPct = data.unrealized_pl_pct;
 
+  const toggleTier = (key: string) =>
+    setOpenTiers((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: 10 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <Layers size={14} color={p.ink.dim} strokeWidth={2.25} />
         <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
@@ -57,6 +129,7 @@ export function CardOwnershipSection({ cardId }: { cardId: string }) {
         </Text>
       </View>
 
+      {/* Rolled-up summary — one flat strip. */}
       {(costBasis != null || value != null) && (
         <View
           style={{
@@ -69,31 +142,204 @@ export function CardOwnershipSection({ cardId }: { cardId: string }) {
             backgroundColor: p.bg.elevated,
           }}
         >
-          <SummaryCell label="Cost basis" value={costBasis != null ? <Price usd={costBasis} className="text-[15px] font-extrabold text-ink" /> : null} />
-          <SummaryCell label="Value" value={value != null ? <Price usd={value} className="text-[15px] font-extrabold text-ink" /> : null} />
+          <SummaryCell
+            label="Cost basis"
+            value={costBasis != null ? <Price usd={costBasis} className="text-[15px] font-extrabold text-ink" /> : null}
+          />
+          <SummaryCell
+            label="Value"
+            value={value != null ? <Price usd={value} className="text-[15px] font-extrabold text-ink" /> : null}
+          />
           <SummaryCell
             label="Unrealized P/L"
-            value={
-              pl != null ? (
-                <Text style={{ color: pl >= 0 ? p.accent.mint : p.accent.rose, fontSize: 15, fontWeight: "800" }}>
-                  {pl >= 0 ? "+" : "−"}
-                  {Math.abs(pl).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
-                  {plPct != null ? ` (${plPct >= 0 ? "+" : ""}${plPct.toFixed(1)}%)` : ""}
-                </Text>
-              ) : null
-            }
+            value={pl != null ? <SignedMoney usd={pl} pct={plPct} size={15} /> : null}
           />
         </View>
       )}
 
-      <View style={{ gap: 8 }}>
-        {data.holdings.map((h) => (
-          <HoldingRow key={h.holding_id} h={h} />
-        ))}
+      {/* Consolidated grade tiers. A single-copy tier is itself the row —
+          tap goes straight to the holding editor, no pointless expander. */}
+      <View
+        style={{
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: p.line.default,
+          backgroundColor: p.bg.elevated,
+          overflow: "hidden",
+        }}
+      >
+        {tiers.map((tier, i) => {
+          const single = tier.holdings.length === 1;
+          const open = openTiers.has(tier.key);
+          return (
+            <View key={tier.key} style={i > 0 ? { borderTopWidth: 1, borderTopColor: withAlpha(p.line.default, 0.7) } : undefined}>
+              <TierRow
+                tier={tier}
+                expandable={!single}
+                open={open}
+                onPress={() =>
+                  single
+                    ? router.push(routes.gradeEdit(tier.holdings[0]!.holding_id))
+                    : toggleTier(tier.key)
+                }
+              />
+              {open && !single
+                ? tier.holdings.map((h) => <CopyRow key={h.holding_id} h={h} />)
+                : null}
+            </View>
+          );
+        })}
       </View>
     </View>
   );
 }
+
+/* ─── rows ────────────────────────────────────────────────────────────── */
+
+function TierRow({
+  tier,
+  expandable,
+  open,
+  onPress,
+}: {
+  tier: HoldingTier;
+  expandable: boolean;
+  open: boolean;
+  onPress: () => void;
+}) {
+  const p = useThemedPalette();
+  const gradeNum = Number(tier.grade);
+  const tint = tier.isGraded
+    ? gradeColor(Number.isFinite(gradeNum) ? gradeNum : 0)
+    : p.ink.muted;
+  const count = tier.holdings.length;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={
+        expandable
+          ? `${tier.label}, ${count} copies. ${open ? "Collapse" : "Expand"}.`
+          : `${tier.label}. Open holding.`
+      }
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        backgroundColor: pressed ? p.bg.sunken : "transparent",
+      })}
+    >
+      {/* Grade badge */}
+      <View
+        style={{
+          minWidth: 54,
+          alignItems: "center",
+          paddingHorizontal: 8,
+          paddingVertical: 5,
+          borderRadius: 9,
+          backgroundColor: withAlpha(tint, 0.14),
+        }}
+      >
+        <Text style={{ color: tint, fontSize: 12, fontWeight: "800" }} numberOfLines={1}>
+          {tier.label}
+        </Text>
+      </View>
+
+      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6 }}>
+        {count > 1 ? (
+          <View
+            style={{
+              paddingHorizontal: 7,
+              paddingVertical: 2,
+              borderRadius: 999,
+              backgroundColor: withAlpha(p.ink.muted, 0.12),
+            }}
+          >
+            <Text style={{ color: p.ink.muted, fontSize: 11, fontWeight: "800" }}>
+              ×{count}
+            </Text>
+          </View>
+        ) : null}
+        {tier.isGraded ? (
+          <ShieldCheck size={12} color={p.accent.mint} strokeWidth={2.5} />
+        ) : null}
+        <Text style={{ color: p.ink.dim, fontSize: 11, fontWeight: "600" }} numberOfLines={1}>
+          {count > 1 ? "copies" : tier.isGraded ? "graded" : "raw"}
+        </Text>
+      </View>
+
+      <View style={{ alignItems: "flex-end", gap: 1 }}>
+        {tier.valueUsd != null ? (
+          <Price usd={tier.valueUsd} className="text-[14px] font-extrabold text-ink" />
+        ) : (
+          <Text style={{ color: p.ink.muted, fontSize: 14, fontWeight: "800" }}>—</Text>
+        )}
+        {tier.plUsd != null ? <SignedMoney usd={tier.plUsd} size={11} /> : null}
+      </View>
+
+      {expandable ? (
+        open ? (
+          <ChevronUp size={15} color={p.ink.dim} />
+        ) : (
+          <ChevronDown size={15} color={p.ink.dim} />
+        )
+      ) : (
+        <ChevronRight size={15} color={p.ink.dim} />
+      )}
+    </Pressable>
+  );
+}
+
+/** One expanded copy inside a tier — tap opens that holding's editor. */
+function CopyRow({ h }: { h: CardHoldingWire }) {
+  const p = useThemedPalette();
+  const { format } = useMoney();
+  const cost = num(h.purchase_price_usd);
+  const value = num(h.estimated_value_usd);
+  const pl = num(h.unrealized_pl_usd);
+  const acq = h.acquired_via ? ACQUIRED[h.acquired_via] : null;
+
+  const metaBits = [
+    acq?.label ?? null,
+    h.days_held != null ? `${h.days_held}d held` : null,
+    cost != null ? `cost ${format(cost)}` : null,
+  ].filter(Boolean);
+
+  return (
+    <Pressable
+      onPress={() => router.push(routes.gradeEdit(h.holding_id))}
+      accessibilityRole="button"
+      accessibilityLabel="Open this copy"
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingVertical: 10,
+        paddingRight: 12,
+        paddingLeft: 24,
+        backgroundColor: pressed ? p.bg.sunken : withAlpha(p.bg.sunken, 0.45),
+      })}
+    >
+      {acq ? <acq.Icon size={12} color={p.ink.dim} strokeWidth={2.25} /> : null}
+      <Text
+        numberOfLines={1}
+        style={{ flex: 1, color: p.ink.muted, fontSize: 11.5, fontWeight: "600" }}
+      >
+        {metaBits.length > 0 ? metaBits.join(" · ") : "Copy"}
+      </Text>
+      {value != null ? (
+        <Price usd={value} className="text-[12.5px] font-bold text-ink" />
+      ) : null}
+      {pl != null ? <SignedMoney usd={pl} pct={h.unrealized_pl_pct} size={11} /> : null}
+      <ChevronRight size={13} color={p.ink.dim} />
+    </Pressable>
+  );
+}
+
+/* ─── atoms ───────────────────────────────────────────────────────────── */
 
 function SummaryCell({ label, value }: { label: string; value: React.ReactNode }) {
   const p = useThemedPalette();
@@ -107,102 +353,23 @@ function SummaryCell({ label, value }: { label: string; value: React.ReactNode }
   );
 }
 
-function HoldingRow({ h }: { h: CardHoldingWire }) {
+/** Signed P/L in the user's display currency (green/red). */
+function SignedMoney({ usd, pct, size }: { usd: number; pct?: number | null; size: number }) {
   const p = useThemedPalette();
-  const cost = num(h.purchase_price_usd);
-  const value = num(h.estimated_value_usd);
-  const pl = num(h.unrealized_pl_usd);
-  const acq = h.acquired_via ? ACQUIRED[h.acquired_via] : null;
-  const badgeColor = h.is_graded ? p.accent.mint : p.ink.muted;
-
+  const { format } = useMoney();
+  const up = usd >= 0;
   return (
-    <View
+    <Text
       style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-        padding: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: p.line.default,
-        backgroundColor: p.bg.elevated,
+        color: up ? p.accent.mint : p.accent.rose,
+        fontSize: size,
+        fontWeight: "800",
+        fontVariant: ["tabular-nums"],
       }}
     >
-      <View style={{ flex: 1, gap: 6 }}>
-        <View
-          style={{
-            alignSelf: "flex-start",
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-            borderRadius: 8,
-            backgroundColor: withAlpha(badgeColor, 0.14),
-          }}
-        >
-          <Text style={{ color: badgeColor, fontSize: 12, fontWeight: "800" }}>
-            {gradeLabel(h.house, h.grade, h.condition)}
-          </Text>
-        </View>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-          {h.is_graded ? (
-            <Tag icon={<ShieldCheck size={10} color={p.accent.mint} strokeWidth={2.5} />} label="Graded" color={p.accent.mint} />
-          ) : (
-            <Tag label="Raw" color={p.ink.muted} />
-          )}
-          {acq ? <Tag icon={<acq.Icon size={10} color={p.ink.muted} strokeWidth={2.5} />} label={acq.label} color={p.ink.muted} /> : null}
-          {h.days_held != null ? <Tag label={`${h.days_held}d held`} color={p.ink.muted} /> : null}
-        </View>
-      </View>
-
-      <View style={{ flexDirection: "row", gap: 14 }}>
-        <Fig label="Cost" value={cost != null ? <Price usd={cost} className="text-[13px] font-bold text-ink" /> : null} />
-        <Fig label="Value" value={value != null ? <Price usd={value} className="text-[13px] font-bold text-ink" /> : null} />
-        <Fig
-          label="P/L"
-          value={
-            pl != null ? (
-              <Text style={{ color: pl >= 0 ? p.accent.mint : p.accent.rose, fontSize: 13, fontWeight: "800" }}>
-                {pl >= 0 ? "+" : "−"}
-                {h.unrealized_pl_pct != null
-                  ? `${Math.abs(h.unrealized_pl_pct).toFixed(0)}%`
-                  : Math.abs(pl).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
-              </Text>
-            ) : null
-          }
-        />
-      </View>
-    </View>
-  );
-}
-
-function Tag({ icon, label, color }: { icon?: React.ReactNode; label: string; color: string }) {
-  const p = useThemedPalette();
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 3,
-        paddingHorizontal: 7,
-        paddingVertical: 2,
-        borderRadius: 6,
-        borderWidth: 1,
-        borderColor: color === p.accent.mint ? withAlpha(color, 0.35) : p.line.default,
-      }}
-    >
-      {icon}
-      <Text style={{ color, fontSize: 10, fontWeight: "700" }}>{label}</Text>
-    </View>
-  );
-}
-
-function Fig({ label, value }: { label: string; value: React.ReactNode }) {
-  const p = useThemedPalette();
-  return (
-    <View style={{ alignItems: "flex-end", gap: 1, minWidth: 48 }}>
-      <Text style={{ color: p.ink.dim, fontSize: 9, letterSpacing: 0.8, fontWeight: "700" }}>
-        {label.toUpperCase()}
-      </Text>
-      {value ?? <Text style={{ color: p.ink.muted, fontSize: 13, fontWeight: "700" }}>—</Text>}
-    </View>
+      {up ? "+" : "−"}
+      {format(Math.abs(usd))}
+      {pct != null ? ` (${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%)` : ""}
+    </Text>
   );
 }

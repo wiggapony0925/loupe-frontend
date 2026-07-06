@@ -45,7 +45,7 @@ import { CardImage } from "@/presentation/components/CardImage";
 import { SkeletonSearchResults } from "@/presentation/components/Skeletons";
 import { CardHorizontalRail } from "@/presentation/cards";
 import type { CardSearchResult, TcgKey } from "@/infrastructure/http";
-import { compactUsd } from "@/shared/format";
+import { Price } from "@/presentation/components/Price";
 import { TcgMark } from "@/presentation/brand/TcgMark";
 import { gradeColor, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -158,6 +158,7 @@ export default function SearchScreen() {
     queryKey: queryKeys.collection.list(),
     queryFn: () => fetchCollection(),
     enabled: isAuthenticated,
+    staleTime: 30_000,
   });
   const sparks = useQuery({
     queryKey: queryKeys.cards.sparklines(),
@@ -293,6 +294,8 @@ export default function SearchScreen() {
                 Keyboard.dismiss();
               }}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
               className="h-8 w-8 items-center justify-center rounded-full"
             >
               <X size={16} color={p.ink.muted} />
@@ -301,6 +304,8 @@ export default function SearchScreen() {
           <Pressable
             onPress={() => router.push(routes.scanIdentify())}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Scan a card with the camera"
             className="h-8 w-8 items-center justify-center rounded-full"
             style={{ backgroundColor: withAlpha(p.accent.mint, 0.14) }}
           >
@@ -308,68 +313,20 @@ export default function SearchScreen() {
           </Pressable>
         </View>
 
-        {/* Inline recent-searches strip — surfaces saved queries the
-            moment the user focuses the input, so re-running a recent
-            search is one tap instead of scrolling to the idle band.
-            Hidden once the user starts typing (≥2 chars) so it doesn't
-            compete with live results. */}
-        {inputFocused && debouncedQuery.length < 2 && recent.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ gap: 8, paddingTop: 12, paddingRight: 8 }}
-          >
-            {recent.map((r) => (
-              <View
-                key={r}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
-                  paddingLeft: 10,
-                  paddingRight: 4,
-                  paddingVertical: 4,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: p.line.default,
-                  backgroundColor: p.bg.elevated,
-                }}
-              >
-                <Clock size={11} color={p.ink.dim} />
-                <Pressable
-                  onPress={() => {
-                    setQuery(r);
-                    Keyboard.dismiss();
-                  }}
-                  hitSlop={6}
-                >
-                  <Text
-                    style={{
-                      color: p.ink.default,
-                      fontSize: 12,
-                      fontWeight: "600",
-                    }}
-                  >
-                    {r}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => removeRecent(r)}
-                  hitSlop={6}
-                  style={{
-                    width: 18,
-                    height: 18,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 999,
-                  }}
-                >
-                  <X size={11} color={p.ink.dim} />
-                </Pressable>
-              </View>
-            ))}
-          </ScrollView>
+        {/* Recent searches — ONLY while the keyboard is up (input focused)
+            and before live results take over (<2 chars typed). Idle
+            browsing never shows the strip, so the discovery bands below
+            stay clean. */}
+        {inputFocused && debouncedQuery.length < 2 ? (
+          <RecentSearchStrip
+            recent={recent}
+            onPick={(value) => {
+              setQuery(value);
+              Keyboard.dismiss();
+            }}
+            onRemove={removeRecent}
+            onClear={clearRecent}
+          />
         ) : null}
 
         {/* TCG facet chips (drive the live backend search) */}
@@ -465,14 +422,6 @@ export default function SearchScreen() {
           })}
         </ScrollView>
 
-        {!showLive && recent.length > 0 ? (
-          <RecentSearchStrip
-            recent={recent}
-            onPick={(value) => setQuery(value)}
-            onRemove={removeRecent}
-            onClear={clearRecent}
-          />
-        ) : null}
       </View>
 
       <ScrollView
@@ -670,7 +619,7 @@ export default function SearchScreen() {
                 <Text className="mt-1 mb-3 text-base font-semibold text-ink">
                   Top picks
                 </Text>
-                <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+                <View>
                   {[...cards]
                     .sort((a, b) => b.estimatedValueUsd - a.estimatedValueUsd)
                     .slice(0, 3)
@@ -715,7 +664,7 @@ export default function SearchScreen() {
             </View>
 
             {results.length === 0 ? (
-              <View className="items-center rounded-2xl border border-line bg-bg-elevated p-8">
+              <View className="items-center p-8">
                 <SearchIcon size={28} color={p.ink.dim} />
                 <Text className="mt-3 text-sm font-semibold text-ink">No matches</Text>
                 <Text className="mt-1 text-center text-[11px] text-ink-muted">
@@ -723,7 +672,7 @@ export default function SearchScreen() {
                 </Text>
               </View>
             ) : (
-              <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+              <View>
                 {results.map((card, i) => (
                   <ResultRow
                     key={card.id}
@@ -809,6 +758,7 @@ function RecentSearchStrip({
                 justifyContent: "center",
                 borderRadius: 999,
               }}
+              accessibilityRole="button"
               accessibilityLabel={`Remove recent search ${item}`}
             >
               <X size={11} color={p.ink.dim} />
@@ -840,35 +790,38 @@ function ResultRow({
     <Pressable
       onPress={() => router.push(routes.card(card.id))}
       accessibilityRole="button"
-      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-      className={`flex-row items-center gap-3 px-4 py-3 ${bordered ? "border-t border-line/60" : ""}`}
+      style={({ pressed }) => ({
+        backgroundColor: pressed ? p.bg.elevated : "transparent",
+        borderRadius: pressed ? 12 : 0,
+      })}
+      className={`flex-row items-center gap-3 px-1 py-2.5 ${bordered ? "border-t border-line/60" : ""}`}
     >
       <View
-        className="overflow-hidden rounded-lg"
-        style={{ width: 36, height: 50, backgroundColor: p.bg.sunken }}
+        className="overflow-hidden rounded-[10px]"
+        style={{ width: 52, height: 72, backgroundColor: p.bg.sunken }}
       >
         <CardImage
           uri={card.thumbnailUri}
-          width={36}
-          height={50}
-          rounded={8}
+          width={52}
+          height={72}
+          rounded={10}
           priority="low"
           recyclingKey={card.id}
           alt={card.title}
         />
       </View>
       <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} className="text-sm font-semibold text-ink">
+        <Text numberOfLines={1} className="text-[15px] font-semibold text-ink">
           {card.title}
         </Text>
-        <View className="mt-0.5 flex-row items-center gap-1.5">
+        <View className="mt-1 flex-row items-center gap-1.5">
           {card.grade !== null ? (
             <View
               style={{
-                paddingHorizontal: 5,
-                paddingVertical: 1,
-                borderRadius: 4,
-                backgroundColor: withAlpha(gradeTint, 0.18),
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 999,
+                backgroundColor: withAlpha(gradeTint, 0.16),
               }}
             >
               <Text style={{ color: gradeTint, fontSize: 9, fontWeight: "800" }}>
@@ -878,9 +831,9 @@ function ResultRow({
           ) : (
             <View
               style={{
-                paddingHorizontal: 5,
-                paddingVertical: 1,
-                borderRadius: 4,
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 999,
                 backgroundColor: withAlpha(p.ink.muted, 0.12),
               }}
             >
@@ -896,7 +849,11 @@ function ResultRow({
         <Sparkline values={spark ?? []} width={56} height={24} showBaseline={false} />
       </View>
       <View style={{ minWidth: 72, alignItems: "flex-end" }}>
-        <Text className="text-sm font-bold text-ink">{compactUsd(card.estimatedValueUsd)}</Text>
+        <Price
+          usd={card.estimatedValueUsd}
+          className="text-[15px] font-bold text-ink"
+          numberOfLines={1}
+        />
         <Text style={{ color: tint, fontSize: 10, fontWeight: "700" }}>
           {up ? "▲" : "▼"} {Math.abs(deltaPct).toFixed(2)}%
         </Text>
@@ -1017,9 +974,11 @@ function LiveResultsSection({
         </View>
       ) : null}
 
-      <View className="mt-3 overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+      {/* Flat results list — hairline-separated rows on the page surface
+          (no more stacked white blocks). */}
+      <View className="mt-2">
         {isError ? (
-          <View style={{ padding: 8 }}>
+          <View style={{ paddingVertical: 8 }}>
             <ErrorState
               title={COPY.searchError.title}
               message={COPY.searchError.message}
@@ -1031,11 +990,11 @@ function LiveResultsSection({
           // First-page skeleton — far better than a centered spinner
           // because the layout doesn't jump when real rows arrive and
           // the perceived wait is shorter (eyes have something to scan).
-          <View style={{ padding: 8 }}>
+          <View style={{ paddingVertical: 8 }}>
             <SkeletonSearchResults rows={4} />
           </View>
         ) : data.length === 0 ? (
-          <View style={{ padding: 8 }}>
+          <View style={{ paddingVertical: 8 }}>
             <EmptyState
               title={COPY.searchEmpty.title}
               message={COPY.searchEmpty.message}
@@ -1074,13 +1033,13 @@ function LiveResultsSection({
           <Text className="mt-1 text-base font-semibold text-ink" numberOfLines={1}>
             {`${sealed.length} ${sealed.length === 1 ? "match" : "matches"} \u00b7 boxes, ETBs, tins`}
           </Text>
-          <View className="mt-2 overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+          <View className="mt-1">
             {sealed.map((s, i) => (
               <SearchResultRow
                 key={s.id}
                 card={sealedToCardSearchResult(s)}
                 bordered={i > 0}
-                badgeText="SEALED"
+                badgeText="Sealed"
                 priceLabel="MSRP"
                 route={routes.sealedDetail(s.id)}
                 onPressCapture={() => onResultTap?.(query)}

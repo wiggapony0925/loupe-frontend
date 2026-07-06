@@ -43,6 +43,8 @@ export default function CommandCenterScreen() {
     queryKey: queryKeys.collection.summary(),
     queryFn: fetchCollectionSummary,
     enabled: isAuthenticated,
+    // Same key as useFilteredCollection's summary — keep the values in sync.
+    staleTime: 30_000,
   });
   const feed = useHomeFeed({ topMovers: 5, recentScans: 6 });
   const hardware = useScannerConnection();
@@ -208,7 +210,7 @@ export default function CommandCenterScreen() {
               title="No recent scans"
               message="Scan a card to start your vault."
               secondaryActionLabel="Scan a card"
-              onSecondaryAction={() => router.push("/scan")}
+              onSecondaryAction={() => router.push(routes.scanIdentify())}
             />
           ) : (
             <ScrollView

@@ -438,7 +438,9 @@ function NotificationRow({
       </View>
       <View className="flex-1">
         <View className="flex-row items-center justify-between">
-          <Text className="text-[15px] font-semibold text-ink">{item.title}</Text>
+          <Text numberOfLines={1} className="flex-1 pr-2 text-[15px] font-semibold text-ink">
+            {item.title}
+          </Text>
           <Text className="text-[11px] text-ink-dim">{relative(item.at)}</Text>
         </View>
         <Text className="mt-1 text-[13px] leading-[18px] text-ink-muted">

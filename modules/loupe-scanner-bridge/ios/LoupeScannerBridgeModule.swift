@@ -99,52 +99,59 @@ public class LoupeScannerBridgeModule: Module {
       // ── Rectangle detection ─────────────────────────────────────
       // Trading cards are 2.5 × 3.5 in = aspect 0.714. We bracket
       // generously to allow tilt / partial occlusion: 0.55–0.95.
-      let request = VNDetectRectanglesRequest()
-      request.minimumAspectRatio = 0.55
-      request.maximumAspectRatio = 0.95
-      request.minimumSize = 0.25
-      request.maximumObservations = 1
-      request.minimumConfidence = 0.6
-      request.quadratureTolerance = 25
+      // Two-pass: the strict pass wants a close, confident card; when it
+      // misses we retry once with a looser floor so a card held further
+      // from the phone (or at a harder angle) still gets outlined —
+      // shutter captures are deliberate, so a slightly less confident
+      // quad beats no crop at all.
+      func detectRectangle(minSize: Float, minConfidence: Float) -> VNRectangleObservation? {
+        let request = VNDetectRectanglesRequest()
+        request.minimumAspectRatio = 0.55
+        request.maximumAspectRatio = 0.95
+        request.minimumSize = minSize
+        request.maximumObservations = 1
+        request.minimumConfidence = minConfidence
+        request.quadratureTolerance = 25
+        let handler = VNImageRequestHandler(ciImage: scaled, options: [:])
+        guard (try? handler.perform([request])) != nil else { return nil }
+        return (request.results as? [VNRectangleObservation])?.first
+      }
 
-      let handler = VNImageRequestHandler(ciImage: scaled, options: [:])
+      // A detection miss leaves corners nil — the caller still gets the
+      // blur/glare assessment so it can decide what to do (e.g. show a
+      // framing hint).
       var corners: [Double]? = nil
       var confidence: Double = 0
       var aspectOk = false
-      do {
-        try handler.perform([request])
-        if let rect = (request.results as? [VNRectangleObservation])?.first {
-          confidence = Double(rect.confidence)
-          // Vision returns normalised [0,1] corners with origin at
-          // bottom-left. Flip Y and scale back to the ORIGINAL image
-          // pixel space so JS can crop the high-res source.
-          let w = originalExtent.width
-          let h = originalExtent.height
-          func denorm(_ p: CGPoint) -> CGPoint {
-            return CGPoint(x: p.x * w, y: (1.0 - p.y) * h)
-          }
-          let tl = denorm(rect.topLeft)
-          let tr = denorm(rect.topRight)
-          let br = denorm(rect.bottomRight)
-          let bl = denorm(rect.bottomLeft)
-          corners = [
-            Double(tl.x), Double(tl.y),
-            Double(tr.x), Double(tr.y),
-            Double(br.x), Double(br.y),
-            Double(bl.x), Double(bl.y)
-          ]
-          // Sanity check: detected aspect close to a card.
-          let widthPx = hypot(tr.x - tl.x, tr.y - tl.y)
-          let heightPx = hypot(bl.x - tl.x, bl.y - tl.y)
-          let detectedAspect = widthPx > 0
-            ? Double(min(widthPx, heightPx) / max(widthPx, heightPx))
-            : 0
-          aspectOk = detectedAspect >= 0.55 && detectedAspect <= 0.95
+      let detected = detectRectangle(minSize: 0.25, minConfidence: 0.6)
+        ?? detectRectangle(minSize: 0.12, minConfidence: 0.45)
+      if let rect = detected {
+        confidence = Double(rect.confidence)
+        // Vision returns normalised [0,1] corners with origin at
+        // bottom-left. Flip Y and scale back to the ORIGINAL image
+        // pixel space so JS can crop the high-res source.
+        let w = originalExtent.width
+        let h = originalExtent.height
+        func denorm(_ p: CGPoint) -> CGPoint {
+          return CGPoint(x: p.x * w, y: (1.0 - p.y) * h)
         }
-      } catch {
-        // Rectangle detection failed — leave corners nil, continue with
-        // blur/glare assessment so the caller can still decide what to
-        // do (e.g. show "hold steady").
+        let tl = denorm(rect.topLeft)
+        let tr = denorm(rect.topRight)
+        let br = denorm(rect.bottomRight)
+        let bl = denorm(rect.bottomLeft)
+        corners = [
+          Double(tl.x), Double(tl.y),
+          Double(tr.x), Double(tr.y),
+          Double(br.x), Double(br.y),
+          Double(bl.x), Double(bl.y)
+        ]
+        // Sanity check: detected aspect close to a card.
+        let widthPx = hypot(tr.x - tl.x, tr.y - tl.y)
+        let heightPx = hypot(bl.x - tl.x, bl.y - tl.y)
+        let detectedAspect = widthPx > 0
+          ? Double(min(widthPx, heightPx) / max(widthPx, heightPx))
+          : 0
+        aspectOk = detectedAspect >= 0.55 && detectedAspect <= 0.95
       }
 
       // ── Blur via Laplacian variance ─────────────────────────────
@@ -274,6 +281,51 @@ public class LoupeScannerBridgeModule: Module {
         "alignmentOk": true,
         "aspectOk": true
       ]
+    }
+
+    // On-device text recognition via Apple's Vision framework
+    // (VNRecognizeTextRequest, accurate mode). This is the first-party
+    // replacement for the third-party ML Kit dependency on iOS: it ships
+    // with the OS, needs no extra native pod, and reads card titles /
+    // set codes well. Language correction is OFF on purpose — card names
+    // are proper nouns ("Charizard", "SWSH050") that autocorrect mangles.
+    //
+    // Used by the identify budget-fallback path: when the server skips
+    // paid OCR, the client reads the frame locally and resubmits text.
+    // Resolves (never rejects) with empty text on failure so callers can
+    // degrade gracefully.
+    AsyncFunction("recognizeCardText") { (uri: String, promise: Promise) in
+      guard let url = self.fileURL(from: uri),
+            let source = CIImage(contentsOf: url) else {
+        promise.resolve(["text": "", "confidence": 0.0, "lineCount": 0])
+        return
+      }
+      let request = VNRecognizeTextRequest()
+      request.recognitionLevel = .accurate
+      request.usesLanguageCorrection = false
+      request.recognitionLanguages = ["en-US"]
+      let handler = VNImageRequestHandler(ciImage: source, options: [:])
+      do {
+        try handler.perform([request])
+        let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
+        var lines: [String] = []
+        var confidenceSum = 0.0
+        for observation in observations {
+          guard let candidate = observation.topCandidates(1).first else { continue }
+          let trimmed = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
+          if trimmed.isEmpty { continue }
+          lines.append(trimmed)
+          confidenceSum += Double(candidate.confidence)
+        }
+        let confidence = lines.isEmpty ? 0.0 : confidenceSum / Double(lines.count)
+        promise.resolve([
+          "text": lines.joined(separator: "\n"),
+          "confidence": confidence,
+          "lineCount": lines.count
+        ])
+      } catch {
+        promise.resolve(["text": "", "confidence": 0.0, "lineCount": 0])
+      }
     }
 
     // Difference-hash (dHash) over a 9×8 grayscale downsample of the

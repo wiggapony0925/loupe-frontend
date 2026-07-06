@@ -1,12 +1,14 @@
 /**
- * `/scan/identify` — live card identification (PriceCharting-style).
+ * `/scan/identify` — live card identification.
  *
- * Mounts the streaming OCR viewfinder. When the user picks a candidate
- * we deep-link into the unified `/card/{id}` detail page (price by
- * grade, lowest live price per marketplace, recent sold comps). From
+ * Mounts the shutter-driven viewfinder: each tap captures one frame and
+ * resolves it into the session tray. When the user taps a matched
+ * capture we deep-link into the unified `/card/{id}` detail page (price
+ * by grade, lowest live price per marketplace, recent sold comps). From
  * there an "Add to vault" CTA bridges to `gradeNew`. If we couldn't
  * resolve a catalog id we fall back to the legacy gradeNew flow so the
- * user still has a way to save what they captured.
+ * user still has a way to save what they captured. "Add all" on the
+ * tray bulk-saves the whole scanned stack as RAW holdings.
  */
 import React from "react";
 import { Alert } from "react-native";
@@ -17,6 +19,8 @@ import type {
   IdentifyTcgHint,
 } from "@/infrastructure/repositories/identifyRepository";
 import { useCreateGrade } from "@/application/queries/collection/useGradeMutations";
+import { ApiError } from "@/infrastructure/http/client";
+import { usePro } from "@/presentation/features/pro";
 import { routes } from "@/shared/routes";
 
 const ALLOWED: readonly NonNullable<IdentifyTcgHint>[] = [
@@ -37,10 +41,15 @@ const BATCH_RAW_GRADE = 9;
 export default function IdentifyScanScreen() {
   const { tcg } = useLocalSearchParams<{ tcg?: string }>();
   const createGrade = useCreateGrade();
+  const { openPaywall } = usePro();
+  // No explicit game param → AUTO-DETECT (null), never a silent default.
+  // The old "pokemon" fallback constrained every FAB-launched scan to the
+  // Pokémon catalog, which made any other card return zero results with
+  // only the tiny game pill hinting why.
   const initialTcg: IdentifyTcgHint =
     typeof tcg === "string" && (ALLOWED as readonly string[]).includes(tcg)
       ? (tcg as NonNullable<IdentifyTcgHint>)
-      : "pokemon";
+      : null;
 
   const handleAddBatch = React.useCallback(
     async (candidates: IdentifyCandidate[]) => {
@@ -62,16 +71,26 @@ export default function IdentifyScanScreen() {
       );
       const added = results.filter((r) => r.status === "fulfilled").length;
       const failed = candidates.length - added;
+      // Free-tier cap reached mid-batch — open the Loupe Pro paywall
+      // instead of a generic "couldn't save" (the backend 402 decides).
+      const hitCardLimit = results.some(
+        (r) =>
+          r.status === "rejected" &&
+          r.reason instanceof ApiError &&
+          r.reason.status === 402,
+      );
 
       router.replace(routes.vault());
-      if (failed > 0) {
+      if (hitCardLimit) {
+        openPaywall("card_limit");
+      } else if (failed > 0) {
         Alert.alert(
           "Stack added",
           `${added} card${added === 1 ? "" : "s"} added to your vault as RAW (Near Mint). ${failed} couldn't be saved — try those again.`,
         );
       }
     },
-    [createGrade],
+    [createGrade, openPaywall],
   );
 
   return (
@@ -87,8 +106,8 @@ export default function IdentifyScanScreen() {
         // a local `card_id` and a composite `upstream_id`
         // (e.g. `pokemontcg:base1-4`), so a freshly-scanned card that only
         // came back with an upstream id still lands on the full page
-        // instead of dropping into add-to-vault. "Add to collection" lives
-        // there as a primary CTA.
+        // instead of dropping into add-to-vault. "Add to collection" and
+        // grading live there as primary CTAs.
         const detailId = candidate.card_id ?? candidate.upstream_id ?? null;
         if (detailId) {
           router.replace(routes.card(detailId));
@@ -103,23 +122,6 @@ export default function IdentifyScanScreen() {
             cardSet: candidate.set_name ?? undefined,
           }),
         );
-      }}
-      onAddToVault={(candidate) => {
-        router.replace(
-          routes.gradeNew({
-            cardId: candidate.card_id ?? undefined,
-            upstreamId: candidate.upstream_id ?? undefined,
-            cardName: candidate.name,
-            cardImage: candidate.image_url ?? undefined,
-            cardSet: candidate.set_name ?? undefined,
-          }),
-        );
-      }}
-      onGrade={() => {
-        // "Grade this card" → the photometric Studio capture (measure
-        // centering/edges/corners/surface for a grade estimate). Push so the
-        // user can swipe back to the scanner.
-        router.push(routes.scanPhone("studio"));
       }}
       onAddBatch={handleAddBatch}
       onManualSearch={() => router.replace("/search")}

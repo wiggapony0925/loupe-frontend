@@ -10,5 +10,8 @@ export function useScanners<T = unknown>() {
     queryKey: queryKeys.scanners.list(),
     queryFn: () => apiFetch<T>(ENDPOINTS.scanners.list),
     enabled: isAuthenticated,
+    // Registry only changes on pair/unpair, and the pairing flow invalidates
+    // hardware.status — not this key — so freshness here rides on staleTime.
+    staleTime: 60_000,
   });
 }

@@ -2,9 +2,9 @@
  * Live card detector — typed JS facade over the iOS Vision + CoreImage
  * functions in `LoupeScannerBridge`.
  *
- * Used by the `LiveIdentifyFlow` capture loop to (a) reject frames
- * with no card / blur / glare *before* burning a network round trip,
- * and (b) perspective-correct the card to ~30KB before upload. When
+ * Used by `LiveIdentifyFlow` on each shutter capture to (a) surface a
+ * framing hint when no card outline is found in the frame, and
+ * (b) perspective-correct the card to ~30KB before upload. When
  * the native module isn't linked (Expo Go, web), every method returns
  * a "no opinion" report so the caller falls through to the legacy
  * full-frame upload path. Never throws.
@@ -17,9 +17,10 @@
 import LoupeScannerBridge, {
   type CardFrameAnalysis,
   type CroppedCard,
+  type RecognizedCardText,
 } from "../../../modules/loupe-scanner-bridge";
 
-export type { CardFrameAnalysis, CroppedCard };
+export type { CardFrameAnalysis, CroppedCard, RecognizedCardText };
 
 export type CardDetectorSource = "native" | "unavailable";
 
@@ -40,6 +41,8 @@ interface CardDetectorImpl {
     crop: boolean;
     /** dHash. iOS + Android. */
     hash: boolean;
+    /** Apple Vision on-device OCR (VNRecognizeTextRequest). iOS only today. */
+    recognizeText: boolean;
   };
   analyzeFrame(uri: string): Promise<CardFrameAnalysis>;
   crop(
@@ -54,6 +57,12 @@ interface CardDetectorImpl {
    * tolerate that and fall through to the network identify path.
    */
   hash(uri: string): Promise<string | null>;
+  /**
+   * First-party on-device OCR. Returns `null` when the capability is
+   * missing or recognition failed — callers fall back to ML Kit (via
+   * `@/infrastructure/ocr/onDeviceOcr`) or the server.
+   */
+  recognizeText(uri: string): Promise<RecognizedCardText | null>;
 }
 
 const NO_RESULT: CardFrameAnalysis = {
@@ -75,7 +84,9 @@ function makeNative(mod: NonNullable<typeof LoupeScannerBridge>): CardDetectorIm
   const hasCrop = typeof (mod as { cropCardPerspective?: unknown }).cropCardPerspective === "function";
   const hasHash =
     typeof (mod as { computePerceptualHash?: unknown }).computePerceptualHash === "function";
-  if (!hasAnalyze && !hasCrop && !hasHash) {
+  const hasRecognizeText =
+    typeof (mod as { recognizeCardText?: unknown }).recognizeCardText === "function";
+  if (!hasAnalyze && !hasCrop && !hasHash && !hasRecognizeText) {
     if (__DEV__) {
       // eslint-disable-next-line no-console
       console.warn(
@@ -87,7 +98,12 @@ function makeNative(mod: NonNullable<typeof LoupeScannerBridge>): CardDetectorIm
   return {
     source: "native",
     isAvailable: true,
-    capabilities: { analyze: hasAnalyze, crop: hasCrop, hash: hasHash },
+    capabilities: {
+      analyze: hasAnalyze,
+      crop: hasCrop,
+      hash: hasHash,
+      recognizeText: hasRecognizeText,
+    },
     async analyzeFrame(uri) {
       if (!hasAnalyze) return NO_RESULT;
       try {
@@ -108,6 +124,15 @@ function makeNative(mod: NonNullable<typeof LoupeScannerBridge>): CardDetectorIm
         return null;
       }
     },
+    async recognizeText(uri) {
+      if (!hasRecognizeText) return null;
+      try {
+        const result = await mod.recognizeCardText(uri);
+        return result && result.text.trim().length > 0 ? result : null;
+      } catch {
+        return null;
+      }
+    },
   };
 }
 
@@ -115,7 +140,7 @@ function makeUnavailable(): CardDetectorImpl {
   return {
     source: "unavailable",
     isAvailable: false,
-    capabilities: { analyze: false, crop: false, hash: false },
+    capabilities: { analyze: false, crop: false, hash: false, recognizeText: false },
     async analyzeFrame() {
       return NO_RESULT;
     },
@@ -125,6 +150,9 @@ function makeUnavailable(): CardDetectorImpl {
       return { uri, width: 0, height: 0, bytes: 0 };
     },
     async hash() {
+      return null;
+    },
+    async recognizeText() {
       return null;
     },
   };

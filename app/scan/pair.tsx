@@ -89,6 +89,7 @@ export default function PairScannerScreen() {
     <SafeAreaView className="flex-1 bg-bg" edges={["top"]}>
       <View className="flex-row items-center justify-between px-5 pb-2 pt-2">
         <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Close pairing"
           hitSlop={12}
           onPress={handleDone}

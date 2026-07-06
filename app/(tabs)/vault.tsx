@@ -34,6 +34,7 @@ import { FilterBar } from "@/presentation/features/collection/FilterBar";
 import { PositionRow } from "@/presentation/features/collection/PositionRow";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { useFilteredCollection } from "@/presentation/features/collection/useFilteredCollection";
+import { ProUsageBanner } from "@/presentation/features/pro";
 import { useMySealedHoldings } from "@/application/queries/collection/useSealed";
 import { useVaultFilters, useVaultSelection } from "@/application/stores";
 import {
@@ -262,7 +263,9 @@ export default function VaultScreen() {
             ) : (
               <VaultPageHeader
                 onAdd={() => router.push(routes.gradeNew())}
-                onScan={() => router.push(routes.scanPhone())}
+                // Scan = the identify camera (shutter → tray → "Add all"),
+                // the same flow as the center tab — not the old capture mode.
+                onScan={() => router.push(routes.scanIdentify())}
                 onSealed={() => router.push(routes.sealed())}
               />
             )}
@@ -270,6 +273,9 @@ export default function VaultScreen() {
               <VaultHeaderSkeleton />
             ) : (
               <>
+                {/* Free-tier "X of 50 cards" meter — renders nothing for Pro
+                    users or while subscriptions are switched off. */}
+                <ProUsageBanner />
                 <PortfolioHero
                   totalValueUsd={summary?.totalValueUsd ?? stats.value}
                   pnlUsd={summary?.unrealizedPnlUsd ?? null}
@@ -408,7 +414,26 @@ export default function VaultScreen() {
                 compact
               />
             </View>
+          ) : uniqueCount === 0 ? (
+            // Genuinely empty vault (whole-vault aggregate, not just the
+            // filtered page) — lead with the scanner, the fastest way to a
+            // first card. Filter copy here would be nonsense.
+            <View
+              style={{
+                paddingTop: 16,
+                paddingHorizontal: viewMode === "grid" ? 0 : 14,
+              }}
+            >
+              <EmptyState
+                title={COPY.vaultEmpty.title}
+                message={COPY.vaultEmpty.message}
+                icon={Camera}
+                secondaryActionLabel="Scan a card"
+                onSecondaryAction={() => router.push(routes.scanIdentify())}
+              />
+            </View>
           ) : (
+            // Cards exist but the active search/filters exclude them all.
             <View
               style={{
                 paddingTop: 16,
@@ -809,7 +834,9 @@ function VaultPageHeader({
       >
         <Plus size={18} color={p.accent.mint} strokeWidth={2.5} />
       </Pressable>
-      {/* Scan — the high-value primary path. Same icon pill shape. */}
+      {/* Scan — the high-value primary path. Same icon pill shape. Dark
+          ink on the mint fill (white-on-mint fails contrast — mint is a
+          light accent; matches the tab-bar FAB treatment). */}
       <Pressable
         onPress={onScan}
         accessibilityRole="button"
@@ -825,7 +852,7 @@ function VaultPageHeader({
           opacity: pressed ? 0.85 : 1,
         })}
       >
-        <Camera size={17} color="#fff" strokeWidth={2.5} />
+        <Camera size={17} color="#06140d" strokeWidth={2.5} />
       </Pressable>
       <Pressable
         onPress={onSealed}

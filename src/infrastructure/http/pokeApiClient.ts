@@ -5,6 +5,13 @@
  * Auth: none. Generous public rate limit; we cache aggressively
  * via TanStack Query so most users never hit the network twice.
  *
+ * INTENTIONALLY direct-from-device: PokéAPI is free, keyless, and
+ * unmetered (no shared quota to burn, no secret to ship), and the
+ * Loupe backend has no species/flavor proxy. This is the one allowed
+ * exception to the "all card-data JSON goes through our backend" rule
+ * — do NOT add keyed/metered third-party clients here (see the
+ * deleted pokemonTcgClient for how that path gets migrated).
+ *
  * 404s for non-species names (trainers, energy, unreleased forms) are
  * an EXPECTED outcome — the hooks turn this into a no-render in
  * `PokedexPanel`. We surface them as `PokeApiError` with `status=404`

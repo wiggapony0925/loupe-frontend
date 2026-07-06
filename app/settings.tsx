@@ -25,6 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import { useSettings, type Currency, type ThemeMode } from "@/application/stores/settingsStore";
+import { useDisplayCurrency } from "@/application/hooks/useDisplayCurrency";
 import {
   useUpdateUserSettings,
   useUserSettings,
@@ -33,6 +34,7 @@ import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerShe
 import { getCurrency } from "@/shared/currency";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import { useAuth } from "@/presentation/providers/AuthProvider";
+import { ProMembershipCard } from "@/presentation/features/pro";
 
 type PageKey = "menu" | "general" | "appearance" | "legal" | "about";
 
@@ -159,6 +161,10 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           </View>
         </View>
       </View>
+
+      {/* Loupe Pro membership — upgrade CTA for free users, billing for Pro.
+          Renders nothing while subscriptions are switched off. */}
+      <ProMembershipCard />
 
       {/* Menu rows — hairline separators, no card containers */}
       <View className="mt-2 border-t border-line">
@@ -460,10 +466,13 @@ function ToggleRow(
 function GeneralTab() {
   const p = useThemedPalette();
   const s = useSettings();
+  // Currency changes also persist to the profile (PATCH /me/settings) so the
+  // choice follows the user to the webapp and their other devices.
+  const { currency, setCurrency } = useDisplayCurrency();
   return (
     <>
       <Section title="Currency">
-        <CurrencyPicker value={s.currency} onChange={s.setCurrency} />
+        <CurrencyPicker value={currency} onChange={setCurrency} />
       </Section>
 
       <Section title="Capture">

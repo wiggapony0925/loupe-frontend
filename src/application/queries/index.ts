@@ -83,6 +83,13 @@ export { useHomeFeed } from "./analytics/useHomeFeed";
 
 // auth
 export { useMe } from "./auth/useMe";
+export {
+  useEntitlements,
+  useBillingConfig,
+  useStartCheckout,
+  useBillingPortal,
+  useRefreshEntitlements,
+} from "./auth/useEntitlements";
 
 // ops
 export { useApiHealth } from "./ops/useApiHealth";

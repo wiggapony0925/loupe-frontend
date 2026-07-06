@@ -31,12 +31,15 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { ReportsSection } from "@/presentation/features/reports";
 import { COPY } from "@/shared/copy";
 import { normalizeError } from "@/shared/errors";
-import { compactUsd } from "@/shared/format";
+import { Price, useMoney } from "@/presentation/components/Price";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import type { AnalyticsMoverRow } from "@/infrastructure/repositories/analyticsRepository";
 
 export default function AnalyticsScreen() {
   useThemedPalette();
+  // The one reusable currency hook — every $ figure on this page renders in
+  // the user's chosen display currency and live-updates when they switch.
+  const { format } = useMoney();
   const q = useAnalyticsOverview();
   const data = q.data;
   const loading = q.isLoading;
@@ -87,7 +90,7 @@ export default function AnalyticsScreen() {
             title="No analytics yet"
             message="Add your first card and Loupe will chart your portfolio value, movers, allocation, and grade mix right here."
             secondaryActionLabel="Scan a card"
-            onSecondaryAction={() => router.push("/scan")}
+            onSecondaryAction={() => router.push(routes.scanIdentify())}
           />
         ) : (
           <>
@@ -122,29 +125,33 @@ export default function AnalyticsScreen() {
             <View className="rounded-2xl border border-line bg-bg-elevated p-4">
               <DonutChart
                 data={allocation}
-                centerValue={compactUsd(data.stats.totalValueUsd)}
+                centerValue={format(data.stats.totalValueUsd)}
                 centerLabel="total"
-                format={(n) => compactUsd(n)}
+                format={(n) => format(n)}
               />
             </View>
           )}
         </View>
 
+        {/* One Movers section (Robinhood-style), not two stacked headers —
+            gainers and losers read as a single story about the past year. */}
         <View>
-          <SectionHeader eyebrow="Movers" title="Top gainers" />
+          <SectionHeader eyebrow="Movers · past year" title="Top movers" />
           {loading || !data ? (
-            <SkeletonBlock height={150} />
+            <SkeletonBlock height={300} />
           ) : (
-            <MoverList rows={data.movers.gainers} emptyHint="No gainers yet" />
-          )}
-        </View>
-
-        <View>
-          <SectionHeader eyebrow="Movers" title="Top losers" />
-          {loading || !data ? (
-            <SkeletonBlock height={150} />
-          ) : (
-            <MoverList rows={data.movers.losers} emptyHint="No losers yet" />
+            <View style={{ gap: 14 }}>
+              <MoverGroup
+                label="Gainers"
+                rows={data.movers.gainers}
+                emptyHint="No gainers yet"
+              />
+              <MoverGroup
+                label="Losers"
+                rows={data.movers.losers}
+                emptyHint="No losers yet"
+              />
+            </View>
           )}
         </View>
 
@@ -184,6 +191,25 @@ export default function AnalyticsScreen() {
 }
 
 /* ─── Mover row (lightweight; matches the server payload shape) ──── */
+
+function MoverGroup({
+  label,
+  rows,
+  emptyHint,
+}: {
+  label: string;
+  rows: AnalyticsMoverRow[];
+  emptyHint: string;
+}) {
+  return (
+    <View>
+      <Text className="mb-1.5 text-[10px] font-semibold uppercase tracking-[2px] text-ink-dim">
+        {label}
+      </Text>
+      <MoverList rows={rows} emptyHint={emptyHint} />
+    </View>
+  );
+}
 
 function MoverList({ rows, emptyHint }: { rows: AnalyticsMoverRow[]; emptyHint: string }) {
   if (rows.length === 0) {
@@ -241,9 +267,10 @@ function MoverRow({ row }: { row: AnalyticsMoverRow }) {
         </Text>
       </View>
       <View className="items-end" style={{ minWidth: 78 }}>
-        <Text className="text-[15px] font-semibold tracking-tight text-ink">
-          {compactUsd(row.valueUsd)}
-        </Text>
+        <Price
+          usd={row.valueUsd}
+          className="text-[15px] font-semibold tracking-tight text-ink"
+        />
         <Text className="text-[11px] font-semibold" style={{ color: tint }}>
           {up ? "+" : ""}
           {row.changePct1y.toFixed(2)}%

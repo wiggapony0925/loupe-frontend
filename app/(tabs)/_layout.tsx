@@ -21,6 +21,7 @@ import {
   Layers,
   type LucideIcon,
   Search,
+  Sparkles,
   X,
   Zap,
 } from "lucide-react-native";
@@ -41,7 +42,7 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useSettings } from "@/application/stores/settingsStore";
 import { routes } from "@/shared/routes";
 
-type ScanShortcut = "grade" | "identify";
+type ScanShortcut = "grade" | "identify" | "playground";
 
 interface ScanTabButtonProps {
   children?: React.ReactNode;
@@ -186,8 +187,6 @@ export default function TabsLayout() {
 }
 
 function ScanTabButton({
-  onPress,
-  onLongPress,
   style,
   accessibilityLabel,
   accessibilityRole,
@@ -198,7 +197,12 @@ function ScanTabButton({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const navigateToShortcut = useCallback((target: ScanShortcut) => {
-    const href = target === "grade" ? routes.scanPhone("studio") : routes.scanIdentify();
+    const href =
+      target === "grade"
+        ? routes.scanPhone("studio")
+        : target === "playground"
+          ? routes.gradePlayground()
+          : routes.scanIdentify();
     setMenuOpen(false);
     router.push(href);
   }, []);
@@ -206,16 +210,23 @@ function ScanTabButton({
   return (
     <>
       <Pressable
-        onPress={onPress}
-        onLongPress={(event) => {
-          onLongPress?.(event);
+        // Tap = camera, instantly. The old behavior switched to an
+        // interstitial hub tab first — a whole extra tap in front of the
+        // app's primary verb. We deliberately do NOT forward the tab
+        // navigation onPress/onLongPress: the FAB is a launcher, not a tab.
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          router.push(routes.scanIdentify());
+        }}
+        onLongPress={() => {
           setMenuOpen(true);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         }}
         delayLongPress={260}
         accessibilityRole={accessibilityRole ?? "button"}
         accessibilityLabel={
-          accessibilityLabel ?? "Scan. Press and hold to choose a camera mode."
+          accessibilityLabel ??
+          "Scan a card. Opens the camera. Press and hold for more scan modes."
         }
         accessibilityState={accessibilityState}
         testID={testID}
@@ -445,6 +456,14 @@ function ScanActionSheet({
               palette={p}
               onPress={() => handleSelect("grade")}
             />
+            <ScanShortcutTarget
+              label="Loupe Playground"
+              caption="Score it by eye — instant grade estimate"
+              icon="playground"
+              tint={p.accent.purple}
+              palette={p}
+              onPress={() => handleSelect("playground")}
+            />
           </View>
         </Animated.View>
       </GestureDetector>
@@ -467,12 +486,18 @@ function ScanShortcutTarget({
   palette: ReturnType<typeof useThemedPalette>;
   onPress: () => void;
 }) {
-  const Icon = icon === "grade" ? Camera : Zap;
+  const Icon = icon === "grade" ? Camera : icon === "playground" ? Sparkles : Zap;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={icon === "grade" ? "Open grade scanner" : "Open quick identify scanner"}
+      accessibilityLabel={
+        icon === "grade"
+          ? "Open grade scanner"
+          : icon === "playground"
+            ? "Open the grade playground"
+            : "Open quick identify scanner"
+      }
       style={({ pressed }) => ({
         alignSelf: "stretch",
         borderRadius: 20,

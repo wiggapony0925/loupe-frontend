@@ -25,6 +25,8 @@ export const queryKeys = {
     profile: () => ["me"] as const,
     grades: () => ["me", "grades"] as const,
     settings: () => ["me", "settings"] as const,
+    entitlements: () => ["me", "entitlements"] as const,
+    billingConfig: () => ["me", "billing-config"] as const,
   },
   grades: {
     all: ["grades"] as const,

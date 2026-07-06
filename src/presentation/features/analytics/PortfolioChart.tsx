@@ -42,9 +42,8 @@ import {
   type PortfolioTimeframe,
 } from "@/domain/charts";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-import { compactUsd } from "@/shared/format";
-import { getCurrency } from "@/shared/currency";
-import { useSettings } from "@/application/stores/settingsStore";
+import { useMoney } from "@/presentation/components/Price";
+import { useDisplayCurrency } from "@/application/hooks/useDisplayCurrency";
 import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
 import { usePressScale } from "@/presentation/components/usePressScale";
 
@@ -102,10 +101,11 @@ export function PortfolioChart({
   const bleedRight = Math.max(0, bleedX - insets.right);
   const [range, setRange] = useState<PortfolioTimeframe>("1Y");
   const [width, setWidth] = useState(0);
-  const currency = useSettings((s) => s.currency);
-  const setCurrency = useSettings((s) => s.setCurrency);
+  // Reusable currency hook — subscribes to the display currency AND
+  // persists changes to the user's profile (so the webapp follows).
+  const { currency, setCurrency } = useDisplayCurrency();
+  const { format: money, meta: ccyMeta } = useMoney();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const ccyMeta = getCurrency(currency);
   const ccyTint = ccyMeta.kind === "crypto" ? p.accent.amber : p.accent.mint;
   const [scrub, setScrub] = useState<number | null>(null);
   // Hero delta basis: "period" (vs first point on the chart) or "cost"
@@ -268,7 +268,7 @@ export function PortfolioChart({
               fontVariant: ["tabular-nums"],
             }}
           >
-            {compactUsd(displayVal)}
+            {money(displayVal)}
           </Text>
           {/* Currency bubble — Robinhood-style: lives next to the headline value
               it denominates, opens a native bottom-sheet picker. */}
@@ -304,7 +304,7 @@ export function PortfolioChart({
           <Text style={{ color: tint, fontSize: 12 }}>{up ? "▲" : "▼"}</Text>
           <Text style={{ color: tint, fontSize: 14, fontWeight: "600" }}>
             {up ? "+" : ""}
-            {compactUsd(displayDeltaUsd)} ({up ? "+" : ""}
+            {money(displayDeltaUsd)} ({up ? "+" : ""}
             {displayDeltaPct.toFixed(2)}%)
           </Text>
           <Text className="text-sm text-ink-muted">
@@ -477,7 +477,7 @@ export function PortfolioChart({
                       letterSpacing: 0.3,
                     }}
                   >
-                    {compactUsd(displayVal)}
+                    {money(displayVal)}
                   </Text>
                 </View>
               </View>

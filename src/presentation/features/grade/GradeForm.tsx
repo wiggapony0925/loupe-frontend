@@ -36,6 +36,8 @@ import {
   useUpdateGrade,
 } from "@/application/queries";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
+import { ApiError } from "@/infrastructure/http/client";
+import { usePro } from "@/presentation/features/pro";
 import type { GradeHouse, RawCondition } from "@/infrastructure/http";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -129,6 +131,7 @@ function daysBetween(iso: string): number | null {
 
 export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   const p = useThemedPalette();
+  const { openPaywall } = usePro();
   const createMut = useCreateGrade();
   const updateMut = useUpdateGrade();
   const deleteMut = useDeleteGrade();
@@ -240,6 +243,12 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
       }
       router.back();
     } catch (e) {
+      // Free-tier cap reached — turn the 402 into the upgrade paywall
+      // rather than a dead-end error (mirrors the web CollectionForm).
+      if (e instanceof ApiError && e.status === 402) {
+        openPaywall("card_limit");
+        return;
+      }
       Alert.alert(
         mode === "create" ? "Couldn't add card" : "Couldn't update",
         e instanceof Error ? e.message : "Try again in a moment.",

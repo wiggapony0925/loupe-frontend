@@ -50,6 +50,15 @@ export interface WebPageScreenProps {
   embed?: "app" | "admin";
   /** Hide the native header (for tab-level surfaces with their own title). */
   showHeader?: boolean;
+  /**
+   * Web detail links to reroute into NATIVE screens. When the user taps a
+   * link matching `${webPrefix}/:id` inside the embed, the tap is swallowed
+   * before the web SPA can route (capture-phase click interceptor) and the
+   * native route from `toNative(id)` is pushed instead — so an embedded
+   * storefront can hand card taps to the real native card page rather than
+   * showing the web detail page inside the WebView.
+   */
+  nativeDetours?: { webPrefix: string; toNative: (id: string) => string }[];
 }
 
 export function WebPageScreen({
@@ -59,6 +68,7 @@ export function WebPageScreen({
   confinePaths,
   embed = "app",
   showHeader = true,
+  nativeDetours,
 }: WebPageScreenProps) {
   const p = useThemedPalette();
   const { scheme } = useTheme();
@@ -77,13 +87,69 @@ export function WebPageScreen({
       injectToken && token
         ? `try { window.localStorage.setItem('loupe.auth.token', ${JSON.stringify(token)}); } catch (e) {}`
         : "";
+    // Capture-phase click interceptor for native detours: swallow taps on
+    // matching detail links BEFORE the web SPA's router sees them (no flash
+    // of the web detail page, no history pollution) and hand the id to the
+    // native side via postMessage. The web app's links are real <a href>
+    // elements (react-router), so click capture is reliable.
+    const detourPrefixes = (nativeDetours ?? []).map((d) => d.webPrefix);
+    const detourLine = detourPrefixes.length
+      ? `
+      (function () {
+        var prefixes = ${JSON.stringify(detourPrefixes)};
+        document.addEventListener('click', function (e) {
+          var t = e.target;
+          var a = t && t.closest ? t.closest('a[href]') : null;
+          if (!a) return;
+          var url;
+          try { url = new URL(a.getAttribute('href') || '', location.origin); } catch (err) { return; }
+          if (url.origin !== location.origin) return;
+          for (var i = 0; i < prefixes.length; i++) {
+            var p = prefixes[i];
+            if (url.pathname.indexOf(p + '/') === 0 && url.pathname.length > p.length + 1) {
+              e.preventDefault();
+              e.stopPropagation();
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'loupe:native-detour',
+                prefix: p,
+                pathname: url.pathname
+              }));
+              return;
+            }
+          }
+        }, true);
+      })();`
+      : "";
     return `
       try { window.sessionStorage.setItem('loupe.embed', ${JSON.stringify(embed)}); } catch (e) {}
       try { window.localStorage.setItem('loupe.theme', ${JSON.stringify(scheme)}); document.documentElement.setAttribute('data-theme', ${JSON.stringify(scheme)}); } catch (e) {}
       ${tokenLine}
+      ${detourLine}
       true;
     `;
-  }, [embed, injectToken, scheme, token]);
+  }, [embed, injectToken, scheme, token, nativeDetours]);
+
+  // Native-detour messages from the interceptor above → push the native
+  // screen. Ids arrive URL-encoded (composite ids like "pokemontcg:base1-4"
+  // encode the colon); decode once — the route helper re-encodes.
+  const onMessage = (event: { nativeEvent: { data: string } }) => {
+    if (!nativeDetours?.length) return;
+    try {
+      const msg = JSON.parse(event.nativeEvent.data) as {
+        type?: string;
+        prefix?: string;
+        pathname?: string;
+      };
+      if (msg.type !== "loupe:native-detour" || !msg.prefix || !msg.pathname) return;
+      const detour = nativeDetours.find((d) => d.webPrefix === msg.prefix);
+      if (!detour) return;
+      const rawId = msg.pathname.slice(msg.prefix.length + 1).split("/")[0] ?? "";
+      const id = decodeURIComponent(rawId);
+      if (id) router.push(detour.toNative(id));
+    } catch {
+      // Malformed message — ignore; the embed keeps working.
+    }
+  };
 
   // Confine hard navigations to the page's own section + same origin. Blocks
   // links that would leave the bundled page for the rest of the app or an
@@ -125,6 +191,7 @@ export function WebPageScreen({
           source={{ uri }}
           injectedJavaScriptBeforeContentLoaded={injectedBefore}
           onShouldStartLoadWithRequest={onShouldStart}
+          onMessage={onMessage}
           onLoadEnd={() => setLoading(false)}
           startInLoadingState={false}
           originWhitelist={["*"]}

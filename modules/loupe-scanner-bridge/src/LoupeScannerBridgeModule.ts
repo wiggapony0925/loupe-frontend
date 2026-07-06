@@ -6,6 +6,7 @@ import {
   HapticPattern,
   ImageQualityReport,
   LoupeScannerBridgeModuleEvents,
+  RecognizedCardText,
   ScannerInfo,
 } from "./LoupeScannerBridge.types";
 
@@ -35,6 +36,8 @@ declare class LoupeScannerBridgeModule extends NativeModule<LoupeScannerBridgeMo
   ): Promise<CroppedCard>;
   /** dHash over a 9×8 grayscale downsample. Returns 16-char hex. */
   computePerceptualHash(uri: string): Promise<string>;
+  /** Apple Vision on-device OCR (accurate, no autocorrect). iOS only. */
+  recognizeCardText(uri: string): Promise<RecognizedCardText>;
 
   // Haptics
   triggerHaptic(pattern: HapticPattern): void;

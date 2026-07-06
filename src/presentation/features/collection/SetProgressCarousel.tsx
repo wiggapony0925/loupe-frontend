@@ -38,7 +38,7 @@ const SCREEN_EDGE = 20;
 
 function ringTint(percent: number): string {
   if (percent >= 75) return palette.accent.mint;
-  if (percent >= 25) return "#FFB020";
+  if (percent >= 25) return palette.accent.amber;
   return palette.accent.rose;
 }
 

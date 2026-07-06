@@ -22,7 +22,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { Camera, RotateCcw, X } from "lucide-react-native";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
-import { palette } from "@/presentation/theme/tokens";
+import { palette, withAlpha } from "@/presentation/theme/tokens";
 import type { PhotometricCapture } from "@/domain";
 import { usePhoneCapture, type PhoneCaptureHook } from "./usePhoneCapture";
 import type { PhoneCaptureMode } from "./captureSteps";
@@ -306,7 +306,9 @@ function BottomBar({ ctrl }: { ctrl: PhoneCaptureHook }) {
               <View
                 className="rounded-full px-2 py-0.5"
                 style={{
-                  backgroundColor: q.ok ? "rgba(0,245,155,0.18)" : "rgba(255,69,58,0.18)",
+                  backgroundColor: q.ok
+                    ? withAlpha(palette.accent.mint, 0.18)
+                    : withAlpha(palette.accent.rose, 0.18),
                 }}
               >
                 <Text
@@ -333,6 +335,7 @@ function BottomBar({ ctrl }: { ctrl: PhoneCaptureHook }) {
           onPress={ctrl.retake}
           disabled={ctrl.captures.length === 0 || ctrl.busy}
           hitSlop={12}
+          accessibilityRole="button"
           accessibilityLabel="Retake last shot"
           className="h-12 w-12 items-center justify-center rounded-full bg-white/10"
           style={{ opacity: ctrl.captures.length === 0 ? 0.3 : 1 }}
@@ -343,6 +346,7 @@ function BottomBar({ ctrl }: { ctrl: PhoneCaptureHook }) {
         <Pressable
           onPress={ctrl.capture}
           disabled={ctrl.busy || ctrl.done}
+          accessibilityRole="button"
           accessibilityLabel="Capture photo"
           className="items-center justify-center"
           style={{

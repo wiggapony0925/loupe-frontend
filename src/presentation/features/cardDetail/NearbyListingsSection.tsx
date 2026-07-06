@@ -21,7 +21,7 @@ import type { ExternalBrowserTarget } from "@/presentation/components/ExternalBr
 import { openExternalUrl } from "@/shared/openExternalUrl";
 import {
   MarketplaceTileCard,
-  MARKETPLACE_TILE_WIDTH,
+  MARKETPLACE_PHOTO_TILE_WIDTH,
 } from "@/presentation/components/MarketplaceTileCard";
 import { SkeletonListingsCarousel } from "@/presentation/components/Skeletons";
 import { radius, spacing, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
@@ -226,7 +226,7 @@ function NearbyListingList({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: spacing.sm + 2, paddingBottom: 4, paddingRight: 4 }}
         decelerationRate="fast"
-        snapToInterval={MARKETPLACE_TILE_WIDTH + spacing.sm + 2}
+        snapToInterval={MARKETPLACE_PHOTO_TILE_WIDTH + spacing.sm + 2}
         snapToAlignment="start"
       >
         {listings.map((l, i) => {
@@ -236,6 +236,7 @@ function NearbyListingList({
           return (
             <MarketplaceTileCard
               key={`${l.url || l.title}:${i}`}
+              layout="photo"
               imageUrl={l.image_url ?? cardImageUrl}
               blurhash={hasOwnPhoto ? null : cardBlurhash}
               fallbackIcon={ShoppingBag}

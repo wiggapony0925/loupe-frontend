@@ -106,6 +106,7 @@ export function AnnouncementBanner() {
         <Pressable
           onPress={dismiss}
           hitSlop={8}
+          accessibilityRole="button"
           accessibilityLabel="Dismiss announcement"
           style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
         >

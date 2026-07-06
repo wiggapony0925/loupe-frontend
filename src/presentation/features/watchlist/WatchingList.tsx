@@ -116,6 +116,8 @@ function WatchRow({ alert, onPress, onDelete }: RowProps) {
       <Pressable
         onPress={onDelete}
         hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Delete price alert"
         style={{ padding: 6, borderRadius: 8 }}
       >
         <Trash2 size={16} color={p.ink.dim} />

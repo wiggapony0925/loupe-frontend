@@ -11,7 +11,11 @@ import { QueryClient } from "@tanstack/react-query";
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
+      // 30s mirrors the web client's global (loupe-web AppProviders). This is
+      // the user-collection tier — slower data (catalog, market, config)
+      // opts up per-hook, so a hook that forgets staleTime over-fetches
+      // instead of showing stale vault data.
+      staleTime: 30_000,
       gcTime: 1000 * 60 * 30,
       refetchOnWindowFocus: true,
       retry: 1,

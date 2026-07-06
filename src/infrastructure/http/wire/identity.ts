@@ -46,6 +46,68 @@ export interface MeResponse {
   is_admin?: boolean;
 }
 
+// ─── Loupe Pro entitlements + billing ──────────────────────────────────
+
+/** Mirrors `PlanLimits` in `app/schemas/entitlement.py`. `null` = unlimited. */
+export interface PlanLimits {
+  max_cards: number | null;
+  /** Statement PDFs a free user may download (their latest N). */
+  free_statements: number | null;
+}
+
+/** Mirrors `PlanFeatures` — boolean capability gates the UI reads. */
+export interface PlanFeatures {
+  unlimited_cards: boolean;
+  scanner_import: boolean;
+  full_history: boolean;
+  unlimited_alerts: boolean;
+  statements: boolean;
+  pro_badge: boolean;
+}
+
+/**
+ * Mirrors `EntitlementsRead` (`GET /v1/me/entitlements`) — the signed-in
+ * user's effective Loupe Pro access. The client never decides what's
+ * unlocked; it renders this computed payload.
+ */
+export interface Entitlements {
+  plan: "free" | "pro";
+  is_pro: boolean;
+  /** True while Pro access is a free trial (Stripe `trialing`). */
+  trialing: boolean;
+  /** Global kill switch. False ⇒ everyone is Pro, hide every upgrade CTA. */
+  subscriptions_enabled: boolean;
+  pro_since: ISODate | null;
+  pro_expires_at: ISODate | null;
+  /** Live count of owned cards (drives the "X of 50" meter). */
+  card_count: number;
+  limits: PlanLimits;
+  features: PlanFeatures;
+}
+
+/** `GET /v1/me/billing/config` — pricing + checkout availability. */
+export interface BillingConfig {
+  checkout_available: boolean;
+  publishable_key: string | null;
+  price_monthly_usd: number;
+  price_yearly_usd: number;
+  trial_days: number;
+}
+
+/** `POST /v1/me/billing/checkout` — hosted Stripe Checkout session. */
+export interface CheckoutSession {
+  status: "checkout" | "unavailable";
+  url?: string;
+  message?: string;
+}
+
+/** `POST /v1/me/billing/portal` — Stripe customer-portal session. */
+export interface BillingPortalSession {
+  url: string;
+}
+
+export type BillingInterval = "monthly" | "yearly";
+
 // ─── Scanners (paired hardware) ────────────────────────────────────────
 
 /** Mirrors `ScannerRead` in `app/schemas/scanner.py`. */

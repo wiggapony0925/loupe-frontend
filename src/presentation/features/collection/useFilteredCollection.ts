@@ -74,12 +74,14 @@ export function useFilteredCollection() {
     // list doesn't blank to a skeleton on every keystroke — feels much
     // closer to "instant" even on a slow network.
     placeholderData: (prev) => prev,
+    staleTime: 30_000,
   });
 
   const summaryQuery = useQuery({
     queryKey: queryKeys.collection.summary(),
     queryFn: fetchCollectionSummary,
     enabled: isAuthenticated,
+    staleTime: 30_000,
   });
 
   // Per-card copy counts — currently we only have the *filtered* page

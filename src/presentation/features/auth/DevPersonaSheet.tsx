@@ -118,6 +118,7 @@ export function DevPersonaSheet({
           <Pressable
             onPress={onClose}
             hitSlop={12}
+            accessibilityRole="button"
             accessibilityLabel="Close persona picker"
           >
             <X size={22} color={p.ink.muted} />

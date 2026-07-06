@@ -130,7 +130,12 @@ export function PriceAlertSheet({
                 </Text>
               ) : null}
             </View>
-            <Pressable onPress={onClose} hitSlop={12} accessibilityLabel="Close">
+            <Pressable
+              onPress={onClose}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
               <X size={20} color={p.ink.muted} />
             </Pressable>
           </View>

@@ -21,10 +21,11 @@ import { usePortfolioHistory, useTopMovers } from "@/application/queries";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-import { compactUsd } from "@/shared/format";
+import { useMoney } from "@/presentation/components/Price";
 import { routes } from "@/shared/routes";
 
 export function TodaysDeltaHero() {
+  const { format } = useMoney();
   const { isAuthenticated } = useAuth();
   const history = usePortfolioHistory({ timeframe: "1D", enabled: isAuthenticated });
   const movers = useTopMovers({ limit: 1 });
@@ -74,7 +75,7 @@ export function TodaysDeltaHero() {
       accessibilityLabel={
         isFlat
           ? "Portfolio unchanged today. Open analytics."
-          : `Portfolio ${isUp ? "up" : "down"} ${compactUsd(Math.abs(delta))} today, ${pct.toFixed(1)} percent.${leaderName ? ` Led by ${leaderName}.` : ""} Open analytics.`
+          : `Portfolio ${isUp ? "up" : "down"} ${format(Math.abs(delta))} today, ${pct.toFixed(1)} percent.${leaderName ? ` Led by ${leaderName}.` : ""} Open analytics.`
       }
       style={({ pressed }) => ({
         borderRadius: 16,
@@ -121,7 +122,7 @@ export function TodaysDeltaHero() {
         >
           {isFlat
             ? "Quiet day, +$0.00"
-            : `${isUp ? "+" : "−"}${compactUsd(Math.abs(delta))} (${isUp ? "+" : "−"}${Math.abs(pct).toFixed(1)}%)`}
+            : `${isUp ? "+" : "−"}${format(Math.abs(delta))} (${isUp ? "+" : "−"}${Math.abs(pct).toFixed(1)}%)`}
         </Text>
       </View>
 

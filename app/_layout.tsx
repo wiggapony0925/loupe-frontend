@@ -14,6 +14,7 @@ import { ErrorBoundary } from "@/presentation/components/ErrorBoundary";
 import { MinVersionGate } from "@/presentation/components/MinVersionGate";
 import { ThemeProvider, useTheme } from "@/presentation/theme";
 import { useRecentsSync } from "@/application/hooks/useRecentsSync";
+import { useCurrencyProfileSync } from "@/application/hooks/useDisplayCurrency";
 import { usePushNotifications } from "@/application/hooks/usePushNotifications";
 import { initSentry } from "@/infrastructure/observability/sentry";
 
@@ -79,6 +80,8 @@ function RootStack() {
   const segments = useSegments();
   // Cross-device sync of recent searches (+ preserve recently-viewed).
   useRecentsSync();
+  // Adopt the profile's saved display currency (set here or on the web).
+  useCurrencyProfileSync();
   usePushNotifications();
 
   useEffect(() => {

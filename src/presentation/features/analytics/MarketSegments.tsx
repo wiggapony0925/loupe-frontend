@@ -9,7 +9,7 @@ import React from "react";
 import { Text, View } from "react-native";
 import { buildBars } from "@loupe/chart";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-import { compactUsd } from "@/shared/format";
+import { useMoney } from "@/presentation/components/Price";
 import type {
   AnalyticsOverview,
   AnalyticsSetIndex,
@@ -24,6 +24,7 @@ interface SetIndexesProps {
 
 export function SetIndexes({ indexes }: SetIndexesProps) {
   const p = useThemedPalette();
+  const { format } = useMoney();
   if (indexes.length === 0) return null;
   return (
     <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
@@ -48,7 +49,7 @@ export function SetIndexes({ indexes }: SetIndexesProps) {
               </View>
               <View style={{ minWidth: 84, alignItems: "flex-end" }}>
                 <Text className="text-sm font-bold text-ink">
-                  {compactUsd(idx.totalValueUsd)}
+                  {format(idx.totalValueUsd)}
                 </Text>
                 <Text style={{ color: tint, fontSize: 11, fontWeight: "700" }}>
                   {hasChange
@@ -85,6 +86,7 @@ interface YearDistributionProps {
 
 export function YearDistribution({ buckets }: YearDistributionProps) {
   const p = useThemedPalette();
+  const { format } = useMoney();
   if (buckets.length === 0) return null;
   // `fraction` (valueUsd / max) from the shared `@loupe/chart` bar math — the
   // web BarChart + mobile GradeBars use the same.
@@ -102,7 +104,7 @@ export function YearDistribution({ buckets }: YearDistributionProps) {
           return (
             <View key={b.decade} className="flex-1 items-center" style={{ gap: 6 }}>
               <Text className="text-[10px] font-semibold text-ink-dim">
-                {compactUsd(b.valueUsd)}
+                {format(b.valueUsd)}
               </Text>
               <View
                 style={{
@@ -190,6 +192,7 @@ interface StatsGridProps {
 }
 
 export function StatsGrid({ stats }: StatsGridProps) {
+  const { format } = useMoney();
   if (stats.holdings === 0) return null;
   return (
     <View className="flex-row flex-wrap" style={{ gap: 8 }}>
@@ -197,7 +200,7 @@ export function StatsGrid({ stats }: StatsGridProps) {
       <StatCell label="Sets" value={stats.uniqueSets.toString()} />
       <StatCell label="Avg Grade" value={stats.avgGrade.toFixed(2)} />
       <StatCell label="Gem Rate" value={`${stats.gemRatePct.toFixed(0)}%`} />
-      <StatCell label="Avg Value" value={compactUsd(stats.avgValueUsd)} />
+      <StatCell label="Avg Value" value={format(stats.avgValueUsd)} />
       <StatCell label="Oldest" value={stats.oldestYear?.toString() ?? "—"} />
     </View>
   );

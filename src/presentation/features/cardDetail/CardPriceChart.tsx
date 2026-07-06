@@ -18,6 +18,7 @@ import { queryKeys } from "@/application/queries/queryKeys";
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import { MarketChart } from "@/presentation/components/MarketChart";
+import { palette } from "@/presentation/theme/tokens";
 import type { MarketSnapshotWire, PriceHistoryWire } from "@/infrastructure/http";
 import type { ComparePreset } from "./compareTiers";
 
@@ -36,8 +37,9 @@ const RANGE_TO_BUCKET: Record<RangeKey, Bucket> = {
   ALL: "all",
 };
 
-/** Color for the primary (your-selection) line when overlaying compares. */
-const PRIMARY_COLOR = "#00F59B";
+/** Color for the primary (your-selection) line when overlaying compares —
+ *  read from the live palette so it tracks the active theme. */
+const primaryColor = () => palette.accent.mint;
 
 function formatUsd(v: number): string {
   if (!Number.isFinite(v)) return "—";
@@ -126,7 +128,7 @@ export function CardPriceChart({
         points: primaryPts,
         // Fixed color only when overlaying; otherwise undefined → MarketChart
         // applies color-by-change (mint/rose).
-        color: comparing ? PRIMARY_COLOR : undefined,
+        color: comparing ? primaryColor() : undefined,
       });
     }
     compare.forEach((t, i) => {

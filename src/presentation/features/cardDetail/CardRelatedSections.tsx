@@ -99,6 +99,7 @@ export function CardActiveAlerts({ cardId }: { cardId: string }) {
               <Pressable
                 onPress={() => del.mutate(a.id)}
                 hitSlop={8}
+                accessibilityRole="button"
                 accessibilityLabel="Delete alert"
                 style={{
                   width: 18,
