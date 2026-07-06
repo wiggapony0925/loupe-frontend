@@ -26,6 +26,12 @@ export const ENDPOINTS = {
     changePassword: `${V1}/auth/change-password`,
     forgotPassword: `${V1}/auth/forgot-password`,
   },
+  publicCatalog: {
+    /** Batch price sparklines for catalog ids (`?ids=a,b,c`) — one call
+     *  prices a whole scan cart; the last point of each series is the
+     *  card's current market price. Public, no auth. */
+    sparklines: `${V1}/public/sparklines`,
+  },
   me: {
     root: `${V1}/me`,
     settings: `${V1}/me/settings`,

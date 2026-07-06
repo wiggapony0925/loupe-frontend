@@ -67,6 +67,7 @@ import { AppNoticeModal } from "@/presentation/components/AppNoticeModal";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
+import { usePublicSparklines } from "@/application/queries/catalog/usePublicSparklines";
 import {
   extractMarketPriceUsd,
   usePokemonTcgCard,
@@ -2164,6 +2165,7 @@ function BottomPanel({
         <BatchTray
           batch={batch}
           themed={themed}
+          formatUsd={formatUsd}
           onPick={onPickCandidate}
           onRemove={onRemoveFromBatch}
           onFinish={onFinishBatch}
@@ -2174,8 +2176,10 @@ function BottomPanel({
         <ScanSessionTray
           items={scanSession}
           themed={themed}
+          formatUsd={formatUsd}
           onPick={onPickScanSessionItem}
           onRemove={onRemoveScanSessionItem}
+          onSearchManually={onManualSearch}
         />
       ) : null}
 
@@ -2856,17 +2860,25 @@ function TcgPickerSheet({
 function BatchTray({
   batch,
   themed,
+  formatUsd,
   onPick,
   onRemove,
   onFinish,
 }: {
   batch: IdentifyCandidate[];
   themed: ReturnType<typeof useThemedPalette>;
+  formatUsd: (v: number) => string;
   onPick: (candidate: IdentifyCandidate) => void;
   onRemove: (key: string) => void;
   onFinish: () => void;
 }) {
   const count = batch.length;
+  // Live running total — the Collectr signature. One batch request prices
+  // the whole cart; unpriced cards simply don't count toward the total.
+  const ids = batch
+    .map((c) => c.upstream_id ?? c.card_id)
+    .filter((id): id is string => id != null);
+  const { priceOf, totalUsd } = usePublicSparklines(ids);
   return (
     <View
       style={{
@@ -2883,7 +2895,7 @@ function BatchTray({
       <BlurView
         intensity={24}
         tint="dark"
-        style={{ backgroundColor: "rgba(5,8,10,0.72)", paddingTop: 10, paddingBottom: 12 }}
+        style={{ backgroundColor: GLASS_STRONG, paddingTop: 10, paddingBottom: 12 }}
       >
         <View
           style={{
@@ -2892,6 +2904,7 @@ function BatchTray({
             justifyContent: "space-between",
             paddingHorizontal: 12,
             marginBottom: 8,
+            gap: 10,
           }}
         >
           <View style={{ gap: 1 }}>
@@ -2905,6 +2918,33 @@ function BatchTray({
               {count} card{count === 1 ? "" : "s"} ready
             </Text>
           </View>
+          {totalUsd != null ? (
+            <View style={{ flex: 1, alignItems: "flex-end", gap: 1 }}>
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.48)",
+                  fontSize: 9,
+                  fontWeight: "800",
+                  letterSpacing: 1.1,
+                }}
+              >
+                TOTAL
+              </Text>
+              <Text
+                style={{
+                  color: themed.accent.mint,
+                  fontSize: 17,
+                  fontWeight: "900",
+                  fontVariant: ["tabular-nums"],
+                  letterSpacing: -0.3,
+                }}
+              >
+                {formatUsd(totalUsd)}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ flex: 1 }} />
+          )}
           <Pressable
             onPress={onFinish}
             accessibilityRole="button"
@@ -2939,6 +2979,7 @@ function BatchTray({
           {batch.map((c) => {
             const key = candidateKey(c);
             const confidencePct = Math.round(c.confidence * 100);
+            const price = priceOf(c.upstream_id ?? c.card_id);
             return (
               <Pressable
                 key={key}
@@ -2960,6 +3001,8 @@ function BatchTray({
                     rounded={10}
                     priority="low"
                   />
+                  {/* Price when we know it (the number the user actually
+                      cares about in a cart); confidence % until then. */}
                   <View
                     pointerEvents="none"
                     style={{
@@ -2969,20 +3012,20 @@ function BatchTray({
                       paddingHorizontal: 5,
                       paddingVertical: 2,
                       borderRadius: 999,
-                      backgroundColor: "rgba(0,0,0,0.66)",
+                      backgroundColor: "rgba(0,0,0,0.78)",
                       borderWidth: 1,
-                      borderColor: withAlpha(themed.accent.mint, 0.28),
+                      borderColor: withAlpha(themed.accent.mint, 0.35),
                     }}
                   >
                     <Text
                       style={{
-                        color: "#fff",
-                        fontSize: 8,
+                        color: price != null ? themed.accent.mint : "#fff",
+                        fontSize: 8.5,
                         fontWeight: "900",
                         fontVariant: ["tabular-nums"],
                       }}
                     >
-                      {confidencePct}%
+                      {price != null ? formatUsd(price) : `${confidencePct}%`}
                     </Text>
                   </View>
                   <Pressable
@@ -3031,24 +3074,85 @@ function BatchTray({
 function ScanSessionTray({
   items,
   themed,
+  formatUsd,
   onPick,
   onRemove,
+  onSearchManually,
 }: {
   items: ScanSessionItem[];
   themed: ReturnType<typeof useThemedPalette>;
+  formatUsd: (v: number) => string;
   onPick: (item: ScanSessionItem) => void;
   onRemove: (id: string) => void;
+  onSearchManually?: () => void;
 }) {
+  const matched = items.filter((i) => i.status === "matched" && i.candidate != null);
+  // Running session total — one batch request prices every matched capture.
+  const ids = matched
+    .map((i) => i.candidate?.upstream_id ?? i.candidate?.card_id)
+    .filter((id): id is string => id != null);
+  const { totalUsd } = usePublicSparklines(ids);
   return (
     <View
       style={{
         borderRadius: 20,
         overflow: "hidden",
         borderWidth: 1,
-        borderColor: withAlpha("#fff", 0.1),
-        backgroundColor: "rgba(5,8,10,0.74)",
+        borderColor: withAlpha("#fff", 0.12),
+        backgroundColor: GLASS_STRONG,
       }}
     >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 12,
+          paddingTop: 10,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+          <Camera size={14} color={themed.accent.mint} strokeWidth={2.2} />
+          <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>
+            This session
+          </Text>
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.5)",
+              fontSize: 11,
+              fontWeight: "700",
+              fontVariant: ["tabular-nums"],
+            }}
+          >
+            {matched.length}/{items.length} matched
+          </Text>
+        </View>
+        {totalUsd != null ? (
+          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5 }}>
+            <Text
+              style={{
+                color: "rgba(255,255,255,0.48)",
+                fontSize: 9,
+                fontWeight: "800",
+                letterSpacing: 1.1,
+              }}
+            >
+              TOTAL
+            </Text>
+            <Text
+              style={{
+                color: themed.accent.mint,
+                fontSize: 16,
+                fontWeight: "900",
+                fontVariant: ["tabular-nums"],
+                letterSpacing: -0.3,
+              }}
+            >
+              {formatUsd(totalUsd)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -3067,6 +3171,7 @@ function ScanSessionTray({
             themed={themed}
             onPick={onPick}
             onRemove={onRemove}
+            onSearchManually={onSearchManually}
           />
         ))}
       </ScrollView>
@@ -3080,31 +3185,50 @@ function ScanSessionCard({
   themed,
   onPick,
   onRemove,
+  onSearchManually,
 }: {
   item: ScanSessionItem;
   index: number;
   themed: ReturnType<typeof useThemedPalette>;
   onPick: (item: ScanSessionItem) => void;
   onRemove: (id: string) => void;
+  onSearchManually?: () => void;
 }) {
   const matched = item.status === "matched" && item.candidate != null;
+  const missed = item.status === "missed";
   const confidencePct = item.confidence != null ? Math.round(item.confidence * 100) : null;
   const title = matched
     ? item.candidate?.name ?? "Matched card"
-    : item.status === "missed"
-      ? "No match yet"
+    : missed
+      ? "No match found"
       : "Reading photo";
+  // A missed capture must never be a dead end — tapping it opens manual
+  // search (the Collectr "Tap here to search manually" affordance).
   const subtitle = matched
     ? `${confidencePct ?? 0}% match`
-    : item.status === "missed"
-      ? "Try another angle"
+    : missed
+      ? onSearchManually
+        ? "Tap to search manually"
+        : "Try another angle"
       : "Photo captured";
 
   return (
     <Pressable
-      onPress={matched ? () => onPick(item) : undefined}
+      onPress={
+        matched
+          ? () => onPick(item)
+          : missed && onSearchManually
+            ? onSearchManually
+            : undefined
+      }
       accessibilityRole="button"
-      accessibilityLabel={matched ? `Open scanned card ${title}` : `Captured scan ${index + 1}`}
+      accessibilityLabel={
+        matched
+          ? `Open scanned card ${title}`
+          : missed && onSearchManually
+            ? "No match found. Search the catalog manually."
+            : `Captured scan ${index + 1}`
+      }
       style={({ pressed }) => ({
         width: 190,
         minHeight: 76,
@@ -3115,8 +3239,12 @@ function ScanSessionCard({
         borderRadius: 16,
         backgroundColor: matched ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)",
         borderWidth: 1,
-        borderColor: matched ? withAlpha(themed.accent.mint, 0.28) : withAlpha("#fff", 0.08),
-        opacity: pressed && matched ? 0.76 : 1,
+        borderColor: matched
+          ? withAlpha(themed.accent.mint, 0.28)
+          : missed
+            ? withAlpha(themed.accent.amber, 0.3)
+            : withAlpha("#fff", 0.08),
+        opacity: pressed && (matched || (missed && onSearchManually)) ? 0.76 : 1,
       })}
     >
       <View
@@ -3175,7 +3303,17 @@ function ScanSessionCard({
         <Text numberOfLines={2} style={{ color: "#fff", fontSize: 12.5, fontWeight: "800" }}>
           {title}
         </Text>
-        <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.52)", fontSize: 10.5, fontWeight: "600" }}>
+        <Text
+          numberOfLines={1}
+          style={{
+            color:
+              missed && onSearchManually
+                ? themed.accent.mint
+                : "rgba(255,255,255,0.52)",
+            fontSize: 10.5,
+            fontWeight: missed && onSearchManually ? "800" : "600",
+          }}
+        >
           {subtitle}
         </Text>
       </View>
