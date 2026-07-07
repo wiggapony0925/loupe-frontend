@@ -68,6 +68,7 @@ import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/token
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
 import { usePublicSparklines } from "@/application/queries/catalog/usePublicSparklines";
 import { useCompactUsd } from "@/shared/format";
+import { usePro } from "@/presentation/features/pro";
 import {
   identifyCard,
   identifyCardFromText,
@@ -914,14 +915,27 @@ export function LiveIdentifyFlow({
     return out;
   }, [scanSession]);
 
+  // Free-tier awareness while scanning: know how many vault slots remain so
+  // the tray can warn BEFORE a batch add slams into the 402 (which the host
+  // still handles as the backstop).
+  const { gatingActive, cardCount, cardLimit, openPaywall } = usePro();
+  const slotsLeft =
+    gatingActive && cardLimit != null ? Math.max(0, cardLimit - cardCount) : null;
+
   const handleAddSession = useCallback(() => {
     if (sessionMatches.length === 0) return;
+    // At the cap with nothing addable → straight to the paywall with the
+    // card-limit story instead of a doomed request.
+    if (slotsLeft !== null && slotsLeft === 0) {
+      openPaywall("card_limit");
+      return;
+    }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
       () => {},
     );
     onAddBatch?.(sessionMatches);
     setScanSession([]);
-  }, [sessionMatches, onAddBatch]);
+  }, [sessionMatches, onAddBatch, slotsLeft, openPaywall]);
 
   // ─── Live price for the locked candidate ────────────────
   // Once we've locked onto a top candidate with a resolved catalog
@@ -1061,6 +1075,7 @@ export function LiveIdentifyFlow({
         scanSession={scanSession}
         sessionMatchCount={sessionMatches.length}
         batchEnabled={onAddBatch != null}
+        slotsLeft={slotsLeft}
         marketPriceUsd={marketPriceUsd}
         priceLoading={priceLoading}
         formatUsd={formatUsd}
@@ -1115,6 +1130,7 @@ function ScannerOverlay({
   scanSession,
   sessionMatchCount,
   batchEnabled,
+  slotsLeft,
   marketPriceUsd,
   priceLoading,
   formatUsd,
@@ -1146,6 +1162,8 @@ function ScannerOverlay({
   scanSession: ScanSessionItem[];
   sessionMatchCount: number;
   batchEnabled: boolean;
+  /** Remaining free-tier vault slots (null = uncapped). */
+  slotsLeft: number | null;
   marketPriceUsd: number | null;
   priceLoading: boolean;
   formatUsd: (v: number) => string;
@@ -1206,7 +1224,8 @@ function ScannerOverlay({
         onCloseTcgPicker={onCloseTcgPicker}
         onPickTcg={onPickTcg}
         scanSession={scanSession}
-        sessionMatchCount={sessionMatchCount}
+        slotsLeft={slotsLeft}
+          sessionMatchCount={sessionMatchCount}
         batchEnabled={batchEnabled}
         onPickScanSessionItem={onPickScanSessionItem}
         onRemoveScanSessionItem={onRemoveScanSessionItem}
@@ -1961,6 +1980,7 @@ function BottomPanel({
   scanSession,
   sessionMatchCount,
   batchEnabled,
+  slotsLeft = null,
   onPickScanSessionItem,
   onRemoveScanSessionItem,
   onAddSession,
@@ -1981,6 +2001,7 @@ function BottomPanel({
   scanSession: ScanSessionItem[];
   sessionMatchCount: number;
   batchEnabled: boolean;
+  slotsLeft?: number | null;
   onPickScanSessionItem: (item: ScanSessionItem) => void;
   onRemoveScanSessionItem: (id: string) => void;
   onAddSession: () => void;
@@ -2059,6 +2080,7 @@ function BottomPanel({
           onSearchManually={onManualSearch}
           onAddAll={batchEnabled && sessionMatchCount > 0 ? onAddSession : undefined}
           addAllCount={sessionMatchCount}
+          slotsLeft={slotsLeft}
         />
       ) : null}
 
@@ -2475,6 +2497,7 @@ function ScanSessionTray({
   onSearchManually,
   onAddAll,
   addAllCount = 0,
+  slotsLeft = null,
 }: {
   items: ScanSessionItem[];
   themed: ReturnType<typeof useThemedPalette>;
@@ -2486,6 +2509,7 @@ function ScanSessionTray({
    *  host didn't wire a batch handler or nothing has matched yet. */
   onAddAll?: () => void;
   addAllCount?: number;
+  slotsLeft?: number | null;
 }) {
   const matched = items.filter((i) => i.status === "matched" && i.candidate != null);
   // Running session total — one batch request prices every matched capture.
@@ -2551,6 +2575,31 @@ function ScanSessionTray({
                 }}
               >
                 {formatUsd(totalUsd)}
+              </Text>
+            </View>
+          ) : null}
+          {slotsLeft != null && slotsLeft <= 10 ? (
+            /* Free-tier vault slots — warn before the cap bites the batch. */
+            <View
+              style={{
+                paddingHorizontal: 9,
+                paddingVertical: 4,
+                borderRadius: 999,
+                backgroundColor: withAlpha(
+                  slotsLeft === 0 ? themed.accent.rose : themed.accent.amber,
+                  0.16,
+                ),
+              }}
+            >
+              <Text
+                style={{
+                  color: slotsLeft === 0 ? themed.accent.rose : themed.accent.amber,
+                  fontSize: 10,
+                  fontWeight: "800",
+                  letterSpacing: 0.4,
+                }}
+              >
+                {slotsLeft === 0 ? "VAULT FULL" : `${slotsLeft} SLOTS LEFT`}
               </Text>
             </View>
           ) : null}

@@ -22,6 +22,7 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import { routes } from "@/shared/routes";
+import { useMoney } from "@/presentation/components/Price";
 import { type Palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { WatchingList } from "@/presentation/features/watchlist/WatchingList";
 import { usePriceAlerts } from "@/application/queries/alerts/usePriceAlerts";
@@ -46,27 +47,26 @@ type Notification = {
  *  read state yet, so recency is the honest proxy for unread. */
 const UNREAD_WINDOW_MS = 48 * 60 * 60 * 1000;
 
-function formatUsd(value: string | number | null): string {
-  if (value === null) return "";
-  const n = typeof value === "string" ? Number(value) : value;
-  if (!Number.isFinite(n)) return "";
-  return `$${n.toLocaleString("en-US", {
-    minimumFractionDigits: n % 1 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
 
 /** Map the backend's triggered price alerts into inbox notifications.
  *  Only alerts the server has actually flagged (`triggered_at != null`)
  *  appear — we never fabricate a price move. */
-function buildFeed(alerts: PriceAlertWire[]): Notification[] {
+function buildFeed(
+  alerts: PriceAlertWire[],
+  money: (usd: number, opts?: { compact?: boolean }) => string,
+): Notification[] {
+  const fmtMoney = (v: string | number | null): string | null => {
+    if (v == null) return null;
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? money(n, { compact: false }) : null;
+  };
   return alerts
     .filter((a) => a.triggered_at !== null)
     .map((a) => {
       const name = a.card_name ?? "A watched card";
       const direction = a.condition === "above" ? "rose above" : "dropped below";
-      const threshold = formatUsd(a.threshold_usd);
-      const hit = formatUsd(a.triggered_price_usd);
+      const threshold = fmtMoney(a.threshold_usd);
+      const hit = fmtMoney(a.triggered_price_usd);
       const triggeredAt = a.triggered_at as string;
       const isUnread =
         Date.now() - new Date(triggeredAt).getTime() < UNREAD_WINDOW_MS;
@@ -113,9 +113,10 @@ export default function NotificationsScreen() {
 
   // Real inbox: triggered price alerts become "market" notifications.
   const alertsQ = usePriceAlerts({ pending: false });
+  const { format: money } = useMoney();
   const feed = useMemo(
-    () => buildFeed(alertsQ.data ?? []),
-    [alertsQ.data],
+    () => buildFeed(alertsQ.data ?? [], money),
+    [alertsQ.data, money],
   );
 
   const visible = useMemo(

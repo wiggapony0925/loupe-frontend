@@ -34,7 +34,7 @@ import {
   useReports,
   useUpcomingReports,
 } from "@/application/queries";
-import { apiUrl, getAuthToken } from "@/infrastructure/http/client";
+import { ApiError, apiUrl, getAuthToken } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type {
   UpcomingReportWire,
@@ -213,14 +213,20 @@ export function ReportsSection() {
     generate.mutate(
       { period: "monthly", year: prev.getUTCFullYear(), month: prev.getUTCMonth() + 1 },
       {
-        onError: (e) =>
+        onError: (e) => {
+          // Server says this needs Pro → paywall, not a dead-end error.
+          if (e instanceof ApiError && e.status === 402) {
+            requirePro();
+            return;
+          }
           Alert.alert(
             "Couldn't generate",
             e instanceof Error ? e.message : "Please try again shortly.",
-          ),
+          );
+        },
       },
     );
-  }, [generate]);
+  }, [generate, requirePro]);
 
   const reports = list.data ?? [];
   // Free tier sees only its latest `freeLimit` statement(s); the rest are walled.

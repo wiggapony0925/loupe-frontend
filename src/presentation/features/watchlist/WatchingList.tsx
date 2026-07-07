@@ -24,17 +24,12 @@ import {
 } from "@/application/queries/collection/useWatchlist";
 import type { PriceAlertWire, WatchlistItemWire } from "@/infrastructure/http";
 import { CardImage } from "@/presentation/components/CardImage";
+import { useMoney } from "@/presentation/components/Price";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
-function formatUsd(value: string | null | undefined): string {
-  if (value == null) return "—";
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "—";
-  return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
 
 interface RowProps {
   alert: PriceAlertWire;
@@ -43,6 +38,12 @@ interface RowProps {
 }
 
 function WatchRow({ alert, onPress, onDelete }: RowProps) {
+  const { format: __money } = useMoney();
+  const formatUsd = (value: string | null | undefined): string => {
+    if (value == null) return "—";
+    const n = Number(value);
+    return Number.isFinite(n) ? __money(n, { compact: false }) : "—";
+  };
   const p = useThemedPalette();
   const isAbove = alert.condition === "above";
   const triggered = alert.triggered_at != null;

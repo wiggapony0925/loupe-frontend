@@ -22,6 +22,8 @@ import {
   View,
 } from "react-native";
 import { X } from "lucide-react-native";
+import { ApiError } from "@/infrastructure/http/client";
+import { usePro } from "@/presentation/features/pro";
 import {
   useCreatePriceAlert,
   useDeletePriceAlert,
@@ -48,6 +50,7 @@ export function PriceAlertSheet({
   visible,
   onClose,
 }: PriceAlertSheetProps) {
+  const { openPaywall } = usePro();
   const p = useThemedPalette();
   const [condition, setCondition] = useState<"above" | "below">("above");
   const [threshold, setThreshold] = useState<string>("");
@@ -77,8 +80,15 @@ export function PriceAlertSheet({
       });
       setThreshold("");
       setNote("");
-    } catch {
-      // Validation / network errors surface via createMut.error; sheet stays open.
+    } catch (err) {
+      // Free-tier alert cap → close the sheet and open the Loupe Pro paywall
+      // with the alerts story (server 402 is the source of truth).
+      if (err instanceof ApiError && err.status === 402) {
+        onClose();
+        openPaywall("alerts");
+        return;
+      }
+      // Other validation / network errors surface via createMut.error.
     }
   }
 

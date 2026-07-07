@@ -30,6 +30,7 @@ import { router } from "expo-router";
 import { Calendar, ChevronLeft, Trash2 } from "lucide-react-native";
 import { CardImage } from "@/presentation/components/CardImage";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
+import { useMoney } from "@/presentation/components/Price";
 import {
   useCreateGrade,
   useDeleteGrade,
@@ -131,6 +132,7 @@ function daysBetween(iso: string): number | null {
 
 export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   const p = useThemedPalette();
+  const { format: money } = useMoney();
   const { openPaywall } = usePro();
   const createMut = useCreateGrade();
   const updateMut = useUpdateGrade();
@@ -413,14 +415,10 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
             }}
           >
             {displayValue != null && Number.isFinite(displayValue)
-              ? displayValue.toLocaleString("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                  maximumFractionDigits: 2,
-                })
+              ? money(displayValue, { compact: false })
               : marketQ.isLoading && mode === "create"
                 ? "—"
-                : "$0.00"}
+                : money(0, { compact: false })}
           </Text>
         </View>
 

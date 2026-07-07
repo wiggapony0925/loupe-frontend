@@ -19,6 +19,7 @@ import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import { MarketChart } from "@/presentation/components/MarketChart";
 import { palette } from "@/presentation/theme/tokens";
+import { useMoney } from "@/presentation/components/Price";
 import type { MarketSnapshotWire, PriceHistoryWire } from "@/infrastructure/http";
 import type { ComparePreset } from "./compareTiers";
 
@@ -41,14 +42,7 @@ const RANGE_TO_BUCKET: Record<RangeKey, Bucket> = {
  *  read from the live palette so it tracks the active theme. */
 const primaryColor = () => palette.accent.mint;
 
-function formatUsd(v: number): string {
-  if (!Number.isFinite(v)) return "—";
-  return v.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  });
-}
+
 
 function toPoints(wire: PriceHistoryWire | undefined) {
   return (wire?.points ?? [])
@@ -84,6 +78,10 @@ export function CardPriceChart({
   onScrubbingChange,
 }: CardPriceChartProps) {
   const [range, setRange] = useState<RangeKey>(defaultRange);
+  // Chart header + axis render in the display currency via the shared
+  // conversion hook (live backend FX), like every other price surface.
+  const { format: money } = useMoney();
+  const formatUsd = (v: number) => (Number.isFinite(v) ? money(v, { compact: false }) : "—");
   const bucket = RANGE_TO_BUCKET[range];
   const comparing = compare.length > 0;
 

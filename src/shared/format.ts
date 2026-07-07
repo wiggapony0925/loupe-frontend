@@ -1,3 +1,4 @@
+import { useFxStore } from "@/application/stores/fxStore";
 import { useSettings } from "@/application/stores/settingsStore";
 import { formatMoney } from "@/shared/currency";
 
@@ -37,7 +38,8 @@ export function relativeTime(iso: string, now = new Date()): string {
  */
 export function compactUsd(value: number): string {
   const code = useSettings.getState().currency;
-  return formatMoney(value, code, { compact: true });
+  const rate = useFxStore.getState().rates?.[code] ?? undefined;
+  return formatMoney(value, code, { compact: true, rate });
 }
 
 /**
@@ -47,7 +49,10 @@ export function compactUsd(value: number): string {
  */
 export function useCompactUsd(): (value: number) => string {
   const code = useSettings((s) => s.currency);
-  return (value: number) => formatMoney(value, code, { compact: true });
+  // Live server FX rate (same table the web uses); static snapshot fallback.
+  const rate = useFxStore((s) => s.rates?.[code] ?? null);
+  return (value: number) =>
+    formatMoney(value, code, { compact: true, rate: rate ?? undefined });
 }
 
 /**

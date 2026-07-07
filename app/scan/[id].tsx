@@ -24,6 +24,7 @@ import {
 } from "@/presentation/features/report";
 import { ErrorState } from "@/presentation/components/ErrorState";
 import { SkeletonCardDetailPage } from "@/presentation/components/Skeletons";
+import { useMoney } from "@/presentation/components/Price";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /** Pull a 0..10 axis score out of the loosely-typed subgrades blob.
@@ -67,19 +68,11 @@ function toForensicScore(
   };
 }
 
-function formatUsd(value: string | null): string | null {
-  if (value === null) return null;
-  const n = Number(value);
-  if (!Number.isFinite(n)) return null;
-  return `$${n.toLocaleString("en-US", {
-    minimumFractionDigits: n % 1 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
 
 export default function ScanDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const p = useThemedPalette();
+  const { format: money } = useMoney();
   const { data, isLoading, isError, refetch } = useGradedCard(id);
 
   const grade = data ? Number(data.grade) : 0;
@@ -88,7 +81,10 @@ export default function ScanDetailScreen() {
     [data, grade],
   );
 
-  const value = data ? formatUsd(data.estimated_value_usd) : null;
+  const value = React.useMemo(() => {
+    const n = data?.estimated_value_usd != null ? Number(data.estimated_value_usd) : null;
+    return n != null && Number.isFinite(n) ? money(n, { compact: false }) : null;
+  }, [data?.estimated_value_usd, money]);
   const meta = [data?.card_set_name, data?.card_year ? String(data.card_year) : null]
     .filter(Boolean)
     .join(" · ");

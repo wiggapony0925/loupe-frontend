@@ -179,6 +179,11 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           onPress={() => router.push("/blog")}
         />
         <MenuRow
+          title="Manage subscription"
+          subtitle="Loupe Pro plan, billing, usage, and benefits"
+          onPress={() => router.push("/subscription")}
+        />
+        <MenuRow
           title="Preferences"
           subtitle="Currency, capture, haptics, notifications"
           onPress={() => onNavigate("general")}

@@ -24,6 +24,7 @@ import {
   useSealedProduct,
 } from "@/application/queries/collection/useSealed";
 import { routes } from "@/shared/routes";
+import { useMoney } from "@/presentation/components/Price";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -46,17 +47,12 @@ function prettyType(t: string): string {
   );
 }
 
-function usd(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return "—";
-  return n.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  });
-}
 
 export default function SealedDetailScreen() {
   const p = useThemedPalette();
+  const { format: money } = useMoney();
+  const usd = (n: number | null | undefined): string =>
+    n == null || !Number.isFinite(n) ? "—" : money(n, { compact: false });
   const params = useLocalSearchParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -279,6 +275,9 @@ function Tier({
   value: number | null;
   p: ReturnType<typeof useThemedPalette>;
 }) {
+  const { format: money } = useMoney();
+  const usd = (n: number | null | undefined): string =>
+    n == null || !Number.isFinite(n) ? "—" : money(n, { compact: false });
   return (
     <View
       style={{

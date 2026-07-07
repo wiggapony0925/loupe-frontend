@@ -28,7 +28,7 @@ import {
   TrendingUp,
 } from "lucide-react-native";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-import { Price } from "@/presentation/components/Price";
+import { Price, useMoney } from "@/presentation/components/Price";
 import { useCardComps } from "@/application/queries/catalog/useCardComps";
 import { useCardListings } from "@/application/queries/catalog/useCardListings";
 import type {
@@ -389,6 +389,7 @@ export function CardCostBasisStrip({
   ownedGrade: GradedCard | null;
   marketAmount: number | null;
 }) {
+  const { format: money } = useMoney();
   const p = useThemedPalette();
   const cost = useMemo(() => {
     const raw = ownedGrade?.purchase_price_usd;
@@ -449,11 +450,7 @@ export function CardCostBasisStrip({
         <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
           <Text style={{ color, fontSize: 18, fontWeight: "800" }}>
             {positive ? "+" : "−"}
-            {Math.abs(pnl).toLocaleString("en-US", {
-              style: "currency",
-              currency: "USD",
-              maximumFractionDigits: 2,
-            })}
+            {money(Math.abs(pnl), { compact: false })}
           </Text>
           <Text style={{ color, fontSize: 12, fontWeight: "700" }}>
             ({positive ? "+" : ""}
