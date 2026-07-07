@@ -407,6 +407,10 @@ public class LoupeScannerBridgeModule: Module {
     //   NATIVE CAMERA VIEW — AVFoundation preview + live Vision reticle
     // ─────────────────────────────────────────────────────────────────
     View(LoupeCameraView.self) {
+      // Pin the exported view name so JS `requireNativeView("LoupeScannerBridge",
+      // "LoupeCameraView")` resolves deterministically instead of relying on
+      // the type-name fallback (which can drift under Swift name-mangling).
+      ViewName("LoupeCameraView")
       Events("onCameraReady", "onCardDetected", "onCapture", "onMountError")
 
       Prop("active") { (view: LoupeCameraView, active: Bool) in
