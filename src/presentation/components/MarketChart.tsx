@@ -13,7 +13,7 @@
  * color-by-change (mint↑ / rose↓) for single series, and a touch crosshair
  * with a price flag.
  */
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { LayoutChangeEvent, Pressable, Text, View } from "react-native";
 import Svg, {
   Circle,
@@ -26,6 +26,7 @@ import Svg, {
   Text as SvgText,
 } from "react-native-svg";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import * as Haptics from "expo-haptics";
 import {
   computeAvailableRanges,
   computeChartGeometry,
@@ -36,6 +37,7 @@ import {
   type ChartSeries,
   type RangeKey,
 } from "@loupe/chart";
+import { useSettings } from "@/application/stores/settingsStore";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 const PAD = { top: 12, right: 58, bottom: 22 };
@@ -93,6 +95,8 @@ export function MarketChart({
   const [internalRange, setRange] = useState<RangeKey>(defaultRange ?? "1M");
   const range = controlled ? controlledRange : internalRange;
   const [active, setActive] = useState<number | null>(null);
+  const hapticsEnabled = useSettings((s) => s.hapticsEnabled);
+  const lastHapticIdx = useRef<number | null>(null);
 
   // Multi-series fallback palette (mirrors the web PALETTE order).
   const PALETTE = useMemo(
@@ -169,6 +173,29 @@ export function MarketChart({
   const deltaUp = delta >= 0;
   const crossPt = primary?.coords[idx];
 
+  // Per-series values under the crosshair — powers the compare tooltip.
+  // "Equilibrium": when compared lines have converged to ~the same price,
+  // collapse to a single readout instead of N near-identical rows (web parity).
+  const scrubT = active !== null ? primaryPts[active]?.t : undefined;
+  const tipRows = useMemo(() => {
+    if (active === null || scrubT === undefined) return [];
+    return geo.built
+      .map((b) => {
+        const j = nearestIndexByT(b.series.points, scrubT);
+        return {
+          label: b.series.label ?? b.series.id,
+          color: b.color ?? PALETTE[0]!,
+          v: b.series.points[j]?.v,
+        };
+      })
+      .filter((r): r is { label: string; color: string; v: number } => r.v != null);
+  }, [active, scrubT, geo.built, PALETTE]);
+  const tipVals = tipRows.map((r) => r.v);
+  const tipMax = tipVals.length ? Math.max(...tipVals) : 0;
+  const tipMin = tipVals.length ? Math.min(...tipVals) : 0;
+  const equilibrium =
+    tipRows.length > 1 && tipMin > 0 && (tipMax - tipMin) / tipMax < 0.015;
+
   const pickRange = (r: RangeKey) => {
     if (!controlled) setRange(r);
     onRangeChange?.(r);
@@ -203,7 +230,14 @@ export function MarketChart({
     if (!primary || primaryPts.length === 0) return;
     const clamped = Math.max(0, Math.min(geo.innerW, x));
     const t = geo.tMin + (clamped / geo.innerW) * tSpan;
-    setActive(nearestIndexByT(primaryPts, t));
+    const next = nearestIndexByT(primaryPts, t);
+    // Robinhood-style tick: a tiny selection haptic each time the crosshair
+    // snaps to a new point (respects the user's haptics preference).
+    if (next !== lastHapticIdx.current) {
+      lastHapticIdx.current = next;
+      if (hapticsEnabled) Haptics.selectionAsync().catch(() => {});
+    }
+    setActive(next);
   }
 
   return (
@@ -235,7 +269,10 @@ export function MarketChart({
             >
               {deltaUp ? "▲" : "▼"} {format(Math.abs(delta))} (
               {deltaPct >= 0 ? "+" : ""}
-              {deltaPct.toFixed(2)}%) · {RANGE_LABEL[effectiveRange]}
+              {deltaPct.toFixed(2)}%) ·{" "}
+              {active !== null && scrubT !== undefined
+                ? fmtTime(scrubT)
+                : RANGE_LABEL[effectiveRange]}
             </Text>
           ) : (
             <Text style={{ color: p.ink.dim, fontSize: 13, fontWeight: "600" }}>
@@ -374,26 +411,142 @@ export function MarketChart({
             </Svg>
           ) : null}
 
-          {/* Scrub price flag (single series), positioned over the crosshair. */}
-          {active !== null && crossPt && isSingle ? (
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                top: 0,
-                left: Math.min(Math.max(crossPt[0] - 30, 0), geo.innerW - 60),
-                backgroundColor: p.ink.default,
-                borderRadius: 7,
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-              }}
-            >
-              <Text
-                style={{ color: p.bg.base, fontSize: 12, fontWeight: "800" }}
+          {/* Scrub readout — single-series price flag, or a multi-row compare
+              tooltip (date + per-series values, equilibrium collapse). */}
+          {active !== null && crossPt ? (
+            isSingle ? (
+              <View
+                pointerEvents="none"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: Math.min(Math.max(crossPt[0] - 30, 0), geo.innerW - 60),
+                  backgroundColor: p.ink.default,
+                  borderRadius: 7,
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                }}
               >
-                {format(shownV)}
-              </Text>
-            </View>
+                <Text
+                  style={{ color: p.bg.base, fontSize: 12, fontWeight: "800" }}
+                >
+                  {format(shownV)}
+                </Text>
+              </View>
+            ) : tipRows.length > 0 ? (
+              <View
+                pointerEvents="none"
+                style={{
+                  position: "absolute",
+                  top: 2,
+                  left:
+                    crossPt[0] > geo.innerW * 0.55
+                      ? Math.max(2, crossPt[0] - 168)
+                      : Math.min(crossPt[0] + 10, geo.innerW - 160),
+                  width: 158,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: withAlpha(p.line.default, 0.8),
+                  backgroundColor: withAlpha(p.bg.elevated, 0.97),
+                  paddingHorizontal: 10,
+                  paddingVertical: 7,
+                  gap: 4,
+                  shadowColor: "#000",
+                  shadowOpacity: 0.12,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 2 },
+                  elevation: 4,
+                }}
+              >
+                {scrubT !== undefined ? (
+                  <Text
+                    style={{
+                      color: p.ink.dim,
+                      fontSize: 9.5,
+                      fontWeight: "700",
+                      letterSpacing: 0.4,
+                    }}
+                  >
+                    {fmtTime(scrubT)}
+                  </Text>
+                ) : null}
+                {equilibrium ? (
+                  <View
+                    style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                  >
+                    <View
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: 4,
+                        backgroundColor: p.accent.mint,
+                      }}
+                    />
+                    <Text
+                      style={{
+                        flex: 1,
+                        color: p.ink.muted,
+                        fontSize: 11,
+                        fontWeight: "600",
+                      }}
+                    >
+                      Equilibrium
+                    </Text>
+                    <Text
+                      style={{
+                        color: p.accent.mint,
+                        fontSize: 11,
+                        fontWeight: "800",
+                        fontVariant: ["tabular-nums"],
+                      }}
+                    >
+                      {format((tipMax + tipMin) / 2)}
+                    </Text>
+                  </View>
+                ) : (
+                  tipRows.map((r, i) => (
+                    <View
+                      key={i}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: 4,
+                          backgroundColor: r.color,
+                        }}
+                      />
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          flex: 1,
+                          color: p.ink.muted,
+                          fontSize: 11,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {r.label}
+                      </Text>
+                      <Text
+                        style={{
+                          color: p.ink.default,
+                          fontSize: 11,
+                          fontWeight: "800",
+                          fontVariant: ["tabular-nums"],
+                        }}
+                      >
+                        {format(r.v)}
+                      </Text>
+                    </View>
+                  ))
+                )}
+              </View>
+            ) : null
           ) : null}
         </View>
       </GestureDetector>
@@ -430,6 +583,55 @@ export function MarketChart({
           );
         })}
       </View>
+
+      {/* Legend — names each compare line (web parity). Last value per series
+          so the ranking reads without scrubbing. */}
+      {norm.length > 1 ? (
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            columnGap: 14,
+            rowGap: 6,
+          }}
+        >
+          {geo.built.map((b, i) => {
+            const last = b.series.points[b.series.points.length - 1]?.v;
+            return (
+              <View
+                key={i}
+                style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
+              >
+                <View
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: b.color ?? PALETTE[0]!,
+                  }}
+                />
+                <Text
+                  style={{ color: p.ink.muted, fontSize: 11, fontWeight: "600" }}
+                >
+                  {b.series.label ?? b.series.id}
+                </Text>
+                {last != null ? (
+                  <Text
+                    style={{
+                      color: p.ink.dim,
+                      fontSize: 11,
+                      fontWeight: "700",
+                      fontVariant: ["tabular-nums"],
+                    }}
+                  >
+                    {format(last)}
+                  </Text>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }

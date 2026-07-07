@@ -29,9 +29,12 @@ import Svg, {
   LinearGradient as SvgGradient,
   Path,
   Stop,
+  Text as SvgText,
 } from "react-native-svg";
+import * as Haptics from "expo-haptics";
 import { ChevronDown } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSettings } from "@/application/stores/settingsStore";
 import { usePortfolioHistory, useMarketIndex } from "@/application/queries";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import {
@@ -157,13 +160,15 @@ export function PortfolioChart({
     return { pathLine, pathArea, baselineY: yScale(points[0]!.priceUsd), coords };
   }, [points, width]);
 
-  // PSA-10 overlay path. Reuses the portfolio's x-domain (index → x) and
+  // PSA-10 benchmark overlay. Reuses the portfolio's x-domain (index → x) and
   // y-scale (so the overlay line is visually comparable). Each index
   // value is converted to "portfolio-equivalent dollars" by scaling the
   // normalized series (first point = 100) up to the portfolio's first
   // value. That guarantees both lines start at the same baselineY and
   // the vertical gap at any later x reads as relative outperformance.
-  const overlayPath = useMemo(() => {
+  // Returns the path AND the equivalent-USD values so the scrub tooltip
+  // can read the benchmark at any x.
+  const bench = useMemo(() => {
     if (
       !showPsa10Overlay ||
       !points ||
@@ -172,10 +177,10 @@ export function PortfolioChart({
       !overlay.data ||
       overlay.data.points.length < 2
     ) {
-      return "";
+      return null;
     }
     const portfolioFirst = points[0]!.priceUsd;
-    if (portfolioFirst <= 0) return "";
+    if (portfolioFirst <= 0) return null;
     const ys = points.map((pt) => pt.priceUsd);
     const lo = Math.min(...ys);
     const hi = Math.max(...ys);
@@ -186,12 +191,16 @@ export function PortfolioChart({
     };
     const op = overlay.data.points;
     const xScale = (i: number) => (i / (op.length - 1)) * width;
-    const overlayCoords = op.map((pt, i) => {
-      const equivUsd = (pt.indexValue / 100) * portfolioFirst;
-      return [xScale(i), yScale(equivUsd)] as const;
-    });
-    return monotoneCubic(overlayCoords);
+    const equivUsd = op.map((pt) => (pt.indexValue / 100) * portfolioFirst);
+    const coords = equivUsd.map((v, i) => [xScale(i), yScale(v)] as const);
+    return {
+      path: monotoneCubic(coords),
+      equivUsd,
+      deltaPct: overlay.data.deltaPct,
+      cohortSize: overlay.data.cohortSize,
+    };
   }, [showPsa10Overlay, overlay.data, points, width]);
+  const overlayPath = bench?.path ?? "";
 
   const latestVal = points?.[points.length - 1]?.priceUsd ?? fallbackTotal;
   const firstVal = points?.[0]?.priceUsd ?? latestVal;
@@ -221,11 +230,61 @@ export function PortfolioChart({
     }),
   ).current;
 
+  // Robinhood-style scrub tick — a tiny selection haptic each time the
+  // crosshair snaps to a new point (respects the haptics preference).
+  const hapticsEnabled = useSettings((s) => s.hapticsEnabled);
+  const lastHapticIdx = useRef<number | null>(null);
+  useEffect(() => {
+    if (scrubIdx === null) {
+      lastHapticIdx.current = null;
+      return;
+    }
+    if (scrubIdx !== lastHapticIdx.current) {
+      lastHapticIdx.current = scrubIdx;
+      if (hapticsEnabled) Haptics.selectionAsync().catch(() => {});
+    }
+  }, [scrubIdx, hapticsEnabled]);
+
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
   const scrubX = scrubIdx !== null ? coords[scrubIdx]![0] : null;
   const scrubY = scrubIdx !== null ? coords[scrubIdx]![1] : null;
   const scrubLabel = scrubIdx !== null ? points![scrubIdx]!.date : null;
+
+  // Benchmark value at the scrub position (fraction of plot width → nearest
+  // overlay bucket), so the tooltip compares You vs PSA-10 at the same date.
+  const benchAtScrub =
+    bench && scrubX !== null && width > 0
+      ? bench.equivUsd[
+          Math.round((scrubX / width) * (bench.equivUsd.length - 1))
+        ] ?? null
+      : null;
+
+  // Outperformance vs the PSA-10 cohort over the visible period, in points
+  // (your period % − cohort period %). Only meaningful on the period basis.
+  const portfolioPeriodPct =
+    firstVal > 0 ? ((latestVal - firstVal) / firstVal) * 100 : null;
+  const outperformPts =
+    bench && portfolioPeriodPct !== null
+      ? portfolioPeriodPct - bench.deltaPct
+      : null;
+
+  // High/low watermarks for the visible window (Robinhood expanded style).
+  const hiLo = useMemo(() => {
+    if (!points || points.length < 2 || coords.length !== points.length)
+      return null;
+    let loI = 0;
+    let hiI = 0;
+    points.forEach((pt, i) => {
+      if (pt.priceUsd < points[loI]!.priceUsd) loI = i;
+      if (pt.priceUsd > points[hiI]!.priceUsd) hiI = i;
+    });
+    if (loI === hiI) return null;
+    return {
+      hi: { c: coords[hiI]!, v: points[hiI]!.priceUsd },
+      lo: { c: coords[loI]!, v: points[loI]!.priceUsd },
+    };
+  }, [points, coords]);
 
   // Pulsing LIVE indicator for the 1D range.
   const pulse = useRef(new Animated.Value(0)).current;
@@ -317,37 +376,46 @@ export function PortfolioChart({
           {hasCost ? (
             <BasisToggle basis={basis} tint={tint} onChange={setBasis} />
           ) : null}
-          {showPsa10Overlay && overlayPath ? (
+          {bench && outperformPts !== null && !scrubLabel ? (
+            /* Benchmark verdict chip — "you vs the PSA-10 market" in points.
+               The single most interesting number a collector's chart can show. */
             <View
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                gap: 4,
-                marginLeft: 8,
-                paddingLeft: 8,
-                borderLeftWidth: 1,
-                borderLeftColor: withAlpha(p.line.default, 0.6),
+                gap: 5,
+                marginLeft: 4,
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: 999,
+                backgroundColor: withAlpha(
+                  outperformPts >= 0 ? p.accent.mint : p.accent.amber,
+                  0.12,
+                ),
               }}
-              accessibilityLabel="PSA-10 cohort index shown as faded dashed line for comparison"
+              accessibilityLabel={`Your portfolio ${
+                outperformPts >= 0 ? "beats" : "trails"
+              } the PSA-10 index by ${Math.abs(outperformPts).toFixed(1)} points this period`}
             >
               <View
                 style={{
-                  width: 14,
-                  height: 1.5,
+                  width: 12,
+                  height: 2,
                   borderRadius: 1,
-                  backgroundColor: p.ink.muted,
-                  opacity: 0.6,
+                  backgroundColor: p.accent.blue,
                 }}
               />
               <Text
                 style={{
-                  color: p.ink.muted,
+                  color: outperformPts >= 0 ? p.accent.mint : p.accent.amber,
                   fontSize: 10,
-                  fontWeight: "700",
-                  letterSpacing: 0.4,
+                  fontWeight: "800",
+                  letterSpacing: 0.3,
+                  fontVariant: ["tabular-nums"],
                 }}
               >
-                vs PSA•10 INDEX
+                {outperformPts >= 0 ? "+" : "−"}
+                {Math.abs(outperformPts).toFixed(1)} pts vs PSA-10
               </Text>
             </View>
           ) : null}
@@ -382,18 +450,18 @@ export function PortfolioChart({
                 </SvgGradient>
               </Defs>
               <Path d={pathArea} fill="url(#portfolioFill)" />
-              {/* PSA-10 cohort overlay — drawn before the baseline + main
-                  line so it sits visually behind them. */}
+              {/* PSA-10 benchmark — a real compare line (brand blue, dashed)
+                  drawn before the baseline + main line so it sits behind. */}
               {overlayPath ? (
                 <Path
                   d={overlayPath}
-                  stroke={p.ink.muted}
-                  strokeWidth={1.25}
-                  strokeDasharray="3,3"
+                  stroke={p.accent.blue}
+                  strokeWidth={1.5}
+                  strokeDasharray="4,4"
                   strokeLinejoin="round"
                   strokeLinecap="round"
                   fill="none"
-                  opacity={0.55}
+                  opacity={0.75}
                 />
               ) : null}
               {/* Period-start baseline (Robinhood's signature dashed flat line) */}
@@ -415,6 +483,32 @@ export function PortfolioChart({
                 strokeLinecap="round"
                 fill="none"
               />
+              {/* High/low watermarks — tiny labels at the period extremes
+                  (hidden while scrubbing so they never fight the crosshair). */}
+              {hiLo && scrubX === null ? (
+                <>
+                  <SvgText
+                    x={Math.min(Math.max(hiLo.hi.c[0], 26), width - 26)}
+                    y={Math.max(10, hiLo.hi.c[1] - 8)}
+                    fontSize={9}
+                    fontWeight="700"
+                    fill={p.ink.dim}
+                    textAnchor="middle"
+                  >
+                    {`H ${money(hiLo.hi.v)}`}
+                  </SvgText>
+                  <SvgText
+                    x={Math.min(Math.max(hiLo.lo.c[0], 26), width - 26)}
+                    y={Math.min(CHART_HEIGHT - 4, hiLo.lo.c[1] + 14)}
+                    fontSize={9}
+                    fontWeight="700"
+                    fill={p.ink.dim}
+                    textAnchor="middle"
+                  >
+                    {`L ${money(hiLo.lo.v)}`}
+                  </SvgText>
+                </>
+              ) : null}
               {scrubX !== null && scrubY !== null ? (
                 <>
                   <Line
@@ -449,38 +543,88 @@ export function PortfolioChart({
               )}
             </Svg>
 
-            {/* Floating crosshair tooltip — positioned absolutely above the scrubber */}
+            {/* Floating crosshair tooltip. Single value flag normally; a
+                You-vs-PSA-10 compare card when the benchmark is overlaid. */}
             {scrubX !== null ? (
-              <View
-                pointerEvents="none"
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: clampLabelX(scrubX, width, 96),
-                  width: 96,
-                  alignItems: "center",
-                }}
-              >
+              benchAtScrub !== null ? (
                 <View
+                  pointerEvents="none"
                   style={{
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                    borderRadius: 6,
-                    backgroundColor: p.ink.default,
+                    position: "absolute",
+                    top: 0,
+                    left: clampLabelX(scrubX, width, 156),
+                    width: 156,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: withAlpha(p.line.default, 0.8),
+                    backgroundColor: withAlpha(p.bg.elevated, 0.97),
+                    paddingHorizontal: 10,
+                    paddingVertical: 7,
+                    gap: 4,
+                    shadowColor: "#000",
+                    shadowOpacity: 0.12,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 2 },
+                    elevation: 4,
                   }}
                 >
+                  <TipRow
+                    color={tint}
+                    label="You"
+                    value={money(displayVal)}
+                    ink={p.ink}
+                  />
+                  <TipRow
+                    color={p.accent.blue}
+                    label="PSA-10"
+                    value={money(benchAtScrub)}
+                    ink={p.ink}
+                  />
                   <Text
                     style={{
-                      color: p.bg.base,
-                      fontSize: 10,
-                      fontWeight: "700",
-                      letterSpacing: 0.3,
+                      color:
+                        displayVal >= benchAtScrub ? p.accent.mint : p.accent.amber,
+                      fontSize: 9.5,
+                      fontWeight: "800",
+                      fontVariant: ["tabular-nums"],
                     }}
                   >
-                    {money(displayVal)}
+                    {displayVal >= benchAtScrub ? "▲ ahead " : "▼ behind "}
+                    {money(Math.abs(displayVal - benchAtScrub))}
                   </Text>
                 </View>
-              </View>
+              ) : (
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: clampLabelX(scrubX, width, 96),
+                    width: 96,
+                    alignItems: "center",
+                  }}
+                >
+                  <View
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 6,
+                      backgroundColor: p.ink.default,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: p.bg.base,
+                        fontSize: 10,
+                        fontWeight: "700",
+                        letterSpacing: 0.3,
+                      }}
+                    >
+                      {money(displayVal)}
+                    </Text>
+                  </View>
+                </View>
+              )
             ) : null}
           </>
         ) : (
@@ -589,6 +733,42 @@ function RangePill({
 
 function getX(e: GestureResponderEvent): number {
   return e.nativeEvent.locationX;
+}
+
+/** One dot·label·value line inside the You-vs-benchmark scrub tooltip. */
+function TipRow({
+  color,
+  label,
+  value,
+  ink,
+}: {
+  color: string;
+  label: string;
+  value: string;
+  ink: { muted: string; default: string };
+}) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <View
+        style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }}
+      />
+      <Text
+        style={{ flex: 1, color: ink.muted, fontSize: 11, fontWeight: "600" }}
+      >
+        {label}
+      </Text>
+      <Text
+        style={{
+          color: ink.default,
+          fontSize: 11,
+          fontWeight: "800",
+          fontVariant: ["tabular-nums"],
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
 }
 
 /**
