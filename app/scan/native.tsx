@@ -64,7 +64,7 @@ export default function NativeScanScreen() {
   const createGrade = useCreateGrade();
 
   const [torch, setTorch] = useState(false);
-  const [autoCapture, setAutoCapture] = useState(true);
+  const [autoCapture, setAutoCapture] = useState(Platform.OS === "ios");
   const [zoom, setZoom] = useState(1);
   const [detect, setDetect] = useState<Detect>({ detected: false, steady: false, fill: 0 });
   const [busy, setBusy] = useState(false);
@@ -75,7 +75,13 @@ export default function NativeScanScreen() {
   const busyRef = useRef(false);
   const zoomBase = useRef(1);
 
-  const useNative = Platform.OS === "ios" && isNativeCameraAvailable;
+  // Native camera resolves per-platform (Swift on iOS, CameraX on Android)
+  // through the same LoupeCameraView contract; RN LiveIdentifyFlow is the
+  // fallback when neither native view is linked (Expo Go, web, old builds).
+  const useNative = isNativeCameraAvailable;
+  // Live detection + auto-capture are iOS-only today (Android has no
+  // rectangle-detection pass yet), so the AUTO toggle only applies there.
+  const detectionSupported = Platform.OS === "ios";
 
   React.useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
@@ -220,15 +226,17 @@ export default function NativeScanScreen() {
 
   if (!useNative) return <View style={{ flex: 1, backgroundColor: "#000" }} />;
 
-  const hint = !detect.detected
-    ? "Point at a card"
-    : detect.fill < 0.2
-      ? "Move closer"
-      : detect.steady
-        ? autoCapture
-          ? "Hold steady — capturing…"
-          : "Ready — tap to capture"
-        : "Hold steady";
+  const hint = !detectionSupported
+    ? "Frame the card, then tap the shutter"
+    : !detect.detected
+      ? "Point at a card"
+      : detect.fill < 0.2
+        ? "Move closer"
+        : detect.steady
+          ? autoCapture
+            ? "Hold steady — capturing…"
+            : "Ready — tap to capture"
+          : "Hold steady";
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
@@ -284,7 +292,8 @@ export default function NativeScanScreen() {
           </GlassButton>
 
           <View style={{ flexDirection: "row", gap: 8 }} pointerEvents="box-none">
-            {/* Auto-capture toggle */}
+            {/* Auto-capture toggle — only where live detection exists (iOS). */}
+            {detectionSupported ? (
             <Pressable
               onPress={() => setAutoCapture((v) => !v)}
               accessibilityRole="button"
@@ -311,6 +320,7 @@ export default function NativeScanScreen() {
                 AUTO
               </Text>
             </Pressable>
+            ) : null}
             <GlassButton
               onPress={() => setTorch((v) => !v)}
               label="Toggle torch"

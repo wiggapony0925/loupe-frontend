@@ -135,6 +135,32 @@ class LoupeScannerBridgeModule : Module() {
       }
       Events("onLoad")
     }
+
+    // Native Android camera (CameraX) — same contract as the iOS Swift
+    // LoupeCameraView so the shared JS component drives both platforms.
+    View(LoupeCameraView::class) {
+      Name("LoupeCameraView")
+      Events("onCameraReady", "onCardDetected", "onCapture", "onMountError")
+
+      Prop("active") { view: LoupeCameraView, active: Boolean ->
+        view.setActive(active)
+      }
+      Prop("torchEnabled") { view: LoupeCameraView, on: Boolean ->
+        view.setTorch(on)
+      }
+      Prop("detectionEnabled") { view: LoupeCameraView, enabled: Boolean ->
+        view.setDetectionEnabled(enabled)
+      }
+      Prop("autoCapture") { view: LoupeCameraView, on: Boolean ->
+        view.setAutoCapture(on)
+      }
+      Prop("zoom") { view: LoupeCameraView, zoom: Double ->
+        view.setZoom(zoom)
+      }
+      Prop("captureRequestId") { view: LoupeCameraView, id: String ->
+        view.setCaptureRequest(id)
+      }
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
