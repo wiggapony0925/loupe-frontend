@@ -80,7 +80,8 @@
         }
       ],
       "expo-web-browser",
-      "expo-image"
+      "expo-image",
+      "./plugins/withIphoneDistributionSigning.js"
     ],
     "experiments": {
       "typedRoutes": true
