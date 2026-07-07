@@ -26,7 +26,6 @@ import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
 import { fetchCardSparklines, fetchCollection } from "@/infrastructure/repositories/forensicRepository";
 import { fetchMarketCatalog } from "@/infrastructure/repositories/marketRepository";
-import { Sparkline } from "@/presentation/components/Sparkline";
 import { ErrorState } from "@/presentation/components/ErrorState";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { COPY } from "@/shared/copy";
@@ -41,11 +40,9 @@ import { SearchResultRow } from "@/presentation/features/search/SearchResultRow"
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
 import { SealedRail } from "@/presentation/features/search/SealedRail";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
-import { CardImage } from "@/presentation/components/CardImage";
 import { SkeletonSearchResults } from "@/presentation/components/Skeletons";
-import { CardHorizontalRail } from "@/presentation/cards";
+import { CardHorizontalRail, CardSparkRow } from "@/presentation/cards";
 import type { CardSearchResult, TcgKey } from "@/infrastructure/http";
-import { Price } from "@/presentation/components/Price";
 import { TcgMark } from "@/presentation/brand/TcgMark";
 import { gradeColor, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -770,6 +767,8 @@ function RecentSearchStrip({
   );
 }
 
+/** Local vault/catalog row — adapts `SearchableCard` onto the canonical
+ *  `CardSparkRow` so local results and live results read identically. */
 function ResultRow({
   card,
   spark,
@@ -782,83 +781,27 @@ function ResultRow({
   bordered: boolean;
 }) {
   const p = useThemedPalette();
-  const up = deltaPct >= 0;
-  const tint = up ? p.accent.mint : p.accent.rose;
   const gradeTint = card.grade !== null ? gradeColor(card.grade) : p.ink.muted;
 
   return (
-    <Pressable
+    <CardSparkRow
+      thumbUri={card.thumbnailUri}
+      recyclingKey={card.id}
+      title={card.title}
+      badge={{
+        label:
+          card.grade !== null
+            ? card.grade.toFixed(card.grade % 1 === 0 ? 0 : 1)
+            : "RAW",
+        tint: gradeTint,
+      }}
+      meta={[card.set, card.year].filter(Boolean).join(" · ") || null}
+      spark={spark ?? null}
+      priceUsd={card.estimatedValueUsd}
+      deltaPct={deltaPct}
+      bordered={bordered}
       onPress={() => router.push(routes.card(card.id))}
-      accessibilityRole="button"
-      style={({ pressed }) => ({
-        backgroundColor: pressed ? p.bg.elevated : "transparent",
-        borderRadius: pressed ? 12 : 0,
-      })}
-      className={`flex-row items-center gap-3 px-1 py-2.5 ${bordered ? "border-t border-line/60" : ""}`}
-    >
-      <View
-        className="overflow-hidden rounded-[10px]"
-        style={{ width: 52, height: 72, backgroundColor: p.bg.sunken }}
-      >
-        <CardImage
-          uri={card.thumbnailUri}
-          width={52}
-          height={72}
-          rounded={10}
-          priority="low"
-          recyclingKey={card.id}
-          alt={card.title}
-        />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} className="text-[15px] font-semibold text-ink">
-          {card.title}
-        </Text>
-        <View className="mt-1 flex-row items-center gap-1.5">
-          {card.grade !== null ? (
-            <View
-              style={{
-                paddingHorizontal: 6,
-                paddingVertical: 2,
-                borderRadius: 999,
-                backgroundColor: withAlpha(gradeTint, 0.16),
-              }}
-            >
-              <Text style={{ color: gradeTint, fontSize: 9, fontWeight: "800" }}>
-                {card.grade.toFixed(card.grade % 1 === 0 ? 0 : 1)}
-              </Text>
-            </View>
-          ) : (
-            <View
-              style={{
-                paddingHorizontal: 6,
-                paddingVertical: 2,
-                borderRadius: 999,
-                backgroundColor: withAlpha(p.ink.muted, 0.12),
-              }}
-            >
-              <Text style={{ color: p.ink.muted, fontSize: 9, fontWeight: "800" }}>RAW</Text>
-            </View>
-          )}
-          <Text numberOfLines={1} className="text-[11px] text-ink-muted">
-            {card.set} · {card.year}
-          </Text>
-        </View>
-      </View>
-      <View style={{ width: 56 }}>
-        <Sparkline values={spark ?? []} width={56} height={24} showBaseline={false} />
-      </View>
-      <View style={{ minWidth: 72, alignItems: "flex-end" }}>
-        <Price
-          usd={card.estimatedValueUsd}
-          className="text-[15px] font-bold text-ink"
-          numberOfLines={1}
-        />
-        <Text style={{ color: tint, fontSize: 10, fontWeight: "700" }}>
-          {up ? "▲" : "▼"} {Math.abs(deltaPct).toFixed(2)}%
-        </Text>
-      </View>
-    </Pressable>
+    />
   );
 }
 

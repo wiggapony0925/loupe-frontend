@@ -1,22 +1,21 @@
 /**
- * SearchResultRow — the one row style for live search results.
+ * SearchResultRow — live-catalog result row.
  *
- * Flat, Robinhood-style: no card containers, just a roomy 64×90 thumbnail,
- * a two-line identity block (name · set/number/year), a per-game tinted
- * badge, and a right-aligned market price. Parents separate rows with
- * hairlines; the row itself stays transparent so the list reads as one
- * continuous surface instead of stacked white blocks.
+ * Thin adapter: maps a `CardSearchResult` onto the canonical `CardSparkRow`
+ * so live results, sealed matches, and the local vault rows all share ONE
+ * row language (52×72 art · title · badge+meta · range/spark · price).
+ *
+ * Live results have no price history, so the middle slot shows the honest
+ * low↔high market-range meter from `pricing_summary` when the provider
+ * returned a band.
  */
 import React from "react";
-import { Pressable, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
-import { ChevronRight } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import type { CardSearchResult } from "@/infrastructure/http";
-import { CardImage } from "@/presentation/components/CardImage";
-import { Price } from "@/presentation/components/Price";
+import { CardSparkRow } from "@/presentation/cards";
 import { pickCardBlurhash, pickCardImageUrl } from "@/shared/cardImage";
-import { useThemedPalette, withAlpha, type Palette } from "@/presentation/theme/tokens";
+import { useThemedPalette, type Palette } from "@/presentation/theme/tokens";
 
 /** Brand tint per game so the badge (and only the badge) carries the TCG. */
 function tcgTint(tcg: string, p: Palette): string {
@@ -70,138 +69,44 @@ export function SearchResultRow({
   priceLabel = "Market",
 }: SearchResultRowProps) {
   const p = useThemedPalette();
-  const market = card.pricing_summary?.market?.amount ?? null;
+  const summary = card.pricing_summary;
+  const market = summary?.market?.amount ?? null;
+  const low = summary?.low?.amount ?? null;
+  const high = summary?.high?.amount ?? null;
   const small = pickCardImageUrl(card, "small");
   const normal = pickCardImageUrl(card, "normal");
   const tint = tcgTint(card.tcg, p);
-  const meta = [card.set_name, card.number ? `#${card.number}` : null, card.year]
+
+  // Identity line: set · #number · year, with rarity folded in when known —
+  // every field the catalog gives us earns its place on the row.
+  const meta = [
+    card.set_name,
+    card.number ? `#${card.number}` : null,
+    card.year,
+    card.rarity,
+  ]
     .filter(Boolean)
     .join(" · ");
 
   return (
-    <Pressable
+    <CardSparkRow
+      thumbUri={small ?? normal}
+      thumbFallbackUri={small && normal && small !== normal ? normal : undefined}
+      blurhash={pickCardBlurhash(card)}
+      recyclingKey={card.id}
+      title={card.name}
+      badge={{ label: badgeText ?? tcgLabel(card.tcg), tint }}
+      meta={meta || null}
+      range={low != null && high != null ? { low, high, market } : null}
+      priceUsd={market}
+      priceLabel={priceLabel}
+      bordered={bordered}
+      priority={priority}
       onPress={() => {
         onPressCapture?.();
         router.push(route ?? routes.card(card.id));
       }}
-      accessibilityRole="button"
       accessibilityLabel={`${card.name}, ${meta || card.tcg}`}
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingVertical: 10,
-        paddingHorizontal: 4,
-        borderTopWidth: bordered ? 1 : 0,
-        borderTopColor: withAlpha(p.line.default, 0.6),
-        backgroundColor: pressed ? p.bg.elevated : "transparent",
-        borderRadius: pressed ? 12 : 0,
-      })}
-    >
-      <View
-        style={{
-          width: 64,
-          height: 90,
-          borderRadius: 10,
-          overflow: "hidden",
-          backgroundColor: p.bg.sunken,
-        }}
-      >
-        <CardImage
-          uri={small ?? normal}
-          fallbackUri={small && normal && small !== normal ? normal : undefined}
-          blurhash={pickCardBlurhash(card)}
-          width={64}
-          height={90}
-          rounded={0}
-          contentFit="cover"
-          priority={priority}
-          recyclingKey={card.id}
-          alt={card.name}
-        />
-      </View>
-
-      <View style={{ flex: 1, gap: 3 }}>
-        <Text
-          numberOfLines={1}
-          style={{
-            color: p.ink.default,
-            fontSize: 15,
-            fontWeight: "700",
-            letterSpacing: -0.2,
-          }}
-        >
-          {card.name}
-        </Text>
-        {meta ? (
-          <Text numberOfLines={1} style={{ color: p.ink.muted, fontSize: 12 }}>
-            {meta}
-          </Text>
-        ) : null}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 4,
-              paddingHorizontal: 7,
-              paddingVertical: 2.5,
-              borderRadius: 999,
-              backgroundColor: withAlpha(tint, 0.12),
-            }}
-          >
-            <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: tint }} />
-            <Text
-              style={{
-                color: tint,
-                fontSize: 9.5,
-                fontWeight: "800",
-                letterSpacing: 0.4,
-              }}
-            >
-              {badgeText ?? tcgLabel(card.tcg)}
-            </Text>
-          </View>
-          {card.rarity ? (
-            <Text
-              numberOfLines={1}
-              style={{ flexShrink: 1, color: p.ink.dim, fontSize: 10.5, fontWeight: "600" }}
-            >
-              {card.rarity}
-            </Text>
-          ) : null}
-        </View>
-      </View>
-
-      <View style={{ alignItems: "flex-end", gap: 2, minWidth: 74 }}>
-        {market !== null ? (
-          <Price
-            usd={market}
-            numberOfLines={1}
-            style={{
-              color: p.ink.default,
-              fontSize: 15,
-              fontWeight: "800",
-              letterSpacing: -0.3,
-            }}
-          />
-        ) : (
-          <Text style={{ color: p.ink.dim, fontSize: 15, fontWeight: "700" }}>—</Text>
-        )}
-        <Text
-          style={{
-            color: p.ink.dim,
-            fontSize: 9,
-            fontWeight: "700",
-            letterSpacing: 1,
-            textTransform: "uppercase",
-          }}
-        >
-          {priceLabel}
-        </Text>
-      </View>
-
-      <ChevronRight size={15} color={withAlpha(p.ink.dim, 0.7)} />
-    </Pressable>
+    />
   );
 }

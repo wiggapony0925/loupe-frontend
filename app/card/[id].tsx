@@ -640,11 +640,6 @@ export default function CardDetailScreen() {
                 marketAmount={verifiedTopAmount ?? snapshot?.summary.raw?.amount ?? null}
               />
 
-              {/* 4d. The user's own copies — per-holding grade/acquisition/P-L
-                  + rolled-up totals (server-composed; renders nothing for
-                  guests/non-owners). */}
-              <CardOwnershipSection cardId={cardId} />
-
               {/* 5. Quick-stats row (spread, volatility, liquidity,
                   last-sale freshness). */}
               {hasRealHistory ? <CardQuickStats snapshot={snapshot} cardId={cardId} /> : null}
@@ -783,6 +778,13 @@ export default function CardDetailScreen() {
                   TCGs without a registered panel or when attributes are
                   missing. See `CardAttributesPanel` for the registry. */}
               <CardAttributesPanel canonical={canonicalQ.data} />
+
+              {/* The user's own copies — per-holding grade/acquisition/P-L
+                  + rolled-up totals (server-composed; renders nothing for
+                  guests/non-owners). Anchored at the bottom of the screen so
+                  the market story reads first and the personal ledger closes
+                  it out. */}
+              <CardOwnershipSection cardId={cardId} />
 
               {/* 10. Collapsible card details — flat header */}
               <Pressable

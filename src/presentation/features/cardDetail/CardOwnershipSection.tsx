@@ -64,7 +64,13 @@ interface HoldingTier {
 function buildTiers(holdings: CardHoldingWire[]): HoldingTier[] {
   const map = new Map<string, HoldingTier>();
   for (const h of holdings) {
-    const key = `${h.house}:${h.grade}:${h.condition ?? ""}`;
+    // Raw copies group by condition only — the placeholder grade on an
+    // ungraded card is meaningless, and keying on it used to splinter the
+    // list into several identical "Raw" tiers.
+    const key =
+      h.house === "loupe"
+        ? `loupe:${h.condition ?? ""}`
+        : `${h.house}:${h.grade}:${h.condition ?? ""}`;
     let tier = map.get(key);
     if (!tier) {
       tier = {
@@ -90,7 +96,10 @@ function buildTiers(holdings: CardHoldingWire[]): HoldingTier[] {
   }
   return [...map.values()].sort((a, b) => {
     if (a.isGraded !== b.isGraded) return a.isGraded ? -1 : 1;
-    return Number(b.grade) - Number(a.grade);
+    // Graded tiers: high grade first. Raw tiers: most valuable first
+    // (their grades are placeholders, so value is the honest ordering).
+    if (a.isGraded) return Number(b.grade) - Number(a.grade);
+    return (b.valueUsd ?? 0) - (a.valueUsd ?? 0);
   });
 }
 
@@ -133,27 +142,45 @@ export function CardOwnershipSection({ cardId }: { cardId: string }) {
       {(costBasis != null || value != null) && (
         <View
           style={{
-            flexDirection: "row",
-            gap: 8,
-            padding: 12,
             borderRadius: 14,
             borderWidth: 1,
             borderColor: p.line.default,
             backgroundColor: p.bg.elevated,
+            overflow: "hidden",
           }}
         >
-          <SummaryCell
-            label="Cost basis"
-            value={costBasis != null ? <Price usd={costBasis} className="text-[15px] font-extrabold text-ink" /> : null}
-          />
-          <SummaryCell
-            label="Value"
-            value={value != null ? <Price usd={value} className="text-[15px] font-extrabold text-ink" /> : null}
-          />
-          <SummaryCell
-            label="Unrealized P/L"
-            value={pl != null ? <SignedMoney usd={pl} pct={plPct} size={15} /> : null}
-          />
+          <View style={{ flexDirection: "row", gap: 8, padding: 12 }}>
+            <SummaryCell
+              label="Cost basis"
+              value={costBasis != null ? <Price usd={costBasis} className="text-[15px] font-extrabold text-ink" /> : null}
+            />
+            <SummaryCell
+              label="Value"
+              value={value != null ? <Price usd={value} className="text-[15px] font-extrabold text-ink" /> : null}
+            />
+            <SummaryCell
+              label="Unrealized P/L"
+              value={pl != null ? <SignedMoney usd={pl} pct={plPct} size={15} /> : null}
+            />
+          </View>
+          {/* No purchase prices yet → P/L can't be computed. Say why and
+              point at the fix instead of leaving unexplained dashes. */}
+          {costBasis == null ? (
+            <View
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderTopWidth: 1,
+                borderTopColor: withAlpha(p.line.default, 0.7),
+                backgroundColor: withAlpha(p.bg.sunken, 0.5),
+              }}
+            >
+              <Text style={{ color: p.ink.dim, fontSize: 10.5, fontWeight: "600" }}>
+                Add what you paid to a copy to unlock cost basis & P/L — tap any
+                copy below.
+              </Text>
+            </View>
+          ) : null}
         </View>
       )}
 

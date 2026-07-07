@@ -8,6 +8,11 @@ export {
 } from "./CardHorizontalRail";
 export { MoverSparkRow, type MoverSparkRowProps } from "./MoverSparkRow";
 export {
+  CardSparkRow,
+  type CardSparkRowProps,
+  type CardSparkRowBadge,
+} from "./CardSparkRow";
+export {
   TILE_WIDTH,
   collectionToCardWire,
   type CardWire,

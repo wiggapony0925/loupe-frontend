@@ -353,12 +353,51 @@ export function CardDetailsBlock({ card }: { card: CardSearchResult }) {
     if (value === null || value === undefined || value === "") return;
     rows.push({ label, value: String(value) });
   };
-  push("Collector number", card.number);
+  // "12 / 102"-style collector number when the set's print run is known.
+  const setTotal = card.set?.printed_total ?? card.set?.total_cards ?? null;
+  push(
+    "Collector number",
+    card.number ? (setTotal ? `${card.number} / ${setTotal}` : card.number) : null,
+  );
   push("Rarity", card.rarity);
   push("Release year", card.year);
   push("Set", card.set_name);
+  push("Set series", card.set?.series);
+  push("Set code", card.set_code ?? card.set?.code);
+  push(
+    "Set released",
+    card.set?.release_date
+      ? new Date(card.set.release_date).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : null,
+  );
+  push(
+    "Set size",
+    card.set?.printed_total
+      ? `${card.set.printed_total} cards${
+          card.set.total_cards && card.set.total_cards !== card.set.printed_total
+            ? ` (${card.set.total_cards} incl. secrets)`
+            : ""
+        }`
+      : card.set?.total_cards
+        ? `${card.set.total_cards} cards`
+        : null,
+  );
   push("Trading card game", formatTcgName(card.tcg));
   push("Data source", formatSourceLabel(card.source));
+  push(
+    "Catalog synced",
+    card.metadata?.last_synced_at
+      ? new Date(card.metadata.last_synced_at).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : null,
+  );
 
   return (
     <View style={{ gap: 14 }}>
