@@ -1,46 +1,73 @@
 /**
  * Native scan — `/scan/native`
  *
- * A first-party Swift camera scanner (AVFoundation + Vision) with a pro
- * batch workflow:
+ * A first-party Swift (AVFoundation + Vision) / Kotlin (CameraX) camera
+ * scanner with the SAME pro batch workflow and chrome as the expo-camera
+ * `LiveIdentifyFlow` — it composes the shared scanner overlay
+ * (`features/scan/overlay`) on top of the native camera, so the game
+ * selector, the self-clearing banners, the framing-hint pill, the rolling
+ * session tray (running total + "Add all"), the shutter, and the
+ * manual-search escape hatch are pixel-identical to the RN flow. What's
+ * unique here is the camera itself:
  *   • Native preview + a corner-bracket reticle that turns mint when the
  *     card is well-framed and held steady (all drawn in Swift).
  *   • Auto-capture — hold a card still in frame and it captures itself.
- *   • Smart framing hints driven by the native detection signals.
- *   • Pinch-to-zoom.
- *   • A session tray: scan a whole stack, see a running count + total
- *     value, then "Add all" to the vault in one tap.
+ *   • Pinch + 1×/2×/3× optical-feel zoom.
  *
- * Capture → native crop/deskew → the existing identify pipeline. Falls
- * back to the expo-camera `LiveIdentifyFlow` when the native view isn't
- * linked (Android / older builds).
+ * Capture → native crop/deskew → the existing identify pipeline (with the
+ * on-device OCR fallback). Falls back to the expo-camera `LiveIdentifyFlow`
+ * when the native view isn't linked (Android without CameraX / older builds).
  */
-import React, { useCallback, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useCameraPermissions } from "expo-camera";
-import {
-  ChevronLeft,
-  Flashlight,
-  Sparkles,
-  Wand2,
-  X,
-} from "lucide-react-native";
+import { Camera, CameraOff, Wand2 } from "lucide-react-native";
 import {
   identifyCard,
+  identifyCardFromText,
   type IdentifyCandidate,
+  type IdentifyResponse,
+  type IdentifyTcgHint,
+  submitIdentifyFeedback,
 } from "@/infrastructure/repositories/identifyRepository";
+import {
+  isOnDeviceOcrAvailable,
+  recognizeTextOnDevice,
+} from "@/infrastructure/ocr/onDeviceOcr";
 import { cardDetector } from "@/infrastructure/native";
 import { ApiError } from "@/infrastructure/http/client";
-import { CardImage } from "@/presentation/components/CardImage";
+import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { usePro } from "@/presentation/features/pro";
 import { useCreateGrade } from "@/application/queries/collection/useGradeMutations";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useCompactUsd } from "@/shared/format";
 import { routes } from "@/shared/routes";
+import {
+  BLUR_INTENSITY,
+  GLASS,
+  HAIRLINE,
+  ScannerTopBar,
+  ScannerBottomPanel,
+  candidateKey,
+  scannerErrorCopy,
+  ERROR_DISMISS_MS,
+  MAX_SCAN_SESSION_ITEMS,
+  SESSION_RESULT_CONFIDENCE,
+  type ScanSessionItem,
+} from "@/presentation/features/scan/overlay";
 import {
   LoupeCameraView,
   isNativeCameraAvailable,
@@ -48,13 +75,11 @@ import {
   type CardDetectedEvent,
 } from "../../modules/loupe-scanner-bridge";
 
+/** Live native-detector signal (iOS only today). */
 type Detect = { detected: boolean; steady: boolean; fill: number };
 
-/** One identified card captured in this scanning session. */
-interface SessionCard {
-  key: string;
-  candidate: IdentifyCandidate;
-}
+/** RAW grade stamped on a batch-added card — Near Mint ≈ 9 (see identify.tsx). */
+const BATCH_RAW_GRADE = 9;
 
 export default function NativeScanScreen() {
   const p = useThemedPalette();
@@ -63,17 +88,25 @@ export default function NativeScanScreen() {
   const { gatingActive, cardCount, cardLimit, openPaywall } = usePro();
   const createGrade = useCreateGrade();
 
+  // ── Camera controls ──────────────────────────────────────────────
   const [torch, setTorch] = useState(false);
   const [autoCapture, setAutoCapture] = useState(Platform.OS === "ios");
   const [zoom, setZoom] = useState(1);
   const [detect, setDetect] = useState<Detect>({ detected: false, steady: false, fill: 0 });
-  const [busy, setBusy] = useState(false);
   const [captureReq, setCaptureReq] = useState("");
-  const [session, setSession] = useState<SessionCard[]>([]);
+  const zoomBase = useRef(1);
+
+  // ── Identify / session ───────────────────────────────────────────
+  const [busy, setBusy] = useState(false);
+  const [session, setSession] = useState<ScanSessionItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [tcgHint, setTcgHint] = useState<IdentifyTcgHint>(null);
+  const [tcgPickerOpen, setTcgPickerOpen] = useState(false);
   const [flash, setFlash] = useState<"none" | "hit" | "miss">("none");
   const [adding, setAdding] = useState(false);
   const busyRef = useRef(false);
-  const zoomBase = useRef(1);
+  const sessionSeqRef = useRef(0);
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Native camera resolves per-platform (Swift on iOS, CameraX on Android)
   // through the same LoupeCameraView contract; RN LiveIdentifyFlow is the
@@ -83,42 +116,82 @@ export default function NativeScanScreen() {
   // rectangle-detection pass yet), so the AUTO toggle only applies there.
   const detectionSupported = Platform.OS === "ios";
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
       void requestPermission();
     }
   }, [permission, requestPermission]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!useNative) router.replace(routes.scanIdentify());
   }, [useNative]);
 
+  useEffect(
+    () => () => {
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    },
+    [],
+  );
+
   // Remaining free-tier vault slots (null = uncapped / Pro).
   const slotsLeft =
-    gatingActive && cardLimit != null
-      ? Math.max(0, cardLimit - cardCount - session.length)
-      : null;
+    gatingActive && cardLimit != null ? Math.max(0, cardLimit - cardCount) : null;
 
-  const total = useMemo(
-    () => session.reduce((s, c) => s + (c.candidate.market_price_usd ?? 0), 0),
-    [session],
+  // ── Session helpers (same ScanSessionItem lifecycle as LiveIdentifyFlow) ──
+  const addSessionItem = useCallback((photoUri: string) => {
+    const id = `${Date.now()}-${sessionSeqRef.current++}`;
+    setSession((prev) =>
+      [
+        ...prev,
+        {
+          id,
+          photoUri,
+          candidate: null,
+          identificationId: null,
+          confidence: null,
+          status: "scanning" as const,
+        },
+      ].slice(-MAX_SCAN_SESSION_ITEMS),
+    );
+    return id;
+  }, []);
+
+  const updateSessionItem = useCallback(
+    (id: string, patch: Partial<Omit<ScanSessionItem, "id">>) => {
+      setSession((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+    },
+    [],
   );
+
+  const removeSessionItem = useCallback((id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setSession((prev) => prev.filter((it) => it.id !== id));
+  }, []);
+
+  const showScannerError = useCallback((message: string) => {
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+    setError(scannerErrorCopy(message));
+    errorTimerRef.current = setTimeout(() => setError(null), ERROR_DISMISS_MS);
+  }, []);
 
   const flashCue = useCallback((kind: "hit" | "miss") => {
     setFlash(kind);
     setTimeout(() => setFlash("none"), 320);
   }, []);
 
+  // ── Capture → identify ───────────────────────────────────────────
   const triggerCapture = useCallback(() => {
     if (busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
+    setError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setCaptureReq(`${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
   }, []);
 
   const runIdentify = useCallback(
-    async (uri: string, corners: number[] | null) => {
+    async (uri: string, corners: number[] | null, itemId: string) => {
       try {
         let uploadUri = uri;
         if (corners && corners.length === 8 && cardDetector.capabilities.crop) {
@@ -126,20 +199,44 @@ export default function NativeScanScreen() {
             const cropped = await cardDetector.crop(uri, corners, 900, 0.82);
             if (cropped?.uri) uploadUri = cropped.uri;
           } catch {
-            /* full frame */
+            /* fall back to full frame */
           }
         }
-        const res = await identifyCard(uploadUri);
+
+        let res: IdentifyResponse = await identifyCard(uploadUri, tcgHint);
+        // Server signalled the fast path missed — try on-device OCR, then
+        // re-identify from the recognized text (same fallback the RN flow uses).
+        if (res.fallback_required) {
+          if (isOnDeviceOcrAvailable()) {
+            const ocr = await recognizeTextOnDevice(uploadUri);
+            if (ocr.text.length > 0) {
+              res = await identifyCardFromText(ocr.text, tcgHint, {
+                clientProvider: ocr.provider,
+                ocrConfidence: ocr.confidence,
+              });
+            } else {
+              showScannerError("On-device OCR found no text. Try better lighting.");
+            }
+          } else {
+            showScannerError(
+              res.fallback_reason ?? "Scanner over monthly budget. Try again later.",
+            );
+          }
+        }
+
         const top = res.candidates?.[0] ?? null;
-        if (top && (top.card_id || top.upstream_id)) {
-          // Dedup by resolved id so scanning the same card twice in a
-          // stack doesn't double-add it.
-          const id = top.card_id ?? top.upstream_id!;
-          setSession((prev) =>
-            prev.some((c) => (c.candidate.card_id ?? c.candidate.upstream_id) === id)
-              ? prev
-              : [...prev, { key: `${id}-${Date.now()}`, candidate: top }],
-          );
+        const conf = top?.confidence ?? 0;
+        const matched =
+          top != null &&
+          conf >= SESSION_RESULT_CONFIDENCE &&
+          (top.card_id != null || top.upstream_id != null);
+        updateSessionItem(itemId, {
+          candidate: matched ? top : null,
+          identificationId: matched ? res.identification_id : null,
+          confidence: conf,
+          status: matched ? "matched" : "missed",
+        });
+        if (matched) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
             () => {},
           );
@@ -150,28 +247,31 @@ export default function NativeScanScreen() {
           );
           flashCue("miss");
         }
-      } catch {
+      } catch (e) {
+        updateSessionItem(itemId, { status: "missed" });
         flashCue("miss");
+        showScannerError(e instanceof Error ? e.message : "Identification failed");
       } finally {
         busyRef.current = false;
         setBusy(false);
       }
     },
-    [flashCue],
+    [tcgHint, updateSessionItem, flashCue, showScannerError],
   );
 
   const onCapture = useCallback(
     (e: { nativeEvent: CaptureEvent }) => {
-      const { uri, corners, error } = e.nativeEvent;
-      if (error || !uri) {
+      const { uri, corners, error: captureError } = e.nativeEvent;
+      if (captureError || !uri) {
         busyRef.current = false;
         setBusy(false);
         flashCue("miss");
         return;
       }
-      void runIdentify(uri, corners ?? null);
+      const itemId = addSessionItem(uri);
+      void runIdentify(uri, corners ?? null, itemId);
     },
-    [runIdentify, flashCue],
+    [addSessionItem, runIdentify, flashCue],
   );
 
   const onDetected = useCallback((e: { nativeEvent: CardDetectedEvent }) => {
@@ -179,36 +279,74 @@ export default function NativeScanScreen() {
     setDetect({ detected, steady, fill });
   }, []);
 
-  const removeCard = useCallback((key: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setSession((prev) => prev.filter((c) => c.key !== key));
+  // ── Session actions ──────────────────────────────────────────────
+  const sessionMatches = useMemo(() => {
+    const seen = new Set<string>();
+    const out: IdentifyCandidate[] = [];
+    for (const it of session) {
+      if (it.status !== "matched" || !it.candidate) continue;
+      const key = candidateKey(it.candidate);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(it.candidate);
+    }
+    return out;
+  }, [session]);
+
+  const pickSessionItem = useCallback((item: ScanSessionItem) => {
+    const candidate = item.candidate;
+    if (!candidate) return;
+    Haptics.selectionAsync().catch(() => {});
+    if (item.identificationId) {
+      submitIdentifyFeedback(item.identificationId, {
+        correct: true,
+        chosen_card_id: candidate.card_id,
+      }).catch(() => {});
+    }
+    const detailId = candidate.card_id ?? candidate.upstream_id ?? null;
+    if (detailId) {
+      router.replace(routes.card(detailId));
+      return;
+    }
+    router.replace(
+      routes.gradeNew({
+        cardName: candidate.name,
+        cardImage: candidate.image_url ?? undefined,
+        cardSet: candidate.set_name ?? undefined,
+      }),
+    );
   }, []);
 
-  const addAll = useCallback(async () => {
-    if (session.length === 0) return;
+  const handleAddSession = useCallback(async () => {
+    if (sessionMatches.length === 0) return;
+    if (slotsLeft !== null && slotsLeft === 0) {
+      openPaywall("card_limit");
+      return;
+    }
     setAdding(true);
     const results = await Promise.allSettled(
-      session.map((c) =>
+      sessionMatches.map((c) =>
         createGrade.mutateAsync({
-          cardId: c.candidate.card_id ?? undefined,
-          upstreamId: c.candidate.upstream_id ?? undefined,
-          grade: 9,
+          cardId: c.card_id ?? undefined,
+          upstreamId: c.upstream_id ?? undefined,
+          grade: BATCH_RAW_GRADE,
           house: "loupe",
           condition: "nm",
         }),
       ),
     );
-    const hitCap = results.some(
-      (r) => r.status === "rejected" && r.reason instanceof ApiError && r.reason.status === 402,
-    );
     setAdding(false);
+    const hitCap = results.some(
+      (r) =>
+        r.status === "rejected" && r.reason instanceof ApiError && r.reason.status === 402,
+    );
     if (hitCap) {
       openPaywall("card_limit");
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     router.replace(routes.vault());
-  }, [session, createGrade, openPaywall]);
+  }, [sessionMatches, slotsLeft, openPaywall, createGrade]);
 
   const pinch = useMemo(
     () =>
@@ -217,16 +355,94 @@ export default function NativeScanScreen() {
           zoomBase.current = zoom;
         })
         .onUpdate((e) => {
-          const next = Math.max(1, Math.min(5, zoomBase.current * e.scale));
-          setZoom(next);
+          setZoom(Math.max(1, Math.min(5, zoomBase.current * e.scale)));
         })
         .runOnJS(true),
     [zoom],
   );
 
+  // ── Permission gate (parity with the RN flow) ────────────────────
   if (!useNative) return <View style={{ flex: 1, backgroundColor: "#000" }} />;
 
-  const hint = !detectionSupported
+  if (permission && !permission.granted) {
+    const mustOpenSettings = !permission.canAskAgain;
+    return (
+      <SafeAreaView
+        edges={["top", "bottom"]}
+        style={{
+          flex: 1,
+          backgroundColor: p.bg.base,
+          padding: 24,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <View
+          style={{
+            width: 88,
+            height: 88,
+            borderRadius: 44,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: withAlpha(p.accent.mint, 0.12),
+            borderWidth: 1,
+            borderColor: withAlpha(p.accent.mint, 0.28),
+          }}
+        >
+          {mustOpenSettings ? (
+            <CameraOff size={36} color={p.accent.mint} strokeWidth={1.8} />
+          ) : (
+            <Camera size={36} color={p.accent.mint} strokeWidth={1.8} />
+          )}
+        </View>
+        <Text
+          style={{
+            marginTop: 20,
+            color: p.ink.default,
+            fontSize: 22,
+            fontWeight: "800",
+            textAlign: "center",
+          }}
+        >
+          {mustOpenSettings ? "Turn on camera access" : "Let Loupe see your cards"}
+        </Text>
+        <Text
+          style={{
+            marginTop: 8,
+            color: p.ink.muted,
+            fontSize: 14,
+            lineHeight: 20,
+            textAlign: "center",
+            maxWidth: 300,
+          }}
+        >
+          {mustOpenSettings
+            ? "Camera access is off. Open Settings → Loupe → Camera to switch it on, then come back."
+            : "Point your camera at a card and Loupe identifies it instantly — set, number, and live price."}
+        </Text>
+        <View style={{ height: 28 }} />
+        <View style={{ alignSelf: "stretch", maxWidth: 360, width: "100%", gap: 12 }}>
+          <PrimaryButton
+            label={mustOpenSettings ? "Open Settings" : "Allow camera"}
+            icon={Camera}
+            variant="mint"
+            onPress={async () => {
+              if (mustOpenSettings) {
+                Linking.openSettings().catch(() => {});
+                return;
+              }
+              await requestPermission();
+            }}
+          />
+          <PrimaryButton label="Not now" variant="ghost" onPress={() => router.back()} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Live framing coach — only before the first capture, so it doesn't fight
+  // the session tray. Mirrors the RN flow's "coaching strip until first scan".
+  const liveHint = !detectionSupported
     ? "Frame the card, then tap the shutter"
     : !detect.detected
       ? "Point at a card"
@@ -237,12 +453,13 @@ export default function NativeScanScreen() {
             ? "Hold steady — capturing…"
             : "Ready — tap to capture"
           : "Hold steady";
+  const detectorHint = session.length === 0 && !busy ? liveHint : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <GestureDetector gesture={pinch}>
         <LoupeCameraView
-          style={{ flex: 1 }}
+          style={StyleSheet.absoluteFill}
           active
           torchEnabled={torch}
           detectionEnabled={!busy}
@@ -254,308 +471,197 @@ export default function NativeScanScreen() {
         />
       </GestureDetector>
 
-      {/* Capture flash cue */}
+      {/* Capture flash cue — a quick mint/amber frame pulse on hit/miss. */}
       {flash !== "none" ? (
         <View
           pointerEvents="none"
           style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            ...StyleSheet.absoluteFillObject,
             borderWidth: 4,
             borderColor:
-              flash === "hit" ? withAlpha(p.accent.mint, 0.9) : withAlpha(p.accent.amber, 0.9),
+              flash === "hit"
+                ? withAlpha(p.accent.mint, 0.9)
+                : withAlpha(p.accent.amber, 0.9),
           }}
         />
       ) : null}
 
       <SafeAreaView
-        edges={["top", "bottom"]}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "space-between" }}
+        edges={["top", "left", "right"]}
+        style={{ ...StyleSheet.absoluteFillObject, justifyContent: "space-between" }}
         pointerEvents="box-none"
       >
-        {/* Header */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingHorizontal: 16,
-            paddingTop: 8,
-          }}
-          pointerEvents="box-none"
-        >
-          <GlassButton onPress={() => router.back()} label="Close">
-            <ChevronLeft size={20} color="#fff" />
-          </GlassButton>
-
-          <View style={{ flexDirection: "row", gap: 8 }} pointerEvents="box-none">
-            {/* Auto-capture toggle — only where live detection exists (iOS). */}
-            {detectionSupported ? (
-            <Pressable
-              onPress={() => setAutoCapture((v) => !v)}
-              accessibilityRole="button"
-              accessibilityLabel="Toggle auto capture"
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 5,
-                paddingHorizontal: 11,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: autoCapture ? p.accent.mint : "rgba(0,0,0,0.4)",
-              }}
-            >
-              <Wand2 size={14} color={autoCapture ? "#0B0B0D" : "#fff"} />
-              <Text
-                style={{
-                  color: autoCapture ? "#0B0B0D" : "#fff",
-                  fontSize: 11,
-                  fontWeight: "800",
-                  letterSpacing: 0.5,
-                }}
-              >
-                AUTO
-              </Text>
-            </Pressable>
-            ) : null}
-            <GlassButton
-              onPress={() => setTorch((v) => !v)}
-              label="Toggle torch"
-              active={torch}
-            >
-              <Flashlight size={18} color={torch ? "#0B0B0D" : "#fff"} />
-            </GlassButton>
-          </View>
-        </View>
-
-        {/* Framing hint + slots */}
-        <View style={{ alignItems: "center", gap: 8 }} pointerEvents="none">
-          <View
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 7,
-              borderRadius: 999,
-              backgroundColor: detect.steady
-                ? withAlpha(p.accent.mint, 0.9)
-                : "rgba(0,0,0,0.5)",
-            }}
-          >
-            <Text
-              style={{
-                color: detect.steady ? "#0B0B0D" : "#fff",
-                fontSize: 13,
-                fontWeight: "800",
-              }}
-            >
-              {busy ? "Identifying…" : hint}
-            </Text>
-          </View>
-          {slotsLeft != null && slotsLeft <= 10 ? (
-            <View
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                borderRadius: 999,
-                backgroundColor: withAlpha(
-                  slotsLeft === 0 ? p.accent.rose : p.accent.amber,
-                  0.85,
-                ),
-              }}
-            >
-              <Text style={{ color: "#0B0B0D", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 }}>
-                {slotsLeft === 0 ? "VAULT FULL — UPGRADE" : `${slotsLeft} FREE SLOTS LEFT`}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-
-        {/* Bottom: shutter + session tray */}
-        <View pointerEvents="box-none" style={{ gap: 12 }}>
-          {/* Session tray */}
-          {session.length > 0 ? (
-            <View pointerEvents="box-none" style={{ paddingHorizontal: 16 }}>
-              <SessionTray
-                session={session}
-                total={total}
-                formatUsd={formatUsd}
-                onRemove={removeCard}
-                onAddAll={addAll}
-                adding={adding}
-                palette={p}
+        <ScannerTopBar
+          onClose={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+          flashOn={torch}
+          locked={false}
+          hasMatch={false}
+          scanning={busy}
+          onToggleFlash={() => setTorch((v) => !v)}
+          tcgHint={tcgHint}
+          onOpenTcgPicker={() => setTcgPickerOpen(true)}
+          palette={p}
+          leadingExtra={
+            detectionSupported ? (
+              <AutoToggle
+                on={autoCapture}
+                mint={p.accent.mint}
+                onPress={() => setAutoCapture((v) => !v)}
               />
-            </View>
-          ) : null}
+            ) : undefined
+          }
+        />
 
-          {/* Manual shutter */}
-          <View style={{ alignItems: "center", paddingBottom: 18 }} pointerEvents="box-none">
-            <Pressable
-              onPress={triggerCapture}
-              disabled={busy}
-              accessibilityRole="button"
-              accessibilityLabel="Capture card"
-              style={{
-                width: 74,
-                height: 74,
-                borderRadius: 37,
-                borderWidth: 4,
-                borderColor: "rgba(255,255,255,0.9)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <View
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
-                  backgroundColor: busy
-                    ? withAlpha(p.accent.mint, 0.5)
-                    : detect.steady
-                      ? p.accent.mint
-                      : "#fff",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {busy ? <ActivityIndicator color="#0B0B0D" /> : null}
-              </View>
-            </Pressable>
+        {/* Zoom presets — native 1×/2×/3× (pinch covers everything between). */}
+        <View
+          pointerEvents="box-none"
+          style={{ alignItems: "center", justifyContent: "center", flex: 1 }}
+        >
+          <View
+            pointerEvents="box-none"
+            style={{ position: "absolute", bottom: 8, flexDirection: "row", gap: 10 }}
+          >
+            {[1, 2, 3].map((z) => {
+              const on = Math.round(zoom) === z;
+              return (
+                <Pressable
+                  key={z}
+                  onPress={() => setZoom(z)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Zoom ${z}x`}
+                  accessibilityState={{ selected: on }}
+                  style={({ pressed }) => ({
+                    minWidth: on ? 44 : 34,
+                    height: 34,
+                    paddingHorizontal: on ? 12 : 0,
+                    borderRadius: 999,
+                    overflow: "hidden",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: on ? p.accent.mint : GLASS,
+                    borderWidth: on ? 0 : 1,
+                    borderColor: HAIRLINE,
+                    opacity: pressed ? 0.8 : 1,
+                  })}
+                >
+                  {!on ? (
+                    <BlurView
+                      intensity={BLUR_INTENSITY}
+                      tint="dark"
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                  ) : null}
+                  <Text
+                    style={{
+                      color: on ? "#06140d" : "rgba(255,255,255,0.88)",
+                      fontSize: on ? 13 : 11.5,
+                      fontWeight: "800",
+                    }}
+                  >
+                    {z}×
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
+
+        <ScannerBottomPanel
+          error={error}
+          detectorHint={detectorHint}
+          tcgHint={tcgHint}
+          tcgPickerOpen={tcgPickerOpen}
+          onCloseTcgPicker={() => setTcgPickerOpen(false)}
+          onPickTcg={(t) => {
+            setTcgHint(t);
+            setTcgPickerOpen(false);
+            setError(null);
+          }}
+          scanSession={session}
+          sessionMatchCount={sessionMatches.length}
+          batchEnabled
+          slotsLeft={slotsLeft}
+          onPickScanSessionItem={pickSessionItem}
+          onRemoveScanSessionItem={removeSessionItem}
+          onAddSession={() => {
+            void handleAddSession();
+          }}
+          onDismissError={() => setError(null)}
+          onManualCapture={triggerCapture}
+          onManualSearch={() => router.replace("/search")}
+          scanning={busy}
+          locked={false}
+          formatUsd={formatUsd}
+          palette={p}
+        />
       </SafeAreaView>
+
+      {adding ? (
+        <View
+          pointerEvents="auto"
+          style={{
+            ...StyleSheet.absoluteFillObject,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(0,0,0,0.45)",
+          }}
+        >
+          <ActivityIndicator color="#fff" size="large" />
+        </View>
+      ) : null}
     </View>
   );
 }
 
-function GlassButton({
-  children,
+/** The native-only AUTO-capture toggle, slotted into the top bar. */
+function AutoToggle({
+  on,
+  mint,
   onPress,
-  label,
-  active = false,
 }: {
-  children: React.ReactNode;
+  on: boolean;
+  mint: string;
   onPress: () => void;
-  label: string;
-  active?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
-      hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel={label}
-      style={{
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+      accessibilityLabel="Toggle auto capture"
+      accessibilityState={{ selected: on }}
+      hitSlop={8}
+      style={({ pressed }) => ({
+        flexDirection: "row",
         alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: active ? "#16C09C" : "rgba(0,0,0,0.4)",
-      }}
+        gap: 5,
+        paddingHorizontal: 12,
+        height: 46,
+        borderRadius: 23,
+        overflow: "hidden",
+        backgroundColor: on ? mint : GLASS,
+        borderWidth: on ? 0 : StyleSheet.hairlineWidth * 2,
+        borderColor: HAIRLINE,
+        opacity: pressed ? 0.85 : 1,
+      })}
     >
-      {children}
+      {!on ? (
+        <BlurView
+          intensity={BLUR_INTENSITY}
+          tint="dark"
+          style={StyleSheet.absoluteFillObject}
+        />
+      ) : null}
+      <Wand2 size={15} color={on ? "#06140d" : "#fff"} strokeWidth={2.4} />
+      <Text
+        style={{
+          color: on ? "#06140d" : "#fff",
+          fontSize: 11.5,
+          fontWeight: "800",
+          letterSpacing: 0.5,
+        }}
+      >
+        AUTO
+      </Text>
     </Pressable>
-  );
-}
-
-function SessionTray({
-  session,
-  total,
-  formatUsd,
-  onRemove,
-  onAddAll,
-  adding,
-  palette,
-}: {
-  session: SessionCard[];
-  total: number;
-  formatUsd: (v: number) => string;
-  onRemove: (key: string) => void;
-  onAddAll: () => void;
-  adding: boolean;
-  palette: ReturnType<typeof useThemedPalette>;
-}) {
-  const p = palette;
-  return (
-    <View
-      style={{
-        borderRadius: 20,
-        backgroundColor: withAlpha(p.bg.base, 0.92),
-        borderWidth: 1,
-        borderColor: p.line.default,
-        padding: 12,
-        gap: 10,
-      }}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Text style={{ color: p.ink.default, fontSize: 13, fontWeight: "800" }}>
-          {session.length} {session.length === 1 ? "card" : "cards"}
-          {total > 0 ? ` · ${formatUsd(total)}` : ""}
-        </Text>
-        <Pressable
-          onPress={onAddAll}
-          disabled={adding}
-          accessibilityRole="button"
-          accessibilityLabel="Add all scanned cards to vault"
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            paddingHorizontal: 14,
-            paddingVertical: 8,
-            borderRadius: 999,
-            backgroundColor: p.accent.mint,
-            opacity: adding ? 0.7 : 1,
-          }}
-        >
-          {adding ? (
-            <ActivityIndicator size="small" color="#0B0B0D" />
-          ) : (
-            <Sparkles size={13} color="#0B0B0D" strokeWidth={2.5} />
-          )}
-          <Text style={{ color: "#0B0B0D", fontSize: 12.5, fontWeight: "800" }}>
-            Add all
-          </Text>
-        </Pressable>
-      </View>
-
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-        {session.map((c) => (
-          <Pressable
-            key={c.key}
-            onPress={() => onRemove(c.key)}
-            accessibilityRole="button"
-            accessibilityLabel={`Remove ${c.candidate.name}`}
-            style={{ width: 46, height: 64, borderRadius: 7, overflow: "hidden" }}
-          >
-            <CardImage
-              uri={c.candidate.image_url ?? undefined}
-              width={46}
-              height={64}
-              rounded={7}
-              alt={c.candidate.name}
-            />
-            <View
-              style={{
-                position: "absolute",
-                top: 2,
-                right: 2,
-                width: 16,
-                height: 16,
-                borderRadius: 8,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "rgba(0,0,0,0.6)",
-              }}
-            >
-              <X size={10} color="#fff" strokeWidth={3} />
-            </View>
-          </Pressable>
-        ))}
-      </View>
-    </View>
   );
 }
