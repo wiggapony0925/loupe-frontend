@@ -8,7 +8,7 @@
  * Layout: PriceCharting × Robinhood.
  */
 import React from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LineChart } from "lucide-react-native";
@@ -61,7 +61,12 @@ export default function AnalyticsScreen() {
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 64, gap: 28 }}
+        // Clear the floating iOS tab-bar pill (see Command screen note).
+        contentContainerStyle={{
+          padding: 20,
+          paddingBottom: Platform.OS === "ios" ? 116 : 64,
+          gap: 28,
+        }}
         showsVerticalScrollIndicator={false}
       >
         <View>
@@ -93,7 +98,7 @@ export default function AnalyticsScreen() {
             title="No analytics yet"
             message="Add your first card and Loupe will chart your portfolio value, movers, allocation, and grade mix right here."
             secondaryActionLabel="Scan a card"
-            onSecondaryAction={() => router.push(routes.scanIdentify())}
+            onSecondaryAction={() => router.push(routes.scanEntry())}
           />
         ) : (
           <>

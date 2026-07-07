@@ -42,6 +42,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useSettings } from "@/application/stores/settingsStore";
 import { routes } from "@/shared/routes";
+import { LiquidGlassView } from "@/presentation/components/LiquidGlassView";
+
+const isIOS = Platform.OS === "ios";
 
 type ScanShortcut = "grade" | "identify" | "playground";
 
@@ -86,6 +89,32 @@ function TabIcon({
   );
 }
 
+/**
+ * FloatingGlassBar — the iOS tab bar background: a native Liquid Glass pill
+ * (expo-glass-effect GlassView, blur fallback on older iOS) with a hairline
+ * ring, filling the floating tabBarStyle.
+ */
+function FloatingGlassBar({
+  palette,
+}: {
+  palette: ReturnType<typeof useThemedPalette>;
+}) {
+  return (
+    <LiquidGlassView
+      glassStyle="regular"
+      intensity={40}
+      tint="default"
+      style={{
+        flex: 1,
+        borderRadius: 32,
+        overflow: "hidden",
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: withAlpha(palette.ink.default, 0.12),
+      }}
+    />
+  );
+}
+
 export default function TabsLayout() {
   // Subscribe to theme so the screenOptions object below is rebuilt with
   // the freshly-mutated palette values when the user toggles Light/Dark.
@@ -106,26 +135,43 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: p.accent.mint,
         tabBarInactiveTintColor: p.ink.dim,
-        // Flat, minimal dock — a solid bar flush to the bottom edge with a
-        // single hairline top rule. The web's restrained chrome, not a
-        // floating glass pill. The bar sits in the layout (screens reserve
-        // space for it), so content is never hidden behind it.
-        tabBarStyle: {
-          backgroundColor: p.bg.base,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: p.line.default,
-          height: 56 + insets.bottom,
-          paddingTop: 8,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
-          // Subtle lift so the bar reads as elevated chrome — not a glass dock.
-          shadowColor: "#000",
-          shadowOpacity: 0.06,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: -3 },
-          elevation: 12,
-        },
+        // iOS: a FLOATING liquid-glass pill (native GlassView) hovering above
+        // the content — the Instagram / Apple-Music dock. Android keeps the
+        // flat solid bar flush to the edge (glass is unreliable there).
+        tabBarBackground: isIOS ? () => <FloatingGlassBar palette={p} /> : undefined,
+        tabBarStyle: isIOS
+          ? {
+              position: "absolute",
+              left: 16,
+              right: 16,
+              bottom: Math.max(insets.bottom, 12),
+              height: 64,
+              borderRadius: 32,
+              borderTopWidth: 0,
+              backgroundColor: "transparent",
+              paddingTop: 6,
+              paddingBottom: 6,
+              elevation: 0,
+              shadowColor: "#000",
+              shadowOpacity: 0.18,
+              shadowRadius: 18,
+              shadowOffset: { width: 0, height: 8 },
+            }
+          : {
+              backgroundColor: p.bg.base,
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: p.line.default,
+              height: 56 + insets.bottom,
+              paddingTop: 8,
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
+              shadowColor: "#000",
+              shadowOpacity: 0.06,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: -3 },
+              elevation: 12,
+            },
         tabBarItemStyle: {
-          paddingTop: 2,
+          paddingTop: isIOS ? 4 : 2,
         },
         // Sentence-case, lightly tracked — clean and iOS-native. (The old
         // uppercase + wide tracking pushed "ANALYTICS" past the tab width
@@ -203,9 +249,7 @@ function ScanTabButton({
         ? routes.scanPhone("studio")
         : target === "playground"
           ? routes.gradePlayground()
-          : Platform.OS === "ios"
-            ? routes.scanNative()
-            : routes.scanIdentify();
+          : routes.scanEntry();
     setMenuOpen(false);
     router.push(href);
   }, []);
@@ -219,7 +263,7 @@ function ScanTabButton({
         // navigation onPress/onLongPress: the FAB is a launcher, not a tab.
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-          router.push(routes.scanIdentify());
+          router.push(routes.scanEntry());
         }}
         onLongPress={() => {
           setMenuOpen(true);

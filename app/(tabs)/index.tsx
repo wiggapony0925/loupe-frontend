@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Platform, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
@@ -75,7 +75,13 @@ export default function CommandCenterScreen() {
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 24 }}
+        // iOS floats a tab-bar pill over the content, so pad past it (bar
+        // height + home-indicator inset) instead of the flat-bar gap.
+        contentContainerStyle={{
+          padding: 20,
+          paddingBottom: Platform.OS === "ios" ? 116 : 48,
+          gap: 24,
+        }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -210,7 +216,7 @@ export default function CommandCenterScreen() {
               title="No recent scans"
               message="Scan a card to start your vault."
               secondaryActionLabel="Scan a card"
-              onSecondaryAction={() => router.push(routes.scanIdentify())}
+              onSecondaryAction={() => router.push(routes.scanEntry())}
             />
           ) : (
             <ScrollView
