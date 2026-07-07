@@ -15,6 +15,7 @@ import React from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { Check, ChevronRight, Sparkles } from "lucide-react-native";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useBillingConfig } from "@/application/queries";
 import { usePro } from "./ProProvider";
 import { FREE_CARD_LIMIT, PRO_FEATURES, PRO_PRICE_MONTHLY } from "./proPlan";
 
@@ -31,6 +32,12 @@ export function ProMembershipCard() {
     manageBilling,
     billingBusy,
   } = usePro();
+
+  // Stripe self-serve is only real when the backend reports a configured
+  // checkout. Admin-granted Pro (or an unprovisioned Stripe) has no customer
+  // portal — offering a "Manage billing" button there just errors.
+  const { data: billing } = useBillingConfig(subscriptionsEnabled && isPro);
+  const selfServeBilling = billing?.checkout_available === true;
 
   if (!subscriptionsEnabled) return null;
 
@@ -246,7 +253,28 @@ export function ProMembershipCard() {
           </View>
 
           {/* CTA */}
-          {isPro ? (
+          {isPro && !selfServeBilling ? (
+            /* Pro without a Stripe portal (granted plan / billing not yet
+               provisioned) — state it plainly instead of a dead-end button. */
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                paddingVertical: 11,
+                borderRadius: 13,
+                borderWidth: 1,
+                borderColor: p.line.default,
+                backgroundColor: p.bg.elevated,
+              }}
+            >
+              <Check size={13} color={p.accent.mint} strokeWidth={3} />
+              <Text style={{ color: p.ink.muted, fontSize: 12.5, fontWeight: "700" }}>
+                Pro membership active — managed by Loupe
+              </Text>
+            </View>
+          ) : isPro ? (
             <Pressable
               onPress={manageBilling}
               disabled={billingBusy}

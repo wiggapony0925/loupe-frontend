@@ -19,6 +19,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
   Pressable,
   Text,
   View,
@@ -26,7 +27,7 @@ import {
 import * as WebBrowser from "expo-web-browser";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import { Sparkles } from "lucide-react-native";
+import { Download, Eye, Sparkles } from "lucide-react-native";
 import {
   fetchReportDownloadUrl,
   useGenerateReport,
@@ -39,6 +40,7 @@ import type {
   UpcomingReportWire,
   UserReportWire,
 } from "@/infrastructure/http";
+import { PdfViewerSheet } from "@/presentation/components/PdfViewerSheet";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { ProWall, usePro, useProFeature } from "@/presentation/features/pro";
@@ -56,6 +58,15 @@ function formatSize(bytes: number | null): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function periodLabel(r: UserReportWire): string {
@@ -94,7 +105,7 @@ function formatCloseDate(iso: string): string {
  * a URL, stream the authenticated `/v1/reports/{id}/file` endpoint to a local
  * PDF and hand it to the OS share sheet (Save to Files / AirDrop / print).
  */
-async function downloadAndShareViaStream(report: UserReportWire): Promise<void> {
+async function streamToCache(report: UserReportWire): Promise<string> {
   const token = getAuthToken();
   const safeName = periodLabel(report).replace(/[^\w]+/g, "_");
   const target = `${FileSystem.cacheDirectory}Loupe_Statement_${safeName}.pdf`;
@@ -106,14 +117,19 @@ async function downloadAndShareViaStream(report: UserReportWire): Promise<void> 
   if (res.status !== 200) {
     throw new Error(`Download failed (${res.status})`);
   }
+  return res.uri;
+}
+
+async function downloadAndShareViaStream(report: UserReportWire): Promise<void> {
+  const uri = await streamToCache(report);
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(res.uri, {
+    await Sharing.shareAsync(uri, {
       mimeType: "application/pdf",
       UTI: "com.adobe.pdf",
       dialogTitle: `Loupe statement · ${periodLabel(report)}`,
     });
   } else {
-    await Linking.openURL(res.uri);
+    await Linking.openURL(uri);
   }
 }
 
@@ -127,40 +143,67 @@ export function ReportsSection() {
   const list = useReports();
   const upcoming = useUpcomingReports();
   const generate = useGenerateReport();
-  const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
+  // Per-row busy markers — "<id>:view" while the in-app viewer is opening,
+  // "<id>:save" while the PDF streams to the share sheet.
+  const [busyKey, setBusyKey] = React.useState<string | null>(null);
+  // In-app PDF popup (used when object storage can't presign a URL).
+  const [viewer, setViewer] = React.useState<{ uri: string; title: string } | null>(
+    null,
+  );
 
-  const onDownload = React.useCallback(async (report: UserReportWire) => {
-    setDownloadingId(report.id);
+  /** VIEW — open the statement inside the app (browser page-sheet popup). */
+  const onView = React.useCallback(async (report: UserReportWire) => {
+    setBusyKey(`${report.id}:view`);
     try {
       const { download_url } = await fetchReportDownloadUrl(report.id);
-      if (!download_url) {
-        // No presigned URL → stream the authenticated file endpoint
-        // instead (same fallback the webapp uses), so the download
-        // works even when presigning isn't configured.
-        await downloadAndShareViaStream(report);
+      if (download_url) {
+        // In-app browser (SFSafariViewController / Custom Tab): the PDF
+        // renders inline with native share/print, and closing it drops the
+        // user right back on this screen — no bounce out to Safari.
+        try {
+          await WebBrowser.openBrowserAsync(download_url, {
+            presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+            dismissButtonStyle: "done",
+          });
+        } catch {
+          const ok = await Linking.canOpenURL(download_url);
+          if (ok) await Linking.openURL(download_url);
+          else Alert.alert("Can't open URL", download_url);
+        }
         return;
       }
-      // In-app browser (SFSafariViewController / Custom Tab): the PDF
-      // renders inline with native share/print, and closing it drops the
-      // user right back on this screen — no bounce out to Safari.
-      try {
-        await WebBrowser.openBrowserAsync(download_url, {
-          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-          dismissButtonStyle: "done",
-        });
-      } catch {
-        // Rare fallback (e.g. another in-app browser already open).
-        const ok = await Linking.canOpenURL(download_url);
-        if (ok) await Linking.openURL(download_url);
-        else Alert.alert("Can't open URL", download_url);
+      // No presigned URL → stream the authenticated file endpoint. iOS
+      // renders the local PDF in our in-app popup sheet; Android WebViews
+      // can't draw PDFs, so hand it to the system share sheet instead.
+      if (Platform.OS === "ios") {
+        const uri = await streamToCache(report);
+        setViewer({ uri, title: `Statement · ${periodLabel(report)}` });
+      } else {
+        await downloadAndShareViaStream(report);
       }
+    } catch (e) {
+      Alert.alert(
+        "Couldn't open statement",
+        e instanceof Error ? e.message : "Please try again.",
+      );
+    } finally {
+      setBusyKey(null);
+    }
+  }, []);
+
+  /** DOWNLOAD — stream the PDF locally and open the share sheet
+   *  (Save to Files / AirDrop / print). */
+  const onSave = React.useCallback(async (report: UserReportWire) => {
+    setBusyKey(`${report.id}:save`);
+    try {
+      await downloadAndShareViaStream(report);
     } catch (e) {
       Alert.alert(
         "Download failed",
         e instanceof Error ? e.message : "Please try again.",
       );
     } finally {
-      setDownloadingId(null);
+      setBusyKey(null);
     }
   }, []);
 
@@ -239,14 +282,23 @@ export function ReportsSection() {
           ) : reports.length === 0 ? (
             <EmptyState nextClose={nextMonthly?.closes_at ?? null} />
           ) : (
-            <View className="flex-row flex-wrap" style={{ gap: 10 }}>
-              {visibleReports.map((r) => (
-                <ReportTile
+            <View
+              className="overflow-hidden rounded-2xl border border-line"
+              style={{ backgroundColor: p.bg.elevated }}
+            >
+              {visibleReports.map((r, i) => (
+                <View
                   key={r.id}
-                  report={r}
-                  onDownload={onDownload}
-                  busy={downloadingId === r.id}
-                />
+                  className={i > 0 ? "border-t border-line" : ""}
+                >
+                  <ReportRow
+                    report={r}
+                    onView={onView}
+                    onSave={onSave}
+                    viewBusy={busyKey === `${r.id}:view`}
+                    saveBusy={busyKey === `${r.id}:save`}
+                  />
+                </View>
               ))}
             </View>
           )}
@@ -270,6 +322,13 @@ export function ReportsSection() {
           </View>
         ) : null}
       </View>
+
+      <PdfViewerSheet
+        visible={viewer != null}
+        uri={viewer?.uri ?? null}
+        title={viewer?.title ?? "Statement"}
+        onClose={() => setViewer(null)}
+      />
     </View>
   );
 }
@@ -289,163 +348,233 @@ function NextStatementHeroCard({
 
   return (
     <View
-      className="mt-2 flex-row items-center rounded-2xl border px-4 py-3"
+      className="mt-2 overflow-hidden rounded-2xl border"
       style={{
-        gap: 12,
         borderColor: withAlpha(p.accent.mint, 0.25),
-        backgroundColor: withAlpha(p.accent.mint, 0.05),
+        backgroundColor: p.bg.sunken,
       }}
     >
-      {/* Pulsing AUTO dot — statements close themselves. */}
+      {/* Sheen / glow accents (Amex Black Card vibe) */}
       <View
+        pointerEvents="none"
         style={{
-          width: 34,
-          height: 34,
-          borderRadius: 12,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: withAlpha(p.accent.mint, 0.14),
+          position: "absolute",
+          top: -40,
+          right: -40,
+          width: 220,
+          height: 220,
+          borderRadius: 110,
+          backgroundColor: withAlpha(p.accent.mint, 0.08),
         }}
-      >
-        <View
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: p.accent.mint,
-            shadowColor: p.accent.mint,
-            shadowOpacity: 0.8,
-            shadowRadius: 4,
-          }}
-        />
-      </View>
-      <View style={{ flex: 1 }}>
-        {loading ? (
-          <>
-            <Skeleton width={150} height={12} />
-            <View className="h-1.5" />
-            <Skeleton width={110} height={10} />
-          </>
-        ) : nextMonthly ? (
-          <>
-            <Text className="text-[13px] font-bold text-ink" numberOfLines={1}>
-              Next statement · {nextMonthly.label}
-            </Text>
-            <Text className="mt-0.5 text-[11px] text-ink-muted" numberOfLines={1}>
-              Auto-closes {formatCloseDate(nextMonthly.closes_at)}
-              {nextYearly ? ` · annual ${formatCloseDate(nextYearly.closes_at)}` : ""}
-            </Text>
-          </>
-        ) : (
-          <Text className="text-[12px] text-ink-muted">
-            Your next statement window will appear shortly.
-          </Text>
-        )}
-      </View>
-      {!loading && nextMonthly ? (
-        <View
-          className="rounded-full px-2.5 py-1"
-          style={{ backgroundColor: withAlpha(p.accent.mint, 0.14) }}
-        >
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          bottom: -60,
+          left: -40,
+          width: 180,
+          height: 180,
+          borderRadius: 90,
+          backgroundColor: withAlpha(p.accent.blue, 0.05),
+        }}
+      />
+
+      <View className="p-5">
+        <View className="flex-row items-center justify-between">
           <Text
-            className="text-[10px] font-extrabold tracking-wide"
+            className="text-[10px] font-semibold uppercase tracking-[4px]"
             style={{ color: p.accent.mint }}
           >
-            {relativeUntil(nextMonthly.closes_at).replace("in ", "").toUpperCase()}
+            Loupe · Statement
           </Text>
+          <View
+            className="flex-row items-center rounded-md px-2 py-0.5"
+            style={{ backgroundColor: withAlpha(p.accent.mint, 0.12) }}
+          >
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: p.accent.mint,
+                marginRight: 6,
+                shadowColor: p.accent.mint,
+                shadowOpacity: 0.7,
+                shadowRadius: 3,
+              }}
+            />
+            <Text
+              className="text-[10px] font-bold tracking-[2px]"
+              style={{ color: p.accent.mint }}
+            >
+              AUTO
+            </Text>
+          </View>
         </View>
-      ) : null}
+
+        <Text className="mt-6 text-2xl font-semibold text-ink">
+          Your portfolio,{"\n"}on paper.
+        </Text>
+        <Text className="mt-2 text-xs leading-5 text-ink-muted">
+          We close your statement automatically at the end of every
+          month — just like a credit card. Open it any time, forever.
+        </Text>
+
+        {/* Next-close panel */}
+        <View
+          className="mt-5 rounded-xl border px-4 py-3"
+          style={{
+            borderColor: withAlpha(p.line.default, 0.6),
+            backgroundColor: withAlpha(p.bg.base, 0.4),
+          }}
+        >
+          {loading ? (
+            <>
+              <Skeleton width={140} height={11} />
+              <View className="h-1.5" />
+              <Skeleton width={200} height={14} />
+            </>
+          ) : nextMonthly ? (
+            <>
+              <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+                Next monthly statement
+              </Text>
+              <View className="mt-1 flex-row items-baseline justify-between">
+                <Text className="text-base font-semibold text-ink">
+                  {nextMonthly.label}
+                </Text>
+                <Text
+                  className="text-[11px] font-semibold"
+                  style={{ color: p.accent.mint }}
+                >
+                  Closes {relativeUntil(nextMonthly.closes_at)}
+                </Text>
+              </View>
+              <Text className="mt-0.5 text-[11px]" style={{ color: p.ink.muted }}>
+                Available {formatCloseDate(nextMonthly.closes_at)}
+                {nextYearly
+                  ? ` · Annual closes ${formatCloseDate(nextYearly.closes_at)}`
+                  : ""}
+              </Text>
+            </>
+          ) : (
+            <Text className="text-xs text-ink-muted">
+              Your next statement window will appear shortly.
+            </Text>
+          )}
+        </View>
+      </View>
     </View>
   );
 }
 
 // ─── row ─────────────────────────────────────────────────────────────────
 
-function ReportTile({
+function ReportRow({
   report,
-  onDownload,
-  busy,
+  onView,
+  onSave,
+  viewBusy,
+  saveBusy,
 }: {
   report: UserReportWire;
-  onDownload: (r: UserReportWire) => void;
-  busy: boolean;
+  onView: (r: UserReportWire) => void;
+  onSave: (r: UserReportWire) => void;
+  viewBusy: boolean;
+  saveBusy: boolean;
 }) {
   const p = useThemedPalette();
   const ready = report.status === "ready";
   const failed = report.status === "failed";
   const dotColor = ready ? p.accent.mint : failed ? p.accent.rose : p.accent.amber;
-  const statusLabel = ready
-    ? `${formatSize(report.file_size_bytes)} · PDF`
-    : failed
-      ? "Failed"
-      : "Generating…";
-  const start = new Date(report.period_start);
-  const yearly = report.period === "yearly";
-  const mono = yearly
-    ? String(start.getUTCFullYear())
-    : (MONTH_NAMES[start.getUTCMonth()] ?? "").slice(0, 3).toUpperCase();
+  const statusLabel = ready ? "Ready" : failed ? "Failed" : "Generating";
+  const busy = viewBusy || saveBusy;
 
   return (
-    <Pressable
-      onPress={() => onDownload(report)}
-      disabled={!ready || busy}
-      accessibilityRole="button"
-      accessibilityLabel={`Open statement ${periodLabel(report)}`}
-      style={({ pressed }) => ({
-        flexBasis: "47%",
-        flexGrow: 1,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: ready ? p.line.default : withAlpha(dotColor, 0.35),
-        backgroundColor: p.bg.elevated,
-        padding: 14,
-        gap: 8,
-        opacity: pressed ? 0.8 : ready ? 1 : 0.75,
-      })}
-    >
+    <View className="flex-row items-center px-4 py-3.5">
       <View
         style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: dotColor,
+          marginRight: 12,
+          shadowColor: dotColor,
+          shadowOpacity: ready ? 0.6 : 0,
+          shadowRadius: 4,
         }}
-      >
-        <Text
-          style={{
-            color: ready ? p.accent.mint : dotColor,
-            fontSize: yearly ? 17 : 19,
-            fontWeight: "800",
-            letterSpacing: yearly ? 0.5 : 2,
-          }}
-        >
-          {mono}
-        </Text>
-        {busy ? (
-          <ActivityIndicator size="small" color={p.accent.mint} />
-        ) : (
-          <View
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: 4,
-              backgroundColor: dotColor,
-              shadowColor: dotColor,
-              shadowOpacity: ready ? 0.6 : 0,
-              shadowRadius: 3,
-            }}
-          />
-        )}
-      </View>
-      <View>
-        <Text className="text-[13px] font-bold text-ink" numberOfLines={1}>
-          {yearly ? "Annual statement" : `${start.getUTCFullYear()} · Monthly`}
-        </Text>
-        <Text className="mt-0.5 text-[10.5px] text-ink-muted" numberOfLines={1}>
-          {statusLabel}
+      />
+
+      <View className="flex-1 pr-3">
+        <View className="flex-row items-baseline">
+          <Text className="text-sm font-semibold text-ink">
+            {periodLabel(report)}
+          </Text>
+          <Text
+            className="ml-2 text-[10px] uppercase tracking-[2px]"
+            style={{ color: p.ink.dim }}
+          >
+            {report.period === "monthly" ? "Monthly" : "Annual"}
+          </Text>
+        </View>
+        <Text className="mt-0.5 text-[11px]" style={{ color: p.ink.muted }}>
+          {ready
+            ? `${formatDate(report.generated_at)} · ${formatSize(report.file_size_bytes)}`
+            : statusLabel}
           {failed && report.error_message ? ` · ${report.error_message}` : ""}
         </Text>
       </View>
-    </Pressable>
+
+      {/* VIEW — opens the PDF in the in-app browser popup. */}
+      <Pressable
+        onPress={() => onView(report)}
+        disabled={!ready || busy}
+        accessibilityRole="button"
+        accessibilityLabel={`View statement ${periodLabel(report)}`}
+        className="flex-row items-center gap-1.5 rounded-full px-3 py-2"
+        style={{
+          backgroundColor: ready
+            ? withAlpha(p.accent.mint, 0.12)
+            : withAlpha(p.line.default, 0.4),
+          opacity: !ready || busy ? 0.6 : 1,
+        }}
+      >
+        {viewBusy ? (
+          <ActivityIndicator size="small" color={p.accent.mint} />
+        ) : (
+          <>
+            <Eye size={13} color={ready ? p.accent.mint : p.ink.dim} strokeWidth={2.5} />
+            <Text
+              className="text-[11px] font-bold tracking-wide"
+              style={{ color: ready ? p.accent.mint : p.ink.dim }}
+            >
+              VIEW
+            </Text>
+          </>
+        )}
+      </Pressable>
+
+      {/* DOWNLOAD — streams the PDF and opens the share sheet. */}
+      <Pressable
+        onPress={() => onSave(report)}
+        disabled={!ready || busy}
+        accessibilityRole="button"
+        accessibilityLabel={`Download statement ${periodLabel(report)}`}
+        className="ml-2 h-9 w-9 items-center justify-center rounded-full border"
+        style={{
+          borderColor: p.line.default,
+          backgroundColor: p.bg.elevated,
+          opacity: !ready || busy ? 0.5 : 1,
+        }}
+      >
+        {saveBusy ? (
+          <ActivityIndicator size="small" color={p.ink.muted} />
+        ) : (
+          <Download size={14} color={p.ink.muted} strokeWidth={2.25} />
+        )}
+      </Pressable>
+    </View>
   );
 }
 
@@ -453,16 +582,15 @@ function ReportTile({
 
 function SkeletonList() {
   return (
-    <View className="flex-row flex-wrap" style={{ gap: 10 }}>
-      {[0, 1, 2, 3].map((i) => (
+    <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
+      {[0, 1, 2].map((i) => (
         <View
           key={i}
-          className="rounded-2xl border border-line bg-bg-elevated p-4"
-          style={{ flexBasis: "47%", flexGrow: 1 }}
+          className={`px-4 py-4 ${i > 0 ? "border-t border-line" : ""}`}
         >
-          <Skeleton width={52} height={18} />
-          <View className="h-2" />
-          <Skeleton width={100} height={12} />
+          <Skeleton width={120} height={12} />
+          <View className="h-1.5" />
+          <Skeleton width={180} height={10} />
         </View>
       ))}
     </View>

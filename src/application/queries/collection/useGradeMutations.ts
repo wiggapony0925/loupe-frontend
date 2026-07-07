@@ -38,12 +38,23 @@ export interface CreateGradeInput {
   notes?: string | null;
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function toCreateBody(input: CreateGradeInput): Record<string, unknown> {
   const body: Record<string, unknown> = {
     grade: input.grade,
     house: input.house,
   };
-  if (input.cardId) body.card_id = input.cardId;
+  // Route the id by SHAPE, not by which prop the caller used: the backend
+  // requires `card_id` to be a local UUID and rejects composite catalog ids
+  // ("pokemontcg:base1-4") with a 422 — those must go as `upstream_id`,
+  // which the server materializes into a local card. Every screen passes
+  // the id it has; this chokepoint sends it in the right field.
+  if (input.cardId) {
+    if (UUID_RE.test(input.cardId)) body.card_id = input.cardId;
+    else body.upstream_id = input.cardId;
+  }
   if (input.upstreamId) body.upstream_id = input.upstreamId;
   if (input.condition != null) body.condition = input.condition;
   if (input.purchasePriceUsd != null)

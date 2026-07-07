@@ -69,8 +69,16 @@ export function ProProvider({ children }: { children: ReactNode }) {
         refreshEntitlements();
       });
     },
-    onError: () =>
-      Alert.alert("Billing unavailable", "Couldn't open billing — please try again."),
+    onError: (err) =>
+      // Surface the backend's actual reason ("Billing is not configured.",
+      // "No billing account yet — start a subscription first.") instead of
+      // a generic retry message the user can't act on.
+      Alert.alert(
+        "Billing",
+        err instanceof Error && err.message
+          ? err.message
+          : "Couldn't open billing — please try again.",
+      ),
   });
 
   // Default to *unlocked* while loading: a returning Pro user never flashes a
