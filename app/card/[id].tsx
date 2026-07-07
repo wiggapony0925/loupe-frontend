@@ -353,13 +353,18 @@ export default function CardDetailScreen() {
                   style={({ pressed }) => ({
                     transform: [{ scale: pressed ? 0.97 : 1 }],
                     position: "relative",
+                    // Soft lift so the art reads as the hero object.
+                    shadowColor: "#000",
+                    shadowOpacity: 0.18,
+                    shadowRadius: 14,
+                    shadowOffset: { width: 0, height: 7 },
                   })}
                 >
                   <CardImage
                     uri={imageUrl}
                     blurhash={blurhash}
-                    width={120}
-                    height={168}
+                    width={128}
+                    height={179}
                     rounded={14}
                     contentFit="contain"
                     priority="high"
@@ -388,34 +393,69 @@ export default function CardDetailScreen() {
                     <Expand size={13} color={p.ink.default} strokeWidth={2.5} />
                   </View>
                 </Pressable>
-                <View style={{ flex: 1, justifyContent: "center", gap: 6 }}>
-                  <Text className="text-xl font-semibold text-ink" numberOfLines={2}>
+                <View style={{ flex: 1, justifyContent: "center", gap: 7 }}>
+                  <Text
+                    numberOfLines={2}
+                    style={{
+                      color: p.ink.default,
+                      fontSize: 21,
+                      lineHeight: 25,
+                      fontWeight: "800",
+                      letterSpacing: -0.4,
+                    }}
+                  >
                     {card.name}
                   </Text>
-                  <Text
-                    className="text-[12px] leading-4 text-ink-muted"
-                    numberOfLines={2}
-                    ellipsizeMode="tail"
-                  >
-                    {card.set_name ?? "Unknown set"}
-                  </Text>
-                  <Text className="text-[11px] text-ink-dim" numberOfLines={1}>
-                    {[card.year, card.number ? `#${card.number}` : null]
-                      .filter(Boolean)
-                      .join(" · ") || "Card details pending"}
-                  </Text>
-                  <Text
+
+                  {/* Set line — official set symbol when the catalog has one. */}
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    {card.set?.symbol?.url ? (
+                      <CardImage
+                        uri={card.set.symbol.url}
+                        width={15}
+                        height={15}
+                        rounded={0}
+                        contentFit="contain"
+                        priority="low"
+                        alt=""
+                      />
+                    ) : null}
+                    <Text
+                      className="text-[12.5px] leading-4 text-ink-muted"
+                      numberOfLines={2}
+                      ellipsizeMode="tail"
+                      style={{ flexShrink: 1 }}
+                    >
+                      {card.set_name ?? "Unknown set"}
+                    </Text>
+                  </View>
+
+                  {/* Identity chips — TCG (tinted) · rarity · number/run · year */}
+                  <View
                     style={{
-                      color: p.ink.dim,
-                      fontSize: 10,
-                      fontWeight: "800",
-                      letterSpacing: 1,
-                      marginTop: 6,
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: 5,
+                      marginTop: 2,
                     }}
-                    numberOfLines={1}
                   >
-                    {formatTcgName(card.tcg) ?? "Trading card"}
-                  </Text>
+                    <HeroChip
+                      label={formatTcgName(card.tcg) ?? "TCG"}
+                      tint={heroTcgTint(card.tcg, p)}
+                      solid
+                    />
+                    {card.rarity ? <HeroChip label={card.rarity} /> : null}
+                    {card.number ? (
+                      <HeroChip
+                        label={
+                          card.set?.printed_total
+                            ? `#${card.number} / ${card.set.printed_total}`
+                            : `#${card.number}`
+                        }
+                      />
+                    ) : null}
+                    {card.year ? <HeroChip label={String(card.year)} /> : null}
+                  </View>
                 </View>
               </View>
 
@@ -784,7 +824,13 @@ export default function CardDetailScreen() {
                   guests/non-owners). Anchored at the bottom of the screen so
                   the market story reads first and the personal ledger closes
                   it out. */}
-              <CardOwnershipSection cardId={cardId} />
+              <CardOwnershipSection
+                cardId={cardId}
+                cardName={card.name}
+                cardImage={imageUrl ?? undefined}
+                cardSet={card.set_name ?? undefined}
+                cardYear={card.year ?? undefined}
+              />
 
               {/* 10. Collapsible card details — flat header */}
               <Pressable
@@ -844,5 +890,63 @@ export default function CardDetailScreen() {
         onHide={() => setBanner(null)}
       />
     </SafeAreaView>
+  );
+}
+
+/** Brand tint per game — matches the search-row badge colors. */
+function heroTcgTint(tcg: string, p: ReturnType<typeof useThemedPalette>): string {
+  switch (tcg) {
+    case "pokemon":
+      return p.accent.amber;
+    case "magic":
+      return p.accent.blue;
+    case "yugioh":
+      return p.accent.purple;
+    default:
+      return p.accent.mint;
+  }
+}
+
+/** Small identity chip under the hero title. `solid` = tinted TCG pill. */
+function HeroChip({
+  label,
+  tint,
+  solid = false,
+}: {
+  label: string;
+  tint?: string;
+  solid?: boolean;
+}) {
+  const p = useThemedPalette();
+  const color = tint ?? p.ink.muted;
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 999,
+        backgroundColor: solid ? withAlpha(color, 0.13) : "transparent",
+        borderWidth: solid ? 0 : 1,
+        borderColor: solid ? "transparent" : p.line.default,
+      }}
+    >
+      {solid ? (
+        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: color }} />
+      ) : null}
+      <Text
+        numberOfLines={1}
+        style={{
+          color: solid ? color : p.ink.muted,
+          fontSize: 10.5,
+          fontWeight: "700",
+          letterSpacing: 0.3,
+        }}
+      >
+        {label}
+      </Text>
+    </View>
   );
 }

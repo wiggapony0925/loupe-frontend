@@ -20,10 +20,10 @@ import { Sparkline } from "@/presentation/components/Sparkline";
 import { usePressScale } from "@/presentation/components/usePressScale";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
-const THUMB_W = 52;
-const THUMB_H = 72;
-const SPARK_W = 56;
-const SPARK_H = 24;
+const THUMB_W = 60;
+const THUMB_H = 84;
+const SPARK_W = 62;
+const SPARK_H = 26;
 
 export interface CardSparkRowBadge {
   label: string;
@@ -96,7 +96,7 @@ function CardSparkRowImpl({
     >
       <Animated.View
         style={{ transform: [{ scale }] }}
-        className={`flex-row items-center gap-3 px-1 py-2.5 ${
+        className={`flex-row items-center gap-3.5 px-1 py-3 ${
           bordered ? "border-t border-line/60" : ""
         }`}
       >
@@ -129,9 +129,9 @@ function CardSparkRowImpl({
             numberOfLines={1}
             style={{
               color: p.ink.default,
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: "700",
-              letterSpacing: -0.2,
+              letterSpacing: -0.3,
             }}
           >
             {title}
@@ -149,7 +149,7 @@ function CardSparkRowImpl({
                 <Text
                   style={{
                     color: badge.tint,
-                    fontSize: 9.5,
+                    fontSize: 10.5,
                     fontWeight: "800",
                     letterSpacing: 0.4,
                   }}
@@ -161,7 +161,7 @@ function CardSparkRowImpl({
             {meta ? (
               <Text
                 numberOfLines={1}
-                style={{ flexShrink: 1, color: p.ink.muted, fontSize: 11.5 }}
+                style={{ flexShrink: 1, color: p.ink.muted, fontSize: 12.5 }}
               >
                 {meta}
               </Text>
@@ -185,28 +185,28 @@ function CardSparkRowImpl({
         ) : null}
 
         {/* Right column — price + delta% (or tiny label) */}
-        <View style={{ minWidth: 72, alignItems: "flex-end", gap: 2 }}>
+        <View style={{ minWidth: 78, alignItems: "flex-end", gap: 2 }}>
           {priceUsd != null ? (
             <Price
               usd={priceUsd}
               numberOfLines={1}
               style={{
                 color: p.ink.default,
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: "800",
-                letterSpacing: -0.3,
+                letterSpacing: -0.35,
                 fontVariant: ["tabular-nums"],
               }}
             />
           ) : (
-            <Text style={{ color: p.ink.dim, fontSize: 15, fontWeight: "700" }}>—</Text>
+            <Text style={{ color: p.ink.dim, fontSize: 16, fontWeight: "700" }}>—</Text>
           )}
           {delta != null ? (
             <Text
               numberOfLines={1}
               style={{
                 color: deltaTint,
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: "700",
                 fontVariant: ["tabular-nums"],
               }}

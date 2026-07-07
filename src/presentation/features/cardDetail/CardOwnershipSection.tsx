@@ -23,6 +23,7 @@ import {
   ChevronUp,
   Layers,
   PencilLine,
+  Plus,
   ScanLine,
   ShieldCheck,
   Upload,
@@ -116,7 +117,22 @@ function tierTint(tier: HoldingTier, p: ReturnType<typeof useThemedPalette>): st
   return p.ink.muted;
 }
 
-export function CardOwnershipSection({ cardId }: { cardId: string }) {
+export interface CardOwnershipSectionProps {
+  cardId: string;
+  /** Prefill for the "Add another copy" quick action (grade form). */
+  cardName?: string;
+  cardImage?: string;
+  cardSet?: string;
+  cardYear?: number;
+}
+
+export function CardOwnershipSection({
+  cardId,
+  cardName,
+  cardImage,
+  cardSet,
+  cardYear,
+}: CardOwnershipSectionProps) {
   const p = useThemedPalette();
   const { data } = useCardOwnership(cardId);
   const [openTiers, setOpenTiers] = useState<Set<string>>(new Set());
@@ -301,6 +317,50 @@ export function CardOwnershipSection({ cardId }: { cardId: string }) {
             </View>
           );
         })}
+
+        {/* Quick path to grow the position — prefilled grade form. */}
+        <Pressable
+          onPress={() =>
+            router.push(
+              routes.gradeNew({
+                cardId,
+                cardName,
+                cardImage,
+                cardSet,
+                cardYear,
+              }),
+            )
+          }
+          accessibilityRole="button"
+          accessibilityLabel="Add another copy of this card"
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            paddingVertical: 12,
+            paddingHorizontal: 2,
+            borderTopWidth: 1,
+            borderTopColor: withAlpha(p.line.default, 0.6),
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
+          <View
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 11,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: withAlpha(p.accent.mint, 0.14),
+            }}
+          >
+            <Plus size={13} color={p.accent.mint} strokeWidth={2.75} />
+          </View>
+          <Text style={{ flex: 1, color: p.accent.mint, fontSize: 13.5, fontWeight: "700" }}>
+            Add another copy
+          </Text>
+          <ChevronRight size={15} color={p.ink.dim} />
+        </Pressable>
       </View>
     </View>
   );
@@ -377,6 +437,13 @@ function TierRow({
         </View>
         <Text style={{ color: p.ink.dim, fontSize: 10.5, fontWeight: "600" }}>
           {sharePct != null ? `${sharePct.toFixed(0)}% of position` : count > 1 ? "copies" : tier.isGraded ? "graded slab" : "raw"}
+          {count > 1 && tier.valueUsd != null ? (
+            <Text style={{ color: p.ink.dim, fontSize: 10.5, fontWeight: "600" }}>
+              {" · avg "}
+              <PlainMoney usd={tier.valueUsd / count} />
+              {"/copy"}
+            </Text>
+          ) : null}
           {tier.plUsd != null ? " · " : ""}
           {tier.plUsd != null ? (
             <Text
