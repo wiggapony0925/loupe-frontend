@@ -7,6 +7,13 @@
  */
 import React from "react";
 import { Text, View } from "react-native";
+import {
+  Award,
+  Layers,
+  Sparkles,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react-native";
 import { buildBars } from "@loupe/chart";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useMoney } from "@/presentation/components/Price";
@@ -193,29 +200,101 @@ interface StatsGridProps {
 
 export function StatsGrid({ stats }: StatsGridProps) {
   const { format } = useMoney();
+  const p = useThemedPalette();
   if (stats.holdings === 0) return null;
+  // 2×2 tinted hero metrics (web Analytics MetricCard parity).
   return (
     <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-      <StatCell label="Holdings" value={stats.holdings.toString()} />
-      <StatCell label="Sets" value={stats.uniqueSets.toString()} />
-      <StatCell label="Avg Grade" value={stats.avgGrade.toFixed(2)} />
-      <StatCell label="Gem Rate" value={`${stats.gemRatePct.toFixed(0)}%`} />
-      <StatCell label="Avg Value" value={format(stats.avgValueUsd)} />
-      <StatCell label="Oldest" value={stats.oldestYear?.toString() ?? "—"} />
+      <HeroCell
+        tint={p.accent.mint}
+        icon={Wallet}
+        label="Collection value"
+        value={format(stats.totalValueUsd)}
+        caption={`${stats.holdings.toLocaleString()} cards`}
+      />
+      <HeroCell
+        tint={p.accent.blue}
+        icon={Layers}
+        label="Holdings"
+        value={stats.holdings.toLocaleString()}
+        caption={`${stats.uniqueSets} ${stats.uniqueSets === 1 ? "set" : "sets"} · avg ${format(stats.avgValueUsd)}`}
+      />
+      <HeroCell
+        tint={p.accent.purple}
+        icon={Award}
+        label="Avg grade"
+        value={stats.avgGrade ? stats.avgGrade.toFixed(1) : "—"}
+        caption={`${stats.gemRatePct.toFixed(0)}% gem rate`}
+      />
+      <HeroCell
+        tint={p.accent.amber}
+        icon={Sparkles}
+        label="Oldest card"
+        value={stats.oldestYear?.toString() ?? "—"}
+        caption={stats.oldestYear ? "vintage anchor" : "no dated cards yet"}
+      />
     </View>
   );
 }
 
-function StatCell({ label, value }: { label: string; value: string }) {
+function HeroCell({
+  tint,
+  icon: Icon,
+  label,
+  value,
+  caption,
+}: {
+  tint: string;
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  caption: string;
+}) {
+  const p = useThemedPalette();
   return (
     <View
-      className="rounded-xl border border-line bg-bg-elevated px-3 py-2.5"
-      style={{ flexBasis: "31%", flexGrow: 1 }}
+      style={{
+        flexBasis: "47%",
+        flexGrow: 1,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: withAlpha(tint, 0.28),
+        backgroundColor: withAlpha(tint, 0.06),
+        paddingHorizontal: 13,
+        paddingVertical: 12,
+        gap: 6,
+      }}
     >
-      <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-ink-dim">
-        {label}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <Icon size={13} color={tint} strokeWidth={2.5} />
+        <Text
+          numberOfLines={1}
+          style={{
+            color: p.ink.dim,
+            fontSize: 9,
+            fontWeight: "800",
+            letterSpacing: 1.4,
+            textTransform: "uppercase",
+          }}
+        >
+          {label}
+        </Text>
+      </View>
+      <Text
+        numberOfLines={1}
+        style={{
+          color: p.ink.default,
+          fontSize: 19,
+          fontWeight: "800",
+          letterSpacing: -0.4,
+          fontVariant: ["tabular-nums"],
+        }}
+      >
+        {value}
       </Text>
-      <Text className="mt-1 text-base font-bold text-ink">{value}</Text>
+      <Text numberOfLines={1} style={{ color: p.ink.muted, fontSize: 10.5 }}>
+        {caption}
+      </Text>
     </View>
   );
 }

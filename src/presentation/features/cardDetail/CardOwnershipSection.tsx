@@ -1,14 +1,18 @@
 /**
- * CardOwnershipSection — the signed-in user's own copies of a card ("Your
- * copies"), from the server-composed `GET /v1/cards/{id}/ownership` (auth).
+ * CardOwnershipSection — "Your position" in this card, from the
+ * server-composed `GET /v1/cards/{id}/ownership` (auth).
  *
- * Big collections stay readable: copies are CONSOLIDATED by grade tier
- * (house + grade + condition). Fifteen PSA-10s collapse into one "PSA 10 ×15"
- * row with rolled-up value/P-L; tapping a tier expands its individual copies,
- * and tapping a copy opens that holding's editor (`/grade/[id]`).
+ * Robinhood-position-panel treatment:
+ *   • Hero panel (statement metal-card aesthetic): position value big,
+ *     colored P/L, cost basis + copies meta, and a stacked SHARE BAR
+ *     showing how the position's value splits across grade tiers.
+ *   • Tier rows keyed to the bar by colored dots: grade chip · count ·
+ *     value · share %. Single-copy tiers open the holding editor
+ *     directly; multi-copy tiers expand into per-copy rows.
  *
- * Renders nothing for guests, non-owners, or before the endpoint returns —
- * safe to mount unconditionally.
+ * Copies are CONSOLIDATED by tier: graded → (house, grade, condition);
+ * raw → condition only (a placeholder grade on an ungraded card must
+ * never splinter the list). Renders nothing for guests/non-owners.
  */
 import React, { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -103,6 +107,15 @@ function buildTiers(holdings: CardHoldingWire[]): HoldingTier[] {
   });
 }
 
+/** Tint for a tier — grade color for slabs, muted ink ramp for raw. */
+function tierTint(tier: HoldingTier, p: ReturnType<typeof useThemedPalette>): string {
+  if (tier.isGraded) {
+    const g = Number(tier.grade);
+    return gradeColor(Number.isFinite(g) ? g : 0);
+  }
+  return p.ink.muted;
+}
+
 export function CardOwnershipSection({ cardId }: { cardId: string }) {
   const p = useThemedPalette();
   const { data } = useCardOwnership(cardId);
@@ -118,6 +131,11 @@ export function CardOwnershipSection({ cardId }: { cardId: string }) {
   const pl = num(data.unrealized_pl_usd);
   const plPct = data.unrealized_pl_pct;
 
+  // Share-of-position per tier (drives the stacked bar + the % column).
+  const valuedTotal = tiers.reduce((s, t) => s + (t.valueUsd ?? 0), 0);
+  const shareOf = (t: HoldingTier) =>
+    valuedTotal > 0 && t.valueUsd != null ? (t.valueUsd / valuedTotal) * 100 : null;
+
   const toggleTier = (key: string) =>
     setOpenTiers((prev) => {
       const next = new Set(prev);
@@ -127,81 +145,148 @@ export function CardOwnershipSection({ cardId }: { cardId: string }) {
     });
 
   return (
-    <View style={{ gap: 10 }}>
+    <View style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <Layers size={14} color={p.ink.dim} strokeWidth={2.25} />
         <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-          Your Copies
+          Your Position
         </Text>
-        <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "700" }}>
-          ×{data.copies}
-        </Text>
-      </View>
-
-      {/* Rolled-up summary — one flat strip. */}
-      {(costBasis != null || value != null) && (
         <View
           style={{
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: p.line.default,
-            backgroundColor: p.bg.elevated,
-            overflow: "hidden",
+            paddingHorizontal: 7,
+            paddingVertical: 2,
+            borderRadius: 999,
+            backgroundColor: withAlpha(p.accent.mint, 0.14),
           }}
         >
-          <View style={{ flexDirection: "row", gap: 8, padding: 12 }}>
-            <SummaryCell
-              label="Cost basis"
-              value={costBasis != null ? <Price usd={costBasis} className="text-[15px] font-extrabold text-ink" /> : null}
-            />
-            <SummaryCell
-              label="Value"
-              value={value != null ? <Price usd={value} className="text-[15px] font-extrabold text-ink" /> : null}
-            />
-            <SummaryCell
-              label="Unrealized P/L"
-              value={pl != null ? <SignedMoney usd={pl} pct={plPct} size={15} /> : null}
-            />
-          </View>
-          {/* No purchase prices yet → P/L can't be computed. Say why and
-              point at the fix instead of leaving unexplained dashes. */}
-          {costBasis == null ? (
-            <View
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderTopWidth: 1,
-                borderTopColor: withAlpha(p.line.default, 0.7),
-                backgroundColor: withAlpha(p.bg.sunken, 0.5),
-              }}
-            >
-              <Text style={{ color: p.ink.dim, fontSize: 10.5, fontWeight: "600" }}>
-                Add what you paid to a copy to unlock cost basis & P/L — tap any
-                copy below.
-              </Text>
-            </View>
-          ) : null}
+          <Text style={{ color: p.accent.mint, fontSize: 10, fontWeight: "800" }}>
+            ×{data.copies} {data.copies === 1 ? "copy" : "copies"}
+          </Text>
         </View>
-      )}
+      </View>
 
-      {/* Consolidated grade tiers. A single-copy tier is itself the row —
-          tap goes straight to the holding editor, no pointless expander. */}
+      {/* ── Hero panel — statement metal-card aesthetic ── */}
       <View
         style={{
-          borderRadius: 14,
+          borderRadius: 18,
           borderWidth: 1,
-          borderColor: p.line.default,
-          backgroundColor: p.bg.elevated,
+          borderColor: withAlpha(p.accent.mint, 0.25),
+          backgroundColor: p.bg.sunken,
           overflow: "hidden",
         }}
       >
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: -50,
+            right: -50,
+            width: 190,
+            height: 190,
+            borderRadius: 95,
+            backgroundColor: withAlpha(p.accent.mint, 0.07),
+          }}
+        />
+        <View style={{ padding: 16, gap: 12 }}>
+          <View>
+            <Text
+              style={{
+                color: p.ink.dim,
+                fontSize: 9,
+                fontWeight: "800",
+                letterSpacing: 1.6,
+              }}
+            >
+              POSITION VALUE
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "flex-end",
+                flexWrap: "wrap",
+                columnGap: 10,
+                marginTop: 3,
+              }}
+            >
+              {value != null ? (
+                <Price
+                  usd={value}
+                  className="text-[28px] font-extrabold tracking-tight text-ink"
+                />
+              ) : (
+                <Text style={{ color: p.ink.muted, fontSize: 28, fontWeight: "800" }}>
+                  —
+                </Text>
+              )}
+              {pl != null ? (
+                <View style={{ paddingBottom: 4 }}>
+                  <SignedMoney usd={pl} pct={plPct} size={13} />
+                </View>
+              ) : null}
+            </View>
+            <Text style={{ color: p.ink.muted, fontSize: 11.5, marginTop: 3 }}>
+              {costBasis != null ? (
+                <>
+                  Cost basis <Price usd={costBasis} className="text-[11.5px] font-bold text-ink" />
+                  {" · "}
+                </>
+              ) : null}
+              {data.copies} {data.copies === 1 ? "copy" : "copies"} across{" "}
+              {tiers.length} {tiers.length === 1 ? "tier" : "tiers"}
+            </Text>
+          </View>
+
+          {/* Stacked tier share bar — how the position's value splits. */}
+          {valuedTotal > 0 ? (
+            <View
+              style={{
+                flexDirection: "row",
+                height: 8,
+                borderRadius: 4,
+                overflow: "hidden",
+                backgroundColor: withAlpha(p.ink.muted, 0.14),
+              }}
+            >
+              {tiers.map((t) => {
+                const share = shareOf(t);
+                if (share == null || share <= 0) return null;
+                return (
+                  <View
+                    key={t.key}
+                    style={{
+                      width: `${share}%`,
+                      backgroundColor: tierTint(t, p),
+                      borderRightWidth: 1,
+                      borderRightColor: p.bg.sunken,
+                    }}
+                  />
+                );
+              })}
+            </View>
+          ) : null}
+
+          {/* No purchase prices yet → P/L can't be computed. Say why and
+              point at the fix instead of leaving unexplained dashes. */}
+          {costBasis == null ? (
+            <Text style={{ color: p.ink.dim, fontSize: 10.5, fontWeight: "600" }}>
+              Add what you paid to a copy to unlock cost basis & P/L — tap any
+              tier below.
+            </Text>
+          ) : null}
+        </View>
+      </View>
+
+      {/* ── Tier rows — flat, hairline-separated, keyed to the bar ── */}
+      <View>
         {tiers.map((tier, i) => {
           const single = tier.holdings.length === 1;
           const open = openTiers.has(tier.key);
           return (
-            <View key={tier.key} style={i > 0 ? { borderTopWidth: 1, borderTopColor: withAlpha(p.line.default, 0.7) } : undefined}>
+            <View key={tier.key}>
               <TierRow
                 tier={tier}
+                sharePct={shareOf(tier)}
+                bordered={i > 0}
                 expandable={!single}
                 open={open}
                 onPress={() =>
@@ -225,20 +310,21 @@ export function CardOwnershipSection({ cardId }: { cardId: string }) {
 
 function TierRow({
   tier,
+  sharePct,
+  bordered,
   expandable,
   open,
   onPress,
 }: {
   tier: HoldingTier;
+  sharePct: number | null;
+  bordered: boolean;
   expandable: boolean;
   open: boolean;
   onPress: () => void;
 }) {
   const p = useThemedPalette();
-  const gradeNum = Number(tier.grade);
-  const tint = tier.isGraded
-    ? gradeColor(Number.isFinite(gradeNum) ? gradeNum : 0)
-    : p.ink.muted;
+  const tint = tierTint(tier, p);
   const count = tier.holdings.length;
 
   return (
@@ -254,57 +340,66 @@ function TierRow({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        paddingHorizontal: 12,
         paddingVertical: 12,
-        backgroundColor: pressed ? p.bg.sunken : "transparent",
+        paddingHorizontal: 2,
+        borderTopWidth: bordered ? 1 : 0,
+        borderTopColor: withAlpha(p.line.default, 0.6),
+        backgroundColor: pressed ? p.bg.elevated : "transparent",
+        borderRadius: pressed ? 10 : 0,
       })}
     >
-      {/* Grade badge */}
-      <View
-        style={{
-          minWidth: 54,
-          alignItems: "center",
-          paddingHorizontal: 8,
-          paddingVertical: 5,
-          borderRadius: 9,
-          backgroundColor: withAlpha(tint, 0.14),
-        }}
-      >
-        <Text style={{ color: tint, fontSize: 12, fontWeight: "800" }} numberOfLines={1}>
-          {tier.label}
-        </Text>
-      </View>
+      {/* Legend dot keyed to the hero share bar */}
+      <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: tint }} />
 
-      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 6 }}>
-        {count > 1 ? (
-          <View
-            style={{
-              paddingHorizontal: 7,
-              paddingVertical: 2,
-              borderRadius: 999,
-              backgroundColor: withAlpha(p.ink.muted, 0.12),
-            }}
-          >
-            <Text style={{ color: p.ink.muted, fontSize: 11, fontWeight: "800" }}>
-              ×{count}
+      {/* Tier identity */}
+      <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={{ color: p.ink.default, fontSize: 14.5, fontWeight: "800" }}>
+            {tier.label}
+          </Text>
+          {count > 1 ? (
+            <View
+              style={{
+                paddingHorizontal: 6,
+                paddingVertical: 1.5,
+                borderRadius: 999,
+                backgroundColor: withAlpha(tint, 0.14),
+              }}
+            >
+              <Text style={{ color: tint, fontSize: 10, fontWeight: "800" }}>
+                ×{count}
+              </Text>
+            </View>
+          ) : null}
+          {tier.isGraded ? (
+            <ShieldCheck size={12} color={p.accent.mint} strokeWidth={2.5} />
+          ) : null}
+        </View>
+        <Text style={{ color: p.ink.dim, fontSize: 10.5, fontWeight: "600" }}>
+          {sharePct != null ? `${sharePct.toFixed(0)}% of position` : count > 1 ? "copies" : tier.isGraded ? "graded slab" : "raw"}
+          {tier.plUsd != null ? " · " : ""}
+          {tier.plUsd != null ? (
+            <Text
+              style={{
+                color: tier.plUsd >= 0 ? p.accent.mint : p.accent.rose,
+                fontSize: 10.5,
+                fontWeight: "700",
+              }}
+            >
+              {tier.plUsd >= 0 ? "+" : "−"}
+              <PlainMoney usd={Math.abs(tier.plUsd)} />
             </Text>
-          </View>
-        ) : null}
-        {tier.isGraded ? (
-          <ShieldCheck size={12} color={p.accent.mint} strokeWidth={2.5} />
-        ) : null}
-        <Text style={{ color: p.ink.dim, fontSize: 11, fontWeight: "600" }} numberOfLines={1}>
-          {count > 1 ? "copies" : tier.isGraded ? "graded" : "raw"}
+          ) : null}
         </Text>
       </View>
 
-      <View style={{ alignItems: "flex-end", gap: 1 }}>
+      {/* Value */}
+      <View style={{ alignItems: "flex-end" }}>
         {tier.valueUsd != null ? (
-          <Price usd={tier.valueUsd} className="text-[14px] font-extrabold text-ink" />
+          <Price usd={tier.valueUsd} className="text-[15px] font-extrabold text-ink" />
         ) : (
-          <Text style={{ color: p.ink.muted, fontSize: 14, fontWeight: "800" }}>—</Text>
+          <Text style={{ color: p.ink.muted, fontSize: 15, fontWeight: "800" }}>—</Text>
         )}
-        {tier.plUsd != null ? <SignedMoney usd={tier.plUsd} size={11} /> : null}
       </View>
 
       {expandable ? (
@@ -345,9 +440,10 @@ function CopyRow({ h }: { h: CardHoldingWire }) {
         alignItems: "center",
         gap: 8,
         paddingVertical: 10,
-        paddingRight: 12,
-        paddingLeft: 24,
-        backgroundColor: pressed ? p.bg.sunken : withAlpha(p.bg.sunken, 0.45),
+        paddingRight: 4,
+        paddingLeft: 27,
+        backgroundColor: pressed ? p.bg.sunken : "transparent",
+        borderRadius: pressed ? 10 : 0,
       })}
     >
       {acq ? <acq.Icon size={12} color={p.ink.dim} strokeWidth={2.25} /> : null}
@@ -368,16 +464,10 @@ function CopyRow({ h }: { h: CardHoldingWire }) {
 
 /* ─── atoms ───────────────────────────────────────────────────────────── */
 
-function SummaryCell({ label, value }: { label: string; value: React.ReactNode }) {
-  const p = useThemedPalette();
-  return (
-    <View style={{ flex: 1, gap: 2 }}>
-      <Text style={{ color: p.ink.dim, fontSize: 9, letterSpacing: 1.1, fontWeight: "700" }}>
-        {label.toUpperCase()}
-      </Text>
-      {value ?? <Text style={{ color: p.ink.muted, fontSize: 15, fontWeight: "800" }}>—</Text>}
-    </View>
-  );
+/** Plain converted money inside a colored Text run (inherits parent color). */
+function PlainMoney({ usd }: { usd: number }) {
+  const { format } = useMoney();
+  return <>{format(usd)}</>;
 }
 
 /** Signed P/L in the user's display currency (green/red). */

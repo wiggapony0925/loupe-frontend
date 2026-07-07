@@ -33,7 +33,10 @@ import { COPY } from "@/shared/copy";
 import { normalizeError } from "@/shared/errors";
 import { Price, useMoney } from "@/presentation/components/Price";
 import { useThemedPalette } from "@/presentation/theme/tokens";
-import type { AnalyticsMoverRow } from "@/infrastructure/repositories/analyticsRepository";
+import type {
+  AnalyticsKpis,
+  AnalyticsMoverRow,
+} from "@/infrastructure/repositories/analyticsRepository";
 
 export default function AnalyticsScreen() {
   useThemedPalette();
@@ -97,6 +100,7 @@ export default function AnalyticsScreen() {
         <PortfolioChart
           fallbackTotal={data?.stats.totalValueUsd ?? 0}
           bleedX={20}
+          showPsa10Overlay
         />
 
         <View>
@@ -179,6 +183,15 @@ export default function AnalyticsScreen() {
             <SkeletonBlock height={140} />
           ) : (
             <GradeBars buckets={data.gradeDistribution} />
+          )}
+        </View>
+
+        <View>
+          <SectionHeader eyebrow="Activity" title="Scanning" />
+          {loading || !data ? (
+            <SkeletonBlock height={120} />
+          ) : (
+            <ScanningKpis kpis={data.kpis} />
           )}
         </View>
 
@@ -277,6 +290,50 @@ function MoverRow({ row }: { row: AnalyticsMoverRow }) {
         </Text>
       </View>
     </Pressable>
+  );
+}
+
+/** Scanning activity KPIs — total scans, scan avg grade, gem rate, and the
+ *  grading-house split (web Analytics "Scanning" section parity). */
+function ScanningKpis({ kpis }: { kpis: AnalyticsKpis }) {
+  return (
+    <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+      <KpiCell label="Total scans" value={kpis.totalScans.toLocaleString()} />
+      <KpiCell
+        label="Scan avg grade"
+        value={kpis.avgGrade ? kpis.avgGrade.toFixed(1) : "—"}
+      />
+      <KpiCell label="Scan gem rate" value={`${kpis.gemRatePct.toFixed(0)}%`} />
+      <KpiCell
+        label="Graders"
+        value={`PSA ${kpis.graderSplit.psa} · BGS ${kpis.graderSplit.bgs} · CGC ${kpis.graderSplit.cgc}`}
+        wide
+      />
+    </View>
+  );
+}
+
+function KpiCell({
+  label,
+  value,
+  wide = false,
+}: {
+  label: string;
+  value: string;
+  wide?: boolean;
+}) {
+  return (
+    <View
+      className="rounded-xl border border-line bg-bg-elevated px-3 py-2.5"
+      style={{ flexBasis: wide ? "100%" : "31%", flexGrow: 1 }}
+    >
+      <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-ink-dim">
+        {label}
+      </Text>
+      <Text numberOfLines={1} className="mt-1 text-base font-bold text-ink">
+        {value}
+      </Text>
+    </View>
   );
 }
 

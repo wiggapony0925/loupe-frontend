@@ -359,7 +359,9 @@ export function PortfolioChart({
           </Pressable>
         </View>
 
-        <View className="mt-1 flex-row items-center gap-2">
+        {/* flex-wrap: the delta + date + basis toggle + benchmark chip can
+            exceed one line on small phones — wrap instead of clipping. */}
+        <View className="mt-1 flex-row flex-wrap items-center gap-2">
           <Text style={{ color: tint, fontSize: 12 }}>{up ? "▲" : "▼"}</Text>
           <Text style={{ color: tint, fontSize: 14, fontWeight: "600" }}>
             {up ? "+" : ""}

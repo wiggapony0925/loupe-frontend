@@ -58,15 +58,6 @@ function formatSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function periodLabel(r: UserReportWire): string {
   const start = new Date(r.period_start);
   if (r.period === "yearly") return String(start.getUTCFullYear());
@@ -248,21 +239,14 @@ export function ReportsSection() {
           ) : reports.length === 0 ? (
             <EmptyState nextClose={nextMonthly?.closes_at ?? null} />
           ) : (
-            <View
-              className="overflow-hidden rounded-2xl border border-line"
-              style={{ backgroundColor: p.bg.elevated }}
-            >
-              {visibleReports.map((r, i) => (
-                <View
+            <View className="flex-row flex-wrap" style={{ gap: 10 }}>
+              {visibleReports.map((r) => (
+                <ReportTile
                   key={r.id}
-                  className={i > 0 ? "border-t border-line" : ""}
-                >
-                  <ReportRow
-                    report={r}
-                    onDownload={onDownload}
-                    busy={downloadingId === r.id}
-                  />
-                </View>
+                  report={r}
+                  onDownload={onDownload}
+                  busy={downloadingId === r.id}
+                />
               ))}
             </View>
           )}
@@ -305,130 +289,79 @@ function NextStatementHeroCard({
 
   return (
     <View
-      className="mt-2 overflow-hidden rounded-2xl border"
+      className="mt-2 flex-row items-center rounded-2xl border px-4 py-3"
       style={{
+        gap: 12,
         borderColor: withAlpha(p.accent.mint, 0.25),
-        backgroundColor: p.bg.sunken,
+        backgroundColor: withAlpha(p.accent.mint, 0.05),
       }}
     >
-      {/* Sheen / glow accents (Amex Black Card vibe) */}
+      {/* Pulsing AUTO dot — statements close themselves. */}
       <View
-        pointerEvents="none"
         style={{
-          position: "absolute",
-          top: -40,
-          right: -40,
-          width: 220,
-          height: 220,
-          borderRadius: 110,
-          backgroundColor: withAlpha(p.accent.mint, 0.08),
+          width: 34,
+          height: 34,
+          borderRadius: 12,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: withAlpha(p.accent.mint, 0.14),
         }}
-      />
-      <View
-        pointerEvents="none"
-        style={{
-          position: "absolute",
-          bottom: -60,
-          left: -40,
-          width: 180,
-          height: 180,
-          borderRadius: 90,
-          backgroundColor: withAlpha(p.accent.blue, 0.05),
-        }}
-      />
-
-      <View className="p-5">
-        <View className="flex-row items-center justify-between">
+      >
+        <View
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: p.accent.mint,
+            shadowColor: p.accent.mint,
+            shadowOpacity: 0.8,
+            shadowRadius: 4,
+          }}
+        />
+      </View>
+      <View style={{ flex: 1 }}>
+        {loading ? (
+          <>
+            <Skeleton width={150} height={12} />
+            <View className="h-1.5" />
+            <Skeleton width={110} height={10} />
+          </>
+        ) : nextMonthly ? (
+          <>
+            <Text className="text-[13px] font-bold text-ink" numberOfLines={1}>
+              Next statement · {nextMonthly.label}
+            </Text>
+            <Text className="mt-0.5 text-[11px] text-ink-muted" numberOfLines={1}>
+              Auto-closes {formatCloseDate(nextMonthly.closes_at)}
+              {nextYearly ? ` · annual ${formatCloseDate(nextYearly.closes_at)}` : ""}
+            </Text>
+          </>
+        ) : (
+          <Text className="text-[12px] text-ink-muted">
+            Your next statement window will appear shortly.
+          </Text>
+        )}
+      </View>
+      {!loading && nextMonthly ? (
+        <View
+          className="rounded-full px-2.5 py-1"
+          style={{ backgroundColor: withAlpha(p.accent.mint, 0.14) }}
+        >
           <Text
-            className="text-[10px] font-semibold uppercase tracking-[4px]"
+            className="text-[10px] font-extrabold tracking-wide"
             style={{ color: p.accent.mint }}
           >
-            Loupe · Statement
+            {relativeUntil(nextMonthly.closes_at).replace("in ", "").toUpperCase()}
           </Text>
-          <View
-            className="flex-row items-center rounded-md px-2 py-0.5"
-            style={{ backgroundColor: withAlpha(p.accent.mint, 0.12) }}
-          >
-            <View
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: p.accent.mint,
-                marginRight: 6,
-                shadowColor: p.accent.mint,
-                shadowOpacity: 0.7,
-                shadowRadius: 3,
-              }}
-            />
-            <Text
-              className="text-[10px] font-bold tracking-[2px]"
-              style={{ color: p.accent.mint }}
-            >
-              AUTO
-            </Text>
-          </View>
         </View>
-
-        <Text className="mt-6 text-2xl font-semibold text-ink">
-          Your portfolio,{"\n"}on paper.
-        </Text>
-        <Text className="mt-2 text-xs leading-5 text-ink-muted">
-          We close your statement automatically at the end of every
-          month — just like a credit card. Open it any time, forever.
-        </Text>
-
-        {/* Next-close panel */}
-        <View
-          className="mt-5 rounded-xl border px-4 py-3"
-          style={{
-            borderColor: withAlpha(p.line.default, 0.6),
-            backgroundColor: withAlpha(p.bg.base, 0.4),
-          }}
-        >
-          {loading ? (
-            <>
-              <Skeleton width={140} height={11} />
-              <View className="h-1.5" />
-              <Skeleton width={200} height={14} />
-            </>
-          ) : nextMonthly ? (
-            <>
-              <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-                Next monthly statement
-              </Text>
-              <View className="mt-1 flex-row items-baseline justify-between">
-                <Text className="text-base font-semibold text-ink">
-                  {nextMonthly.label}
-                </Text>
-                <Text
-                  className="text-[11px] font-semibold"
-                  style={{ color: p.accent.mint }}
-                >
-                  Closes {relativeUntil(nextMonthly.closes_at)}
-                </Text>
-              </View>
-              <Text className="mt-0.5 text-[11px]" style={{ color: p.ink.muted }}>
-                Available {formatCloseDate(nextMonthly.closes_at)}
-                {nextYearly
-                  ? ` · Annual closes ${formatCloseDate(nextYearly.closes_at)}`
-                  : ""}
-              </Text>
-            </>
-          ) : (
-            <Text className="text-xs text-ink-muted">
-              Your next statement window will appear shortly.
-            </Text>
-          )}
-        </View>
-      </View>
+      ) : null}
     </View>
   );
 }
 
 // ─── row ─────────────────────────────────────────────────────────────────
 
-function ReportRow({
+function ReportTile({
   report,
   onDownload,
   busy,
@@ -441,66 +374,78 @@ function ReportRow({
   const ready = report.status === "ready";
   const failed = report.status === "failed";
   const dotColor = ready ? p.accent.mint : failed ? p.accent.rose : p.accent.amber;
-  const statusLabel = ready ? "Ready" : failed ? "Failed" : "Generating";
+  const statusLabel = ready
+    ? `${formatSize(report.file_size_bytes)} · PDF`
+    : failed
+      ? "Failed"
+      : "Generating…";
+  const start = new Date(report.period_start);
+  const yearly = report.period === "yearly";
+  const mono = yearly
+    ? String(start.getUTCFullYear())
+    : (MONTH_NAMES[start.getUTCMonth()] ?? "").slice(0, 3).toUpperCase();
 
   return (
-    <View className="flex-row items-center px-4 py-3.5">
+    <Pressable
+      onPress={() => onDownload(report)}
+      disabled={!ready || busy}
+      accessibilityRole="button"
+      accessibilityLabel={`Open statement ${periodLabel(report)}`}
+      style={({ pressed }) => ({
+        flexBasis: "47%",
+        flexGrow: 1,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: ready ? p.line.default : withAlpha(dotColor, 0.35),
+        backgroundColor: p.bg.elevated,
+        padding: 14,
+        gap: 8,
+        opacity: pressed ? 0.8 : ready ? 1 : 0.75,
+      })}
+    >
       <View
         style={{
-          width: 8,
-          height: 8,
-          borderRadius: 4,
-          backgroundColor: dotColor,
-          marginRight: 12,
-          shadowColor: dotColor,
-          shadowOpacity: ready ? 0.6 : 0,
-          shadowRadius: 4,
-        }}
-      />
-
-      <View className="flex-1 pr-3">
-        <View className="flex-row items-baseline">
-          <Text className="text-sm font-semibold text-ink">
-            {periodLabel(report)}
-          </Text>
-          <Text
-            className="ml-2 text-[10px] uppercase tracking-[2px]"
-            style={{ color: p.ink.dim }}
-          >
-            {report.period === "monthly" ? "Monthly" : "Annual"}
-          </Text>
-        </View>
-        <Text className="mt-0.5 text-[11px]" style={{ color: p.ink.muted }}>
-          {ready
-            ? `${formatDate(report.generated_at)} · ${formatSize(report.file_size_bytes)}`
-            : statusLabel}
-          {failed && report.error_message ? ` · ${report.error_message}` : ""}
-        </Text>
-      </View>
-
-      <Pressable
-        onPress={() => onDownload(report)}
-        disabled={!ready || busy}
-        className="rounded-full px-3.5 py-2"
-        style={{
-          backgroundColor: ready
-            ? withAlpha(p.accent.mint, 0.12)
-            : withAlpha(p.line.default, 0.4),
-          opacity: !ready || busy ? 0.6 : 1,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
+        <Text
+          style={{
+            color: ready ? p.accent.mint : dotColor,
+            fontSize: yearly ? 17 : 19,
+            fontWeight: "800",
+            letterSpacing: yearly ? 0.5 : 2,
+          }}
+        >
+          {mono}
+        </Text>
         {busy ? (
           <ActivityIndicator size="small" color={p.accent.mint} />
         ) : (
-          <Text
-            className="text-[11px] font-bold tracking-wide"
-            style={{ color: ready ? p.accent.mint : p.ink.dim }}
-          >
-            {ready ? "OPEN" : statusLabel.toUpperCase()}
-          </Text>
+          <View
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: 4,
+              backgroundColor: dotColor,
+              shadowColor: dotColor,
+              shadowOpacity: ready ? 0.6 : 0,
+              shadowRadius: 3,
+            }}
+          />
         )}
-      </Pressable>
-    </View>
+      </View>
+      <View>
+        <Text className="text-[13px] font-bold text-ink" numberOfLines={1}>
+          {yearly ? "Annual statement" : `${start.getUTCFullYear()} · Monthly`}
+        </Text>
+        <Text className="mt-0.5 text-[10.5px] text-ink-muted" numberOfLines={1}>
+          {statusLabel}
+          {failed && report.error_message ? ` · ${report.error_message}` : ""}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -508,15 +453,16 @@ function ReportRow({
 
 function SkeletonList() {
   return (
-    <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
-      {[0, 1, 2].map((i) => (
+    <View className="flex-row flex-wrap" style={{ gap: 10 }}>
+      {[0, 1, 2, 3].map((i) => (
         <View
           key={i}
-          className={`px-4 py-4 ${i > 0 ? "border-t border-line" : ""}`}
+          className="rounded-2xl border border-line bg-bg-elevated p-4"
+          style={{ flexBasis: "47%", flexGrow: 1 }}
         >
-          <Skeleton width={120} height={12} />
-          <View className="h-1.5" />
-          <Skeleton width={180} height={10} />
+          <Skeleton width={52} height={18} />
+          <View className="h-2" />
+          <Skeleton width={100} height={12} />
         </View>
       ))}
     </View>

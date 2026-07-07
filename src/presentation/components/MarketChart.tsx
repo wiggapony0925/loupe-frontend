@@ -420,18 +420,37 @@ export function MarketChart({
                 style={{
                   position: "absolute",
                   top: 0,
-                  left: Math.min(Math.max(crossPt[0] - 30, 0), geo.innerW - 60),
+                  left: Math.min(Math.max(crossPt[0] - 44, 0), geo.innerW - 92),
+                  minWidth: 88,
+                  alignItems: "center",
                   backgroundColor: p.ink.default,
-                  borderRadius: 7,
-                  paddingHorizontal: 8,
-                  paddingVertical: 3,
+                  borderRadius: 8,
+                  paddingHorizontal: 9,
+                  paddingVertical: 4,
                 }}
               >
                 <Text
-                  style={{ color: p.bg.base, fontSize: 12, fontWeight: "800" }}
+                  style={{
+                    color: p.bg.base,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    fontVariant: ["tabular-nums"],
+                  }}
                 >
                   {format(shownV)}
                 </Text>
+                {scrubT !== undefined ? (
+                  <Text
+                    style={{
+                      color: withAlpha(p.bg.base, 0.75),
+                      fontSize: 9,
+                      fontWeight: "700",
+                      marginTop: 1,
+                    }}
+                  >
+                    {fmtTime(scrubT)}
+                  </Text>
+                ) : null}
               </View>
             ) : tipRows.length > 0 ? (
               <View
