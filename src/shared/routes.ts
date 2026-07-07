@@ -49,6 +49,8 @@ export const routes = {
    */
   scanIdentify: (tcg?: "pokemon" | "magic" | "yugioh") =>
     tcg ? `/scan/identify?tcg=${tcg}` : "/scan/identify",
+  /** Native Swift AVFoundation scanner (iOS). Falls back to scanIdentify. */
+  scanNative: () => "/scan/native",
   /**
    * Add a card to the user's vault without scanning.
    *

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -202,7 +203,9 @@ function ScanTabButton({
         ? routes.scanPhone("studio")
         : target === "playground"
           ? routes.gradePlayground()
-          : routes.scanIdentify();
+          : Platform.OS === "ios"
+            ? routes.scanNative()
+            : routes.scanIdentify();
     setMenuOpen(false);
     router.push(href);
   }, []);

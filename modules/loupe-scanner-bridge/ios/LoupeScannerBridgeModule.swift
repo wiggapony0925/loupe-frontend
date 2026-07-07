@@ -402,6 +402,28 @@ public class LoupeScannerBridgeModule: Module {
       }
       Events("onLoad")
     }
+
+    // ─────────────────────────────────────────────────────────────────
+    //   NATIVE CAMERA VIEW — AVFoundation preview + live Vision reticle
+    // ─────────────────────────────────────────────────────────────────
+    View(LoupeCameraView.self) {
+      Events("onCameraReady", "onCardDetected", "onCapture", "onMountError")
+
+      Prop("active") { (view: LoupeCameraView, active: Bool) in
+        view.setActive(active)
+      }
+      Prop("torchEnabled") { (view: LoupeCameraView, on: Bool) in
+        view.setTorch(on)
+      }
+      Prop("detectionEnabled") { (view: LoupeCameraView, enabled: Bool) in
+        view.setDetectionEnabled(enabled)
+      }
+      // Prop-driven capture: set a fresh id to fire a still; the result
+      // arrives on `onCapture` carrying the same id.
+      Prop("captureRequestId") { (view: LoupeCameraView, id: String) in
+        view.setCaptureRequest(id)
+      }
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────
