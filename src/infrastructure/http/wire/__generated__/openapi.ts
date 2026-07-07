@@ -2445,6 +2445,28 @@ export interface paths {
         patch: operations["patch_me_v1_me_patch"];
         trace?: never;
     };
+    "/v1/me/billing/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel my Loupe Pro subscription (keeps access until period end)
+         * @description Self-serve cancel — schedules ``cancel_at_period_end`` so the member
+         *     keeps Pro until the paid period runs out. The plan downgrade itself is
+         *     driven by the Stripe webhook, keeping Stripe the source of truth.
+         */
+        post: operations["billing_cancel_v1_me_billing_cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/billing/checkout": {
         parameters: {
             query?: never;
@@ -2490,6 +2512,27 @@ export interface paths {
         put?: never;
         /** Open the Stripe customer portal (manage/cancel Pro) */
         post: operations["billing_portal_v1_me_billing_portal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/billing/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a scheduled cancellation and keep Loupe Pro
+         * @description Self-serve reactivate — clears a pending ``cancel_at_period_end`` so a
+         *     member who changed their mind keeps Pro without re-checking out.
+         */
+        post: operations["billing_reactivate_v1_me_billing_reactivate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11555,6 +11598,28 @@ export interface operations {
             };
         };
     };
+    billing_cancel_v1_me_billing_cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     start_checkout_v1_me_billing_checkout_post: {
         parameters: {
             query?: never;
@@ -11613,6 +11678,28 @@ export interface operations {
         };
     };
     billing_portal_v1_me_billing_portal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    billing_reactivate_v1_me_billing_reactivate_post: {
         parameters: {
             query?: never;
             header?: never;

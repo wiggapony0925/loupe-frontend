@@ -44,6 +44,8 @@ export const ENDPOINTS = {
     billingConfig: `${V1}/me/billing/config`,
     billingCheckout: `${V1}/me/billing/checkout`,
     billingPortal: `${V1}/me/billing/portal`,
+    billingCancel: `${V1}/me/billing/cancel`,
+    billingReactivate: `${V1}/me/billing/reactivate`,
   },
   scanners: {
     list: `${V1}/scanners`,

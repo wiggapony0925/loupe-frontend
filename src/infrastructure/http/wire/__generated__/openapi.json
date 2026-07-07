@@ -16587,6 +16587,35 @@
         ]
       }
     },
+    "/v1/me/billing/cancel": {
+      "post": {
+        "description": "Self-serve cancel \u2014 schedules ``cancel_at_period_end`` so the member\nkeeps Pro until the paid period runs out. The plan downgrade itself is\ndriven by the Stripe webhook, keeping Stripe the source of truth.",
+        "operationId": "billing_cancel_v1_me_billing_cancel_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Billing Cancel V1 Me Billing Cancel Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel my Loupe Pro subscription (keeps access until period end)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/v1/me/billing/checkout": {
       "post": {
         "operationId": "start_checkout_v1_me_billing_checkout_post",
@@ -16681,6 +16710,35 @@
           }
         ],
         "summary": "Open the Stripe customer portal (manage/cancel Pro)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/v1/me/billing/reactivate": {
+      "post": {
+        "description": "Self-serve reactivate \u2014 clears a pending ``cancel_at_period_end`` so a\nmember who changed their mind keeps Pro without re-checking out.",
+        "operationId": "billing_reactivate_v1_me_billing_reactivate_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Billing Reactivate V1 Me Billing Reactivate Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Undo a scheduled cancellation and keep Loupe Pro",
         "tags": [
           "users"
         ]

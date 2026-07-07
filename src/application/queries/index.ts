@@ -88,6 +88,9 @@ export {
   useBillingConfig,
   useStartCheckout,
   useBillingPortal,
+  useCancelSubscription,
+  useReactivateSubscription,
+  type BillingMutationResult,
   useRefreshEntitlements,
 } from "./auth/useEntitlements";
 

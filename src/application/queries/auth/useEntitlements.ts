@@ -45,6 +45,12 @@ export function useBillingConfig(enabled: boolean) {
 }
 
 /** Begin a hosted Loupe Pro checkout for the given interval. */
+export interface BillingMutationResult {
+  status?: string;
+  cancel_at_period_end: boolean;
+  current_period_end: string | null;
+}
+
 export function useStartCheckout(options?: {
   onSuccess?: (res: CheckoutSession) => void;
   onError?: (err: Error) => void;
@@ -68,6 +74,37 @@ export function useBillingPortal(options?: {
   return useMutation<BillingPortalSession, Error, void>({
     mutationFn: () =>
       apiFetch<BillingPortalSession>(ENDPOINTS.me.billingPortal, {
+        method: "POST",
+      }),
+    onSuccess: options?.onSuccess,
+    onError: options?.onError,
+  });
+}
+
+/** Self-serve cancel — schedules cancel-at-period-end. Returns the new
+ *  subscription state ({ cancel_at_period_end, current_period_end }). */
+export function useCancelSubscription(options?: {
+  onSuccess?: (res: BillingMutationResult) => void;
+  onError?: (err: Error) => void;
+}) {
+  return useMutation<BillingMutationResult, Error, void>({
+    mutationFn: () =>
+      apiFetch<BillingMutationResult>(ENDPOINTS.me.billingCancel, {
+        method: "POST",
+      }),
+    onSuccess: options?.onSuccess,
+    onError: options?.onError,
+  });
+}
+
+/** Self-serve reactivate — undo a scheduled cancellation. */
+export function useReactivateSubscription(options?: {
+  onSuccess?: (res: BillingMutationResult) => void;
+  onError?: (err: Error) => void;
+}) {
+  return useMutation<BillingMutationResult, Error, void>({
+    mutationFn: () =>
+      apiFetch<BillingMutationResult>(ENDPOINTS.me.billingReactivate, {
         method: "POST",
       }),
     onSuccess: options?.onSuccess,

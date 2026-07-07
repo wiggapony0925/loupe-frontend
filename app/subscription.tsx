@@ -13,18 +13,25 @@
  *   • Actions: upgrade / manage billing / re-sync entitlements
  */
 import React, { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import {
   Check,
   ChevronLeft,
+  CreditCard,
   Lock,
   RefreshCw,
   Sparkles,
 } from "lucide-react-native";
 import { useQueryClient } from "@tanstack/react-query";
-import { useBillingConfig, useEntitlements } from "@/application/queries";
+import {
+  useBillingConfig,
+  useCancelSubscription,
+  useEntitlements,
+  useReactivateSubscription,
+  useRefreshEntitlements,
+} from "@/application/queries";
 import { ProMembershipCard, usePro, PRO_FEATURES } from "@/presentation/features/pro";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -41,11 +48,43 @@ function fmtDate(iso: string | null | undefined): string | null {
 
 export default function SubscriptionScreen() {
   const p = useThemedPalette();
-  const { isPro, trialing, subscriptionsEnabled, openPaywall } = usePro();
+  const { isPro, trialing, subscriptionsEnabled, openPaywall, manageBilling, billingBusy } =
+    usePro();
   const { data: ent, refetch } = useEntitlements();
   const { data: billing } = useBillingConfig(true);
   const qc = useQueryClient();
   const [syncing, setSyncing] = useState(false);
+  // Local echo of the last cancel/reactivate so the CTA flips instantly,
+  // before the Stripe webhook round-trips to entitlements.
+  const [cancelScheduled, setCancelScheduled] = useState<boolean | null>(null);
+
+  const refreshEntitlements = useRefreshEntitlements();
+  const cancelMut = useCancelSubscription({
+    onSuccess: (res) => {
+      setCancelScheduled(res.cancel_at_period_end);
+      refreshEntitlements();
+    },
+    onError: (e) =>
+      Alert.alert(
+        "Couldn't cancel",
+        e instanceof Error && e.message ? e.message : "Please try again.",
+      ),
+  });
+  const reactivateMut = useReactivateSubscription({
+    onSuccess: (res) => {
+      setCancelScheduled(res.cancel_at_period_end);
+      refreshEntitlements();
+    },
+    onError: (e) =>
+      Alert.alert(
+        "Couldn't reactivate",
+        e instanceof Error && e.message ? e.message : "Please try again.",
+      ),
+  });
+  // Stripe self-serve is only real when checkout is configured; without it,
+  // cancel/manage would just 503 — hide those and show the managed state.
+  const selfServe = billing?.checkout_available === true;
+  const willCancel = cancelScheduled ?? false;
 
   const monthly = billing?.price_monthly_usd;
   const yearly = billing?.price_yearly_usd;
@@ -200,11 +239,12 @@ export default function SubscriptionScreen() {
           </View>
 
           {/* Actions */}
+          {/* Free → subscribe (hosted Stripe checkout via the paywall sheet). */}
           {!isPro && subscriptionsEnabled ? (
             <Pressable
               onPress={() => openPaywall("generic")}
               accessibilityRole="button"
-              accessibilityLabel="Upgrade to Loupe Pro"
+              accessibilityLabel="Subscribe to Loupe Pro"
               style={({ pressed }) => ({
                 flexDirection: "row",
                 alignItems: "center",
@@ -218,9 +258,126 @@ export default function SubscriptionScreen() {
             >
               <Sparkles size={15} color="#0B0B0D" strokeWidth={2.5} />
               <Text style={{ color: "#0B0B0D", fontSize: 14, fontWeight: "800" }}>
-                Upgrade to Pro
+                Subscribe to Pro
               </Text>
             </Pressable>
+          ) : null}
+
+          {/* Pro + self-serve billing → manage / cancel / reactivate. */}
+          {isPro && subscriptionsEnabled && selfServe ? (
+            willCancel ? (
+              <View style={{ gap: 8 }}>
+                <View
+                  style={{
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: withAlpha(p.accent.amber, 0.4),
+                    backgroundColor: withAlpha(p.accent.amber, 0.08),
+                    padding: 13,
+                  }}
+                >
+                  <Text style={{ color: p.accent.amber, fontSize: 12.5, fontWeight: "700" }}>
+                    Cancellation scheduled
+                  </Text>
+                  <Text style={{ color: p.ink.muted, fontSize: 11.5, marginTop: 2 }}>
+                    You keep Loupe Pro until{" "}
+                    {fmtDate(ent?.pro_expires_at) ?? "the end of your billing period"}.
+                    Changed your mind? Reactivate below.
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => reactivateMut.mutate()}
+                  disabled={reactivateMut.isPending}
+                  accessibilityRole="button"
+                  accessibilityLabel="Keep Loupe Pro"
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 7,
+                    paddingVertical: 14,
+                    borderRadius: 14,
+                    backgroundColor: p.accent.mint,
+                    opacity: pressed || reactivateMut.isPending ? 0.8 : 1,
+                  })}
+                >
+                  {reactivateMut.isPending ? (
+                    <ActivityIndicator size="small" color="#0B0B0D" />
+                  ) : (
+                    <Text style={{ color: "#0B0B0D", fontSize: 14, fontWeight: "800" }}>
+                      Keep Loupe Pro
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : (
+              <View style={{ gap: 8 }}>
+                <Pressable
+                  onPress={manageBilling}
+                  disabled={billingBusy}
+                  accessibilityRole="button"
+                  accessibilityLabel="Manage billing"
+                  className="flex-row items-center justify-center gap-2 rounded-2xl border border-line bg-bg-elevated px-5 py-3.5"
+                  style={({ pressed }) => ({ opacity: pressed || billingBusy ? 0.7 : 1 })}
+                >
+                  {billingBusy ? (
+                    <ActivityIndicator size="small" color={p.ink.muted} />
+                  ) : (
+                    <CreditCard size={14} color={p.ink.muted} />
+                  )}
+                  <Text className="text-[13px] font-semibold text-ink">
+                    Manage payment & billing
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() =>
+                    Alert.alert(
+                      "Cancel Loupe Pro?",
+                      "You'll keep Pro until the end of your current billing period, then drop to Free. Your collection always stays yours.",
+                      [
+                        { text: "Keep Pro", style: "cancel" },
+                        {
+                          text: "Cancel subscription",
+                          style: "destructive",
+                          onPress: () => cancelMut.mutate(),
+                        },
+                      ],
+                    )
+                  }
+                  disabled={cancelMut.isPending}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel subscription"
+                  style={({ pressed }) => ({
+                    alignItems: "center",
+                    paddingVertical: 12,
+                    opacity: pressed || cancelMut.isPending ? 0.6 : 1,
+                  })}
+                >
+                  {cancelMut.isPending ? (
+                    <ActivityIndicator size="small" color={p.accent.rose} />
+                  ) : (
+                    <Text
+                      className="text-[13px] font-semibold"
+                      style={{ color: p.accent.rose, textDecorationLine: "underline" }}
+                    >
+                      Cancel subscription
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            )
+          ) : null}
+
+          {/* Pro but billing not self-serve (admin-granted / unprovisioned). */}
+          {isPro && subscriptionsEnabled && !selfServe ? (
+            <View
+              className="flex-row items-center justify-center gap-2 rounded-2xl border border-line bg-bg-elevated px-5 py-3.5"
+            >
+              <Check size={14} color={p.accent.mint} strokeWidth={3} />
+              <Text className="text-[12.5px] font-semibold text-ink-muted">
+                Membership active — managed by Loupe
+              </Text>
+            </View>
           ) : null}
 
           {/* Re-sync — the "restore purchases" equivalent: re-reads the
