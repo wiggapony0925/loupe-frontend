@@ -265,7 +265,7 @@ export default function VaultScreen() {
                 onAdd={() => router.push(routes.gradeNew())}
                 // Scan = the identify camera (shutter → tray → "Add all"),
                 // the same flow as the center tab — not the old capture mode.
-                onScan={() => router.push(routes.scanIdentify())}
+                onScan={() => router.push(routes.scanEntry())}
                 onSealed={() => router.push(routes.sealed())}
               />
             )}
@@ -429,7 +429,7 @@ export default function VaultScreen() {
                 message={COPY.vaultEmpty.message}
                 icon={Camera}
                 secondaryActionLabel="Scan a card"
-                onSecondaryAction={() => router.push(routes.scanIdentify())}
+                onSecondaryAction={() => router.push(routes.scanEntry())}
               />
             </View>
           ) : (

@@ -25,6 +25,7 @@ import { useCameraPermissions } from "expo-camera";
 import {
   ChevronLeft,
   Flashlight,
+  Search,
   Sparkles,
   Wand2,
   X,
@@ -389,8 +390,70 @@ export default function NativeScanScreen() {
             </View>
           ) : null}
 
-          {/* Manual shutter */}
-          <View style={{ alignItems: "center", paddingBottom: 18 }} pointerEvents="box-none">
+          {/* Zoom presets (also driveable by pinch) */}
+          <View
+            style={{ flexDirection: "row", justifyContent: "center", gap: 8 }}
+            pointerEvents="box-none"
+          >
+            {[1, 2, 3].map((z) => {
+              const on = Math.round(zoom) === z;
+              return (
+                <Pressable
+                  key={z}
+                  onPress={() => setZoom(z)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${z}x zoom`}
+                  style={{
+                    minWidth: 40,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    backgroundColor: on ? p.accent.mint : "rgba(0,0,0,0.4)",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: on ? "#0B0B0D" : "#fff",
+                      fontSize: 12,
+                      fontWeight: "800",
+                    }}
+                  >
+                    {z}×
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Shutter row: manual-search fallback · shutter · spacer */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingHorizontal: 40,
+              paddingBottom: 18,
+            }}
+            pointerEvents="box-none"
+          >
+            {/* Can't get a clean scan? Search the catalog by name instead. */}
+            <Pressable
+              onPress={() => router.replace("/search")}
+              accessibilityRole="button"
+              accessibilityLabel="Search the catalog manually"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(0,0,0,0.4)",
+              }}
+            >
+              <Search size={20} color="#fff" />
+            </Pressable>
+
             <Pressable
               onPress={triggerCapture}
               disabled={busy}
@@ -423,6 +486,9 @@ export default function NativeScanScreen() {
                 {busy ? <ActivityIndicator color="#0B0B0D" /> : null}
               </View>
             </Pressable>
+
+            {/* Spacer to keep the shutter centered opposite the search button. */}
+            <View style={{ width: 48, height: 48 }} />
           </View>
         </View>
       </SafeAreaView>

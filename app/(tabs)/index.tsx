@@ -210,7 +210,7 @@ export default function CommandCenterScreen() {
               title="No recent scans"
               message="Scan a card to start your vault."
               secondaryActionLabel="Scan a card"
-              onSecondaryAction={() => router.push(routes.scanIdentify())}
+              onSecondaryAction={() => router.push(routes.scanEntry())}
             />
           ) : (
             <ScrollView

@@ -15,13 +15,12 @@
  * anything that still navigates here (a stale deep link) lands in the
  * camera too.
  */
-import { Platform } from "react-native";
 import { Redirect } from "expo-router";
 import { routes } from "@/shared/routes";
 
 export default function ScanTabScreen() {
   // iOS gets the native Swift AVFoundation scanner; the screen itself
   // falls back to the expo-camera flow if the native view isn't linked.
-  const href = Platform.OS === "ios" ? routes.scanNative() : routes.scanIdentify();
+  const href = routes.scanEntry();
   return <Redirect href={href} />;
 }

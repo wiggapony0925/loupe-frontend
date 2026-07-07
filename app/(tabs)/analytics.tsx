@@ -93,7 +93,7 @@ export default function AnalyticsScreen() {
             title="No analytics yet"
             message="Add your first card and Loupe will chart your portfolio value, movers, allocation, and grade mix right here."
             secondaryActionLabel="Scan a card"
-            onSecondaryAction={() => router.push(routes.scanIdentify())}
+            onSecondaryAction={() => router.push(routes.scanEntry())}
           />
         ) : (
           <>

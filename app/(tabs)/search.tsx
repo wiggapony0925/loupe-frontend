@@ -299,7 +299,7 @@ export default function SearchScreen() {
             </Pressable>
           ) : null}
           <Pressable
-            onPress={() => router.push(routes.scanIdentify())}
+            onPress={() => router.push(routes.scanEntry())}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Scan a card with the camera"
