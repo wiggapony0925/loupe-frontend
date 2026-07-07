@@ -28,6 +28,11 @@ export interface IdentifyCandidate {
   confidence: number;
   source: "text" | "phash" | "feedback" | string;
   breakdown: Record<string, number>;
+  /** Server-composed enrichment — same numbers on every client. */
+  market_price_usd?: number | null;
+  owned?: boolean;
+  copies_owned?: number;
+  graded_copies?: number;
 }
 
 export interface IdentifyParsed {

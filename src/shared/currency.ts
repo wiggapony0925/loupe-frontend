@@ -57,9 +57,10 @@ export function getCurrency(code: string): CurrencyMeta {
   return BY_CODE[code] ?? BY_CODE.USD!;
 }
 
-/** Convert a USD amount → the target currency's native units. */
-export function convertUsd(usd: number, code: string): number {
-  return usd * getCurrency(code).ratePerUsd;
+/** Convert a USD amount → the target currency's native units.
+ *  `rateOverride` (live server FX) beats the static snapshot. */
+export function convertUsd(usd: number, code: string, rateOverride?: number): number {
+  return usd * (rateOverride ?? getCurrency(code).ratePerUsd);
 }
 
 /**
@@ -69,9 +70,13 @@ export function convertUsd(usd: number, code: string): number {
  *   formatMoney(28_540, "JPY") → "¥4.46M"
  *   formatMoney(28_540, "BTC") → "₿0.4234"
  */
-export function formatMoney(usd: number, code: string, opts?: { compact?: boolean }): string {
+export function formatMoney(
+  usd: number,
+  code: string,
+  opts?: { compact?: boolean; rate?: number },
+): string {
   const meta = getCurrency(code);
-  const value = convertUsd(usd, code);
+  const value = convertUsd(usd, code, opts?.rate);
   const compact = opts?.compact ?? true;
   if (compact && meta.kind === "fiat") {
     if (value >= 1_000_000) return `${meta.symbol}${(value / 1_000_000).toFixed(1)}M`;

@@ -2620,6 +2620,7 @@ function ScanSessionCard({
   onRemove: (id: string) => void;
   onSearchManually?: () => void;
 }) {
+  const formatUsd = useCompactUsd();
   const matched = item.status === "matched" && item.candidate != null;
   const missed = item.status === "missed";
   const confidencePct = item.confidence != null ? Math.round(item.confidence * 100) : null;
@@ -2628,10 +2629,22 @@ function ScanSessionCard({
     : missed
       ? "Couldn’t read this card"
       : "Identifying…";
+  // Server-composed enrichment: price + whether the user already owns it —
+  // identical numbers on web/mobile because the backend computes them.
+  const price = matched ? item.candidate?.market_price_usd ?? null : null;
+  const copies = matched ? item.candidate?.copies_owned ?? 0 : 0;
+  const slabs = matched ? item.candidate?.graded_copies ?? 0 : 0;
   // A missed capture must never be a dead end — tapping it opens manual
   // search (the Collectr "Tap here to search manually" affordance).
   const subtitle = matched
-    ? `${confidencePct ?? 0}% match`
+    ? [
+        price != null ? formatUsd(price) : `${confidencePct ?? 0}% match`,
+        copies > 0
+          ? `Own ×${copies}${slabs > 0 ? ` (${slabs} graded)` : ""}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
     : missed
       ? onSearchManually
         ? "Tap to search manually"

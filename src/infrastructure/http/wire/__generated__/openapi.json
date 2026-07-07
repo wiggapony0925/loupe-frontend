@@ -4557,6 +4557,20 @@
             "title": "Confidence",
             "type": "number"
           },
+          "copies_owned": {
+            "default": 0,
+            "description": "How many copies the user holds.",
+            "minimum": 0.0,
+            "title": "Copies Owned",
+            "type": "integer"
+          },
+          "graded_copies": {
+            "default": 0,
+            "description": "How many of those copies are graded slabs (non-raw).",
+            "minimum": 0.0,
+            "title": "Graded Copies",
+            "type": "integer"
+          },
           "image_url": {
             "anyOf": [
               {
@@ -4567,6 +4581,18 @@
               }
             ],
             "title": "Image Url"
+          },
+          "market_price_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Best cached market price (USD) from the catalog mirror.",
+            "title": "Market Price Usd"
           },
           "name": {
             "title": "Name",
@@ -4582,6 +4608,12 @@
               }
             ],
             "title": "Number"
+          },
+          "owned": {
+            "default": false,
+            "description": "True when the signed-in user already holds this card.",
+            "title": "Owned",
+            "type": "boolean"
           },
           "set_code": {
             "anyOf": [
@@ -8884,8 +8916,9 @@
           "currency": {
             "anyOf": [
               {
-                "maxLength": 3,
-                "minLength": 3,
+                "maxLength": 6,
+                "minLength": 2,
+                "pattern": "^[A-Za-z]+$",
                 "type": "string"
               },
               {
@@ -10286,6 +10319,156 @@
           }
         ],
         "summary": "Catalog coverage by game",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/v1/admin/catalog/mirror": {
+      "get": {
+        "description": "Row counts + price freshness for the Pok\u00e9mon mirror.",
+        "operationId": "get_mirror_status_v1_admin_catalog_mirror_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Mirror Status V1 Admin Catalog Mirror Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Local catalog mirror status",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/v1/admin/catalog/mirror/refresh-prices": {
+      "post": {
+        "description": "Walk the stalest sets and pull fresh tcgplayer/cardmarket blocks from\nthe live API (inline, so the caller sees real progress).",
+        "operationId": "refresh_mirror_prices_v1_admin_catalog_mirror_refresh_prices_post",
+        "parameters": [
+          {
+            "description": "Stale sets to refresh now.",
+            "in": "query",
+            "name": "sets",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "description": "Stale sets to refresh now.",
+              "maximum": 60,
+              "minimum": 1,
+              "title": "Sets",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Refresh Mirror Prices V1 Admin Catalog Mirror Refresh Prices Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Refresh embedded prices per set",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/v1/admin/catalog/mirror/sync": {
+      "post": {
+        "operationId": "sync_mirror_v1_admin_catalog_mirror_sync_post",
+        "parameters": [
+          {
+            "description": "Re-sync sets that look complete.",
+            "in": "query",
+            "name": "force",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Re-sync sets that look complete.",
+              "title": "Force",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Sets to sync this call (newest-first); 0 = all remaining. Chunked so a call stays inside the request timeout \u2014 repeat until `sets_synced` comes back 0.",
+            "in": "query",
+            "name": "max_sets",
+            "required": false,
+            "schema": {
+              "default": 40,
+              "description": "Sets to sync this call (newest-first); 0 = all remaining. Chunked so a call stays inside the request timeout \u2014 repeat until `sets_synced` comes back 0.",
+              "maximum": 500,
+              "minimum": 0,
+              "title": "Max Sets",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Sync Mirror V1 Admin Catalog Mirror Sync Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sync the Pok\u00e9mon mirror from bulk data",
         "tags": [
           "admin-catalog"
         ]
@@ -16243,6 +16426,30 @@
         "summary": "Proxy a card image (public)",
         "tags": [
           "images"
+        ]
+      }
+    },
+    "/v1/market/fx/rates": {
+      "get": {
+        "description": "Units-per-USD conversion rates for every display currency the clients offer (fiat + crypto). ONE source of truth: web and mobile both render prices with this table, so a card is worth the same yen on every surface. Live-fetched from keyless providers, L2-cached for 12 h, degrades to a static snapshot - never errors.",
+        "operationId": "get_fx_rates_v1_market_fx_rates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Fx Rates V1 Market Fx Rates Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Display-currency FX table (public)",
+        "tags": [
+          "market"
         ]
       }
     },

@@ -15,6 +15,7 @@ import { MinVersionGate } from "@/presentation/components/MinVersionGate";
 import { ThemeProvider, useTheme } from "@/presentation/theme";
 import { useRecentsSync } from "@/application/hooks/useRecentsSync";
 import { useCurrencyProfileSync } from "@/application/hooks/useDisplayCurrency";
+import { useFxRatesSync } from "@/application/queries/market/useFxRates";
 import { usePushNotifications } from "@/application/hooks/usePushNotifications";
 import { initSentry } from "@/infrastructure/observability/sentry";
 
@@ -82,6 +83,8 @@ function RootStack() {
   useRecentsSync();
   // Adopt the profile's saved display currency (set here or on the web).
   useCurrencyProfileSync();
+  // Live FX table from the backend — one conversion source for all clients.
+  useFxRatesSync();
   usePushNotifications();
 
   useEffect(() => {

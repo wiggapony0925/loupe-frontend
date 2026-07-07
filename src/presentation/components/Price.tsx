@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Text, type TextProps, type TextStyle } from "react-native";
 import { useSettings } from "@/application/stores/settingsStore";
+import { useFxStore } from "@/application/stores/fxStore";
 import { formatMoney, getCurrency, convertUsd, type CurrencyMeta } from "@/shared/currency";
 
 /**
@@ -14,8 +15,13 @@ import { formatMoney, getCurrency, convertUsd, type CurrencyMeta } from "@/share
  */
 export function useMoney() {
   const code = useSettings((s) => s.currency);
+  // Live server FX rate for the active currency (backend /market/fx/rates —
+  // the same table the web renders with). Null until the first sync lands;
+  // the static snapshot in shared/currency.ts covers that window.
+  const liveRate = useFxStore((s) => s.rates?.[code] ?? null);
   return useMemo(() => {
     const meta: CurrencyMeta = getCurrency(code);
+    const rate = liveRate ?? undefined;
     return {
       code: meta.code,
       symbol: meta.symbol,
@@ -24,11 +30,11 @@ export function useMoney() {
       meta,
       /** Compact: $28.5k / €26.3k / ¥4.46M / ₿0.4234. */
       format: (usd: number, opts?: { compact?: boolean }) =>
-        formatMoney(usd, code, { compact: opts?.compact ?? true }),
+        formatMoney(usd, code, { compact: opts?.compact ?? true, rate }),
       /** Convert USD → the display currency without rendering. */
-      convert: (usd: number) => convertUsd(usd, code),
+      convert: (usd: number) => convertUsd(usd, code, rate),
     };
-  }, [code]);
+  }, [code, liveRate]);
 }
 
 interface PriceProps extends Omit<TextProps, "children"> {

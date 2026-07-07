@@ -248,6 +248,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/catalog/mirror": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Local catalog mirror status
+         * @description Row counts + price freshness for the Pokémon mirror.
+         */
+        get: operations["get_mirror_status_v1_admin_catalog_mirror_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/catalog/mirror/refresh-prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh embedded prices per set
+         * @description Walk the stalest sets and pull fresh tcgplayer/cardmarket blocks from
+         *     the live API (inline, so the caller sees real progress).
+         */
+        post: operations["refresh_mirror_prices_v1_admin_catalog_mirror_refresh_prices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/catalog/mirror/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync the Pokémon mirror from bulk data */
+        post: operations["sync_mirror_v1_admin_catalog_mirror_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/cloud": {
         parameters: {
             query?: never;
@@ -2321,6 +2379,26 @@ export interface paths {
          *     a transient blip will recover automatically.
          */
         get: operations["proxy_image_v1_img_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/market/fx/rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Display-currency FX table (public)
+         * @description Units-per-USD conversion rates for every display currency the clients offer (fiat + crypto). ONE source of truth: web and mobile both render prices with this table, so a card is worth the same yen on every surface. Live-fetched from keyless providers, L2-cached for 12 h, degrades to a static snapshot - never errors.
+         */
+        get: operations["get_fx_rates_v1_market_fx_rates_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4973,12 +5051,35 @@ export interface components {
             card_id?: string | null;
             /** Confidence */
             confidence: number;
+            /**
+             * Copies Owned
+             * @description How many copies the user holds.
+             * @default 0
+             */
+            copies_owned: number;
+            /**
+             * Graded Copies
+             * @description How many of those copies are graded slabs (non-raw).
+             * @default 0
+             */
+            graded_copies: number;
             /** Image Url */
             image_url?: string | null;
+            /**
+             * Market Price Usd
+             * @description Best cached market price (USD) from the catalog mirror.
+             */
+            market_price_usd?: number | null;
             /** Name */
             name: string;
             /** Number */
             number?: string | null;
+            /**
+             * Owned
+             * @description True when the signed-in user already holds this card.
+             * @default false
+             */
+            owned: boolean;
             /** Set Code */
             set_code?: string | null;
             /** Set Name */
@@ -7506,6 +7607,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CatalogCoverage"];
+                };
+            };
+        };
+    };
+    get_mirror_status_v1_admin_catalog_mirror_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    refresh_mirror_prices_v1_admin_catalog_mirror_refresh_prices_post: {
+        parameters: {
+            query?: {
+                /** @description Stale sets to refresh now. */
+                sets?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_mirror_v1_admin_catalog_mirror_sync_post: {
+        parameters: {
+            query?: {
+                /** @description Re-sync sets that look complete. */
+                force?: boolean;
+                /** @description Sets to sync this call (newest-first); 0 = all remaining. Chunked so a call stays inside the request timeout — repeat until `sets_synced` comes back 0. */
+                max_sets?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -11248,6 +11441,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_fx_rates_v1_market_fx_rates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

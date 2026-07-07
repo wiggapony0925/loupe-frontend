@@ -108,6 +108,7 @@ export const ENDPOINTS = {
     file: (id: string) => `${V1}/reports/${id}/file`,
   },
   market: {
+    fxRates: `${V1}/market/fx/rates`,
     indexHistory: (indexId: string) =>
       `${V1}/market/indices/${indexId}/history`,
   },
