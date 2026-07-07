@@ -207,13 +207,8 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         />
         <MenuRow
           title="Security and privacy"
-          subtitle="Captures stay on-device until you grade"
-          onPress={() =>
-            Alert.alert(
-              "Privacy",
-              "Loupe never uploads your captures unless you tap Grade. OCR runs locally on your device.",
-            )
-          }
+          subtitle="Captures stay on-device until you grade · full policy"
+          onPress={() => void openLegal(LEGAL_LINKS.privacy, "Privacy policy")}
         />
         <MenuRow
           title="Legal"
@@ -258,19 +253,12 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
       {/* Log out — large outlined pill */}
       <View className="mt-7 px-5">
         <Pressable
-          onPress={() =>
-            Alert.alert("Log out?", "You'll need to sign in again to access your vault.", [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Log out",
-                style: "destructive",
-                onPress: () => {
-                  signOut();
-                  router.replace("/");
-                },
-              },
-            ])
-          }
+          onPress={() => {
+            // Tap = do it (house style: no confirm popups). Logging out is
+            // fully reversible — sign back in and the vault is untouched.
+            signOut();
+            router.replace("/");
+          }}
           accessibilityRole="button"
           accessibilityLabel="Log out"
           style={({ pressed }) => ({
@@ -294,24 +282,13 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         {/* Secondary: revoke every device/session (kill switch for a lost
             device or stolen token). Subtle text link under the main pill. */}
         <Pressable
-          onPress={() =>
-            Alert.alert(
-              "Sign out everywhere?",
-              "Revoke every device and active session. Use this if you've lost a device or think your account is compromised.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Sign out everywhere",
-                  style: "destructive",
-                  onPress: async () => {
-                    setSigningOutAll(true);
-                    await signOutEverywhere();
-                    router.replace("/");
-                  },
-                },
-              ],
-            )
-          }
+          onPress={async () => {
+            // Immediate (house style) — revokes every session; recovering is
+            // just signing back in, so no confirm dialog.
+            setSigningOutAll(true);
+            await signOutEverywhere();
+            router.replace("/");
+          }}
           disabled={signingOutAll}
           hitSlop={8}
           accessibilityRole="button"
@@ -510,12 +487,7 @@ function GeneralTab() {
       <NotificationsSection />
 
       <Pressable
-        onPress={() =>
-          Alert.alert("Reset settings?", "Restore all preferences to their defaults.", [
-            { text: "Cancel", style: "cancel" },
-            { text: "Reset", style: "destructive", onPress: () => s.reset() },
-          ])
-        }
+        onPress={() => s.reset()}
         className="mt-2 flex-row items-center justify-center gap-2 rounded-2xl border border-line bg-bg-elevated px-5 py-4"
         style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
         accessibilityRole="button"
@@ -738,22 +710,18 @@ function AboutTab() {
           description="github.com/wiggapony0925/loupe-frontend"
           trailing={<ChevronRight size={16} color={p.ink.dim} />}
           onPress={() =>
-            Alert.alert("Open in browser?", "https://github.com/wiggapony0925/loupe-frontend", [
-              { text: "OK" },
-            ])
+            void openLegal(
+              "https://github.com/wiggapony0925/loupe-frontend",
+              "GitHub",
+            )
           }
         />
         <Row
           icon={Shield}
           label="Privacy"
-          description="Captures stay on-device until you grade."
+          description="Captures stay on-device until you grade · full policy"
           trailing={<ChevronRight size={16} color={p.ink.dim} />}
-          onPress={() =>
-            Alert.alert(
-              "Privacy",
-              "Loupe never uploads your captures unless you tap Grade. OCR runs locally.",
-            )
-          }
+          onPress={() => void openLegal(LEGAL_LINKS.privacy, "Privacy policy")}
           isLast
         />
       </Section>

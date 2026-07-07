@@ -13,7 +13,8 @@
  * answers "what am I watching?" without burning global navigation.
  */
 import React, { useCallback } from "react";
-import { Alert, FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { ArrowDownRight, ArrowUpRight, Bell, Heart, Trash2 } from "lucide-react-native";
 import { useDeletePriceAlert, usePriceAlerts } from "@/application/queries/alerts/usePriceAlerts";
@@ -219,42 +220,21 @@ export function WatchingList({ showHeader = true }: WatchingListProps) {
   const unpinMut = useRemoveFromWatchlist();
   const pinned = watchlist.data ?? [];
 
+  // Tap = do it (house style). Both actions are trivially reversible —
+  // re-favorite from the card screen, re-create the alert in two taps — so
+  // no confirm popups; a light haptic acknowledges the removal instead.
   const onUnpin = useCallback(
     (item: WatchlistItemWire) => {
-      Alert.alert(
-        "Remove favorite?",
-        `Remove ${item.card_name ?? "this card"} from your favorites?`,
-        [
-          { text: "Keep", style: "cancel" },
-          {
-            text: "Remove",
-            style: "destructive",
-            onPress: () => {
-              void unpinMut.mutateAsync(item.card_id);
-            },
-          },
-        ],
-      );
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      void unpinMut.mutateAsync(item.card_id);
     },
     [unpinMut],
   );
 
   const onDelete = useCallback(
     (alert: PriceAlertWire) => {
-      Alert.alert(
-        "Cancel price alert?",
-        `Stop the price alert for ${alert.card_name ?? "this card"}?`,
-        [
-          { text: "Keep", style: "cancel" },
-          {
-            text: "Cancel alert",
-            style: "destructive",
-            onPress: () => {
-              void deleteMut.mutateAsync(alert.id);
-            },
-          },
-        ],
-      );
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      void deleteMut.mutateAsync(alert.id);
     },
     [deleteMut],
   );

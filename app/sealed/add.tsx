@@ -13,7 +13,6 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -75,6 +74,9 @@ export default function AddSealedScreen() {
   const [quantity, setQuantity] = useState("1");
   const [price, setPrice] = useState("");
   const [date, setDate] = useState("");
+  // Inline form feedback — validation and save errors render in the form
+  // instead of a blocking Alert popup (house style: no popups).
+  const [formError, setFormError] = useState<string | null>(null);
 
   const search = useSealedSearch(q, { productType: filter });
   const createMut = useCreateSealedHolding();
@@ -97,9 +99,10 @@ export default function AddSealedScreen() {
 
   const onSubmit = useCallback(async () => {
     if (selected == null) return;
+    setFormError(null);
     const qty = parseInt(quantity, 10);
     if (!Number.isFinite(qty) || qty < 1) {
-      Alert.alert("Invalid quantity", "Quantity must be at least 1.");
+      setFormError("Quantity must be at least 1.");
       return;
     }
     const payload: SealedHoldingCreateWire = {
@@ -109,7 +112,7 @@ export default function AddSealedScreen() {
     if (price.trim().length > 0) {
       const n = Number(price);
       if (!Number.isFinite(n) || n < 0) {
-        Alert.alert("Invalid price", "Purchase price must be a positive number.");
+        setFormError("Purchase price must be a positive number.");
         return;
       }
       payload.purchase_price_usd = n.toFixed(2);
@@ -123,7 +126,9 @@ export default function AddSealedScreen() {
       await createMut.mutateAsync(payload);
       router.back();
     } catch (e) {
-      Alert.alert("Couldn't save", e instanceof Error ? e.message : "Try again.");
+      setFormError(
+        e instanceof Error ? `Couldn't save — ${e.message}` : "Couldn't save. Try again.",
+      );
     }
   }, [createMut, date, price, quantity, router, selected]);
 
@@ -176,6 +181,26 @@ export default function AddSealedScreen() {
           <Check size={22} color={p.accent.mint} />
         </Pressable>
       </View>
+
+      {/* Inline form feedback — replaces the old blocking Alert popups. */}
+      {formError ? (
+        <View
+          style={{
+            marginHorizontal: 14,
+            marginBottom: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 9,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: withAlpha(p.accent.rose, 0.4),
+            backgroundColor: withAlpha(p.accent.rose, 0.08),
+          }}
+        >
+          <Text style={{ color: p.accent.rose, fontSize: 12, fontWeight: "600" }}>
+            {formError}
+          </Text>
+        </View>
+      ) : null}
 
       <FlatList
         data={selected != null ? [] : search.data ?? []}
