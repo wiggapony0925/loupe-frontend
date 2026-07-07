@@ -50,6 +50,19 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
   // normalized Vision space for the crop math on capture.
   private var lastNormalizedCorners: [CGPoint]?
 
+  // ── Auto-capture / steadiness ───────────────────────────────────
+  // A pro scanner captures itself when the card is well-framed and held
+  // still. We track how many consecutive frames the card's centroid has
+  // barely moved; once it's steady + confident + filling enough of the
+  // frame for `autoSteadyFrames`, we auto-fire a capture.
+  private var autoCapture = false
+  private var steadyStreak = 0
+  private var lastCentroid: CGPoint?
+  private var lastAutoCaptureAt: TimeInterval = 0
+  private let autoSteadyFrames = 5
+  private let autoCaptureCooldown: TimeInterval = 2.5
+  private var pendingZoom: CGFloat = 1.0
+
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
     backgroundColor = .black
@@ -110,7 +123,29 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
   func setDetectionEnabled(_ enabled: Bool) {
     detectionEnabled = enabled
     if !enabled {
+      steadyStreak = 0
+      lastCentroid = nil
       DispatchQueue.main.async { [weak self] in self?.hideReticle() }
+    }
+  }
+
+  func setAutoCapture(_ on: Bool) {
+    autoCapture = on
+    steadyStreak = 0
+  }
+
+  // Pinch-driven zoom, clamped to a sane card-scanning range.
+  func setZoom(_ zoom: Double) {
+    let z = CGFloat(max(1.0, min(zoom, 5.0)))
+    pendingZoom = z
+    sessionQueue.async { [weak self] in
+      guard let self, let device = self.device else { return }
+      do {
+        try device.lockForConfiguration()
+        let maxZoom = min(device.activeFormat.videoMaxZoomFactor, 5.0)
+        device.videoZoomFactor = max(1.0, min(z, maxZoom))
+        device.unlockForConfiguration()
+      } catch {}
     }
   }
 
@@ -216,10 +251,15 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
       options: [:]
     )
     guard (try? handler.perform([request])) != nil,
-          let rect = (request.results as? [VNRectangleObservation])?.first
+          let rect = (request.results ?? []).first
     else {
       lastNormalizedCorners = nil
-      DispatchQueue.main.async { [weak self] in self?.hideReticle() }
+      steadyStreak = 0
+      lastCentroid = nil
+      DispatchQueue.main.async { [weak self] in
+        self?.hideReticle()
+        self?.onCardDetected(["detected": false, "confidence": 0, "steady": false, "fill": 0])
+      }
       return
     }
 
@@ -227,17 +267,48 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     lastNormalizedCorners = [rect.topLeft, rect.topRight, rect.bottomRight, rect.bottomLeft]
     let confidence = Double(rect.confidence)
 
+    // Fill ratio (card area / frame) → drives "move closer" hints.
+    let widthN = hypot(rect.topRight.x - rect.topLeft.x, rect.topRight.y - rect.topLeft.y)
+    let heightN = hypot(rect.bottomLeft.x - rect.topLeft.x, rect.bottomLeft.y - rect.topLeft.y)
+    let fill = Double(widthN * heightN)
+
+    // Steadiness: how little the centroid moved since the last frame.
+    let cx = (rect.topLeft.x + rect.topRight.x + rect.bottomRight.x + rect.bottomLeft.x) / 4
+    let cy = (rect.topLeft.y + rect.topRight.y + rect.bottomRight.y + rect.bottomLeft.y) / 4
+    let centroid = CGPoint(x: cx, y: cy)
+    if let last = lastCentroid {
+      let drift = hypot(centroid.x - last.x, centroid.y - last.y)
+      if drift < 0.02 { steadyStreak += 1 } else { steadyStreak = 0 }
+    }
+    lastCentroid = centroid
+
+    let wellFramed = confidence > 0.6 && fill > 0.20
+    let steady = wellFramed && steadyStreak >= autoSteadyFrames
+
+    // Auto-capture: fire once the card is confidently framed AND held
+    // still, respecting a cooldown so we don't machine-gun captures.
+    let now2 = CACurrentMediaTime()
+    if autoCapture, steady, !capturing, now2 - lastAutoCaptureAt > autoCaptureCooldown {
+      lastAutoCaptureAt = now2
+      steadyStreak = 0
+      let autoId = "auto-\(UUID().uuidString.prefix(8))"
+      lastCaptureRequestId = autoId
+      capture(requestId: autoId)
+    }
+
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
-      self.drawReticle(rect)
+      self.drawReticle(rect, ready: steady || wellFramed)
       self.onCardDetected([
         "detected": true,
         "confidence": confidence,
+        "steady": steady,
+        "fill": fill,
       ])
     }
   }
 
-  private func drawReticle(_ rect: VNRectangleObservation) {
+  private func drawReticle(_ rect: VNRectangleObservation, ready: Bool) {
     // Map normalized Vision points → preview-layer view coordinates.
     func toView(_ p: CGPoint) -> CGPoint {
       // Vision origin bottom-left; preview layer uses the standard
@@ -245,18 +316,43 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
       let converted = previewLayer.layerPointConverted(fromCaptureDevicePoint: CGPoint(x: p.y, y: 1 - p.x))
       return converted
     }
+    let tl = toView(rect.topLeft)
+    let tr = toView(rect.topRight)
+    let br = toView(rect.bottomRight)
+    let bl = toView(rect.bottomLeft)
+
+    // Corner-bracket path — L-shapes at each corner rather than a full
+    // outline. Reads as a "targeting" frame and stays crisp at any tilt.
     let path = UIBezierPath()
-    path.move(to: toView(rect.topLeft))
-    path.addLine(to: toView(rect.topRight))
-    path.addLine(to: toView(rect.bottomRight))
-    path.addLine(to: toView(rect.bottomLeft))
-    path.close()
+    func bracket(_ corner: CGPoint, _ a: CGPoint, _ b: CGPoint) {
+      let la = 0.22
+      path.move(to: lerp(corner, a, la))
+      path.addLine(to: corner)
+      path.addLine(to: lerp(corner, b, la))
+    }
+    bracket(tl, tr, bl)
+    bracket(tr, tl, br)
+    bracket(br, tr, bl)
+    bracket(bl, tl, br)
+
+    let color = ready
+      ? UIColor(red: 0.086, green: 0.753, blue: 0.612, alpha: 0.98)
+      : UIColor(white: 1.0, alpha: 0.85)
 
     CATransaction.begin()
-    CATransaction.setAnimationDuration(0.12)
+    CATransaction.setAnimationDuration(0.1)
     reticleLayer.path = path.cgPath
+    reticleLayer.fillColor = UIColor.clear.cgColor
+    reticleLayer.strokeColor = color.cgColor
+    reticleLayer.lineWidth = ready ? 4.0 : 3.0
+    reticleLayer.shadowColor = color.cgColor
+    reticleLayer.shadowOpacity = ready ? 0.8 : 0.3
     reticleLayer.opacity = 1
     CATransaction.commit()
+  }
+
+  private func lerp(_ a: CGPoint, _ b: CGPoint, _ t: CGFloat) -> CGPoint {
+    return CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
   }
 
   private func hideReticle() {

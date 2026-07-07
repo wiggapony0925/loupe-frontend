@@ -418,6 +418,12 @@ public class LoupeScannerBridgeModule: Module {
       Prop("detectionEnabled") { (view: LoupeCameraView, enabled: Bool) in
         view.setDetectionEnabled(enabled)
       }
+      Prop("autoCapture") { (view: LoupeCameraView, on: Bool) in
+        view.setAutoCapture(on)
+      }
+      Prop("zoom") { (view: LoupeCameraView, zoom: Double) in
+        view.setZoom(zoom)
+      }
       // Prop-driven capture: set a fresh id to fire a still; the result
       // arrives on `onCapture` carrying the same id.
       Prop("captureRequestId") { (view: LoupeCameraView, id: String) in

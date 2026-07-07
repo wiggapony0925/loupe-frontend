@@ -3,8 +3,15 @@ import * as React from "react";
 import { View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 
-/** Emitted continuously while a card-shaped rectangle is (not) in frame. */
-export type CardDetectedEvent = { detected: boolean; confidence: number };
+/** Emitted continuously with the live framing signals. */
+export type CardDetectedEvent = {
+  detected: boolean;
+  confidence: number;
+  /** Card confidently framed AND held still — the auto-capture trigger. */
+  steady: boolean;
+  /** Card area / frame area in [0,1] — drives "move closer" hints. */
+  fill: number;
+};
 /** Emitted when the camera session is live. */
 export type CameraReadyEvent = { ready: boolean };
 /** Emitted after a still capture — echoes the triggering requestId. */
@@ -25,6 +32,10 @@ export interface LoupeCameraViewProps {
   torchEnabled?: boolean;
   /** Run live Vision rectangle detection + the native reticle. */
   detectionEnabled?: boolean;
+  /** Auto-fire a capture when the card is confidently framed + steady. */
+  autoCapture?: boolean;
+  /** Optical/digital zoom factor (1–5). */
+  zoom?: number;
   /** Set a fresh id (uuid) to fire a still capture; result on onCapture. */
   captureRequestId?: string;
   onCameraReady?: (e: { nativeEvent: CameraReadyEvent }) => void;
