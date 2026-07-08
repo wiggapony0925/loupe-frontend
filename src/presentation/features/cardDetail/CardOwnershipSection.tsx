@@ -30,6 +30,7 @@ import {
 } from "lucide-react-native";
 import { useThemedPalette, withAlpha, gradeColor } from "@/presentation/theme/tokens";
 import { Price, useMoney } from "@/presentation/components/Price";
+import { CardImage } from "@/presentation/components/CardImage";
 import { useCardOwnership } from "@/application/queries/collection/useCardOwnership";
 import { routes } from "@/shared/routes";
 import type { AcquisitionSource, CardHoldingWire } from "@/infrastructure/http";
@@ -329,6 +330,7 @@ export function CardOwnershipSection({
               <View key={tier.key}>
                 <TierRow
                   tier={tier}
+                  cardImage={cardImage}
                   bordered={i > 0}
                   expandable={!single}
                   open={open}
@@ -469,19 +471,21 @@ function HeroStat({
 /* ─── rows ────────────────────────────────────────────────────────────── */
 
 /**
- * One grade tier as a compact, single-line row — colored grade · ×count on the
- * left, value (+ per-each or P/L) on the right. No repeated card art: the whole
- * section is one card, so the grade is the identity. Multi-copy tiers expand
- * into per-copy rows; single-copy tiers open the holding editor.
+ * One grade tier as a compact row — a small card thumbnail (reusable
+ * `CardImage`) + colored grade · ×count on the left, value (+ per-each or P/L)
+ * on the right. Multi-copy tiers expand into per-copy rows; single-copy tiers
+ * open the holding editor.
  */
 function TierRow({
   tier,
+  cardImage,
   bordered,
   expandable,
   open,
   onPress,
 }: {
   tier: HoldingTier;
+  cardImage?: string;
   bordered: boolean;
   expandable: boolean;
   open: boolean;
@@ -505,15 +509,36 @@ function TierRow({
       style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
-        gap: 8,
-        paddingVertical: 11,
+        gap: 10,
+        paddingVertical: 9,
         borderTopWidth: bordered ? 1 : 0,
         borderTopColor: withAlpha(p.line.default, 0.55),
         backgroundColor: pressed ? p.bg.sunken : "transparent",
       })}
     >
-      {/* Grade — the row's identity, carried by color. */}
-      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: tint }} />
+      {/* Card art — small so the repeat across tiers stays subtle. */}
+      <View
+        style={{
+          width: 30,
+          height: 42,
+          borderRadius: 6,
+          overflow: "hidden",
+          backgroundColor: p.bg.sunken,
+        }}
+      >
+        <CardImage
+          uri={cardImage}
+          width={30}
+          height={42}
+          rounded={0}
+          contentFit="cover"
+          priority="low"
+          recyclingKey={tier.key}
+          alt={tier.label}
+        />
+      </View>
+
+      {/* Grade — identity, carried by color. */}
       <Text style={{ color: tint, fontSize: 13, fontWeight: "800" }}>{tier.label}</Text>
       {count > 1 ? (
         <Text style={{ color: p.ink.muted, fontSize: 11.5, fontWeight: "700" }}>

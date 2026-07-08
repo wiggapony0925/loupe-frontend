@@ -1,19 +1,17 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Modal,
   Platform,
   Pressable,
   StyleSheet,
   Text,
-  type AccessibilityRole,
-  type GestureResponderEvent,
-  type StyleProp,
   useColorScheme,
   View,
-  type ViewStyle,
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { router, Tabs } from "expo-router";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { BottomTabBar } from "@react-navigation/bottom-tabs";
 import {
   BarChart3,
   Camera,
@@ -48,20 +46,19 @@ const isIOS = Platform.OS === "ios";
 
 type ScanShortcut = "grade" | "identify" | "playground";
 
-interface ScanTabButtonProps {
-  children?: React.ReactNode;
-  onPress?: ((event: GestureResponderEvent) => void) | null;
-  onLongPress?: ((event: GestureResponderEvent) => void) | null;
-  style?: StyleProp<ViewStyle>;
-  accessibilityLabel?: string;
-  accessibilityRole?: AccessibilityRole;
-  accessibilityState?: { selected?: boolean };
-  testID?: string;
-  palette: ReturnType<typeof useThemedPalette>;
-}
+/**
+ * The four page tabs, in bar order. Scan is not here — it's the raised
+ * center FAB (a launcher, not a page), inserted between `vault` and
+ * `search`. This order MUST match the <Tabs.Screen> order below.
+ */
+const NAV_TABS: { name: string; label: string; Icon: LucideIcon }[] = [
+  { name: "index", label: "Command", Icon: Gauge },
+  { name: "vault", label: "Vault", Icon: Layers },
+  { name: "search", label: "Search", Icon: Search },
+  { name: "analytics", label: "Analytics", Icon: BarChart3 },
+];
 
-/** A tab icon with a subtle mint pill behind it when active — the polished
- *  active-state treatment (no glass dock). */
+/** A tab icon with a subtle mint pill behind it when active (Android). */
 function TabIcon({
   Icon,
   focused,
@@ -89,32 +86,6 @@ function TabIcon({
   );
 }
 
-/**
- * FloatingGlassBar — the iOS tab bar background: a native Liquid Glass pill
- * (expo-glass-effect GlassView, blur fallback on older iOS) with a hairline
- * ring, filling the floating tabBarStyle.
- */
-function FloatingGlassBar({
-  palette,
-}: {
-  palette: ReturnType<typeof useThemedPalette>;
-}) {
-  return (
-    <LiquidGlassView
-      glassStyle="regular"
-      intensity={40}
-      tint="default"
-      style={{
-        flex: 1,
-        borderRadius: 32,
-        overflow: "hidden",
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: withAlpha(palette.ink.default, 0.12),
-      }}
-    />
-  );
-}
-
 export default function TabsLayout() {
   // Subscribe to theme so the screenOptions object below is rebuilt with
   // the freshly-mutated palette values when the user toggles Light/Dark.
@@ -122,65 +93,30 @@ export default function TabsLayout() {
   const systemScheme = useColorScheme();
   const p = useThemedPalette();
   const insets = useSafeAreaInsets();
-  // Resolve to the actual visible scheme so "Auto" mode also remounts the
-  // navigator when the device theme flips.
   const resolved = themeMode === "system" ? (systemScheme ?? "dark") : themeMode;
 
   return (
     <Tabs
-      // Force the tab navigator to remount on theme change so React Navigation
-      // re-applies tabBarStyle / colors cleanly (it caches some style props).
       key={resolved}
+      // iOS gets a fully custom compact, centered glass pill with a
+      // press-and-drag page switcher (see LoupeTabBar). Android keeps the
+      // stock flat bar (glass + custom gestures are unreliable there), so
+      // the tabBarIcon / tabBarButton options below still drive it.
+      tabBar={(props) => <LoupeTabBar {...props} palette={p} />}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: p.accent.mint,
         tabBarInactiveTintColor: p.ink.dim,
-        // iOS: a FLOATING liquid-glass pill (native GlassView) hovering above
-        // the content — the Instagram / Apple-Music dock. Android keeps the
-        // flat solid bar flush to the edge (glass is unreliable there).
-        tabBarBackground: isIOS ? () => <FloatingGlassBar palette={p} /> : undefined,
-        tabBarStyle: isIOS
-          ? {
-              position: "absolute",
-              left: 16,
-              right: 16,
-              bottom: Math.max(insets.bottom, 12),
-              height: 64,
-              borderRadius: 32,
-              borderTopWidth: 0,
-              backgroundColor: "transparent",
-              paddingTop: 6,
-              paddingBottom: 6,
-              elevation: 0,
-              shadowColor: "#000",
-              shadowOpacity: 0.18,
-              shadowRadius: 18,
-              shadowOffset: { width: 0, height: 8 },
-            }
-          : {
-              backgroundColor: p.bg.base,
-              borderTopWidth: StyleSheet.hairlineWidth,
-              borderTopColor: p.line.default,
-              height: 56 + insets.bottom,
-              paddingTop: 8,
-              paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
-              shadowColor: "#000",
-              shadowOpacity: 0.06,
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: -3 },
-              elevation: 12,
-            },
-        tabBarItemStyle: {
-          paddingTop: isIOS ? 4 : 2,
+        tabBarStyle: {
+          backgroundColor: p.bg.base,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: p.line.default,
+          height: 56 + insets.bottom,
+          paddingTop: 8,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
         },
-        // Sentence-case, lightly tracked — clean and iOS-native. (The old
-        // uppercase + wide tracking pushed "ANALYTICS" past the tab width
-        // on narrow phones and clipped to "ANALYTI…".)
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: "600",
-          letterSpacing: 0.2,
-        },
+        tabBarItemStyle: { paddingTop: 2 },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: "600", letterSpacing: 0.2 },
       }}
     >
       <Tabs.Screen
@@ -201,14 +137,13 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* Scan — the app's primary verb, rendered as a raised circular FAB at the
-          center of the bar (the ScanTabButton). Long-press opens the camera-mode
-          sheet. No label/icon here; the button renders its own. */}
+      {/* Scan — the app's primary verb, a raised circular FAB in the center.
+          Long-press opens the camera-mode sheet. */}
       <Tabs.Screen
         name="scan"
         options={{
           title: "Scan",
-          tabBarButton: (props) => <ScanTabButton {...props} palette={p} />,
+          tabBarButton: () => <ScanFab palette={p} variant="android" />,
         }}
       />
       <Tabs.Screen
@@ -233,14 +168,256 @@ export default function TabsLayout() {
   );
 }
 
-function ScanTabButton({
-  style,
-  accessibilityLabel,
-  accessibilityRole,
-  accessibilityState,
-  testID,
+// ───────────────────────── iOS custom tab bar ─────────────────────────
+
+const ITEM_W = 50; // per-icon hit target
+const ITEM_H = 44;
+
+/**
+ * LoupeTabBar — the iOS bar. A COMPACT, CENTERED liquid-glass pill (not the
+ * full-width spread of the stock bar) with an iOS-Camera-style page dial:
+ * press and drag your finger across it and the active page follows your
+ * finger with a haptic tick at each tab and a highlight that springs under
+ * it; release to land. Tapping a tab still works. The Scan FAB sits raised
+ * in the center. On Android this returns the stock BottomTabBar.
+ */
+function LoupeTabBar(
+  props: BottomTabBarProps & { palette: ReturnType<typeof useThemedPalette> },
+) {
+  const { state, navigation, palette: p } = props;
+  const insets = useSafeAreaInsets();
+
+  const activeName = state.routes[state.index]?.name ?? "index";
+  // Item layout (x + width) in the pill's coordinate space, keyed by route.
+  const layouts = useRef<Record<string, { x: number; width: number }>>({});
+  const highlightX = useSharedValue(0);
+  const highlightW = useSharedValue(ITEM_W);
+  const highlightReady = useSharedValue(0);
+  // `dragName` drives rendering (icon tint); the ref mirrors it so the pan
+  // callbacks can compare/commit without side effects inside a setState updater.
+  const [dragName, setDragName] = useState<string | null>(null);
+  const dragNameRef = useRef<string | null>(null);
+  const setDrag = useCallback((name: string | null) => {
+    dragNameRef.current = name;
+    setDragName(name);
+  }, []);
+
+  const moveHighlightTo = useCallback(
+    (name: string, animated = true) => {
+      const l = layouts.current[name];
+      if (!l) return;
+      highlightReady.value = 1;
+      if (animated) {
+        highlightX.value = withSpring(l.x, { damping: 22, stiffness: 260, mass: 0.7 });
+        highlightW.value = withSpring(l.width, { damping: 22, stiffness: 260 });
+      } else {
+        highlightX.value = l.x;
+        highlightW.value = l.width;
+      }
+    },
+    [highlightX, highlightW, highlightReady],
+  );
+
+  // Keep the highlight under the active tab (navigation from anywhere).
+  useEffect(() => {
+    if (!dragName) moveHighlightTo(activeName);
+  }, [activeName, dragName, moveHighlightTo]);
+
+  const hitTest = useCallback((x: number): string | null => {
+    for (const t of NAV_TABS) {
+      const l = layouts.current[t.name];
+      if (l && x >= l.x && x <= l.x + l.width) return t.name;
+    }
+    return null;
+  }, []);
+
+  const onDragMove = useCallback(
+    (x: number) => {
+      const hit = hitTest(x);
+      if (hit && hit !== dragNameRef.current) {
+        Haptics.selectionAsync().catch(() => {});
+        moveHighlightTo(hit);
+        setDrag(hit);
+      }
+    },
+    [hitTest, moveHighlightTo, setDrag],
+  );
+
+  const commitDrag = useCallback(() => {
+    const name = dragNameRef.current;
+    if (name && name !== activeName) {
+      navigation.navigate(name as never);
+    } else {
+      moveHighlightTo(activeName);
+    }
+    setDrag(null);
+  }, [activeName, navigation, moveHighlightTo, setDrag]);
+
+  // Horizontal drag = page dial. activeOffsetX lets vertical/short touches
+  // fall through to the per-item Pressables (plain taps still navigate).
+  const pan = Gesture.Pan()
+    .runOnJS(true)
+    .activeOffsetX([-10, 10])
+    .onBegin((e) => onDragMove(e.x))
+    .onUpdate((e) => onDragMove(e.x))
+    .onEnd(commitDrag)
+    .onFinalize(commitDrag);
+
+  const highlightStyle = useAnimatedStyle(() => ({
+    opacity: highlightReady.value,
+    width: highlightW.value,
+    transform: [{ translateX: highlightX.value }],
+  }));
+
+  if (!isIOS) {
+    return <BottomTabBar {...props} />;
+  }
+
+  const tap = (name: string) => {
+    Haptics.selectionAsync().catch(() => {});
+    if (name !== activeName) navigation.navigate(name as never);
+  };
+
+  // Split nav tabs around the center FAB: [Command, Vault] · FAB · [Search, Analytics].
+  const left = NAV_TABS.slice(0, 2);
+  const right = NAV_TABS.slice(2);
+
+  return (
+    <View
+      pointerEvents="box-none"
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: Math.max(insets.bottom, 10),
+        alignItems: "center",
+      }}
+    >
+      <GestureDetector gesture={pan}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 10,
+            height: 60,
+            borderRadius: 30,
+            overflow: "hidden",
+            shadowColor: "#000",
+            shadowOpacity: 0.22,
+            shadowRadius: 20,
+            shadowOffset: { width: 0, height: 10 },
+          }}
+        >
+          <LiquidGlassView
+            glassStyle="regular"
+            intensity={40}
+            tint="default"
+            style={{
+              ...StyleSheet.absoluteFillObject,
+              borderRadius: 30,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: withAlpha(p.ink.default, 0.14),
+            }}
+          />
+
+          {/* Sliding active-tab highlight — follows the finger while dragging. */}
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              {
+                position: "absolute",
+                top: (60 - ITEM_H) / 2,
+                height: ITEM_H,
+                borderRadius: 999,
+                backgroundColor: withAlpha(p.accent.mint, 0.16),
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: withAlpha(p.accent.mint, 0.5),
+              },
+              highlightStyle,
+            ]}
+          />
+
+          {left.map((t) => (
+            <NavItem
+              key={t.name}
+              tab={t}
+              active={(dragName ?? activeName) === t.name}
+              palette={p}
+              onPress={() => tap(t.name)}
+              onLayout={(x, width) => {
+                layouts.current[t.name] = { x, width };
+                if (t.name === activeName && !dragName) moveHighlightTo(t.name, false);
+              }}
+            />
+          ))}
+
+          <ScanFab palette={p} variant="ios" />
+
+          {right.map((t) => (
+            <NavItem
+              key={t.name}
+              tab={t}
+              active={(dragName ?? activeName) === t.name}
+              palette={p}
+              onPress={() => tap(t.name)}
+              onLayout={(x, width) => {
+                layouts.current[t.name] = { x, width };
+                if (t.name === activeName && !dragName) moveHighlightTo(t.name, false);
+              }}
+            />
+          ))}
+        </View>
+      </GestureDetector>
+    </View>
+  );
+}
+
+function NavItem({
+  tab,
+  active,
   palette: p,
-}: ScanTabButtonProps) {
+  onPress,
+  onLayout,
+}: {
+  tab: { name: string; label: string; Icon: LucideIcon };
+  active: boolean;
+  palette: ReturnType<typeof useThemedPalette>;
+  onPress: () => void;
+  onLayout: (x: number, width: number) => void;
+}) {
+  const { Icon } = tab;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={tab.label}
+      onLayout={(e) => onLayout(e.nativeEvent.layout.x, e.nativeEvent.layout.width)}
+      style={{ width: ITEM_W, height: 60, alignItems: "center", justifyContent: "center" }}
+    >
+      <Icon
+        size={22}
+        color={active ? p.accent.mint : p.ink.dim}
+        strokeWidth={active ? 2.5 : 2}
+      />
+    </Pressable>
+  );
+}
+
+// ───────────────────────── Scan FAB + menu ─────────────────────────
+
+/**
+ * The raised Scan launcher — tap opens the camera instantly, long-press
+ * opens the camera-mode sheet. Shared by the iOS pill (`variant="ios"`) and
+ * the Android stock bar (`variant="android"`, where it's the tabBarButton).
+ */
+function ScanFab({
+  palette: p,
+  variant,
+}: {
+  palette: ReturnType<typeof useThemedPalette>;
+  variant: "ios" | "android";
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const navigateToShortcut = useCallback((target: ScanShortcut) => {
@@ -257,47 +434,38 @@ function ScanTabButton({
   return (
     <>
       <Pressable
-        // Tap = camera, instantly. The old behavior switched to an
-        // interstitial hub tab first — a whole extra tap in front of the
-        // app's primary verb. We deliberately do NOT forward the tab
-        // navigation onPress/onLongPress: the FAB is a launcher, not a tab.
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           router.push(routes.scanEntry());
         }}
         onLongPress={() => {
           setMenuOpen(true);
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
         }}
         delayLongPress={260}
-        accessibilityRole={accessibilityRole ?? "button"}
-        accessibilityLabel={
-          accessibilityLabel ??
-          "Scan a card. Opens the camera. Press and hold for more scan modes."
+        accessibilityRole="button"
+        accessibilityLabel="Scan a card. Opens the camera. Press and hold for more scan modes."
+        style={
+          variant === "android"
+            ? { flex: 1, alignItems: "center", justifyContent: "flex-start" }
+            : { width: 60, alignItems: "center", justifyContent: "center", height: 60 }
         }
-        accessibilityState={accessibilityState}
-        testID={testID}
-        style={[
-          style,
-          { flex: 1, alignItems: "center", justifyContent: "flex-start" },
-        ]}
       >
         {({ pressed }) => (
-          // Raised circular FAB — Scan is the app's primary verb, so it's the
-          // hero of the bar. Long-press still opens the camera-mode sheet.
           <View
             style={[
               {
-                marginTop: -16,
-                width: 56,
-                height: 56,
-                borderRadius: 28,
+                // On iOS the pill is only 60 tall, so a gentle raise (not the
+                // big Android cut-out) keeps the FAB inside the glass.
+                marginTop: variant === "android" ? -16 : -18,
+                width: 54,
+                height: 54,
+                borderRadius: 27,
                 backgroundColor: p.accent.mint,
                 alignItems: "center",
                 justifyContent: "center",
-                // A bg-colored ring "cuts" the FAB out of the bar.
                 borderWidth: 4,
-                borderColor: p.bg.base,
+                borderColor: variant === "android" ? p.bg.base : withAlpha(p.bg.base, 0.0),
                 shadowColor: p.accent.mint,
                 shadowOpacity: 0.45,
                 shadowRadius: 10,
@@ -333,8 +501,8 @@ function ScanTabButton({
 /**
  * Draggable bottom sheet for the long-press Scan menu. Slides up from the
  * tab bar, can be dragged down (or tapped on the scrim) to dismiss, and
- * exposes the two quick-scan actions. Uses gesture-handler + reanimated so
- * the drag runs on the UI thread (the old PanResponder version crashed).
+ * exposes the quick-scan actions. gesture-handler + reanimated so the drag
+ * runs on the UI thread.
  */
 function ScanActionSheet({
   palette: p,
@@ -448,22 +616,11 @@ function ScanActionSheet({
             }}
           >
             <View>
-              <Text
-                style={{
-                  color: p.ink.default,
-                  fontSize: 20,
-                  fontWeight: "800",
-                }}
-              >
+              <Text style={{ color: p.ink.default, fontSize: 20, fontWeight: "800" }}>
                 Scan
               </Text>
               <Text
-                style={{
-                  color: p.ink.dim,
-                  fontSize: 12,
-                  fontWeight: "600",
-                  marginTop: 2,
-                }}
+                style={{ color: p.ink.dim, fontSize: 12, fontWeight: "600", marginTop: 2 }}
               >
                 Choose the camera mode
               </Text>
@@ -579,22 +736,13 @@ function ScanShortcutTarget({
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text
             numberOfLines={1}
-            style={{
-              color: p.ink.default,
-              fontSize: 16,
-              fontWeight: "700",
-            }}
+            style={{ color: p.ink.default, fontSize: 16, fontWeight: "700" }}
           >
             {label}
           </Text>
           <Text
             numberOfLines={1}
-            style={{
-              color: p.ink.dim,
-              fontSize: 12,
-              fontWeight: "500",
-              marginTop: 2,
-            }}
+            style={{ color: p.ink.dim, fontSize: 12, fontWeight: "500", marginTop: 2 }}
           >
             {caption}
           </Text>
