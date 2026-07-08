@@ -2,6 +2,38 @@ import ExpoModulesCore
 import AVFoundation
 import Vision
 import UIKit
+import SwiftUI
+
+// ── Overlay state pushed from JS ────────────────────────────────────
+// The whole scanner chrome is a native SwiftUI overlay (ScannerOverlayView)
+// driven by this one prop; JS owns the identify/pricing/nav logic and just
+// pushes display state in and receives interaction events back out.
+struct ScannerItemPayload: Record {
+  @Field var id: String = ""
+  @Field var imageUrl: String? = nil
+  @Field var photoUri: String? = nil
+  @Field var title: String = ""
+  @Field var subtitle: String = ""
+  @Field var status: String = "scanning"
+}
+
+struct OverlayStatePayload: Record {
+  @Field var statusText: String = "Frame a card · tap the shutter"
+  @Field var hintText: String? = nil
+  @Field var errorText: String? = nil
+  @Field var tcgLabel: String = "Auto-detect"
+  @Field var tcgAccentHex: String = "#16C09C"
+  @Field var torchOn: Bool = false
+  @Field var autoOn: Bool = false
+  @Field var autoSupported: Bool = true
+  @Field var zoom: Double = 1
+  @Field var slotsLeft: Int = -1
+  @Field var busy: Bool = false
+  @Field var matchedCount: Int = 0
+  @Field var totalText: String? = nil
+  @Field var canAddAll: Bool = false
+  @Field var items: [ScannerItemPayload] = []
+}
 
 // Native Swift camera preview for the card scanner. Replaces the
 // React-Native `expo-camera` surface with a first-party AVFoundation
@@ -25,6 +57,22 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
   let onCardDetected = EventDispatcher()
   let onCapture = EventDispatcher()
   let onMountError = EventDispatcher()
+  // SwiftUI overlay interactions → JS.
+  let onOverlayClose = EventDispatcher()
+  let onShutter = EventDispatcher()
+  let onToggleTorch = EventDispatcher()
+  let onToggleAuto = EventDispatcher()
+  let onZoomChange = EventDispatcher()
+  let onManualSearch = EventDispatcher()
+  let onDismissError = EventDispatcher()
+  let onPickTcg = EventDispatcher()
+  let onPickCard = EventDispatcher()
+  let onRemoveCard = EventDispatcher()
+  let onAddAll = EventDispatcher()
+
+  // ── Native SwiftUI overlay ──────────────────────────────────────
+  private let overlayModel = ScannerOverlayModel()
+  private var overlayHost: UIHostingController<ScannerOverlayView>?
 
   // ── Capture stack ───────────────────────────────────────────────
   private let session = AVCaptureSession()
@@ -68,6 +116,63 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     backgroundColor = .black
     setupPreview()
     setupReticle()
+    setupOverlay()
+  }
+
+  // MARK: - SwiftUI overlay
+
+  private func setupOverlay() {
+    // Wire the SwiftUI overlay's interactions to the JS event dispatchers.
+    overlayModel.onClose = { [weak self] in self?.onOverlayClose([:]) }
+    overlayModel.onShutter = { [weak self] in self?.onShutter([:]) }
+    overlayModel.onToggleTorch = { [weak self] in self?.onToggleTorch([:]) }
+    overlayModel.onToggleAuto = { [weak self] in self?.onToggleAuto([:]) }
+    overlayModel.onZoom = { [weak self] z in self?.onZoomChange(["zoom": z]) }
+    overlayModel.onManualSearch = { [weak self] in self?.onManualSearch([:]) }
+    overlayModel.onDismissError = { [weak self] in self?.onDismissError([:]) }
+    overlayModel.onPickTcg = { [weak self] tcg in self?.onPickTcg(["tcg": tcg]) }
+    overlayModel.onPickCard = { [weak self] id in self?.onPickCard(["id": id]) }
+    overlayModel.onRemoveCard = { [weak self] id in self?.onRemoveCard(["id": id]) }
+    overlayModel.onAddAll = { [weak self] in self?.onAddAll([:]) }
+
+    let host = UIHostingController(rootView: ScannerOverlayView(model: overlayModel))
+    host.view.backgroundColor = .clear
+    host.view.frame = bounds
+    host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    addSubview(host.view)
+    overlayHost = host
+  }
+
+  // Push the full display state in from JS (main thread — drives SwiftUI).
+  func setOverlayState(_ state: OverlayStatePayload) {
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      let m = self.overlayModel
+      m.statusText = state.statusText
+      m.hintText = state.hintText
+      m.errorText = state.errorText
+      m.tcgLabel = state.tcgLabel
+      m.tcgAccentHex = state.tcgAccentHex
+      m.torchOn = state.torchOn
+      m.autoOn = state.autoOn
+      m.autoSupported = state.autoSupported
+      m.zoom = state.zoom
+      m.slotsLeft = state.slotsLeft
+      m.busy = state.busy
+      m.matchedCount = state.matchedCount
+      m.totalText = state.totalText
+      m.canAddAll = state.canAddAll
+      m.items = state.items.map {
+        ScannerItem(
+          id: $0.id,
+          imageUrl: $0.imageUrl,
+          photoUri: $0.photoUri,
+          title: $0.title,
+          subtitle: $0.subtitle,
+          status: $0.status
+        )
+      }
+    }
   }
 
   // MARK: - Layout
@@ -95,6 +200,15 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     super.layoutSubviews()
     previewLayer.frame = bounds
     reticleLayer.frame = bounds
+    overlayHost?.view.frame = bounds
+    // The bare hosting subview doesn't inherit the safe area, so feed the
+    // device insets into the SwiftUI model (top bar must clear the island).
+    if overlayModel.topInset != safeAreaInsets.top {
+      overlayModel.topInset = safeAreaInsets.top
+    }
+    if overlayModel.bottomInset != safeAreaInsets.bottom {
+      overlayModel.bottomInset = safeAreaInsets.bottom
+    }
   }
 
   // MARK: - Props (called from the module DSL)

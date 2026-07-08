@@ -14,6 +14,7 @@
  *     do NOT wrap `router.push` itself so call sites keep working with
  *     `router.replace`, `router.back`, `Link`, etc.
  */
+import { Platform } from "react-native";
 
 export type ScanPhoneMode = "quick" | "studio";
 
@@ -51,6 +52,13 @@ export const routes = {
     tcg ? `/scan/identify?tcg=${tcg}` : "/scan/identify",
   /** Native Swift AVFoundation scanner (iOS). Falls back to scanIdentify. */
   scanNative: () => "/scan/native",
+  /**
+   * THE scan entry — every "scan a card" affordance should use this. iOS
+   * gets the native Swift scanner; Android/web fall back to the expo-camera
+   * flow. (The /scan/native screen itself also self-falls-back if the native
+   * view isn't linked.)
+   */
+  scanEntry: () => (Platform.OS === "ios" ? "/scan/native" : "/scan/identify"),
   /**
    * Add a card to the user's vault without scanning.
    *

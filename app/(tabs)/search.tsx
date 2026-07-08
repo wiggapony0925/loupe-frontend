@@ -12,6 +12,7 @@ import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -308,7 +309,7 @@ export default function SearchScreen() {
             </Pressable>
           ) : null}
           <Pressable
-            onPress={() => router.push(routes.scanIdentify())}
+            onPress={() => router.push(routes.scanEntry())}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Scan a card with the camera"
@@ -431,7 +432,13 @@ export default function SearchScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingTop: 4, paddingBottom: 64, gap: 24 }}
+        // Clear the floating iOS tab-bar pill (see Command screen note).
+        contentContainerStyle={{
+          padding: 20,
+          paddingTop: 4,
+          paddingBottom: Platform.OS === "ios" ? 116 : 64,
+          gap: 24,
+        }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

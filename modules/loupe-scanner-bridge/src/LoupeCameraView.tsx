@@ -24,6 +24,36 @@ export type CaptureEvent = {
 /** Emitted when the capture session couldn't start. */
 export type MountErrorEvent = { message: string };
 
+/** One tile in the native SwiftUI session tray. */
+export type ScannerOverlayItem = {
+  id: string;
+  imageUrl?: string | null;
+  photoUri?: string | null;
+  title: string;
+  subtitle: string;
+  status: "scanning" | "matched" | "missed";
+};
+
+/** Full display state for the native SwiftUI scanner overlay (pushed from JS). */
+export type ScannerOverlayState = {
+  statusText: string;
+  hintText?: string | null;
+  errorText?: string | null;
+  tcgLabel: string;
+  tcgAccentHex: string;
+  torchOn: boolean;
+  autoOn: boolean;
+  autoSupported: boolean;
+  zoom: number;
+  /** Remaining free-tier slots; -1 means uncapped (null). */
+  slotsLeft: number;
+  busy: boolean;
+  matchedCount: number;
+  totalText?: string | null;
+  canAddAll: boolean;
+  items: ScannerOverlayItem[];
+};
+
 export interface LoupeCameraViewProps {
   style?: StyleProp<ViewStyle>;
   /** Start/stop the AVCaptureSession. */
@@ -38,10 +68,24 @@ export interface LoupeCameraViewProps {
   zoom?: number;
   /** Set a fresh id (uuid) to fire a still capture; result on onCapture. */
   captureRequestId?: string;
+  /** Full state for the native SwiftUI overlay chrome (top bar, tray, …). */
+  overlayState?: ScannerOverlayState;
   onCameraReady?: (e: { nativeEvent: CameraReadyEvent }) => void;
   onCardDetected?: (e: { nativeEvent: CardDetectedEvent }) => void;
   onCapture?: (e: { nativeEvent: CaptureEvent }) => void;
   onMountError?: (e: { nativeEvent: MountErrorEvent }) => void;
+  // ── Native SwiftUI overlay interactions ──
+  onOverlayClose?: (e: { nativeEvent: object }) => void;
+  onShutter?: (e: { nativeEvent: object }) => void;
+  onToggleTorch?: (e: { nativeEvent: object }) => void;
+  onToggleAuto?: (e: { nativeEvent: object }) => void;
+  onZoomChange?: (e: { nativeEvent: { zoom: number } }) => void;
+  onManualSearch?: (e: { nativeEvent: object }) => void;
+  onDismissError?: (e: { nativeEvent: object }) => void;
+  onPickTcg?: (e: { nativeEvent: { tcg: string } }) => void;
+  onPickCard?: (e: { nativeEvent: { id: string } }) => void;
+  onRemoveCard?: (e: { nativeEvent: { id: string } }) => void;
+  onAddAll?: (e: { nativeEvent: object }) => void;
 }
 
 // Second view registered on the LoupeScannerBridge module — referenced by

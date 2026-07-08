@@ -10,4 +10,6 @@ export type {
   CaptureEvent,
   MountErrorEvent,
   LoupeCameraViewProps,
+  ScannerOverlayItem,
+  ScannerOverlayState,
 } from "./src/LoupeCameraView";

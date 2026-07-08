@@ -76,8 +76,17 @@ export function WebPageScreen({
   const [loading, setLoading] = useState(true);
   const webRef = useRef<WebView>(null);
 
+  // Same confine list the hard-nav guard uses (below). We also hand it to the
+  // web app (`?scope=`) so it can block CLIENT-SIDE (SPA) navigations out of the
+  // section — those don't fire onShouldStartLoadWithRequest, so the native
+  // guard alone can't catch them.
+  const allowed = confinePaths ?? [path];
+  const allowedKey = allowed.join(",");
+
   const sep = path.includes("?") ? "&" : "?";
-  const uri = `${config.webUrl}${path}${sep}embed=${embed}`;
+  const scopeParam =
+    embed === "app" ? `&scope=${encodeURIComponent(allowedKey)}` : "";
+  const uri = `${config.webUrl}${path}${sep}embed=${embed}${scopeParam}`;
 
   // Runs before the web app's own scripts (mirrors the dev-portal screen):
   // seed embed scope + native theme + (optionally) the session token so the
@@ -120,14 +129,21 @@ export function WebPageScreen({
         }, true);
       })();`
       : "";
+    // Seed the confine scope before the web app boots, so its SPA-navigation
+    // guard has it even if the URL param is dropped on client-side navigation.
+    const scopeLine =
+      embed === "app"
+        ? `try { window.sessionStorage.setItem('loupe.embed.scope', ${JSON.stringify(allowedKey)}); } catch (e) {}`
+        : "";
     return `
       try { window.sessionStorage.setItem('loupe.embed', ${JSON.stringify(embed)}); } catch (e) {}
+      ${scopeLine}
       try { window.localStorage.setItem('loupe.theme', ${JSON.stringify(scheme)}); document.documentElement.setAttribute('data-theme', ${JSON.stringify(scheme)}); } catch (e) {}
       ${tokenLine}
       ${detourLine}
       true;
     `;
-  }, [embed, injectToken, scheme, token, nativeDetours]);
+  }, [embed, injectToken, scheme, token, nativeDetours, allowedKey]);
 
   // Native-detour messages from the interceptor above → push the native
   // screen. Ids arrive URL-encoded (composite ids like "pokemontcg:base1-4"
@@ -153,8 +169,7 @@ export function WebPageScreen({
 
   // Confine hard navigations to the page's own section + same origin. Blocks
   // links that would leave the bundled page for the rest of the app or an
-  // external site.
-  const allowed = confinePaths ?? [path];
+  // external site. (SPA navigations are confined web-side via `?scope=`.)
   const onShouldStart = (request: { url: string }): boolean => {
     try {
       const u = new URL(request.url);
