@@ -19,22 +19,12 @@
  * when the native view isn't linked (Android without CameraX / older builds).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Linking,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Linking, Platform, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useCameraPermissions } from "expo-camera";
-import { Camera, CameraOff, Wand2 } from "lucide-react-native";
+import { Camera, CameraOff } from "lucide-react-native";
 import {
   identifyCard,
   identifyCardFromText,
@@ -57,11 +47,6 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useCompactUsd } from "@/shared/format";
 import { routes } from "@/shared/routes";
 import {
-  BLUR_INTENSITY,
-  GLASS,
-  HAIRLINE,
-  ScannerTopBar,
-  ScannerBottomPanel,
   candidateKey,
   scannerErrorCopy,
   ERROR_DISMISS_MS,
@@ -75,6 +60,7 @@ import {
   isNativeCameraAvailable,
   type CaptureEvent,
   type CardDetectedEvent,
+  type ScannerOverlayState,
 } from "../../modules/loupe-scanner-bridge";
 
 /** Live native-detector signal (iOS only today). */
@@ -82,6 +68,14 @@ type Detect = { detected: boolean; steady: boolean; fill: number };
 
 /** RAW grade stamped on a batch-added card — Near Mint ≈ 9 (see identify.tsx). */
 const BATCH_RAW_GRADE = 9;
+
+/** TCG hint → the label + accent the native overlay shows. */
+const TCG_META: Record<string, { label: string; hex: string }> = {
+  auto: { label: "Auto-detect", hex: "#16C09C" },
+  pokemon: { label: "Pokémon", hex: "#F0B429" },
+  magic: { label: "Magic", hex: "#3B82F6" },
+  yugioh: { label: "Yu-Gi-Oh!", hex: "#8B5CF6" },
+};
 
 export default function NativeScanScreen() {
   const p = useThemedPalette();
@@ -96,7 +90,6 @@ export default function NativeScanScreen() {
   const [zoom, setZoom] = useState(1);
   const [detect, setDetect] = useState<Detect>({ detected: false, steady: false, fill: 0 });
   const [captureReq, setCaptureReq] = useState("");
-  const zoomBase = useRef(1);
 
   // ── Identify / session ───────────────────────────────────────────
   // `capturing` = the brief camera encode window (gates re-triggering a
@@ -109,7 +102,6 @@ export default function NativeScanScreen() {
   const [session, setSession] = useState<ScanSessionItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [tcgHint, setTcgHint] = useState<IdentifyTcgHint>(null);
-  const [tcgPickerOpen, setTcgPickerOpen] = useState(false);
   const [flash, setFlash] = useState<"none" | "hit" | "miss">("none");
   const [adding, setAdding] = useState(false);
   const captureBusyRef = useRef(false);
@@ -432,18 +424,94 @@ export default function NativeScanScreen() {
     router.replace(routes.vault());
   }, [sessionMatches, slotsLeft, openPaywall, createGrade]);
 
-  const pinch = useMemo(
+  // Running session total from the server-priced matched candidates.
+  const total = useMemo(
     () =>
-      Gesture.Pinch()
-        .onStart(() => {
-          zoomBase.current = zoom;
-        })
-        .onUpdate((e) => {
-          setZoom(Math.max(1, Math.min(5, zoomBase.current * e.scale)));
-        })
-        .runOnJS(true),
-    [zoom],
+      session.reduce(
+        (s, it) =>
+          s + (it.status === "matched" ? it.candidate?.market_price_usd ?? 0 : 0),
+        0,
+      ),
+    [session],
   );
+
+  // Everything the native SwiftUI overlay renders — one state record pushed
+  // down each render. The live framing coach shows only before the first
+  // capture so it doesn't fight the tray.
+  const overlayState = useMemo<ScannerOverlayState>(() => {
+    const liveHint = !detectionSupported
+      ? "Frame the card, then tap the shutter"
+      : !detect.detected
+        ? "Point at a card"
+        : detect.fill < 0.2
+          ? "Move closer"
+          : detect.steady
+            ? autoCapture
+              ? "Hold steady — capturing…"
+              : "Ready — tap to capture"
+            : "Hold steady";
+    const meta = TCG_META[tcgHint ?? "auto"] ?? TCG_META.auto!;
+    return {
+      statusText: busy ? "Identifying…" : "Frame a card · tap the shutter",
+      hintText: session.length === 0 && !busy ? liveHint : null,
+      errorText: error,
+      tcgLabel: meta.label,
+      tcgAccentHex: meta.hex,
+      torchOn: torch,
+      autoOn: autoCapture,
+      autoSupported: detectionSupported,
+      zoom,
+      slotsLeft: slotsLeft ?? -1,
+      busy,
+      matchedCount: sessionMatches.length,
+      totalText: total > 0 ? formatUsd(total) : null,
+      canAddAll: sessionMatches.length > 0,
+      items: session.map((it) => {
+        const matched = it.status === "matched" && it.candidate != null;
+        const missed = it.status === "missed";
+        const price = matched ? it.candidate?.market_price_usd ?? null : null;
+        const copies = matched ? it.candidate?.copies_owned ?? 0 : 0;
+        const slabs = matched ? it.candidate?.graded_copies ?? 0 : 0;
+        const conf = it.confidence != null ? Math.round(it.confidence * 100) : null;
+        const subtitle = matched
+          ? [
+              price != null ? formatUsd(price) : `${conf ?? 0}% match`,
+              copies > 0 ? `Own ×${copies}${slabs > 0 ? ` (${slabs} graded)` : ""}` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : missed
+            ? "Tap to search manually"
+            : "Photo captured";
+        return {
+          id: it.id,
+          imageUrl: matched ? it.candidate?.image_url ?? null : null,
+          photoUri: it.photoUri,
+          title: matched
+            ? it.candidate?.name ?? "Matched card"
+            : missed
+              ? "Couldn’t read this card"
+              : "Identifying…",
+          subtitle,
+          status: it.status,
+        };
+      }),
+    };
+  }, [
+    busy,
+    detect,
+    detectionSupported,
+    autoCapture,
+    tcgHint,
+    error,
+    torch,
+    zoom,
+    slotsLeft,
+    sessionMatches.length,
+    total,
+    session,
+    formatUsd,
+  ]);
 
   // ── Permission gate (parity with the RN flow) ────────────────────
   if (!useNative) return <View style={{ flex: 1, backgroundColor: "#000" }} />;
@@ -524,36 +592,40 @@ export default function NativeScanScreen() {
     );
   }
 
-  // Live framing coach — only before the first capture, so it doesn't fight
-  // the session tray. Mirrors the RN flow's "coaching strip until first scan".
-  const liveHint = !detectionSupported
-    ? "Frame the card, then tap the shutter"
-    : !detect.detected
-      ? "Point at a card"
-      : detect.fill < 0.2
-        ? "Move closer"
-        : detect.steady
-          ? autoCapture
-            ? "Hold steady — capturing…"
-            : "Ready — tap to capture"
-          : "Hold steady";
-  const detectorHint = session.length === 0 && !busy ? liveHint : null;
-
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <GestureDetector gesture={pinch}>
-        <LoupeCameraView
-          style={StyleSheet.absoluteFill}
-          active
-          torchEnabled={torch}
-          detectionEnabled={!capturing}
-          autoCapture={autoCapture && !capturing && (slotsLeft == null || slotsLeft > 0)}
-          zoom={zoom}
-          captureRequestId={captureReq}
-          onCardDetected={onDetected}
-          onCapture={onCapture}
-        />
-      </GestureDetector>
+      <LoupeCameraView
+        style={StyleSheet.absoluteFill}
+        active
+        torchEnabled={torch}
+        detectionEnabled={!capturing}
+        autoCapture={autoCapture && !capturing && (slotsLeft == null || slotsLeft > 0)}
+        zoom={zoom}
+        captureRequestId={captureReq}
+        overlayState={overlayState}
+        onCardDetected={onDetected}
+        onCapture={onCapture}
+        onOverlayClose={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+        onShutter={triggerCapture}
+        onToggleTorch={() => setTorch((v) => !v)}
+        onToggleAuto={() => setAutoCapture((v) => !v)}
+        onZoomChange={(e) => setZoom(e.nativeEvent.zoom)}
+        onManualSearch={() => router.replace("/search")}
+        onDismissError={() => setError(null)}
+        onPickTcg={(e) => {
+          const t = e.nativeEvent.tcg;
+          setTcgHint(t === "auto" ? null : (t as IdentifyTcgHint));
+          setError(null);
+        }}
+        onPickCard={(e) => {
+          const item = session.find((it) => it.id === e.nativeEvent.id);
+          if (item) pickSessionItem(item);
+        }}
+        onRemoveCard={(e) => removeSessionItem(e.nativeEvent.id)}
+        onAddAll={() => {
+          void handleAddSession();
+        }}
+      />
 
       {/* Capture flash cue — a quick mint/amber frame pulse on hit/miss. */}
       {flash !== "none" ? (
@@ -570,116 +642,6 @@ export default function NativeScanScreen() {
         />
       ) : null}
 
-      <SafeAreaView
-        edges={["top", "left", "right"]}
-        style={{ ...StyleSheet.absoluteFillObject, justifyContent: "space-between" }}
-        pointerEvents="box-none"
-      >
-        <ScannerTopBar
-          onClose={() => (router.canGoBack() ? router.back() : router.replace("/"))}
-          flashOn={torch}
-          locked={false}
-          hasMatch={false}
-          scanning={busy}
-          onToggleFlash={() => setTorch((v) => !v)}
-          tcgHint={tcgHint}
-          onOpenTcgPicker={() => setTcgPickerOpen(true)}
-          palette={p}
-          leadingExtra={
-            detectionSupported ? (
-              <AutoToggle
-                on={autoCapture}
-                mint={p.accent.mint}
-                onPress={() => setAutoCapture((v) => !v)}
-              />
-            ) : undefined
-          }
-        />
-
-        {/* Zoom presets — native 1×/2×/3× (pinch covers everything between). */}
-        <View
-          pointerEvents="box-none"
-          style={{ alignItems: "center", justifyContent: "center", flex: 1 }}
-        >
-          <View
-            pointerEvents="box-none"
-            style={{ position: "absolute", bottom: 8, flexDirection: "row", gap: 10 }}
-          >
-            {[1, 2, 3].map((z) => {
-              const on = Math.round(zoom) === z;
-              return (
-                <Pressable
-                  key={z}
-                  onPress={() => setZoom(z)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Zoom ${z}x`}
-                  accessibilityState={{ selected: on }}
-                  style={({ pressed }) => ({
-                    minWidth: on ? 44 : 34,
-                    height: 34,
-                    paddingHorizontal: on ? 12 : 0,
-                    borderRadius: 999,
-                    overflow: "hidden",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: on ? p.accent.mint : GLASS,
-                    borderWidth: on ? 0 : 1,
-                    borderColor: HAIRLINE,
-                    opacity: pressed ? 0.8 : 1,
-                  })}
-                >
-                  {!on ? (
-                    <BlurView
-                      intensity={BLUR_INTENSITY}
-                      tint="dark"
-                      style={StyleSheet.absoluteFillObject}
-                    />
-                  ) : null}
-                  <Text
-                    style={{
-                      color: on ? "#06140d" : "rgba(255,255,255,0.88)",
-                      fontSize: on ? 13 : 11.5,
-                      fontWeight: "800",
-                    }}
-                  >
-                    {z}×
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <ScannerBottomPanel
-          error={error}
-          detectorHint={detectorHint}
-          tcgHint={tcgHint}
-          tcgPickerOpen={tcgPickerOpen}
-          onCloseTcgPicker={() => setTcgPickerOpen(false)}
-          onPickTcg={(t) => {
-            setTcgHint(t);
-            setTcgPickerOpen(false);
-            setError(null);
-          }}
-          scanSession={session}
-          sessionMatchCount={sessionMatches.length}
-          batchEnabled
-          slotsLeft={slotsLeft}
-          onPickScanSessionItem={pickSessionItem}
-          onRemoveScanSessionItem={removeSessionItem}
-          onAddSession={() => {
-            void handleAddSession();
-          }}
-          onDismissError={() => setError(null)}
-          onManualCapture={triggerCapture}
-          onManualSearch={() => router.replace("/search")}
-          scanning={busy}
-          locked={false}
-          formatUsd={formatUsd}
-          palette={p}
-        />
-      </SafeAreaView>
-
       {adding ? (
         <View
           pointerEvents="auto"
@@ -694,58 +656,5 @@ export default function NativeScanScreen() {
         </View>
       ) : null}
     </View>
-  );
-}
-
-/** The native-only AUTO-capture toggle, slotted into the top bar. */
-function AutoToggle({
-  on,
-  mint,
-  onPress,
-}: {
-  on: boolean;
-  mint: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Toggle auto capture"
-      accessibilityState={{ selected: on }}
-      hitSlop={8}
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 5,
-        paddingHorizontal: 12,
-        height: 46,
-        borderRadius: 23,
-        overflow: "hidden",
-        backgroundColor: on ? mint : GLASS,
-        borderWidth: on ? 0 : StyleSheet.hairlineWidth * 2,
-        borderColor: HAIRLINE,
-        opacity: pressed ? 0.85 : 1,
-      })}
-    >
-      {!on ? (
-        <BlurView
-          intensity={BLUR_INTENSITY}
-          tint="dark"
-          style={StyleSheet.absoluteFillObject}
-        />
-      ) : null}
-      <Wand2 size={15} color={on ? "#06140d" : "#fff"} strokeWidth={2.4} />
-      <Text
-        style={{
-          color: on ? "#06140d" : "#fff",
-          fontSize: 11.5,
-          fontWeight: "800",
-          letterSpacing: 0.5,
-        }}
-      >
-        AUTO
-      </Text>
-    </Pressable>
   );
 }

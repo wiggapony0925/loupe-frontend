@@ -411,10 +411,21 @@ public class LoupeScannerBridgeModule: Module {
       // "LoupeCameraView")` resolves deterministically instead of relying on
       // the type-name fallback (which can drift under Swift name-mangling).
       ViewName("LoupeCameraView")
-      Events("onCameraReady", "onCardDetected", "onCapture", "onMountError")
+      Events(
+        "onCameraReady", "onCardDetected", "onCapture", "onMountError",
+        // Native SwiftUI overlay interactions.
+        "onOverlayClose", "onShutter", "onToggleTorch", "onToggleAuto",
+        "onZoomChange", "onManualSearch", "onDismissError", "onPickTcg",
+        "onPickCard", "onRemoveCard", "onAddAll"
+      )
 
       Prop("active") { (view: LoupeCameraView, active: Bool) in
         view.setActive(active)
+      }
+      // The entire scanner chrome is a native SwiftUI overlay driven by
+      // this one state record (see ScannerOverlayView / OverlayStatePayload).
+      Prop("overlayState") { (view: LoupeCameraView, state: OverlayStatePayload) in
+        view.setOverlayState(state)
       }
       Prop("torchEnabled") { (view: LoupeCameraView, on: Bool) in
         view.setTorch(on)

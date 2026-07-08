@@ -311,60 +311,25 @@ export default function SubscriptionScreen() {
                 </Pressable>
               </View>
             ) : (
-              <View style={{ gap: 8 }}>
-                <Pressable
-                  onPress={manageBilling}
-                  disabled={billingBusy}
-                  accessibilityRole="button"
-                  accessibilityLabel="Manage billing"
-                  className="flex-row items-center justify-center gap-2 rounded-2xl border border-line bg-bg-elevated px-5 py-3.5"
-                  style={({ pressed }) => ({ opacity: pressed || billingBusy ? 0.7 : 1 })}
-                >
-                  {billingBusy ? (
-                    <ActivityIndicator size="small" color={p.ink.muted} />
-                  ) : (
-                    <CreditCard size={14} color={p.ink.muted} />
-                  )}
-                  <Text className="text-[13px] font-semibold text-ink">
-                    Manage payment & billing
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() =>
-                    Alert.alert(
-                      "Cancel Loupe Pro?",
-                      "You'll keep Pro until the end of your current billing period, then drop to Free. Your collection always stays yours.",
-                      [
-                        { text: "Keep Pro", style: "cancel" },
-                        {
-                          text: "Cancel subscription",
-                          style: "destructive",
-                          onPress: () => cancelMut.mutate(),
-                        },
-                      ],
-                    )
-                  }
-                  disabled={cancelMut.isPending}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cancel subscription"
-                  style={({ pressed }) => ({
-                    alignItems: "center",
-                    paddingVertical: 12,
-                    opacity: pressed || cancelMut.isPending ? 0.6 : 1,
-                  })}
-                >
-                  {cancelMut.isPending ? (
-                    <ActivityIndicator size="small" color={p.accent.rose} />
-                  ) : (
-                    <Text
-                      className="text-[13px] font-semibold"
-                      style={{ color: p.accent.rose, textDecorationLine: "underline" }}
-                    >
-                      Cancel subscription
-                    </Text>
-                  )}
-                </Pressable>
-              </View>
+              // Primary action is Manage billing — the cancel affordance lives
+              // at the very bottom of the page (see below), de-emphasized.
+              <Pressable
+                onPress={manageBilling}
+                disabled={billingBusy}
+                accessibilityRole="button"
+                accessibilityLabel="Manage billing"
+                className="flex-row items-center justify-center gap-2 rounded-2xl border border-line bg-bg-elevated px-5 py-3.5"
+                style={({ pressed }) => ({ opacity: pressed || billingBusy ? 0.7 : 1 })}
+              >
+                {billingBusy ? (
+                  <ActivityIndicator size="small" color={p.ink.muted} />
+                ) : (
+                  <CreditCard size={14} color={p.ink.muted} />
+                )}
+                <Text className="text-[13px] font-semibold text-ink">
+                  Manage payment & billing
+                </Text>
+              </Pressable>
             )
           ) : null}
 
@@ -405,6 +370,46 @@ export default function SubscriptionScreen() {
             charged in your bank's currency. Cancel anytime — your collection
             always stays yours.
           </Text>
+
+          {/* Cancel lives at the very bottom, de-emphasized (small, low-
+              contrast, no underline) — reachable per App Store rules, but the
+              page leads with keeping Pro. Only shown for an active, self-serve
+              subscription that isn't already scheduled to cancel. */}
+          {isPro && subscriptionsEnabled && selfServe && !willCancel ? (
+            <Pressable
+              onPress={() =>
+                Alert.alert(
+                  "Cancel Loupe Pro?",
+                  "You'll keep Pro until the end of your current billing period, then drop to Free. Your collection always stays yours.",
+                  [
+                    { text: "Keep Pro", style: "cancel" },
+                    {
+                      text: "Cancel subscription",
+                      style: "destructive",
+                      onPress: () => cancelMut.mutate(),
+                    },
+                  ],
+                )
+              }
+              disabled={cancelMut.isPending}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel subscription"
+              hitSlop={8}
+              style={({ pressed }) => ({
+                alignItems: "center",
+                paddingTop: 4,
+                opacity: pressed || cancelMut.isPending ? 0.5 : 1,
+              })}
+            >
+              {cancelMut.isPending ? (
+                <ActivityIndicator size="small" color={p.ink.dim} />
+              ) : (
+                <Text className="text-[11px] font-medium text-ink-dim">
+                  Cancel subscription
+                </Text>
+              )}
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>

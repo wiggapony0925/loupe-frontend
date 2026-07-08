@@ -213,11 +213,11 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         <MenuRow
           title="Security and privacy"
           subtitle="Captures stay on-device until you grade · full policy"
-          onPress={() => void openLegal(LEGAL_LINKS.privacy, "Privacy policy")}
+          onPress={() => router.push("/legal/privacy")}
         />
         <MenuRow
           title="Legal"
-          subtitle="Terms of service, privacy policy, acknowledgements"
+          subtitle="Terms of service, privacy policy, cookies"
           onPress={() => onNavigate("legal")}
         />
         <MenuRow
@@ -715,7 +715,7 @@ function AboutTab() {
           description="github.com/wiggapony0925/loupe-frontend"
           trailing={<ChevronRight size={16} color={p.ink.dim} />}
           onPress={() =>
-            void openLegal(
+            void openExternalUrl(
               "https://github.com/wiggapony0925/loupe-frontend",
               "GitHub",
             )
@@ -726,7 +726,7 @@ function AboutTab() {
           label="Privacy"
           description="Captures stay on-device until you grade · full policy"
           trailing={<ChevronRight size={16} color={p.ink.dim} />}
-          onPress={() => void openLegal(LEGAL_LINKS.privacy, "Privacy policy")}
+          onPress={() => router.push("/legal/privacy")}
           isLast
         />
       </Section>
@@ -743,13 +743,8 @@ function AboutTab() {
 
 /* ─── Legal tab ──────────────────────────────────────────────────────── */
 
-const LEGAL_LINKS = {
-  terms: "https://loupe.app/legal/terms",
-  privacy: "https://loupe.app/legal/privacy",
-  acknowledgements: "https://loupe.app/legal/acknowledgements",
-} as const;
-
-async function openLegal(url: string, label: string) {
+/** Open a genuinely off-platform URL in the system browser (GitHub, etc.). */
+async function openExternalUrl(url: string, label: string) {
   try {
     const ok = await Linking.canOpenURL(url);
     if (ok) {
@@ -767,6 +762,8 @@ function LegalTab() {
   const version = Constants.expoConfig?.version ?? "0.1.0";
   return (
     <>
+      {/* Legal docs are bundled in-app (chrome-less WebView), not kicked out to
+          the system browser — same pattern as Support and Blog. */}
       <Section title="Documents">
         <Row
           icon={Shield}
@@ -774,7 +771,7 @@ function LegalTab() {
           label="Terms of service"
           description="Your agreement with Loupe — read before continuing."
           trailing={<ChevronRight size={16} color={p.ink.dim} />}
-          onPress={() => openLegal(LEGAL_LINKS.terms, "Terms of service")}
+          onPress={() => router.push("/legal/terms")}
         />
         <Row
           icon={ShieldCheck}
@@ -782,17 +779,15 @@ function LegalTab() {
           label="Privacy policy"
           description="How we collect, store, and use your data."
           trailing={<ChevronRight size={16} color={p.ink.dim} />}
-          onPress={() => openLegal(LEGAL_LINKS.privacy, "Privacy policy")}
+          onPress={() => router.push("/legal/privacy")}
         />
         <Row
           icon={Info}
           iconTint={p.accent.amber}
-          label="Open-source acknowledgements"
-          description="Credits for the libraries Loupe is built on."
+          label="Cookie policy"
+          description="How Loupe uses cookies and local storage."
           trailing={<ChevronRight size={16} color={p.ink.dim} />}
-          onPress={() =>
-            openLegal(LEGAL_LINKS.acknowledgements, "Open-source acknowledgements")
-          }
+          onPress={() => router.push("/legal/cookies")}
           isLast
         />
       </Section>
