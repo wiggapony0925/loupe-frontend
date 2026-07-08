@@ -51,10 +51,10 @@ import {
   scannerErrorCopy,
   ERROR_DISMISS_MS,
   LOCK_CONFIDENCE,
-  MAX_SCAN_SESSION_ITEMS,
   SESSION_RESULT_CONFIDENCE,
   type ScanSessionItem,
 } from "@/presentation/features/scan/overlay";
+import { useScanSession } from "@/application/stores/scanSessionStore";
 import {
   LoupeCameraView,
   isNativeCameraAvailable,
@@ -103,9 +103,16 @@ export default function NativeScanScreen() {
   // frame it can't read — the user gets a beat to re-frame.
   const [autoPaused, setAutoPaused] = useState(false);
   const autoPauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [session, setSession] = useState<ScanSessionItem[]>([]);
+  // The scan session (tray) lives in a PERSISTED store, not local state, so
+  // leaving the scanner and coming back lands the user right where they were.
+  const session = useScanSession((s) => s.items);
+  const tcgHint = useScanSession((s) => s.tcgHint);
+  const setTcgHint = useScanSession((s) => s.setTcgHint);
+  const addSessionItem = useScanSession((s) => s.add);
+  const updateSessionItem = useScanSession((s) => s.patch);
+  const removeSessionItemRaw = useScanSession((s) => s.remove);
+  const clearSession = useScanSession((s) => s.clear);
   const [error, setError] = useState<string | null>(null);
-  const [tcgHint, setTcgHint] = useState<IdentifyTcgHint>(null);
   const [flash, setFlash] = useState<"none" | "hit" | "miss">("none");
   const [adding, setAdding] = useState(false);
   const captureBusyRef = useRef(false);
@@ -116,7 +123,6 @@ export default function NativeScanScreen() {
   // Key of the most recently matched card — so holding one card steady under
   // auto-capture doesn't keep re-adding the SAME card as a fresh tile.
   const lastMatchedKeyRef = useRef<string | null>(null);
-  const sessionSeqRef = useRef(0);
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Native camera resolves per-platform (Swift on iOS, CameraX on Android)
@@ -149,42 +155,14 @@ export default function NativeScanScreen() {
   const slotsLeft =
     gatingActive && cardLimit != null ? Math.max(0, cardLimit - cardCount) : null;
 
-  // ── Session helpers (same ScanSessionItem lifecycle as LiveIdentifyFlow) ──
-  // With no `resolved` arg the tile lands as a "scanning" placeholder that a
-  // later identify patches in place; with one (a pHash cache hit) it lands
-  // already "matched" — instant, no network.
-  const addSessionItem = useCallback(
-    (photoUri: string, resolved?: { candidate: IdentifyCandidate; confidence: number }) => {
-      const id = `${Date.now()}-${sessionSeqRef.current++}`;
-      setSession((prev) =>
-        [
-          ...prev,
-          {
-            id,
-            photoUri,
-            candidate: resolved?.candidate ?? null,
-            identificationId: null,
-            confidence: resolved?.confidence ?? null,
-            status: resolved ? ("matched" as const) : ("scanning" as const),
-          },
-        ].slice(-MAX_SCAN_SESSION_ITEMS),
-      );
-      return id;
+  // Tap the ✕ on a tile → drop it from the persisted session.
+  const removeSessionItem = useCallback(
+    (id: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      removeSessionItemRaw(id);
     },
-    [],
+    [removeSessionItemRaw],
   );
-
-  const updateSessionItem = useCallback(
-    (id: string, patch: Partial<Omit<ScanSessionItem, "id">>) => {
-      setSession((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
-    },
-    [],
-  );
-
-  const removeSessionItem = useCallback((id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setSession((prev) => prev.filter((it) => it.id !== id));
-  }, []);
 
   const showScannerError = useCallback((message: string) => {
     if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
@@ -198,18 +176,16 @@ export default function NativeScanScreen() {
     setTimeout(() => setFlash("none"), 320);
   }, []);
 
-  // A miss is a dead end: pause auto-capture briefly (so it doesn't re-fire
-  // on the same unreadable frame) and self-dismiss the tile so failed reads
-  // don't pile up in the tray.
-  const handleMiss = useCallback((itemId: string) => {
+  // A miss keeps its captured photo in the tray (Collectr-style) — the tile
+  // stays so the user can tap it to search or swipe it away; it does NOT
+  // vanish. We just pause auto-capture briefly so it doesn't machine-gun the
+  // same unreadable frame.
+  const handleMiss = useCallback(() => {
     flashCue("miss");
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     setAutoPaused(true);
     if (autoPauseTimerRef.current) clearTimeout(autoPauseTimerRef.current);
-    autoPauseTimerRef.current = setTimeout(() => setAutoPaused(false), 3000);
-    setTimeout(() => {
-      setSession((prev) => prev.filter((it) => it.id !== itemId));
-    }, 3600);
+    autoPauseTimerRef.current = setTimeout(() => setAutoPaused(false), 2500);
   }, [flashCue]);
 
   // ── Capture → identify ───────────────────────────────────────────
@@ -276,11 +252,11 @@ export default function NativeScanScreen() {
             rememberCardHash(hash, top, conf).catch(() => {});
           }
         } else {
-          handleMiss(itemId);
+          handleMiss();
         }
       } catch (e) {
         updateSessionItem(itemId, { status: "missed" });
-        handleMiss(itemId);
+        handleMiss();
         showScannerError(e instanceof Error ? e.message : "Identification failed");
       } finally {
         if (hash) inFlightHashesRef.current.delete(hash);
@@ -437,8 +413,10 @@ export default function NativeScanScreen() {
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    // Batch is banked — start the next session fresh.
+    clearSession();
     router.replace(routes.vault());
-  }, [sessionMatches, slotsLeft, openPaywall, createGrade]);
+  }, [sessionMatches, slotsLeft, openPaywall, createGrade, clearSession]);
 
   // Running session total from the server-priced matched candidates.
   const total = useMemo(
@@ -499,7 +477,7 @@ export default function NativeScanScreen() {
               .filter(Boolean)
               .join(" · ")
           : missed
-            ? "No match — try again"
+            ? "No match · tap to search"
             : "Reading…";
         return {
           id: it.id,

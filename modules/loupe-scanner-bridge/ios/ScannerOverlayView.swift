@@ -297,20 +297,21 @@ struct ScannerOverlayView: View {
     .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.12), lineWidth: 1))
   }
 
+  // Collectr-style tile: the captured photo is the skeleton and STAYS until
+  // a match resolves, then smoothly crossfades into the card art while the
+  // name / number / price morph in. A miss keeps the photo (tap to search);
+  // nothing vanishes.
   private func trayCard(_ item: ScannerItem) -> some View {
     let matched = item.status == "matched"
     let missed = item.status == "missed"
-    let accent = matched ? Color(hexString: "#16C09C") : (missed ? Color(hexString: "#F0B429") : Color(hexString: "#3B82F6"))
-    // Only a MATCHED card is tappable (opens detail). A miss is a dead end —
-    // it self-dismisses from the tray, so we don't invite a tap that goes
-    // nowhere; a "reading" tile is still resolving.
+    let accent = matched
+      ? Color(hexString: "#16C09C")
+      : (missed ? Color(hexString: "#F0B429") : Color(hexString: "#3B82F6"))
     return Button {
-      if matched { model.onPickCard(item.id) }
+      if matched { model.onPickCard(item.id) } else if missed { model.onManualSearch() }
     } label: {
       HStack(spacing: 10) {
-        TrayThumbnail(imageUrl: item.imageUrl, photoUri: item.photoUri)
-          .frame(width: 42, height: 42 * 3.5 / 2.5)
-          .clipShape(RoundedRectangle(cornerRadius: 8))
+        trayImage(item)
 
         VStack(alignment: .leading, spacing: 3) {
           HStack(spacing: 6) {
@@ -320,15 +321,18 @@ struct ScannerOverlayView: View {
           }
           Text(item.title).font(.system(size: 12.5, weight: .heavy))
             .foregroundColor(.white).lineLimit(2)
+            .contentTransition(.opacity)
           Text(item.subtitle).font(.system(size: 10.5, weight: .semibold))
-            .foregroundColor(.white.opacity(0.52)).lineLimit(1)
+            .foregroundColor(missed ? Color(hexString: "#16C09C") : .white.opacity(0.52))
+            .lineLimit(1)
+            .contentTransition(.opacity)
         }
         Spacer(minLength: 0)
       }
       .padding(9)
       .frame(width: 190)
       .background(Color.white.opacity(matched ? 0.08 : 0.05), in: RoundedRectangle(cornerRadius: 16))
-      .overlay(RoundedRectangle(cornerRadius: 16).stroke(accent.opacity(0.3), lineWidth: 1))
+      .overlay(RoundedRectangle(cornerRadius: 16).stroke(accent.opacity(0.35), lineWidth: 1))
       .overlay(alignment: .topTrailing) {
         Button { model.onRemoveCard(item.id) } label: {
           Image(systemName: "xmark").font(.system(size: 10, weight: .bold))
@@ -340,6 +344,32 @@ struct ScannerOverlayView: View {
       }
     }
     .buttonStyle(.plain)
+    .animation(.spring(response: 0.42, dampingFraction: 0.82), value: item.status)
+  }
+
+  /// The tile's card image: the captured photo (skeleton) crossfading into
+  /// the matched card art, with a shimmer while still reading.
+  private func trayImage(_ item: ScannerItem) -> some View {
+    let matched = item.status == "matched"
+    let scanning = item.status == "scanning"
+    return ZStack {
+      Color.white.opacity(0.08)
+      // Captured photo — visible until a match resolves.
+      TrayThumbnail(imageUrl: nil, photoUri: item.photoUri)
+        .opacity(matched ? 0 : 1)
+      // Matched card art — crossfades in over the photo.
+      TrayThumbnail(imageUrl: item.imageUrl, photoUri: nil)
+        .opacity(matched ? 1 : 0)
+      if scanning {
+        ZStack {
+          Color.black.opacity(0.28)
+          ProgressView().tint(.white).scaleEffect(0.6)
+        }
+      }
+    }
+    .frame(width: 44, height: 44 * 3.5 / 2.5)
+    .clipShape(RoundedRectangle(cornerRadius: 8))
+    .animation(.easeInOut(duration: 0.4), value: matched)
   }
 
   private var shutterRow: some View {
