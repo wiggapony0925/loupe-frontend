@@ -473,8 +473,10 @@ export default function NativeScanScreen() {
         const copies = matched ? it.candidate?.copies_owned ?? 0 : 0;
         const slabs = matched ? it.candidate?.graded_copies ?? 0 : 0;
         const conf = it.confidence != null ? Math.round(it.confidence * 100) : null;
+        const num = matched ? it.candidate?.number ?? null : null;
         const subtitle = matched
           ? [
+              num ? `#${num}` : null,
               price != null ? formatUsd(price) : `${conf ?? 0}% match`,
               copies > 0 ? `Own ×${copies}${slabs > 0 ? ` (${slabs} graded)` : ""}` : null,
             ]

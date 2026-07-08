@@ -201,6 +201,14 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     previewLayer.frame = bounds
     reticleLayer.frame = bounds
     overlayHost?.view.frame = bounds
+    // The bare hosting subview doesn't inherit the safe area, so feed the
+    // device insets into the SwiftUI model (top bar must clear the island).
+    if overlayModel.topInset != safeAreaInsets.top {
+      overlayModel.topInset = safeAreaInsets.top
+    }
+    if overlayModel.bottomInset != safeAreaInsets.bottom {
+      overlayModel.bottomInset = safeAreaInsets.bottom
+    }
   }
 
   // MARK: - Props (called from the module DSL)

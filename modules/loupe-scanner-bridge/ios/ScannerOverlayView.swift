@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // ─────────────────────────────────────────────────────────────────────
 // Native SwiftUI scanner overlay.
@@ -41,6 +42,12 @@ final class ScannerOverlayModel: ObservableObject {
   @Published var matchedCount: Int = 0
   @Published var totalText: String? = nil
   @Published var canAddAll: Bool = false
+  // Device safe-area insets, pushed from the host UIView (the SwiftUI
+  // overlay is a bare hosting subview so it does NOT inherit them) — without
+  // this the top bar renders up under the Dynamic Island / notch and can't
+  // be tapped.
+  @Published var topInset: CGFloat = 0
+  @Published var bottomInset: CGFloat = 0
 
   // Actions → EventDispatchers (assigned by the host view).
   var onClose: () -> Void = {}
@@ -92,6 +99,10 @@ struct ScannerOverlayView: View {
       bottomPanel
     }
     .padding(.horizontal, 12)
+    // Clear the Dynamic Island / notch and the home indicator — the hosting
+    // view fills the whole screen and doesn't inherit the safe area.
+    .padding(.top, max(model.topInset, 8))
+    .padding(.bottom, max(model.bottomInset, 8))
     .confirmationDialog("Game", isPresented: $tcgSheet, titleVisibility: .visible) {
       ForEach(tcgOptions, id: \.key) { opt in
         Button(opt.label) { model.onPickTcg(opt.key) }
@@ -288,19 +299,9 @@ struct ScannerOverlayView: View {
       if matched { model.onPickCard(item.id) } else if missed { model.onManualSearch() }
     } label: {
       HStack(spacing: 10) {
-        ZStack {
-          if let u = URL(string: item.imageUrl ?? item.photoUri ?? "") {
-            AsyncImage(url: u) { img in
-              img.resizable().aspectRatio(contentMode: .fill)
-            } placeholder: {
-              Color.white.opacity(0.08)
-            }
-          } else {
-            Color.white.opacity(0.08)
-          }
-        }
-        .frame(width: 42, height: 42 * 3.5 / 2.5)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        TrayThumbnail(imageUrl: item.imageUrl, photoUri: item.photoUri)
+          .frame(width: 42, height: 42 * 3.5 / 2.5)
+          .clipShape(RoundedRectangle(cornerRadius: 8))
 
         VStack(alignment: .leading, spacing: 3) {
           HStack(spacing: 6) {
@@ -365,5 +366,56 @@ struct ScannerOverlayView: View {
         .background(.ultraThinMaterial, in: Circle())
         .overlay(Circle().stroke(.white.opacity(0.16), lineWidth: 1))
     }
+  }
+}
+
+// MARK: - Tray thumbnail
+//
+// The just-captured photo is a LOCAL file:// path and matched card art is a
+// remote https URL. AsyncImage only loads remote URLs, so the freshly
+// captured "scanning" tile would render blank — the exact "put the photo in
+// the widget while it identifies" behavior. This loads local files once
+// (downsampled, off the main thread) and defers to AsyncImage for remote art.
+struct TrayThumbnail: View {
+  let imageUrl: String?
+  let photoUri: String?
+  @State private var local: UIImage?
+
+  private var isRemote: Bool { imageUrl?.hasPrefix("http") == true }
+
+  var body: some View {
+    Group {
+      if isRemote, let s = imageUrl, let url = URL(string: s) {
+        AsyncImage(url: url) { img in
+          img.resizable().aspectRatio(contentMode: .fill)
+        } placeholder: {
+          Color.white.opacity(0.08)
+        }
+      } else if let img = local {
+        Image(uiImage: img).resizable().aspectRatio(contentMode: .fill)
+      } else {
+        Color.white.opacity(0.08)
+      }
+    }
+    .task(id: photoUri) {
+      guard !isRemote, let uri = photoUri else { return }
+      let path = uri.hasPrefix("file://") ? (URL(string: uri)?.path ?? uri) : uri
+      let image = await Task.detached(priority: .utility) { () -> UIImage? in
+        UIImage(contentsOfFile: path)?.downsampled(to: 240)
+      }.value
+      await MainActor.run { local = image }
+    }
+  }
+}
+
+private extension UIImage {
+  /// Cheap longest-edge downsample so the tray never holds a full-res bitmap.
+  func downsampled(to maxEdge: CGFloat) -> UIImage {
+    let longest = max(size.width, size.height)
+    guard longest > maxEdge else { return self }
+    let scale = maxEdge / longest
+    let target = CGSize(width: size.width * scale, height: size.height * scale)
+    let renderer = UIGraphicsImageRenderer(size: target)
+    return renderer.image { _ in draw(in: CGRect(origin: .zero, size: target)) }
   }
 }
