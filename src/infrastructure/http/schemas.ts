@@ -51,6 +51,8 @@ export const PortfolioSummarySchema = z.object({
   uniqueCardCount: z.number().optional(),
   loupeGradedCount: z.number().optional(),
   availableSets: z.array(z.string()).optional(),
+  // Distinct user tags across the vault — feeds the filter sheet + tag editor.
+  availableTags: z.array(z.string()).optional(),
 });
 
 /* ─── remote app config (feature flags / min version / SDUI) ─────────── */

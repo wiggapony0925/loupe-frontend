@@ -34,6 +34,7 @@ interface GradedCardWire {
   estimated_value_usd: string | null;
   fingerprint_hash: string | null;
   notes: string | null;
+  tags?: string[] | null;
   graded_at: string;
   created_at: string;
   updated_at: string;
@@ -86,6 +87,7 @@ function toCollectionCard(g: GradedCardWire): CollectionCard {
     estimatedValueUsd: g.estimated_value_usd ? Number(g.estimated_value_usd) : 0,
     thumbnailUri: g.card_image_url ?? "",
     scannedAt: g.graded_at,
+    tags: g.tags ?? [],
   };
 }
 
@@ -143,10 +145,18 @@ export interface CollectionQueryParams {
   q?: string;
   /** Exact set-name filter (matches `card_set_name` from the backend). */
   set?: string;
-  /** Grading-house slug (`loupe`, `psa`, `bgs`, …). */
-  house?: string;
+  /** Grading-house slug(s) (`loupe`, `psa`, `bgs`, …) — repeated for multi. */
+  houses?: string[];
   /** Minimum grade (inclusive). */
   minGrade?: number;
+  /** Maximum grade (inclusive). */
+  maxGrade?: number;
+  /** Minimum estimated value USD (inclusive). */
+  minValue?: number;
+  /** Maximum estimated value USD (inclusive). */
+  maxValue?: number;
+  /** User tags — ANY match, repeated per tag. */
+  tags?: string[];
   /** `recent` | `oldest` | `value_desc` | `value_asc` | `grade_desc` | `grade_asc`. */
   sort?: string;
   /** Page offset (rows to skip). */
@@ -164,9 +174,14 @@ export async function fetchCollection(
   const search = new URLSearchParams();
   if (params?.q) search.set("q", params.q);
   if (params?.set) search.set("set", params.set);
-  if (params?.house) search.set("house", params.house);
+  for (const h of params?.houses ?? []) search.append("house", h);
+  for (const t of params?.tags ?? []) search.append("tags", t);
   if (params?.minGrade !== undefined && params.minGrade > 0)
     search.set("min_grade", String(params.minGrade));
+  if (params?.maxGrade !== undefined && params.maxGrade < 10)
+    search.set("max_grade", String(params.maxGrade));
+  if (params?.minValue !== undefined) search.set("min_value", String(params.minValue));
+  if (params?.maxValue !== undefined) search.set("max_value", String(params.maxValue));
   if (params?.sort) search.set("sort", params.sort);
   if (params?.cursor !== undefined && params.cursor > 0)
     search.set("cursor", String(params.cursor));
@@ -207,6 +222,8 @@ export interface CollectionSummary {
   uniqueCardCount?: number;
   loupeGradedCount?: number;
   availableSets?: string[];
+  /** Distinct user tags across the vault — powers the filter sheet + tag editor. */
+  availableTags?: string[];
 }
 
 export async function fetchCollectionSummary(): Promise<CollectionSummary> {
