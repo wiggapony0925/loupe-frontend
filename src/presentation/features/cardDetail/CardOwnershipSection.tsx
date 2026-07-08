@@ -506,80 +506,96 @@ function TierRow({
           ? `${tier.label}, ${count} copies. ${open ? "Collapse" : "Expand"}.`
           : `${tier.label}. Open holding.`
       }
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-        paddingVertical: 9,
-        borderTopWidth: bordered ? 1 : 0,
-        borderTopColor: withAlpha(p.line.default, 0.55),
-        backgroundColor: pressed ? p.bg.sunken : "transparent",
-      })}
     >
-      {/* Card art — small so the repeat across tiers stays subtle. */}
-      <View
-        style={{
-          width: 30,
-          height: 42,
-          borderRadius: 6,
-          overflow: "hidden",
-          backgroundColor: p.bg.sunken,
-        }}
-      >
-        <CardImage
-          uri={cardImage}
-          width={30}
-          height={42}
-          rounded={0}
-          contentFit="cover"
-          priority="low"
-          recyclingKey={tier.key}
-          alt={tier.label}
-        />
-      </View>
-
-      {/* Grade — identity, carried by color. */}
-      <Text style={{ color: tint, fontSize: 13, fontWeight: "800" }}>{tier.label}</Text>
-      {count > 1 ? (
-        <Text style={{ color: p.ink.muted, fontSize: 11.5, fontWeight: "700" }}>
-          ×{count}
-        </Text>
-      ) : null}
-
-      <View style={{ flex: 1 }} />
-
-      {/* Value, with per-each or P/L tucked beneath it. */}
-      <View style={{ alignItems: "flex-end" }}>
-        {tier.valueUsd != null ? (
-          <Price
-            usd={tier.valueUsd}
-            style={{
-              color: p.ink.default,
-              fontSize: 14,
-              fontWeight: "800",
-              fontVariant: ["tabular-nums"],
-            }}
+      {({ pressed }) => (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            paddingVertical: 8,
+            borderTopWidth: bordered ? 1 : 0,
+            borderTopColor: withAlpha(p.line.default, 0.55),
+            backgroundColor: pressed ? p.bg.sunken : "transparent",
+          }}
+        >
+          {/* Card art — self-contained CardImage, small so the repeat stays subtle. */}
+          <CardImage
+            uri={cardImage}
+            width={34}
+            height={47}
+            rounded={5}
+            priority="low"
+            recyclingKey={tier.key}
+            alt={tier.label}
           />
-        ) : (
-          <Text style={{ color: p.ink.muted, fontSize: 14, fontWeight: "800" }}>—</Text>
-        )}
-        {tier.plUsd != null ? (
-          <SignedMoney usd={tier.plUsd} pct={null} size={10.5} />
-        ) : perEa != null ? (
-          <Text style={{ color: p.ink.dim, fontSize: 10.5, fontVariant: ["tabular-nums"] }}>
-            {format(perEa)} ea
-          </Text>
-        ) : null}
-      </View>
 
-      {expandable ? (
-        open ? (
-          <ChevronUp size={15} color={p.ink.dim} />
-        ) : (
-          <ChevronDown size={15} color={p.ink.dim} />
-        )
-      ) : (
-        <ChevronRight size={15} color={p.ink.dim} />
+          {/* Grade identity + count */}
+          <View
+            style={{
+              flex: 1,
+              flexDirection: "row",
+              alignItems: "center",
+              marginLeft: 10,
+            }}
+          >
+            <Text style={{ color: tint, fontSize: 13.5, fontWeight: "800" }}>
+              {tier.label}
+            </Text>
+            {count > 1 ? (
+              <Text
+                style={{
+                  color: p.ink.muted,
+                  fontSize: 12,
+                  fontWeight: "700",
+                  marginLeft: 6,
+                }}
+              >
+                ×{count}
+              </Text>
+            ) : null}
+          </View>
+
+          {/* Value, with per-each or P/L beneath it */}
+          <View style={{ alignItems: "flex-end", marginLeft: 8 }}>
+            {tier.valueUsd != null ? (
+              <Price
+                usd={tier.valueUsd}
+                style={{
+                  color: p.ink.default,
+                  fontSize: 14.5,
+                  fontWeight: "800",
+                  fontVariant: ["tabular-nums"],
+                }}
+              />
+            ) : (
+              <Text style={{ color: p.ink.muted, fontSize: 14.5, fontWeight: "800" }}>
+                —
+              </Text>
+            )}
+            {tier.plUsd != null ? (
+              <SignedMoney usd={tier.plUsd} pct={null} size={10.5} />
+            ) : perEa != null ? (
+              <Text
+                style={{ color: p.ink.dim, fontSize: 10.5, fontVariant: ["tabular-nums"] }}
+              >
+                {format(perEa)} ea
+              </Text>
+            ) : null}
+          </View>
+
+          {/* Chevron */}
+          <View style={{ marginLeft: 6 }}>
+            {expandable ? (
+              open ? (
+                <ChevronUp size={15} color={p.ink.dim} />
+              ) : (
+                <ChevronDown size={15} color={p.ink.dim} />
+              )
+            ) : (
+              <ChevronRight size={15} color={p.ink.dim} />
+            )}
+          </View>
+        </View>
       )}
     </Pressable>
   );

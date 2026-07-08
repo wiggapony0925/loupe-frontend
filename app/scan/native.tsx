@@ -48,6 +48,7 @@ import {
   recognizeTextOnDevice,
 } from "@/infrastructure/ocr/onDeviceOcr";
 import { cardDetector } from "@/infrastructure/native";
+import { lookupCardByHash, rememberCardHash } from "@/infrastructure/cache/cardHashCache";
 import { ApiError } from "@/infrastructure/http/client";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { usePro } from "@/presentation/features/pro";
@@ -64,6 +65,7 @@ import {
   candidateKey,
   scannerErrorCopy,
   ERROR_DISMISS_MS,
+  LOCK_CONFIDENCE,
   MAX_SCAN_SESSION_ITEMS,
   SESSION_RESULT_CONFIDENCE,
   type ScanSessionItem,
@@ -97,6 +99,12 @@ export default function NativeScanScreen() {
   const zoomBase = useRef(1);
 
   // ── Identify / session ───────────────────────────────────────────
+  // `capturing` = the brief camera encode window (gates re-triggering a
+  // capture + auto-capture). `busy` = ≥1 identify in flight (drives the
+  // "Identifying…" chrome). Identifies run in PARALLEL — the camera is
+  // released the instant a frame is ours, so a stack scans without waiting
+  // on each network round-trip (mirrors LiveIdentifyFlow).
+  const [capturing, setCapturing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [session, setSession] = useState<ScanSessionItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +112,14 @@ export default function NativeScanScreen() {
   const [tcgPickerOpen, setTcgPickerOpen] = useState(false);
   const [flash, setFlash] = useState<"none" | "hit" | "miss">("none");
   const [adding, setAdding] = useState(false);
-  const busyRef = useRef(false);
+  const captureBusyRef = useRef(false);
+  const activeIdentifyCountRef = useRef(0);
+  // Hashes currently being identified over the network — so auto-capture
+  // firing repeatedly at the SAME steady card doesn't queue duplicate calls.
+  const inFlightHashesRef = useRef<Set<string>>(new Set());
+  // Key of the most recently matched card — so holding one card steady under
+  // auto-capture doesn't keep re-adding the SAME card as a fresh tile.
+  const lastMatchedKeyRef = useRef<string | null>(null);
   const sessionSeqRef = useRef(0);
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -138,23 +153,29 @@ export default function NativeScanScreen() {
     gatingActive && cardLimit != null ? Math.max(0, cardLimit - cardCount) : null;
 
   // ── Session helpers (same ScanSessionItem lifecycle as LiveIdentifyFlow) ──
-  const addSessionItem = useCallback((photoUri: string) => {
-    const id = `${Date.now()}-${sessionSeqRef.current++}`;
-    setSession((prev) =>
-      [
-        ...prev,
-        {
-          id,
-          photoUri,
-          candidate: null,
-          identificationId: null,
-          confidence: null,
-          status: "scanning" as const,
-        },
-      ].slice(-MAX_SCAN_SESSION_ITEMS),
-    );
-    return id;
-  }, []);
+  // With no `resolved` arg the tile lands as a "scanning" placeholder that a
+  // later identify patches in place; with one (a pHash cache hit) it lands
+  // already "matched" — instant, no network.
+  const addSessionItem = useCallback(
+    (photoUri: string, resolved?: { candidate: IdentifyCandidate; confidence: number }) => {
+      const id = `${Date.now()}-${sessionSeqRef.current++}`;
+      setSession((prev) =>
+        [
+          ...prev,
+          {
+            id,
+            photoUri,
+            candidate: resolved?.candidate ?? null,
+            identificationId: null,
+            confidence: resolved?.confidence ?? null,
+            status: resolved ? ("matched" as const) : ("scanning" as const),
+          },
+        ].slice(-MAX_SCAN_SESSION_ITEMS),
+      );
+      return id;
+    },
+    [],
+  );
 
   const updateSessionItem = useCallback(
     (id: string, patch: Partial<Omit<ScanSessionItem, "id">>) => {
@@ -181,28 +202,25 @@ export default function NativeScanScreen() {
   }, []);
 
   // ── Capture → identify ───────────────────────────────────────────
+  // The shutter/auto-capture only gates on the encode window (captureBusyRef),
+  // NOT on the identify — so you can keep capturing while results resolve.
   const triggerCapture = useCallback(() => {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    setBusy(true);
+    if (captureBusyRef.current) return;
+    captureBusyRef.current = true;
+    setCapturing(true);
     setError(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setCaptureReq(`${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
   }, []);
 
+  // The network identify — runs in parallel (one per captured frame). On a
+  // confident match we remember the frame's pHash so the NEXT frame of the
+  // same card resolves instantly from the on-device cache (no network).
   const runIdentify = useCallback(
-    async (uri: string, corners: number[] | null, itemId: string) => {
+    async (uploadUri: string, hash: string | null, itemId: string) => {
+      activeIdentifyCountRef.current += 1;
+      setBusy(true);
       try {
-        let uploadUri = uri;
-        if (corners && corners.length === 8 && cardDetector.capabilities.crop) {
-          try {
-            const cropped = await cardDetector.crop(uri, corners, 900, 0.82);
-            if (cropped?.uri) uploadUri = cropped.uri;
-          } catch {
-            /* fall back to full frame */
-          }
-        }
-
         let res: IdentifyResponse = await identifyCard(uploadUri, tcgHint);
         // Server signalled the fast path missed — try on-device OCR, then
         // re-identify from the recognized text (same fallback the RN flow uses).
@@ -236,11 +254,16 @@ export default function NativeScanScreen() {
           confidence: conf,
           status: matched ? "matched" : "missed",
         });
-        if (matched) {
+        if (matched && top) {
+          lastMatchedKeyRef.current = candidateKey(top);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
             () => {},
           );
           flashCue("hit");
+          // Cache high-confidence answers so repeat frames short-circuit.
+          if (hash && conf >= LOCK_CONFIDENCE) {
+            rememberCardHash(hash, top, conf).catch(() => {});
+          }
         } else {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
             () => {},
@@ -252,26 +275,87 @@ export default function NativeScanScreen() {
         flashCue("miss");
         showScannerError(e instanceof Error ? e.message : "Identification failed");
       } finally {
-        busyRef.current = false;
-        setBusy(false);
+        if (hash) inFlightHashesRef.current.delete(hash);
+        activeIdentifyCountRef.current = Math.max(0, activeIdentifyCountRef.current - 1);
+        if (activeIdentifyCountRef.current === 0) setBusy(false);
       }
     },
     [tcgHint, updateSessionItem, flashCue, showScannerError],
   );
 
+  // A captured frame → crop → pHash. The cache short-circuit is the big
+  // latency win: a card we've already seen resolves with ZERO network. Only
+  // on a cache miss do we upload the small crop for a live identify.
+  const processCapture = useCallback(
+    async (uri: string, corners: number[] | null) => {
+      // Deskew/crop to the small (~30KB, 720px) upload the server expects.
+      let uploadUri = uri;
+      let cropUri: string | null = null;
+      if (corners && corners.length === 8 && cardDetector.capabilities.crop) {
+        try {
+          const cropped = await cardDetector.crop(uri, corners, 720, 0.7);
+          if (cropped?.uri) {
+            uploadUri = cropped.uri;
+            cropUri = cropped.uri;
+          }
+        } catch {
+          /* fall back to the full frame */
+        }
+      }
+
+      // On-device pHash cache short-circuit.
+      let hash: string | null = null;
+      if (cardDetector.capabilities.hash) {
+        try {
+          hash = await cardDetector.hash(cropUri ?? uploadUri);
+        } catch {
+          hash = null;
+        }
+        if (hash) {
+          // Same card already being identified (auto-capture re-firing) → drop.
+          if (inFlightHashesRef.current.has(hash)) return;
+          const cached = await lookupCardByHash(hash);
+          if (cached) {
+            const cand: IdentifyCandidate = {
+              ...cached.candidate,
+              confidence: Math.max(cached.candidate.confidence, cached.confidence),
+              source: "phash",
+            };
+            rememberCardHash(hash, cand, cand.confidence).catch(() => {}); // bump LRU
+            // Still holding the card that just matched → don't spam a duplicate.
+            if (candidateKey(cand) === lastMatchedKeyRef.current) return;
+            lastMatchedKeyRef.current = candidateKey(cand);
+            addSessionItem(cropUri ?? uri, { candidate: cand, confidence: cand.confidence });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+              () => {},
+            );
+            flashCue("hit");
+            return;
+          }
+        }
+      }
+
+      const itemId = addSessionItem(cropUri ?? uri);
+      if (hash) inFlightHashesRef.current.add(hash);
+      void runIdentify(uploadUri, hash, itemId);
+    },
+    [addSessionItem, runIdentify, flashCue],
+  );
+
   const onCapture = useCallback(
     (e: { nativeEvent: CaptureEvent }) => {
+      // Release the camera lock the instant the frame is ours — the crop +
+      // identify below run off the capture path so the next frame can start.
+      captureBusyRef.current = false;
+      setCapturing(false);
       const { uri, corners, error: captureError } = e.nativeEvent;
       if (captureError || !uri) {
-        busyRef.current = false;
-        setBusy(false);
         flashCue("miss");
         return;
       }
-      const itemId = addSessionItem(uri);
-      void runIdentify(uri, corners ?? null, itemId);
+      void processCapture(uri, corners ?? null);
     },
-    [addSessionItem, runIdentify, flashCue],
+    [processCapture, flashCue],
   );
 
   const onDetected = useCallback((e: { nativeEvent: CardDetectedEvent }) => {
@@ -462,8 +546,8 @@ export default function NativeScanScreen() {
           style={StyleSheet.absoluteFill}
           active
           torchEnabled={torch}
-          detectionEnabled={!busy}
-          autoCapture={autoCapture && !busy && (slotsLeft == null || slotsLeft > 0)}
+          detectionEnabled={!capturing}
+          autoCapture={autoCapture && !capturing && (slotsLeft == null || slotsLeft > 0)}
           zoom={zoom}
           captureRequestId={captureReq}
           onCardDetected={onDetected}
