@@ -121,6 +121,39 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     setupPreview()
     setupReticle()
     setupOverlay()
+    setupFocusTap()
+  }
+
+  // Tap-to-focus. `cancelsTouchesInView = false` so the SwiftUI overlay
+  // controls still receive their taps; a tap anywhere also nudges focus +
+  // exposure to that point (continuous, so it keeps tracking).
+  private func setupFocusTap() {
+    let tap = UITapGestureRecognizer(target: self, action: #selector(handleFocusTap(_:)))
+    tap.cancelsTouchesInView = false
+    addGestureRecognizer(tap)
+  }
+
+  @objc private func handleFocusTap(_ gesture: UITapGestureRecognizer) {
+    guard configured, previewLayer != nil else { return }
+    let point = gesture.location(in: self)
+    let devicePoint = previewLayer.captureDevicePointConverted(fromLayerPoint: point)
+    sessionQueue.async { [weak self] in
+      guard let self, let device = self.device else { return }
+      do {
+        try device.lockForConfiguration()
+        if device.isFocusPointOfInterestSupported,
+           device.isFocusModeSupported(.continuousAutoFocus) {
+          device.focusPointOfInterest = devicePoint
+          device.focusMode = .continuousAutoFocus
+        }
+        if device.isExposurePointOfInterestSupported,
+           device.isExposureModeSupported(.continuousAutoExposure) {
+          device.exposurePointOfInterest = devicePoint
+          device.exposureMode = .continuousAutoExposure
+        }
+        device.unlockForConfiguration()
+      } catch {}
+    }
   }
 
   // MARK: - SwiftUI overlay
@@ -322,6 +355,28 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     }
     self.device = device
     session.addInput(input)
+
+    // Cards are held CLOSE, so bias autofocus to the near range and keep it
+    // continuously refocusing + auto-exposing — the frame stays sharp as the
+    // user moves the card in/out instead of hunting or locking soft.
+    do {
+      try device.lockForConfiguration()
+      if device.isFocusModeSupported(.continuousAutoFocus) {
+        device.focusMode = .continuousAutoFocus
+      }
+      if device.isSmoothAutoFocusSupported {
+        device.isSmoothAutoFocusEnabled = true
+      }
+      if device.isAutoFocusRangeRestrictionSupported {
+        device.autoFocusRangeRestriction = .near
+      }
+      if device.isExposureModeSupported(.continuousAutoExposure) {
+        device.exposureMode = .continuousAutoExposure
+      }
+      device.unlockForConfiguration()
+    } catch {
+      // Focus tuning is best-effort — never fail the mount over it.
+    }
 
     if session.canAddOutput(photoOutput) {
       session.addOutput(photoOutput)
