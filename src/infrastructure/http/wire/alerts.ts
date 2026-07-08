@@ -22,6 +22,9 @@ export interface PriceAlertWire {
   id: ID;
   user_id: ID;
   card_id: ID;
+  /** Composite catalog id (`pokemontcg:base1-4`) the alert's card resolves to,
+   *  so the card-detail can match its "already alerted?" state by that id. */
+  upstream_id?: string | null;
   condition: PriceAlertCondition;
   threshold_usd: DecimalString;
   note: string | null;
