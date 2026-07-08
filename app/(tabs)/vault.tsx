@@ -4,6 +4,7 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -25,18 +26,25 @@ import {
   PackageOpen,
   Plus,
   Search,
+  SlidersHorizontal,
   Trash2,
   X,
 } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import { CardThumbnail } from "@/presentation/features/collection/CardThumbnail";
-import { FilterBar } from "@/presentation/features/collection/FilterBar";
+import { FilterSheet } from "@/presentation/features/collection/FilterSheet";
 import { PositionRow } from "@/presentation/features/collection/PositionRow";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { useFilteredCollection } from "@/presentation/features/collection/useFilteredCollection";
 import { ProUsageBanner } from "@/presentation/features/pro";
 import { useMySealedHoldings } from "@/application/queries/collection/useSealed";
 import { useVaultFilters, useVaultSelection } from "@/application/stores";
+import {
+  activeFilterCount,
+  GRADE_MAX,
+  GRADE_MIN,
+  type VaultType,
+} from "@/application/stores/vaultStore";
 import {
   deleteGradedCard,
   fetchCardSparklines,
@@ -75,11 +83,13 @@ export default function VaultScreen() {
     uniqueCount,
     loupeGradedCount,
     availableSets,
+    availableTags,
     summary,
   } = useFilteredCollection();
   const { isAuthenticated } = useAuth();
   const sealedHoldings = useMySealedHoldings({ includeOpened: false });
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [filterOpen, setFilterOpen] = useState(false);
 
   // Multi-select state lives in its own store so filter / search
   // re-renders don't disturb it (and vice versa). The vault page is
@@ -282,8 +292,8 @@ export default function VaultScreen() {
                   pnlPct={summary?.unrealizedPnlPct ?? null}
                 />
                 <PortfolioPills stats={stats} />
-                <VaultSearchBar />
-                <FilterBar availableSets={availableSets} />
+                <VaultSearchBar onOpenFilters={() => setFilterOpen(true)} />
+                <VaultActiveChips />
                 <VaultListChrome
                   count={cards.length}
                   viewMode={viewMode}
@@ -450,6 +460,13 @@ export default function VaultScreen() {
             </View>
           )
         }
+      />
+      <FilterSheet
+        visible={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        availableSets={availableSets}
+        availableTags={availableTags}
+        resultCount={cards.length}
       />
     </SafeAreaView>
   );
@@ -647,53 +664,186 @@ function VaultListChrome({
  * search term, and the duplicate counts all stay in sync from a single
  * source of truth.
  */
-function VaultSearchBar() {
+function VaultSearchBar({ onOpenFilters }: { onOpenFilters: () => void }) {
   const p = useThemedPalette();
   const query = useVaultFilters((s) => s.query);
   const setQuery = useVaultFilters((s) => s.setQuery);
+  const activeCount = useVaultFilters(activeFilterCount);
+  const hasFilters = activeCount > 0;
   return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderRadius: 12,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: p.line.default,
-        backgroundColor: p.bg.elevated,
-      }}
-    >
-      <Search size={16} color={p.ink.dim} strokeWidth={2.25} />
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Search title, set, year, grade…"
-        placeholderTextColor={p.ink.dim}
-        autoCapitalize="none"
-        autoCorrect={false}
-        returnKeyType="search"
-        clearButtonMode="while-editing"
-        accessibilityLabel="Search your vault"
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      <View
         style={{
           flex: 1,
-          color: p.ink.default,
-          fontSize: 14,
-          paddingVertical: 0,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+          borderRadius: 12,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: p.line.default,
+          backgroundColor: p.bg.elevated,
         }}
-      />
-      {query.length > 0 ? (
-        <Pressable
-          onPress={() => setQuery("")}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="Clear search"
-        >
-          <X size={16} color={p.ink.muted} strokeWidth={2.25} />
-        </Pressable>
-      ) : null}
+      >
+        <Search size={16} color={p.ink.dim} strokeWidth={2.25} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search title, set, year, grade…"
+          placeholderTextColor={p.ink.dim}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+          accessibilityLabel="Search your vault"
+          style={{ flex: 1, color: p.ink.default, fontSize: 14, paddingVertical: 0 }}
+        />
+        {query.length > 0 ? (
+          <Pressable
+            onPress={() => setQuery("")}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+          >
+            <X size={16} color={p.ink.muted} strokeWidth={2.25} />
+          </Pressable>
+        ) : null}
+      </View>
+      {/* Filters button — opens the sheet; shows a live active-facet count. */}
+      <Pressable
+        onPress={onOpenFilters}
+        accessibilityRole="button"
+        accessibilityLabel={`Filters${hasFilters ? `, ${activeCount} active` : ""}`}
+        style={({ pressed }) => ({
+          width: 46,
+          height: 44,
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: hasFilters ? withAlpha(p.accent.mint, 0.5) : p.line.default,
+          backgroundColor: hasFilters
+            ? withAlpha(p.accent.mint, 0.14)
+            : p.bg.elevated,
+          opacity: pressed ? 0.75 : 1,
+        })}
+      >
+        <SlidersHorizontal
+          size={18}
+          color={hasFilters ? p.accent.mint : p.ink.default}
+          strokeWidth={2.25}
+        />
+        {hasFilters ? (
+          <View
+            style={{
+              position: "absolute",
+              top: -5,
+              right: -5,
+              minWidth: 17,
+              height: 17,
+              paddingHorizontal: 4,
+              borderRadius: 999,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: p.accent.mint,
+            }}
+          >
+            <Text style={{ color: "#06140d", fontSize: 10, fontWeight: "800" }}>
+              {activeCount}
+            </Text>
+          </View>
+        ) : null}
+      </Pressable>
     </View>
+  );
+}
+
+const HOUSE_LABELS: Record<VaultType, string> = {
+  loupe: "Loupe",
+  raw: "Raw",
+  psa: "PSA",
+  bgs: "BGS",
+  cgc: "CGC",
+  sgc: "SGC",
+};
+
+/**
+ * Removable chips summarizing the currently-applied filters, so the active
+ * state is visible without opening the sheet. Tapping a chip clears that facet;
+ * "Clear all" resets everything. Renders nothing when no filter is active.
+ */
+function VaultActiveChips() {
+  const p = useThemedPalette();
+  const s = useVaultFilters();
+  if (activeFilterCount(s) === 0) return null;
+
+  const chips: { key: string; label: string; tint?: string; onRemove: () => void }[] = [];
+  for (const h of s.houses)
+    chips.push({ key: `h:${h}`, label: HOUSE_LABELS[h], onRemove: () => s.toggleHouse(h) });
+  for (const t of s.tags)
+    chips.push({ key: `t:${t}`, label: t, tint: p.accent.mint, onRemove: () => s.toggleTag(t) });
+  for (const name of s.sets)
+    chips.push({
+      key: `s:${name}`,
+      label: name.length > 18 ? `${name.slice(0, 17)}…` : name,
+      onRemove: () => s.toggleSet(name),
+    });
+  if (s.gradeRange[0] > GRADE_MIN || s.gradeRange[1] < GRADE_MAX)
+    chips.push({
+      key: "grade",
+      label: `Grade ${s.gradeRange[0]}–${s.gradeRange[1]}`,
+      onRemove: () => s.setGradeRange([GRADE_MIN, GRADE_MAX]),
+    });
+  if (s.minValue != null || s.maxValue != null) {
+    const lo = s.minValue != null ? `$${s.minValue}` : "$0";
+    const hi = s.maxValue != null ? `$${s.maxValue}` : "∞";
+    chips.push({ key: "price", label: `${lo}–${hi}`, onRemove: () => s.setValueRange(null, null) });
+  }
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingRight: 8 }}>
+        {chips.map((c) => {
+          const tint = c.tint ?? p.accent.blue;
+          return (
+            <Pressable
+              key={c.key}
+              onPress={c.onRemove}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove filter ${c.label}`}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+                paddingLeft: 11,
+                paddingRight: 7,
+                paddingVertical: 6,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: withAlpha(tint, 0.5),
+                backgroundColor: withAlpha(tint, 0.13),
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Text style={{ color: tint, fontSize: 12, fontWeight: "700" }}>{c.label}</Text>
+              <X size={12} color={tint} strokeWidth={2.5} />
+            </Pressable>
+          );
+        })}
+        <Pressable
+          onPress={s.clearAll}
+          accessibilityRole="button"
+          accessibilityLabel="Clear all filters"
+          hitSlop={6}
+          style={({ pressed }) => ({ paddingHorizontal: 8, opacity: pressed ? 0.6 : 1 })}
+        >
+          <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "700" }}>
+            Clear all
+          </Text>
+        </Pressable>
+      </View>
+    </ScrollView>
   );
 }
 

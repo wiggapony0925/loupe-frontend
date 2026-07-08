@@ -1,10 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { fetchCollection, fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
+import {
+  fetchCollection,
+  fetchCollectionSummary,
+  type CollectionQueryParams,
+} from "@/infrastructure/repositories/forensicRepository";
 import { queryKeys } from "@/application/queries/queryKeys";
-import { useVaultFilters } from "@/application/stores/vaultStore";
+import {
+  GRADE_MAX,
+  GRADE_MIN,
+  useVaultFilters,
+  type VaultType,
+} from "@/application/stores/vaultStore";
 import { useAuth } from "@/presentation/providers/AuthProvider";
-import type { CardSet } from "@/domain";
 
 /**
  * Server-driven Vault list.
@@ -28,40 +36,45 @@ const DEBOUNCE_MS = 250;
 
 export function useFilteredCollection() {
   const { isAuthenticated } = useAuth();
-  const { set, minGrade, type, query: searchTerm } = useVaultFilters();
-  const setSet = useVaultFilters((s) => s.setSet);
+  const searchTerm = useVaultFilters((s) => s.query);
+  const houses = useVaultFilters((s) => s.houses);
+  const sets = useVaultFilters((s) => s.sets);
+  const tags = useVaultFilters((s) => s.tags);
+  const gradeRange = useVaultFilters((s) => s.gradeRange);
+  const minValue = useVaultFilters((s) => s.minValue);
+  const maxValue = useVaultFilters((s) => s.maxValue);
+  const sort = useVaultFilters((s) => s.sort);
 
   // Debounce the free-text query so every keystroke doesn't fire a new
-  // request. Set & grade filters apply immediately — they're rare,
-  // intentional taps.
+  // request. The other filters apply immediately — deliberate taps.
   const [debouncedQuery, setDebouncedQuery] = useState(searchTerm);
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(searchTerm), DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  // Map the Type filter to a backend `house` slug. "Raw" and "Loupe" both
-  // live under `house=loupe` server-side — we narrow client-side using the
-  // row's `condition` column (see post-fetch refinement below).
-  const serverHouse =
-    type === "All"
-      ? undefined
-      : type === "raw" || type === "loupe"
-        ? "loupe"
-        : type;
+  // "Raw" and "Loupe" both live under `house=loupe` server-side; collapse +
+  // dedupe. The raw↔loupe split is narrowed client-side via `condition` below.
+  const serverHouses = useMemo(() => {
+    const out = new Set<string>();
+    for (const h of houses) out.add(h === "raw" ? "loupe" : h);
+    return [...out];
+  }, [houses]);
 
-  const params = useMemo(
+  const params = useMemo<CollectionQueryParams>(
     () => ({
       q: debouncedQuery.trim() || undefined,
-      set: set === "All" ? undefined : (set as string),
-      house: serverHouse,
-      // The Vault grade slider's "show everything" sentinel is 1 — sending
-      // min_grade=1 to the backend would still match every grade ≥ 1,
-      // which is correct but a wasted predicate. Drop it.
-      minGrade: minGrade > 1 ? minGrade : undefined,
-      sort: "recent" as const,
+      houses: serverHouses.length ? serverHouses : undefined,
+      // The slider's "show everything" bounds (1 / 10) are dropped — no wasted
+      // predicate.
+      minGrade: gradeRange[0] > GRADE_MIN ? gradeRange[0] : undefined,
+      maxGrade: gradeRange[1] < GRADE_MAX ? gradeRange[1] : undefined,
+      minValue: minValue ?? undefined,
+      maxValue: maxValue ?? undefined,
+      tags: tags.length ? tags : undefined,
+      sort,
     }),
-    [debouncedQuery, set, serverHouse, minGrade],
+    [debouncedQuery, serverHouses, gradeRange, minValue, maxValue, tags, sort],
   );
 
   const query = useQuery({
@@ -89,16 +102,32 @@ export function useFilteredCollection() {
   // copy is hidden by the active filter. Backend `copies_owned` is
   // already correct for each row; we leave the local map as a
   // best-effort fallback for any UI that wants O(1) lookup.
-  // Apply the Raw/Loupe client-side refinement on top of whatever the
-  // backend returned. The server can't tell raw apart from a Loupe-graded
-  // slab (both have `house=loupe`); the `condition` column is the
-  // discriminator.
+  // Client-side refinements the server can't do:
+  //  • house buckets — the server can't tell a RAW card from a Loupe-graded
+  //    slab (both are `house=loupe`); the `condition` column is the
+  //    discriminator, so we split them here.
+  //  • sets — the list endpoint takes a single set; multi-select is applied
+  //    over the returned page (which covers the whole vault at limit 500).
   const cards = useMemo(() => {
-    const rows = query.data ?? [];
-    if (type === "raw") return rows.filter((c) => c.condition != null);
-    if (type === "loupe") return rows.filter((c) => c.condition == null);
+    let rows = query.data ?? [];
+    if (houses.length > 0) {
+      const wanted = new Set<VaultType>(houses);
+      rows = rows.filter((c) => {
+        const bucket: VaultType =
+          c.house !== "loupe"
+            ? (c.house as VaultType)
+            : c.condition != null
+              ? "raw"
+              : "loupe";
+        return wanted.has(bucket);
+      });
+    }
+    if (sets.length > 0) {
+      const wantedSets = new Set(sets);
+      rows = rows.filter((c) => wantedSets.has(c.set));
+    }
     return rows;
-  }, [query.data, type]);
+  }, [query.data, houses, sets]);
 
   const copiesByCardId = useMemo(() => {
     const map = new Map<string, number>();
@@ -128,17 +157,9 @@ export function useFilteredCollection() {
     return Array.from(seen).sort((a, b) => a.localeCompare(b));
   }, [summaryQuery.data, query.data]);
 
-  // If the active set filter no longer corresponds to anything the user
-  // owns (e.g. they just deleted their last Topps copy), silently reset
-  // it to "All" so the list never appears empty for an invisible reason.
-  // Guarded on `summaryQuery.data` so we don't clobber the filter while
-  // the truth table is still loading.
-  useEffect(() => {
-    if (!summaryQuery.data?.availableSets || set === "All") return;
-    if (!summaryQuery.data.availableSets.includes(set as string)) {
-      setSet("All" as CardSet | "All");
-    }
-  }, [summaryQuery.data, set, setSet]);
+  // Distinct tags across the whole vault (server-computed) — powers the
+  // filter sheet + the tag editor's suggestions.
+  const availableTags = summaryQuery.data?.availableTags ?? [];
 
   return {
     ...query,
@@ -147,6 +168,7 @@ export function useFilteredCollection() {
     uniqueCount,
     loupeGradedCount,
     availableSets,
+    availableTags,
     /** Whole-vault aggregates (value, P/L, etc.). May be undefined while loading. */
     summary: summaryQuery.data,
   };

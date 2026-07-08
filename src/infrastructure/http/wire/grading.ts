@@ -47,6 +47,8 @@ export interface GradedCard {
   purchase_date: ISODate | null;
   fingerprint_hash: string | null;
   notes: string | null;
+  /** User organization tags for this holding. Absent on legacy/older backends. */
+  tags?: string[];
   graded_at: ISODate;
   created_at: ISODate;
   updated_at: ISODate;

@@ -61,6 +61,7 @@ export default function EditGradeScreen() {
           estimatedValueUsd:
             row.estimated_value_usd != null ? Number(row.estimated_value_usd) : null,
           notes: row.notes,
+          tags: row.tags ?? [],
         }}
       />
     </SafeAreaView>

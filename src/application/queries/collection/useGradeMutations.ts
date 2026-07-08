@@ -36,6 +36,8 @@ export interface CreateGradeInput {
   /** Current market estimate (USD). Optional. */
   estimatedValueUsd?: number | null;
   notes?: string | null;
+  /** User organization tags for this holding. */
+  tags?: string[];
 }
 
 const UUID_RE =
@@ -63,6 +65,7 @@ function toCreateBody(input: CreateGradeInput): Record<string, unknown> {
   if (input.estimatedValueUsd != null)
     body.estimated_value_usd = input.estimatedValueUsd;
   if (input.notes != null && input.notes !== "") body.notes = input.notes;
+  if (input.tags && input.tags.length > 0) body.tags = input.tags;
   return body;
 }
 
@@ -87,6 +90,8 @@ export interface UpdateGradeInput {
   purchaseDate?: string | null;
   estimatedValueUsd?: number | null;
   notes?: string | null;
+  /** Full replacement set of tags. `[]` clears them. */
+  tags?: string[];
 }
 
 function toUpdateBody(input: UpdateGradeInput): Record<string, unknown> {
@@ -100,6 +105,7 @@ function toUpdateBody(input: UpdateGradeInput): Record<string, unknown> {
   if (input.estimatedValueUsd !== undefined)
     body.estimated_value_usd = input.estimatedValueUsd;
   if (input.notes !== undefined) body.notes = input.notes;
+  if (input.tags !== undefined) body.tags = input.tags;
   return body;
 }
 

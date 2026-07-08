@@ -27,10 +27,14 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { Calendar, ChevronLeft, Trash2 } from "lucide-react-native";
 import { CardImage } from "@/presentation/components/CardImage";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { useMoney } from "@/presentation/components/Price";
+import { TagInput } from "@/presentation/features/collection/TagInput";
+import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
+import { queryKeys } from "@/application/queries/queryKeys";
 import {
   useCreateGrade,
   useDeleteGrade,
@@ -86,6 +90,7 @@ export interface GradeFormInitial {
   purchaseDate?: string | null;
   estimatedValueUsd?: number | null;
   notes?: string | null;
+  tags?: string[];
 }
 
 export interface GradeFormProps {
@@ -137,6 +142,13 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   const createMut = useCreateGrade();
   const updateMut = useUpdateGrade();
   const deleteMut = useDeleteGrade();
+  // Tags the user already uses elsewhere — offered as tap-to-add suggestions.
+  // Shares the vault summary cache, so it's usually already warm.
+  const tagSuggestions = useQuery({
+    queryKey: queryKeys.collection.summary(),
+    queryFn: fetchCollectionSummary,
+    staleTime: 60_000,
+  });
 
   const [grade, setGrade] = useState<string>(
     initial?.grade != null ? String(initial.grade) : "",
@@ -162,6 +174,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   );
   const [autoFilledFromMarket, setAutoFilledFromMarket] = useState(false);
   const [notes, setNotes] = useState<string>(initial?.notes ?? "");
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   // How many identical holdings to create. Create-mode only — editing a
   // single holding never changes the count. Mirrors the web CollectionForm.
   const [copies, setCopies] = useState<string>("1");
@@ -223,6 +236,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           estimatedValueUsd:
             estimatedValue === "" ? null : Number(estimatedValue),
           notes: notes.trim() || null,
+          tags,
         };
         // One row per copy — the backend models copies as distinct holdings,
         // so we POST once each (mirrors the web CollectionForm).
@@ -241,6 +255,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           estimatedValueUsd:
             estimatedValue === "" ? null : Number(estimatedValue),
           notes: notes.trim() || null,
+          tags,
         });
       }
       router.back();
@@ -679,6 +694,15 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
             }}
           />
         </View>
+      </Field>
+
+      {/* Tags — user organization labels ("PC", "For sale", …). */}
+      <Field label="Tags" hint="Organize + filter your vault. Tap a chip to remove.">
+        <TagInput
+          value={tags}
+          onChange={setTags}
+          suggestions={tagSuggestions.data?.availableTags ?? []}
+        />
       </Field>
 
       {/* Notes */}

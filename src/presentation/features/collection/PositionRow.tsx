@@ -243,6 +243,46 @@ export function PositionRow({ card, spark, copies = 1, onPress, onLongPress, sel
                 </Text>
               </View>
             </View>
+            {card.tags.length > 0 ? (
+              <View
+                style={{
+                  marginTop: 4,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                {card.tags.slice(0, 2).map((t) => (
+                  <View
+                    key={t}
+                    style={{
+                      paddingHorizontal: 6,
+                      paddingVertical: 1.5,
+                      borderRadius: 5,
+                      backgroundColor: withAlpha(p.accent.mint, 0.12),
+                    }}
+                  >
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        color: p.accent.mint,
+                        fontSize: 9.5,
+                        fontWeight: "700",
+                      }}
+                    >
+                      {t}
+                    </Text>
+                  </View>
+                ))}
+                {card.tags.length > 2 ? (
+                  <Text
+                    style={{ color: p.ink.dim, fontSize: 9.5, fontWeight: "700" }}
+                  >
+                    +{card.tags.length - 2}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
 
           {/* Sparkline */}

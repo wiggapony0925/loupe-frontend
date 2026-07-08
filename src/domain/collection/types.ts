@@ -47,4 +47,6 @@ export interface CollectionCard {
   thumbnailUri: string;
   /** ISO timestamp when the card was last scanned. */
   scannedAt: string;
+  /** User organization tags for this holding (e.g. "PC", "For sale"). */
+  tags: string[];
 }
