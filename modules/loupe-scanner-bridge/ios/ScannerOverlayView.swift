@@ -320,9 +320,11 @@ struct ScannerOverlayView: View {
               .font(.system(size: 9, weight: .black)).foregroundColor(.white.opacity(0.54))
           }
           Text(item.title).font(.system(size: 12.5, weight: .heavy))
-            .foregroundColor(.white).lineLimit(2)          Text(item.subtitle).font(.system(size: 10.5, weight: .semibold))
+            .foregroundColor(.white).lineLimit(2)
+          Text(item.subtitle).font(.system(size: 10.5, weight: .semibold))
             .foregroundColor(missed ? Color(hexString: "#16C09C") : .white.opacity(0.52))
-            .lineLimit(1)        }
+            .lineLimit(1)
+        }
         Spacer(minLength: 0)
       }
       .padding(9)

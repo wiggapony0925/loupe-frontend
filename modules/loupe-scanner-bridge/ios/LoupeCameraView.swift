@@ -535,30 +535,14 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     }
   }
 
-  // Static corner-bracket guide at the fixed `reticleRect`. It does not move
-  // to chase the card — the user aligns the card into it — it only recolors
-  // (white → mint) when a card is well-framed and steady.
+  // Static rounded-rectangle guide at the fixed `reticleRect` (Collectr
+  // style). It does not move to chase the card — the user aligns the card
+  // into it — it only recolors (dim → bright mint) when a card is
+  // well-framed and steady.
   private func drawFixedReticle(ready: Bool) {
     let r = reticleRect
     guard r.width > 1, r.height > 1 else { return }
-    let arm = min(r.width, r.height) * 0.16
-    let path = UIBezierPath()
-    // Top-left
-    path.move(to: CGPoint(x: r.minX, y: r.minY + arm))
-    path.addLine(to: CGPoint(x: r.minX, y: r.minY))
-    path.addLine(to: CGPoint(x: r.minX + arm, y: r.minY))
-    // Top-right
-    path.move(to: CGPoint(x: r.maxX - arm, y: r.minY))
-    path.addLine(to: CGPoint(x: r.maxX, y: r.minY))
-    path.addLine(to: CGPoint(x: r.maxX, y: r.minY + arm))
-    // Bottom-right
-    path.move(to: CGPoint(x: r.maxX, y: r.maxY - arm))
-    path.addLine(to: CGPoint(x: r.maxX, y: r.maxY))
-    path.addLine(to: CGPoint(x: r.maxX - arm, y: r.maxY))
-    // Bottom-left
-    path.move(to: CGPoint(x: r.minX + arm, y: r.maxY))
-    path.addLine(to: CGPoint(x: r.minX, y: r.maxY))
-    path.addLine(to: CGPoint(x: r.minX, y: r.maxY - arm))
+    let path = UIBezierPath(roundedRect: r, cornerRadius: 20)
 
     let color = ready
       ? UIColor(red: 0.086, green: 0.753, blue: 0.612, alpha: 1.0)
