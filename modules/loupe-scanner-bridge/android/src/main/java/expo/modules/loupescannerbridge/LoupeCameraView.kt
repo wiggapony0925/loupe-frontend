@@ -53,7 +53,10 @@ class LoupeCameraView(context: Context, appContext: AppContext) :
     lifecycleRegistry.currentState = Lifecycle.State.CREATED
   }
 
-  override val lifecycle: Lifecycle get() = lifecycleRegistry
+  // The androidx.lifecycle on the classpath exposes LifecycleOwner as the Java
+  // `getLifecycle()` method — implement that form so it compiles across
+  // lifecycle versions (a `val lifecycle` override "overrides nothing" here).
+  override fun getLifecycle(): Lifecycle = lifecycleRegistry
 
   // ── Props ──
 
@@ -148,7 +151,10 @@ class LoupeCameraView(context: Context, appContext: AppContext) :
       object : ImageCapture.OnImageSavedCallback {
         override fun onImageSaved(output: ImageCapture.OutputFileResults) {
           val uri = output.savedUri ?: Uri.fromFile(outFile)
-          onCapture(mapOf("requestId" to requestId, "uri" to uri.toString(), "corners" to null))
+          // Android emits no corners (no live detection) — omit the key rather
+          // than pass a null value, which would make the map Map<String, String?>
+          // and fail the EventDispatcher's Map<String, Any> signature.
+          onCapture(mapOf("requestId" to requestId, "uri" to uri.toString()))
         }
 
         override fun onError(exc: ImageCaptureException) {
