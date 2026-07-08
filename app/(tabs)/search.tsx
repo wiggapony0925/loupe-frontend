@@ -58,6 +58,7 @@ const SUPPORTED_TCGS = new Set<TcgChip>([
   "magic",
   "yugioh",
   "onepiece",
+  "digimon",
 ]);
 const TCG_CHIPS: { key: TcgChip; label: string }[] = [
   { key: "all", label: "All" },
@@ -65,6 +66,7 @@ const TCG_CHIPS: { key: TcgChip; label: string }[] = [
   { key: "magic", label: "Magic" },
   { key: "yugioh", label: "Yu-Gi-Oh!" },
   { key: "onepiece", label: "One Piece" },
+  { key: "digimon", label: "Digimon" },
   { key: "lorcana", label: "Lorcana" },
   { key: "sports", label: "Sports" },
 ];

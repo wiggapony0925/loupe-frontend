@@ -12,6 +12,7 @@ export type Tcg =
   | "magic"
   | "yugioh"
   | "onepiece"
+  | "digimon"
   | "lorcana"
   | "sports";
 
