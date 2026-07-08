@@ -31,7 +31,7 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { COPY } from "@/shared/copy";
 import { useRecentSearches } from "@/application/stores/recentSearchesStore";
 import { useAuth } from "@/presentation/providers/AuthProvider";
-import { useCardSearch, useTrendingCards } from "@/application/queries";
+import { useCardSearchPaged, useTrendingCards } from "@/application/queries";
 import { useSealedSearch } from "@/application/queries/collection/useSealed";
 import type { SealedProductWire } from "@/infrastructure/http";
 import { sealedToCardSearchResult } from "@/presentation/features/search/sealedAdapter";
@@ -241,7 +241,16 @@ export default function SearchScreen() {
       : activeCategory === "pokemon" || activeCategory === "magic" || activeCategory === "yugioh"
         ? activeCategory
         : "all";
-  const live = useCardSearch({ q: debouncedQuery, tcg: liveTcg, limit: 20 });
+  // Deep, TRUE-paginated search so every printing of a popular name is
+  // reachable (Pikachu 177, Charizard 400+) instead of a capped top-20.
+  const live = useCardSearchPaged({ q: debouncedQuery, tcg: liveTcg, pageSize: 24 });
+  const liveResults = React.useMemo(
+    () => (live.data?.pages ?? []).flatMap((pg) => pg.results ?? []),
+    [live.data],
+  );
+  const liveTotal = live.data?.pages?.[0]?.total ?? liveResults.length;
+  const liveError = live.data?.pages?.[0]?.error;
+  const livePartial = live.data?.pages?.[0]?.partial;
   const showLive = debouncedQuery.length >= 2;
   // Sealed catalog runs alongside singles — same debounced query, same
   // ≥2-char gate — so "booster box" surfaces alongside cards instead of
@@ -430,12 +439,20 @@ export default function SearchScreen() {
           <LiveResultsSection
             query={debouncedQuery}
             tcg={liveTcg}
-            isLoading={live.isLoading || live.isFetching}
+            isLoading={
+              live.isLoading || (live.isFetching && !live.isFetchingNextPage)
+            }
             isError={live.isError}
-            data={live.data?.results ?? []}
+            data={liveResults}
+            total={liveTotal}
+            hasMore={!!live.hasNextPage}
+            isFetchingMore={live.isFetchingNextPage}
+            onLoadMore={() => {
+              void live.fetchNextPage();
+            }}
             sealed={sealed.data ?? []}
-            upstreamError={live.data?.error}
-            partial={live.data?.partial}
+            upstreamError={liveError}
+            partial={livePartial}
             onResultTap={commitRecentSearch}
           />
         ) : null}
@@ -817,6 +834,10 @@ function LiveResultsSection({
   isLoading,
   isError,
   data,
+  total,
+  hasMore = false,
+  isFetchingMore = false,
+  onLoadMore,
   sealed = [],
   upstreamError,
   partial,
@@ -827,6 +848,11 @@ function LiveResultsSection({
   isLoading: boolean;
   isError: boolean;
   data: CardSearchResult[];
+  /** Provider's real match count (e.g. 177 for Pikachu) — may exceed loaded. */
+  total?: number;
+  hasMore?: boolean;
+  isFetchingMore?: boolean;
+  onLoadMore?: () => void;
   sealed?: SealedProductWire[];
   upstreamError?: string;
   partial?: boolean;
@@ -867,7 +893,9 @@ function LiveResultsSection({
           numberOfLines={1}
         >
           {data.length > 0
-            ? `${data.length} ${data.length === 1 ? "result" : "results"} for “${query}”`
+            ? total != null && total > data.length
+              ? `${data.length} of ${total.toLocaleString()} for “${query}”`
+              : `${data.length} ${data.length === 1 ? "result" : "results"} for “${query}”`
             : isLoading
               ? `Searching “${query}”…`
               : `Results for “${query}”`}
@@ -948,16 +976,66 @@ function LiveResultsSection({
           // Rows fade slightly while a refresh is in-flight so the user
           // gets visual confirmation that something is updating without
           // losing the previous results (TanStack `keepPreviousData`).
-          <View style={{ opacity: isLoading ? 0.55 : 1 }}>
-            {data.map((card, i) => (
-              <SearchResultRow
-                key={card.id}
-                card={card}
-                bordered={i > 0}
-                onPressCapture={() => onResultTap?.(query)}
-              />
-            ))}
-          </View>
+          <>
+            <View style={{ opacity: isLoading ? 0.55 : 1 }}>
+              {data.map((card, i) => (
+                <SearchResultRow
+                  key={card.id}
+                  card={card}
+                  bordered={i > 0}
+                  onPressCapture={() => onResultTap?.(query)}
+                />
+              ))}
+            </View>
+
+            {/* Deep pagination — every printing of a popular name is
+                reachable (Pikachu 177, Charizard 400+) instead of a capped
+                top-N. Tap loads the next page and appends. */}
+            {hasMore ? (
+              <Pressable
+                onPress={onLoadMore}
+                disabled={isFetchingMore}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  total != null
+                    ? `Load more results. ${total - data.length} more available.`
+                    : "Load more results"
+                }
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  marginTop: 10,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: withAlpha(p.accent.mint, 0.3),
+                  backgroundColor: withAlpha(
+                    p.accent.mint,
+                    pressed ? 0.12 : 0.06,
+                  ),
+                  opacity: isFetchingMore ? 0.7 : 1,
+                })}
+              >
+                {isFetchingMore ? (
+                  <ActivityIndicator size="small" color={p.accent.mint} />
+                ) : (
+                  <Text
+                    style={{
+                      color: p.accent.mint,
+                      fontSize: 13,
+                      fontWeight: "800",
+                    }}
+                  >
+                    {total != null
+                      ? `Load ${(total - data.length).toLocaleString()} more`
+                      : "Load more"}
+                  </Text>
+                )}
+              </Pressable>
+            ) : null}
+          </>
         )}
       </View>
 

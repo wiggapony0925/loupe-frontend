@@ -172,6 +172,22 @@ export interface CardSearchResponse {
   partial?: boolean;
 }
 
+/**
+ * `GET /v1/public/search` — the deep, TRUE-paginated search. Same card shape
+ * as {@link CardSearchResponse}, but `total` is the provider's real count
+ * (e.g. 177 for Pikachu) and results are pageable, so every printing of a
+ * popular name is reachable rather than capped at a top-N.
+ */
+export interface PublicSearchResponse {
+  results: CardSearchResult[];
+  total: number;
+  page: number;
+  page_size: number;
+  source: string;
+  error?: string;
+  partial?: boolean;
+}
+
 export interface TrendingResponseWire {
   cards: CardSearchResult[];
   updated_at: string;
