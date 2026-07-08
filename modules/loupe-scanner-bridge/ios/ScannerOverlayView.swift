@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ImageIO
 
 // ─────────────────────────────────────────────────────────────────────
 // Native SwiftUI scanner overlay.
@@ -82,7 +83,6 @@ extension Color {
 
 struct ScannerOverlayView: View {
   @ObservedObject var model: ScannerOverlayModel
-  @State private var tcgSheet = false
 
   private let tcgOptions: [(key: String, label: String, hex: String)] = [
     ("auto", "Auto-detect", "#16C09C"),
@@ -103,12 +103,6 @@ struct ScannerOverlayView: View {
     // view fills the whole screen and doesn't inherit the safe area.
     .padding(.top, max(model.topInset, 8))
     .padding(.bottom, max(model.bottomInset, 8))
-    .confirmationDialog("Game", isPresented: $tcgSheet, titleVisibility: .visible) {
-      ForEach(tcgOptions, id: \.key) { opt in
-        Button(opt.label) { model.onPickTcg(opt.key) }
-      }
-      Button("Cancel", role: .cancel) {}
-    }
   }
 
   // MARK: Top bar
@@ -120,8 +114,20 @@ struct ScannerOverlayView: View {
 
         Spacer()
 
-        Button {
-          tcgSheet = true
+        // Native dropdown menu anchored to the pill (not a bottom sheet) —
+        // pick a game, checkmark shows the current one.
+        Menu {
+          ForEach(tcgOptions, id: \.key) { opt in
+            Button {
+              model.onPickTcg(opt.key)
+            } label: {
+              if opt.label == model.tcgLabel {
+                Label(opt.label, systemImage: "checkmark")
+              } else {
+                Text(opt.label)
+              }
+            }
+          }
         } label: {
           HStack(spacing: 8) {
             Circle()
@@ -295,8 +301,11 @@ struct ScannerOverlayView: View {
     let matched = item.status == "matched"
     let missed = item.status == "missed"
     let accent = matched ? Color(hexString: "#16C09C") : (missed ? Color(hexString: "#F0B429") : Color(hexString: "#3B82F6"))
+    // Only a MATCHED card is tappable (opens detail). A miss is a dead end —
+    // it self-dismisses from the tray, so we don't invite a tap that goes
+    // nowhere; a "reading" tile is still resolving.
     return Button {
-      if matched { model.onPickCard(item.id) } else if missed { model.onManualSearch() }
+      if matched { model.onPickCard(item.id) }
     } label: {
       HStack(spacing: 10) {
         TrayThumbnail(imageUrl: item.imageUrl, photoUri: item.photoUri)
@@ -306,13 +315,13 @@ struct ScannerOverlayView: View {
         VStack(alignment: .leading, spacing: 3) {
           HStack(spacing: 6) {
             Circle().fill(accent).frame(width: 6, height: 6)
-            Text(matched ? "SCANNED" : (missed ? "NO MATCH" : "READING"))
+            Text(matched ? "SCANNED" : (missed ? "NO MATCH" : "READING…"))
               .font(.system(size: 9, weight: .black)).foregroundColor(.white.opacity(0.54))
           }
           Text(item.title).font(.system(size: 12.5, weight: .heavy))
             .foregroundColor(.white).lineLimit(2)
-          Text(item.subtitle).font(.system(size: 10.5, weight: missed ? .heavy : .semibold))
-            .foregroundColor(missed ? Color(hexString: "#16C09C") : .white.opacity(0.52)).lineLimit(1)
+          Text(item.subtitle).font(.system(size: 10.5, weight: .semibold))
+            .foregroundColor(.white.opacity(0.52)).lineLimit(1)
         }
         Spacer(minLength: 0)
       }
@@ -398,24 +407,39 @@ struct TrayThumbnail: View {
       }
     }
     .task(id: photoUri) {
-      guard !isRemote, let uri = photoUri else { return }
-      let path = uri.hasPrefix("file://") ? (URL(string: uri)?.path ?? uri) : uri
-      let image = await Task.detached(priority: .utility) { () -> UIImage? in
-        UIImage(contentsOfFile: path)?.downsampled(to: 240)
+      guard !isRemote, let uri = photoUri else {
+        local = nil
+        return
+      }
+      // CGImageSource thumbnailing is robust + thread-safe and takes the
+      // file URL directly (no path-stripping, no off-main UIKit rendering,
+      // which is what left the tile blank before).
+      let fileURL = uri.hasPrefix("file://") ? URL(string: uri) : URL(fileURLWithPath: uri)
+      guard let fileURL else { return }
+      let image = await Task.detached(priority: .utility) {
+        loadThumbnail(fileURL, maxPixel: 240)
       }.value
       await MainActor.run { local = image }
     }
   }
 }
 
-private extension UIImage {
-  /// Cheap longest-edge downsample so the tray never holds a full-res bitmap.
-  func downsampled(to maxEdge: CGFloat) -> UIImage {
-    let longest = max(size.width, size.height)
-    guard longest > maxEdge else { return self }
-    let scale = maxEdge / longest
-    let target = CGSize(width: size.width * scale, height: size.height * scale)
-    let renderer = UIGraphicsImageRenderer(size: target)
-    return renderer.image { _ in draw(in: CGRect(origin: .zero, size: target)) }
+/// Decode a downsampled thumbnail from a local image file without loading the
+/// full-resolution bitmap. Thread-safe, with a direct-decode fallback so a
+/// captured frame always renders even if thumbnailing fails.
+private func loadThumbnail(_ url: URL, maxPixel: CGFloat) -> UIImage? {
+  if let src = CGImageSourceCreateWithURL(url as CFURL, nil) {
+    let opts: [CFString: Any] = [
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceCreateThumbnailWithTransform: true,
+      kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+    ]
+    if let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) {
+      return UIImage(cgImage: cg)
+    }
   }
+  // Fallbacks: raw file decode, then a Data load (handles odd path forms).
+  if let img = UIImage(contentsOfFile: url.path) { return img }
+  if let data = try? Data(contentsOf: url) { return UIImage(data: data) }
+  return nil
 }

@@ -68,8 +68,11 @@ export interface LoupeCameraViewProps {
   zoom?: number;
   /** Set a fresh id (uuid) to fire a still capture; result on onCapture. */
   captureRequestId?: string;
-  /** Full state for the native SwiftUI overlay chrome (top bar, tray, …). */
-  overlayState?: ScannerOverlayState;
+  /** Full state for the native SwiftUI overlay chrome (top bar, tray, …),
+   *  passed as a JSON string (JSON.stringify(ScannerOverlayState)) — a
+   *  structured Record prop with a nested array silently failed to decode
+   *  natively, so we serialize and decode with Codable on the Swift side. */
+  overlayStateJson?: string;
   onCameraReady?: (e: { nativeEvent: CameraReadyEvent }) => void;
   onCardDetected?: (e: { nativeEvent: CardDetectedEvent }) => void;
   onCapture?: (e: { nativeEvent: CaptureEvent }) => void;

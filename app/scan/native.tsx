@@ -99,6 +99,10 @@ export default function NativeScanScreen() {
   // on each network round-trip (mirrors LiveIdentifyFlow).
   const [capturing, setCapturing] = useState(false);
   const [busy, setBusy] = useState(false);
+  // After a miss, auto-capture pauses briefly so it stops machine-gunning a
+  // frame it can't read — the user gets a beat to re-frame.
+  const [autoPaused, setAutoPaused] = useState(false);
+  const autoPauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [session, setSession] = useState<ScanSessionItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [tcgHint, setTcgHint] = useState<IdentifyTcgHint>(null);
@@ -136,6 +140,7 @@ export default function NativeScanScreen() {
   useEffect(
     () => () => {
       if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+      if (autoPauseTimerRef.current) clearTimeout(autoPauseTimerRef.current);
     },
     [],
   );
@@ -192,6 +197,20 @@ export default function NativeScanScreen() {
     setFlash(kind);
     setTimeout(() => setFlash("none"), 320);
   }, []);
+
+  // A miss is a dead end: pause auto-capture briefly (so it doesn't re-fire
+  // on the same unreadable frame) and self-dismiss the tile so failed reads
+  // don't pile up in the tray.
+  const handleMiss = useCallback((itemId: string) => {
+    flashCue("miss");
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    setAutoPaused(true);
+    if (autoPauseTimerRef.current) clearTimeout(autoPauseTimerRef.current);
+    autoPauseTimerRef.current = setTimeout(() => setAutoPaused(false), 3000);
+    setTimeout(() => {
+      setSession((prev) => prev.filter((it) => it.id !== itemId));
+    }, 3600);
+  }, [flashCue]);
 
   // ── Capture → identify ───────────────────────────────────────────
   // The shutter/auto-capture only gates on the encode window (captureBusyRef),
@@ -257,14 +276,11 @@ export default function NativeScanScreen() {
             rememberCardHash(hash, top, conf).catch(() => {});
           }
         } else {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
-            () => {},
-          );
-          flashCue("miss");
+          handleMiss(itemId);
         }
       } catch (e) {
         updateSessionItem(itemId, { status: "missed" });
-        flashCue("miss");
+        handleMiss(itemId);
         showScannerError(e instanceof Error ? e.message : "Identification failed");
       } finally {
         if (hash) inFlightHashesRef.current.delete(hash);
@@ -272,7 +288,7 @@ export default function NativeScanScreen() {
         if (activeIdentifyCountRef.current === 0) setBusy(false);
       }
     },
-    [tcgHint, updateSessionItem, flashCue, showScannerError],
+    [tcgHint, updateSessionItem, flashCue, handleMiss, showScannerError],
   );
 
   // A captured frame → crop → pHash. The cache short-circuit is the big
@@ -483,8 +499,8 @@ export default function NativeScanScreen() {
               .filter(Boolean)
               .join(" · ")
           : missed
-            ? "Tap to search manually"
-            : "Photo captured";
+            ? "No match — try again"
+            : "Reading…";
         return {
           id: it.id,
           imageUrl: matched ? it.candidate?.image_url ?? null : null,
@@ -601,10 +617,12 @@ export default function NativeScanScreen() {
         active
         torchEnabled={torch}
         detectionEnabled={!capturing}
-        autoCapture={autoCapture && !capturing && (slotsLeft == null || slotsLeft > 0)}
+        autoCapture={
+          autoCapture && !capturing && !autoPaused && (slotsLeft == null || slotsLeft > 0)
+        }
         zoom={zoom}
         captureRequestId={captureReq}
-        overlayState={overlayState}
+        overlayStateJson={JSON.stringify(overlayState)}
         onCardDetected={onDetected}
         onCapture={onCapture}
         onOverlayClose={() => (router.canGoBack() ? router.back() : router.replace("/"))}

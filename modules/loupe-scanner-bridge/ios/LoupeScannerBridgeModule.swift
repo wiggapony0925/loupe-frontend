@@ -422,10 +422,11 @@ public class LoupeScannerBridgeModule: Module {
       Prop("active") { (view: LoupeCameraView, active: Bool) in
         view.setActive(active)
       }
-      // The entire scanner chrome is a native SwiftUI overlay driven by
-      // this one state record (see ScannerOverlayView / OverlayStatePayload).
-      Prop("overlayState") { (view: LoupeCameraView, state: OverlayStatePayload) in
-        view.setOverlayState(state)
+      // The entire scanner chrome is a native SwiftUI overlay driven by this
+      // one state blob, sent as a JSON string (a Record with a nested array
+      // silently failed to decode — see LoupeCameraView.setOverlayStateJson).
+      Prop("overlayStateJson") { (view: LoupeCameraView, json: String) in
+        view.setOverlayStateJson(json)
       }
       Prop("torchEnabled") { (view: LoupeCameraView, on: Bool) in
         view.setTorch(on)

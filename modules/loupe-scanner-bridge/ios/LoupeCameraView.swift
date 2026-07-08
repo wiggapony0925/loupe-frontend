@@ -6,33 +6,35 @@ import SwiftUI
 
 // ── Overlay state pushed from JS ────────────────────────────────────
 // The whole scanner chrome is a native SwiftUI overlay (ScannerOverlayView)
-// driven by this one prop; JS owns the identify/pricing/nav logic and just
-// pushes display state in and receives interaction events back out.
-struct ScannerItemPayload: Record {
-  @Field var id: String = ""
-  @Field var imageUrl: String? = nil
-  @Field var photoUri: String? = nil
-  @Field var title: String = ""
-  @Field var subtitle: String = ""
-  @Field var status: String = "scanning"
+// driven by this one prop. It arrives as a JSON STRING (not an Expo Record)
+// and is decoded with Codable — a plain Record with a nested array of
+// Records (`items`) silently failed to decode, which dropped the ENTIRE
+// prop and left the overlay stuck on its defaults (no tiles, stale hints).
+private struct OverlayItemDTO: Decodable {
+  let id: String
+  let imageUrl: String?
+  let photoUri: String?
+  let title: String
+  let subtitle: String
+  let status: String
 }
 
-struct OverlayStatePayload: Record {
-  @Field var statusText: String = "Frame a card · tap the shutter"
-  @Field var hintText: String? = nil
-  @Field var errorText: String? = nil
-  @Field var tcgLabel: String = "Auto-detect"
-  @Field var tcgAccentHex: String = "#16C09C"
-  @Field var torchOn: Bool = false
-  @Field var autoOn: Bool = false
-  @Field var autoSupported: Bool = true
-  @Field var zoom: Double = 1
-  @Field var slotsLeft: Int = -1
-  @Field var busy: Bool = false
-  @Field var matchedCount: Int = 0
-  @Field var totalText: String? = nil
-  @Field var canAddAll: Bool = false
-  @Field var items: [ScannerItemPayload] = []
+private struct OverlayStateDTO: Decodable {
+  let statusText: String
+  let hintText: String?
+  let errorText: String?
+  let tcgLabel: String
+  let tcgAccentHex: String
+  let torchOn: Bool
+  let autoOn: Bool
+  let autoSupported: Bool
+  let zoom: Double
+  let slotsLeft: Int
+  let busy: Bool
+  let matchedCount: Int
+  let totalText: String?
+  let canAddAll: Bool
+  let items: [OverlayItemDTO]
 }
 
 // Native Swift camera preview for the card scanner. Replaces the
@@ -107,8 +109,10 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
   private var steadyStreak = 0
   private var lastCentroid: CGPoint?
   private var lastAutoCaptureAt: TimeInterval = 0
-  private let autoSteadyFrames = 5
-  private let autoCaptureCooldown: TimeInterval = 2.5
+  // Auto-capture only on a genuinely good, well-held frame — a lower bar
+  // machine-guns blurry/partial frames that just come back "no match".
+  private let autoSteadyFrames = 8
+  private let autoCaptureCooldown: TimeInterval = 3.0
   private var pendingZoom: CGFloat = 1.0
 
   required init(appContext: AppContext? = nil) {
@@ -143,8 +147,13 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     overlayHost = host
   }
 
-  // Push the full display state in from JS (main thread — drives SwiftUI).
-  func setOverlayState(_ state: OverlayStatePayload) {
+  // Push the full display state in from JS as a JSON string (decoded with
+  // Codable, then applied on the main thread to drive SwiftUI).
+  func setOverlayStateJson(_ json: String) {
+    guard
+      let data = json.data(using: .utf8),
+      let state = try? JSONDecoder().decode(OverlayStateDTO.self, from: data)
+    else { return }
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       let m = self.overlayModel
@@ -396,7 +405,7 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     }
     lastCentroid = centroid
 
-    let wellFramed = confidence > 0.6 && fill > 0.20
+    let wellFramed = confidence > 0.72 && fill > 0.26
     let steady = wellFramed && steadyStreak >= autoSteadyFrames
 
     // Auto-capture: fire once the card is confidently framed AND held
