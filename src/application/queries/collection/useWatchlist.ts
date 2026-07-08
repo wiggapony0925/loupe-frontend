@@ -32,11 +32,18 @@ export function useWatchlist(opts: { enabled?: boolean } = {}) {
   });
 }
 
-/** Derived selector — true when `cardId` is on the signed-in user's watchlist. */
+/** Derived selector — true when `cardId` is on the signed-in user's watchlist.
+ *
+ * Matches on EITHER the local UUID or the composite upstream id: the
+ * card-detail knows a catalog card only by its composite id
+ * (`pokemontcg:base1-4`), while the stored row keys off the materialized UUID
+ * (with `upstream_id` echoed back). */
 export function useIsWatching(cardId: string | undefined, enabled = true): boolean {
   const { data } = useWatchlist({ enabled });
   if (!cardId || !data) return false;
-  return data.some((row) => row.card_id === cardId);
+  return data.some(
+    (row) => row.card_id === cardId || row.upstream_id === cardId,
+  );
 }
 
 export function useAddToWatchlist() {

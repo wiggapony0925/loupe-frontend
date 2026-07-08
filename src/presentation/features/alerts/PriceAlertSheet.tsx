@@ -61,7 +61,12 @@ export function PriceAlertSheet({
   const deleteMut = useDeletePriceAlert();
 
   const myAlerts = useMemo(
-    () => (list.data ?? []).filter((a) => a.card_id === cardId),
+    // Match on the local UUID OR the composite upstream id — the card-detail
+    // only knows the composite for a catalog card; the stored alert echoes it.
+    () =>
+      (list.data ?? []).filter(
+        (a) => a.card_id === cardId || a.upstream_id === cardId,
+      ),
     [list.data, cardId],
   );
 
