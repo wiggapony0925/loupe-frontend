@@ -39,6 +39,7 @@ import { sealedToCardSearchResult } from "@/presentation/features/search/sealedA
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
+import { CarouselRails } from "@/presentation/features/search/CarouselRail";
 import { SealedRail } from "@/presentation/features/search/SealedRail";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { SkeletonSearchResults } from "@/presentation/components/Skeletons";
@@ -620,24 +621,36 @@ export default function SearchScreen() {
                 <SealedRail products={sealed.data ?? []} />
               </View>
 
-              {selectedTcg === "all" || selectedTcg === "pokemon" ? (
-                <View style={{ gap: 8 }}>
-                  <SectionHeader eyebrow="Pokémon" title="Chase rares" />
-                  <HotRightNowRail tcg="pokemon" limit={12} />
-                </View>
-              ) : null}
-              {selectedTcg === "all" || selectedTcg === "yugioh" ? (
-                <View style={{ gap: 8 }}>
-                  <SectionHeader eyebrow="Yu-Gi-Oh!" title="Newest releases" />
-                  <HotRightNowRail tcg="yugioh" limit={12} />
-                </View>
-              ) : null}
-              {selectedTcg === "all" || selectedTcg === "magic" ? (
-                <View style={{ gap: 8 }}>
-                  <SectionHeader eyebrow="Magic" title="EDHREC favorites" />
-                  <HotRightNowRail tcg="magic" limit={12} />
-                </View>
-              ) : null}
+              {selectedTcg === "all" ? (
+                // Mixed scope keeps the cross-game teaser rails.
+                <>
+                  <View style={{ gap: 8 }}>
+                    <SectionHeader eyebrow="Pokémon" title="Chase rares" />
+                    <HotRightNowRail tcg="pokemon" limit={12} />
+                  </View>
+                  <View style={{ gap: 8 }}>
+                    <SectionHeader eyebrow="Yu-Gi-Oh!" title="Newest releases" />
+                    <HotRightNowRail tcg="yugioh" limit={12} />
+                  </View>
+                  <View style={{ gap: 8 }}>
+                    <SectionHeader eyebrow="Magic" title="EDHREC favorites" />
+                    <HotRightNowRail tcg="magic" limit={12} />
+                  </View>
+                </>
+              ) : (
+                // Per-game: render the SAME backend-owned carousels the web
+                // marketplace shows for this game. The backend
+                // (/v1/public/carousels) is the single source of truth for the
+                // shelf set; catalog-only games return none and fall back to
+                // the Trending + Sealed anchors above.
+                <CarouselRails
+                  tcg={selectedTcg}
+                  label={
+                    TCG_CHIPS.find((c) => c.key === selectedTcg)?.label ??
+                    selectedTcg
+                  }
+                />
+              )}
             </View>
 
             {/* ── BAND 3 · YOUR STUFF ─────────────────────── */}
