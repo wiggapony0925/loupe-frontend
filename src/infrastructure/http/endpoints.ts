@@ -31,6 +31,11 @@ export const ENDPOINTS = {
      *  prices a whole scan cart; the last point of each series is the
      *  card's current market price. Public, no auth. */
     sparklines: `${V1}/public/sparklines`,
+    /** Deep, TRUE-paginated catalog search (`?q&tcg&page&page_size&sort`).
+     *  Unlike `/cards/search` (a capped top-N typeahead), this walks the
+     *  provider's own pagination so every printing of a popular name is
+     *  reachable — Pikachu 177, Charizard 400+ — with a real `total`. */
+    search: `${V1}/public/search`,
   },
   me: {
     root: `${V1}/me`,

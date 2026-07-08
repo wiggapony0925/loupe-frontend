@@ -12,6 +12,7 @@
 
 // catalog
 export { useCardSearch } from "./catalog/useCardSearch";
+export { useCardSearchPaged } from "./catalog/useCardSearchPaged";
 export { useTrendingCards } from "./catalog/useTrendingCards";
 export { useCard } from "./catalog/useCard";
 export { useCardPriceHistory } from "./catalog/useCardPriceHistory";
