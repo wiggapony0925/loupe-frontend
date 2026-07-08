@@ -49,7 +49,16 @@ import { gradeColor, useThemedPalette, withAlpha } from "@/presentation/theme/to
 
 /** All TCG facets supported by the chip row, in render order. */
 type TcgChip = TcgKey | "all";
-const SUPPORTED_TCGS = new Set<TcgChip>(["all", "pokemon", "magic", "yugioh"]);
+// Games the backend can actually search/browse. One Piece is data-backed via
+// the apitcg catalog now; Lorcana + Sports have no provider yet, so they keep
+// the "SOON" badge and fall back to "all" when tapped.
+const SUPPORTED_TCGS = new Set<TcgChip>([
+  "all",
+  "pokemon",
+  "magic",
+  "yugioh",
+  "onepiece",
+]);
 const TCG_CHIPS: { key: TcgChip; label: string }[] = [
   { key: "all", label: "All" },
   { key: "pokemon", label: "Pokémon" },
