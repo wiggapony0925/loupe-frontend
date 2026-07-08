@@ -193,3 +193,34 @@ export interface TrendingResponseWire {
   updated_at: string;
   source: "live" | "cached" | "fallback";
 }
+
+// ─── Marketplace carousels ─────────────────────────────────────────────
+/**
+ * One curator/AI-authored carousel definition — the serializable "recipe"
+ * that `/v1/public/carousels` returns. Mirrors the backend `CarouselRecipe`
+ * (`app/schemas/carousel.py`) and the web `@loupe/core` type so the same shelf
+ * definitions render on web and mobile. The client compiles a recipe into a
+ * card rail: fetch the shelf (`source` → trending/value feed with `priceMax` as
+ * a server hint) then apply the price-band / rarity / sort / limit lens.
+ */
+export interface CarouselRecipeWire {
+  id: string;
+  title: string;
+  subtitle: string;
+  source: "value" | "trending" | "catalog";
+  priceMin?: number | null;
+  priceMax?: number | null;
+  rarityPattern?: string | null;
+  rarities?: string[] | null;
+  sort?: "price_desc" | "price_asc" | "name" | null;
+  limit?: number | null;
+  minItems?: number | null;
+}
+
+/** `GET /v1/public/carousels?game=<tcg>` — the backend-owned shelf pool. */
+export interface CarouselResponseWire {
+  game: string;
+  /** "ai" when a model authored them, "curated" for the built-in pool. */
+  source: "ai" | "curated";
+  carousels: CarouselRecipeWire[];
+}
