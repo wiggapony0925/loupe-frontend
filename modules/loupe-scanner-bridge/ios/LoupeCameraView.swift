@@ -100,6 +100,16 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
   // normalized Vision space for the crop math on capture.
   private var lastNormalizedCorners: [CGPoint]?
 
+  // ── Fixed card guide ────────────────────────────────────────────
+  // The reticle is a STATIC card-shaped frame (a guide the user aligns the
+  // card into), not a box that snaps onto whatever Vision finds. On capture
+  // we crop the photo to exactly this region — "what's in the 4 corners is
+  // what gets taken" — via `cropROI`, the frame mapped to the photo's own
+  // normalized coordinates (aspect-fill-correct). Falls back to the full
+  // frame if the crop can't be computed, so capture can never break.
+  private var reticleRect: CGRect = .zero
+  private var cropROI = CGRect(x: 0.06, y: 0.10, width: 0.88, height: 0.80)
+
   // ── Auto-capture / steadiness ───────────────────────────────────
   // A pro scanner captures itself when the card is well-framed and held
   // still. We track how many consecutive frames the card's centroid has
@@ -121,6 +131,39 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     setupPreview()
     setupReticle()
     setupOverlay()
+    setupFocusTap()
+  }
+
+  // Tap-to-focus. `cancelsTouchesInView = false` so the SwiftUI overlay
+  // controls still receive their taps; a tap also nudges focus + exposure to
+  // that point (continuous, so it keeps tracking).
+  private func setupFocusTap() {
+    let tap = UITapGestureRecognizer(target: self, action: #selector(handleFocusTap(_:)))
+    tap.cancelsTouchesInView = false
+    addGestureRecognizer(tap)
+  }
+
+  @objc private func handleFocusTap(_ gesture: UITapGestureRecognizer) {
+    guard configured, previewLayer != nil else { return }
+    let point = gesture.location(in: self)
+    let devicePoint = previewLayer.captureDevicePointConverted(fromLayerPoint: point)
+    sessionQueue.async { [weak self] in
+      guard let self, let device = self.device else { return }
+      do {
+        try device.lockForConfiguration()
+        if device.isFocusPointOfInterestSupported,
+           device.isFocusModeSupported(.continuousAutoFocus) {
+          device.focusPointOfInterest = devicePoint
+          device.focusMode = .continuousAutoFocus
+        }
+        if device.isExposurePointOfInterestSupported,
+           device.isExposureModeSupported(.continuousAutoExposure) {
+          device.exposurePointOfInterest = devicePoint
+          device.exposureMode = .continuousAutoExposure
+        }
+        device.unlockForConfiguration()
+      } catch {}
+    }
   }
 
   // MARK: - SwiftUI overlay
@@ -218,6 +261,36 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     if overlayModel.bottomInset != safeAreaInsets.bottom {
       overlayModel.bottomInset = safeAreaInsets.bottom
     }
+    updateReticleFrame()
+  }
+
+  // Centered, trading-card-aspect (2.5:3.5) guide frame + its region in the
+  // captured photo (aspect-fill-correct via the preview layer).
+  private func updateReticleFrame() {
+    guard bounds.width > 0, bounds.height > 0 else { return }
+    let cardAspect: CGFloat = 2.5 / 3.5
+    let maxW = bounds.width * 0.86
+    let maxH = bounds.height * 0.60
+    var rw = maxW
+    var rh = rw / cardAspect
+    if rh > maxH {
+      rh = maxH
+      rw = rh * cardAspect
+    }
+    reticleRect = CGRect(
+      x: (bounds.width - rw) / 2,
+      y: (bounds.height - rh) / 2,
+      width: rw,
+      height: rh
+    )
+    // Map the guide rect to the photo's normalized coordinates. Only trust a
+    // sane result (the preview layer needs a live connection first).
+    let roi = previewLayer.metadataOutputRectConverted(fromLayerRect: reticleRect)
+    if roi.width > 0.05, roi.height > 0.05, roi.minX >= -0.01, roi.minY >= -0.01,
+       roi.maxX <= 1.01, roi.maxY <= 1.01 {
+      cropROI = roi
+    }
+    drawFixedReticle(ready: false)
   }
 
   // MARK: - Props (called from the module DSL)
@@ -248,7 +321,8 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     if !enabled {
       steadyStreak = 0
       lastCentroid = nil
-      DispatchQueue.main.async { [weak self] in self?.hideReticle() }
+      // Keep the fixed guide visible even while detection is paused.
+      DispatchQueue.main.async { [weak self] in self?.drawFixedReticle(ready: false) }
     }
   }
 
@@ -323,9 +397,39 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     self.device = device
     session.addInput(input)
 
+    // Cards are held CLOSE, so bias autofocus to the near range and keep it
+    // continuously refocusing + auto-exposing — the frame stays sharp as the
+    // user moves the card instead of hunting or locking soft.
+    do {
+      try device.lockForConfiguration()
+      if device.isFocusModeSupported(.continuousAutoFocus) {
+        device.focusMode = .continuousAutoFocus
+      }
+      if device.isSmoothAutoFocusSupported {
+        device.isSmoothAutoFocusEnabled = true
+      }
+      if device.isAutoFocusRangeRestrictionSupported {
+        device.autoFocusRangeRestriction = .near
+      }
+      if device.isExposureModeSupported(.continuousAutoExposure) {
+        device.exposureMode = .continuousAutoExposure
+      }
+      device.unlockForConfiguration()
+    } catch {
+      // Focus tuning is best-effort — never fail the mount over it.
+    }
+
     if session.canAddOutput(photoOutput) {
       session.addOutput(photoOutput)
       photoOutput.isHighResolutionCaptureEnabled = true
+      // Use the best the sensor offers — full resolution + quality-first.
+      photoOutput.maxPhotoQualityPrioritization = .quality
+      if #available(iOS 16.0, *) {
+        if let maxDim = device.activeFormat.supportedMaxPhotoDimensions
+          .max(by: { Int($0.width) * Int($0.height) < Int($1.width) * Int($1.height) }) {
+          photoOutput.maxPhotoDimensions = maxDim
+        }
+      }
     }
 
     videoOutput.setSampleBufferDelegate(self, queue: videoQueue)
@@ -380,7 +484,7 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
       steadyStreak = 0
       lastCentroid = nil
       DispatchQueue.main.async { [weak self] in
-        self?.hideReticle()
+        self?.drawFixedReticle(ready: false)
         self?.onCardDetected(["detected": false, "confidence": 0, "steady": false, "fill": 0])
       }
       return
@@ -421,7 +525,7 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
 
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
-      self.drawReticle(rect, ready: steady || wellFramed)
+      self.drawFixedReticle(ready: steady || wellFramed)
       self.onCardDetected([
         "detected": true,
         "confidence": confidence,
@@ -431,51 +535,30 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     }
   }
 
-  private func drawReticle(_ rect: VNRectangleObservation, ready: Bool) {
-    // Map normalized Vision points → preview-layer view coordinates.
-    func toView(_ p: CGPoint) -> CGPoint {
-      // Vision origin bottom-left; preview layer uses the standard
-      // captureDevicePointConverted for correct aspect-fill mapping.
-      let converted = previewLayer.layerPointConverted(fromCaptureDevicePoint: CGPoint(x: p.y, y: 1 - p.x))
-      return converted
-    }
-    let tl = toView(rect.topLeft)
-    let tr = toView(rect.topRight)
-    let br = toView(rect.bottomRight)
-    let bl = toView(rect.bottomLeft)
-
-    // Corner-bracket path — L-shapes at each corner rather than a full
-    // outline. Reads as a "targeting" frame and stays crisp at any tilt.
-    let path = UIBezierPath()
-    func bracket(_ corner: CGPoint, _ a: CGPoint, _ b: CGPoint) {
-      let la = 0.22
-      path.move(to: lerp(corner, a, la))
-      path.addLine(to: corner)
-      path.addLine(to: lerp(corner, b, la))
-    }
-    bracket(tl, tr, bl)
-    bracket(tr, tl, br)
-    bracket(br, tr, bl)
-    bracket(bl, tl, br)
+  // Static rounded-rectangle guide at the fixed `reticleRect` (Collectr
+  // style). It does not move to chase the card — the user aligns the card
+  // into it — it only recolors (dim → bright mint) when a card is
+  // well-framed and steady.
+  private func drawFixedReticle(ready: Bool) {
+    let r = reticleRect
+    guard r.width > 1, r.height > 1 else { return }
+    let path = UIBezierPath(roundedRect: r, cornerRadius: 20)
 
     let color = ready
-      ? UIColor(red: 0.086, green: 0.753, blue: 0.612, alpha: 0.98)
-      : UIColor(white: 1.0, alpha: 0.85)
+      ? UIColor(red: 0.086, green: 0.753, blue: 0.612, alpha: 1.0)
+      : UIColor(red: 0.086, green: 0.753, blue: 0.612, alpha: 0.72)
 
     CATransaction.begin()
-    CATransaction.setAnimationDuration(0.1)
+    CATransaction.setAnimationDuration(0.12)
     reticleLayer.path = path.cgPath
     reticleLayer.fillColor = UIColor.clear.cgColor
     reticleLayer.strokeColor = color.cgColor
     reticleLayer.lineWidth = ready ? 4.0 : 3.0
+    reticleLayer.lineCap = .round
     reticleLayer.shadowColor = color.cgColor
-    reticleLayer.shadowOpacity = ready ? 0.8 : 0.3
+    reticleLayer.shadowOpacity = ready ? 0.7 : 0.25
     reticleLayer.opacity = 1
     CATransaction.commit()
-  }
-
-  private func lerp(_ a: CGPoint, _ b: CGPoint, _ t: CGFloat) -> CGPoint {
-    return CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
   }
 
   private func hideReticle() {
@@ -502,6 +585,10 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
       guard let self else { return }
       let settings = AVCapturePhotoSettings()
       settings.isHighResolutionPhotoEnabled = true
+      settings.photoQualityPrioritization = .quality
+      if #available(iOS 16.0, *) {
+        settings.maxPhotoDimensions = self.photoOutput.maxPhotoDimensions
+      }
       if let device = self.device, device.hasFlash {
         settings.flashMode = .off
       }
@@ -532,26 +619,69 @@ extension LoupeCameraView: AVCapturePhotoCaptureDelegate {
     }
     let outURL = URL(fileURLWithPath: NSTemporaryDirectory())
       .appendingPathComponent("scan-\(UUID().uuidString.prefix(8)).jpg")
+
+    // Crop the high-res still to exactly the fixed guide frame — "what's in
+    // the 4 corners is what gets taken". Falls back to the full frame if the
+    // crop can't be produced, so capture can never come back empty. We send
+    // NO corners so JS uploads this crop as-is (no second crop pass).
+    let payload: Data
+    if let cropped = cropToGuide(data), let jpeg = cropped.jpegData(compressionQuality: 0.92) {
+      payload = jpeg
+    } else {
+      payload = data
+    }
     do {
-      try data.write(to: outURL, options: .atomic)
+      try payload.write(to: outURL, options: .atomic)
     } catch {
       onCapture(["requestId": requestId, "error": error.localizedDescription])
       return
     }
 
-    // Include the last-known card corners (normalized, top-left origin)
-    // so JS can hand them straight to `cropCardPerspective` without a
-    // second detection pass on the still.
-    var cornerArray: [Double]? = nil
-    if let c = lastNormalizedCorners {
-      // c is [tl, tr, br, bl] in bottom-left normalized space → flip Y.
-      cornerArray = c.flatMap { [Double($0.x), Double(1 - $0.y)] }
-    }
-
     onCapture([
       "requestId": requestId,
       "uri": outURL.absoluteString,
-      "corners": cornerArray as Any,
+      "corners": [Double](),
     ])
+  }
+
+  // Crop the captured photo to `cropROI` (the fixed guide frame in the
+  // photo's normalized coords), then downscale to a sharp ~1200px upload.
+  private func cropToGuide(_ data: Data) -> UIImage? {
+    guard let raw = UIImage(data: data) else { return nil }
+    let up = raw.normalizedUp()
+    guard let cg = up.cgImage else { return nil }
+    let W = CGFloat(cg.width), H = CGFloat(cg.height)
+    let roi = cropROI
+    let rx = max(0, min(0.9, roi.minX))
+    let ry = max(0, min(0.9, roi.minY))
+    let rw = max(0.1, min(1 - rx, roi.width))
+    let rh = max(0.1, min(1 - ry, roi.height))
+    let cropRect = CGRect(x: rx * W, y: ry * H, width: rw * W, height: rh * H).integral
+    guard cropRect.width > 40, cropRect.height > 40, let out = cg.cropping(to: cropRect) else {
+      return nil
+    }
+    let cropped = UIImage(cgImage: out)
+    let maxEdge: CGFloat = 1200
+    let longest = max(cropped.size.width, cropped.size.height)
+    guard longest > maxEdge else { return cropped }
+    let scale = maxEdge / longest
+    let target = CGSize(width: cropped.size.width * scale, height: cropped.size.height * scale)
+    let fmt = UIGraphicsImageRendererFormat.default()
+    fmt.scale = 1
+    return UIGraphicsImageRenderer(size: target, format: fmt).image { _ in
+      cropped.draw(in: CGRect(origin: .zero, size: target))
+    }
+  }
+}
+
+private extension UIImage {
+  /// Redraw into `.up` orientation so pixel crops line up with display coords.
+  func normalizedUp() -> UIImage {
+    guard imageOrientation != .up else { return self }
+    let fmt = UIGraphicsImageRendererFormat.default()
+    fmt.scale = scale
+    return UIGraphicsImageRenderer(size: size, format: fmt).image { _ in
+      draw(in: CGRect(origin: .zero, size: size))
+    }
   }
 }
