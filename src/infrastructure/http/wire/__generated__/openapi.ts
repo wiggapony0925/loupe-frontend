@@ -306,6 +306,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/catalog/mirror/sync-tcg": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync the Magic / Yu-Gi-Oh mirror
+         * @description Populate/refresh the Magic (Scryfall bulk) or Yu-Gi-Oh (YGOPRODeck dump)
+         *     mirror. Both catalogs ship prices, so no separate price-refresh is needed.
+         */
+        post: operations["sync_mirror_tcg_v1_admin_catalog_mirror_sync_tcg_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/cloud": {
         parameters: {
             query?: never;
@@ -815,6 +836,69 @@ export interface paths {
         get: operations["get_metrics_v1_admin_metrics_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/pricecharting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * PriceCharting tier, capabilities & fallback chain
+         * @description Live-detected tier, the active price strategy, the full fallback chain,
+         *     the grade-field mapping, and local mirror status (cached probe).
+         */
+        get: operations["get_overview_v1_admin_pricecharting_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/pricecharting/probe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-probe the live account now
+         * @description Force a fresh capability probe — call after upgrading / downgrading the
+         *     subscription to make the app adopt the new tier immediately.
+         */
+        post: operations["reprobe_v1_admin_pricecharting_probe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/pricecharting/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync the Legendary bulk CSV price guide
+         * @description Full-refresh the local price mirror from the Legendary CSV. No-op with a
+         *     clear reason on lower tiers / when no CSV URL is configured.
+         */
+        post: operations["sync_mirror_v1_admin_pricecharting_sync_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1797,11 +1881,14 @@ export interface paths {
         };
         /**
          * Trending cards (public)
-         * @description Mixed trending feed across the three live catalogs.
+         * @description A discovery shelf across the live catalogs — the same server-shaped feed
+         *     the web storefront uses (`/v1/public/trending`), so mobile and web render
+         *     identical rails.
          *
-         *     Cached for 15 minutes. Falls back to a small hardcoded set of
-         *     well-known cards if every upstream is unreachable, so the endpoint
-         *     never returns a 5xx.
+         *     ``sort=trending`` is the movement feed; ``sort=value`` ("most valuable")
+         *     draws from a dedicated high-priced source and is deduped against trending;
+         *     ``max_price`` applies the "steals under $X" cut. Every card is guaranteed a
+         *     price + art. Cached ~15 min; never returns 5xx.
          */
         get: operations["get_trending_v1_cards_trending_get"];
         put?: never;
@@ -2176,6 +2263,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/collections/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Portfolio switcher (All + collections, with counts & value)
+         * @description Everything the dashboard's portfolio dropdown renders: the synthetic
+         *     **All** entry (undeletable) plus each collection with a live card count and
+         *     total value. Backend-owned — the client just displays it.
+         */
+        get: operations["overview_v1_collections_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/collections/{collection_id}": {
         parameters: {
             query?: never;
@@ -2224,6 +2333,27 @@ export interface paths {
         post?: never;
         /** Remove Item */
         delete: operations["remove_item_v1_collections__collection_id__items__graded_card_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/collections/{collection_id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge another collection into this one
+         * @description Fold ``source_id`` into ``collection_id``: its items move over (de-duped)
+         *     and the emptied source is deleted. Holdings are untouched.
+         */
+        post: operations["merge_v1_collections__collection_id__merge_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2771,6 +2901,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/carousels/resolved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Marketplace carousels already resolved into cards (both clients render this)
+         * @description A game's discovery carousels **already resolved into cards** — the recipe
+         *     pool run against the shelf/catalog server-side, with empty rails dropped. Web
+         *     and mobile render this identically (no client-side filtering), so the
+         *     marketplace shows the exact same carousels everywhere.
+         */
+        get: operations["public_carousels_resolved_v1_public_carousels_resolved_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Storefront category tags (games + sections; backend-driven)
+         * @description The canonical marketplace/search category tags both web + mobile render,
+         *     each with a ``status`` (``live`` | ``soon``) derived from real catalog
+         *     capability — so One Piece flips live everywhere from here, no client
+         *     release. App-only actions (Scan/Grade/Scanner) stay client-side.
+         */
+        get: operations["public_games_v1_public_games_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/search": {
         parameters: {
             query?: never;
@@ -2782,8 +2958,9 @@ export interface paths {
          * Public storefront search (server-side filter / sort / paginate / facets)
          * @description Search (or, with no query, browse trending) with all derivation done here.
          *
-         *     Returns the paginated slice plus ``total`` and ``facets`` so the client
-         *     renders directly — no client-side filtering/sorting/pagination.
+         *     Returns the paginated slice plus ``total``, ``facets`` and
+         *     ``available_languages`` so the client renders + drives its language picker
+         *     directly — no client-side filtering/sorting/pagination.
          */
         get: operations["public_search_v1_public_search_get"];
         put?: never;
@@ -3224,6 +3401,26 @@ export interface paths {
          * @description Returns one entry per set the user owns at least one card from, sorted by completion percent (highest first). Each entry: `{setId, setName, setCode, tcg, imageUrl, owned, total, percent, estimatedValueUsd, missingTop: [{cardId, name, number, imageUrl}]}`. All values are computed from real graded-card data; sets with unknown total fall back to the count of cards we have indexed.
          */
         get: operations["get_progress_v1_sets_progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sets/{set_id}/checklist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Full card checklist for one set (owned + still-missing)
+         * @description The complete card list for a set — every card flagged `owned` or not — so the client can render a 'you have these / still missing these' sheet. Shape: `{setId, setName, total, owned, cards: [{id, name, number, imageUrl, owned}]}`. The full list comes from the catalog mirror; `owned` is true when the signed-in user holds a copy with the same collector number in this set.
+         */
+        get: operations["get_set_checklist_v1_sets__set_id__checklist_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4349,6 +4546,18 @@ export interface components {
             graded_card_id: string;
         };
         /**
+         * CollectionMerge
+         * @description Body for ``POST /v1/collections/{id}/merge`` — fold ``source_id`` into
+         *     the path collection, then delete the (now-empty) source.
+         */
+        CollectionMerge: {
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+        };
+        /**
          * CollectionRead
          * @description Public representation of a collection.
          */
@@ -4381,6 +4590,37 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+        };
+        /**
+         * CollectionSummary
+         * @description One row of the portfolio switcher (the currency-style dropdown).
+         *
+         *     ``id`` is null for the synthetic **All** entry — everything the user owns,
+         *     which is derived (not a real row) and therefore never deletable. Custom
+         *     collections are categorizations layered on top; deleting one drops the
+         *     categorization, never the cards.
+         */
+        CollectionSummary: {
+            /** Card Count */
+            card_count: number;
+            /** Color */
+            color?: string | null;
+            /**
+             * Deletable
+             * @default true
+             */
+            deletable: boolean;
+            /** Id */
+            id: string | null;
+            /**
+             * Is All
+             * @default false
+             */
+            is_all: boolean;
+            /** Name */
+            name: string;
+            /** Total Value Usd */
+            total_value_usd: number;
         };
         /**
          * CollectionUpdate
@@ -4899,6 +5139,8 @@ export interface components {
             subgrades?: {
                 [key: string]: unknown;
             } | null;
+            /** Tags */
+            tags?: string[] | null;
             /**
              * Upstream Id
              * @description Composite catalog id like 'pokemontcg:base1-4'.
@@ -4968,6 +5210,11 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
+            /**
              * Updated At
              * Format: date-time
              */
@@ -5004,6 +5251,8 @@ export interface components {
             subgrades?: {
                 [key: string]: unknown;
             } | null;
+            /** Tags */
+            tags?: string[] | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -5825,6 +6074,8 @@ export interface components {
             triggered_at?: string | null;
             /** Triggered Price Usd */
             triggered_price_usd?: string | null;
+            /** Upstream Id */
+            upstream_id?: string | null;
             /**
              * User Id
              * Format: uuid
@@ -7063,10 +7314,7 @@ export interface components {
         };
         /** WatchlistAdd */
         WatchlistAdd: {
-            /**
-             * Card Id
-             * Format: uuid
-             */
+            /** Card Id */
             card_id: string;
         };
         /**
@@ -7093,6 +7341,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Upstream Id */
+            upstream_id?: string | null;
             /**
              * User Id
              * Format: uuid
@@ -7717,6 +7967,41 @@ export interface operations {
                 force?: boolean;
                 /** @description Sets to sync this call (newest-first); 0 = all remaining. Chunked so a call stays inside the request timeout — repeat until `sets_synced` comes back 0. */
                 max_sets?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_mirror_tcg_v1_admin_catalog_mirror_sync_tcg_post: {
+        parameters: {
+            query: {
+                tcg: string;
+                /** @description Cap cards this call (0 = the full catalog). Both fit one call. */
+                max_cards?: number;
             };
             header?: never;
             path?: never;
@@ -8735,6 +9020,72 @@ export interface operations {
             };
         };
     };
+    get_overview_v1_admin_pricecharting_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    reprobe_v1_admin_pricecharting_probe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    sync_mirror_v1_admin_pricecharting_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     get_pulse_v1_admin_pulse_get: {
         parameters: {
             query?: {
@@ -9511,7 +9862,9 @@ export interface operations {
     };
     get_overview_v1_analytics_overview_get: {
         parameters: {
-            query?: never;
+            query?: {
+                collection_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -9527,6 +9880,15 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -10376,6 +10738,8 @@ export interface operations {
         parameters: {
             query?: {
                 tcg?: string;
+                sort?: string;
+                max_price?: number | null;
                 limit?: number;
             };
             header?: never;
@@ -10991,6 +11355,26 @@ export interface operations {
             };
         };
     };
+    overview_v1_collections_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionSummary"][];
+                };
+            };
+        };
+    };
     delete_v1_collections__collection_id__delete: {
         parameters: {
             query?: never;
@@ -11153,6 +11537,39 @@ export interface operations {
             };
         };
     };
+    merge_v1_collections__collection_id__merge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionMerge"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_flags_v1_flags_get: {
         parameters: {
             query?: never;
@@ -11186,11 +11603,27 @@ export interface operations {
                 q?: string | null;
                 /** @description Filter to a single set by exact name (case-sensitive). */
                 set?: string | null;
-                /** @description Filter by grading house slug (e.g. `loupe`, `psa`, `bgs`). Case-insensitive — normalised to lower. */
-                house?: string | null;
+                /** @description Filter by grading house slug(s) (e.g. `loupe`, `psa`, `bgs`). Repeatable for multi-select (`?house=psa&house=bgs`); case-insensitive. */
+                house?: string[] | null;
                 /** @description Minimum grade (inclusive). Rows below this are dropped. */
                 min_grade?: number | null;
-                /** @description Result ordering. One of: `recent` (default), `oldest`, `value_desc`, `value_asc`, `grade_desc`, `grade_asc`. */
+                /** @description Maximum grade (inclusive). Rows above this are dropped. */
+                max_grade?: number | null;
+                /** @description Minimum estimated value USD (inclusive). */
+                min_value?: number | string | null;
+                /** @description Maximum estimated value USD (inclusive). */
+                max_value?: number | string | null;
+                /** @description Filter to holdings tagged with ANY of these tags (repeatable, case-insensitive). */
+                tags?: string[] | null;
+                /** @description Show only slabbed/graded cards (house ≠ loupe). */
+                graded_only?: boolean;
+                /** @description Show only raw/ungraded cards (house = loupe). */
+                raw_only?: boolean;
+                /** @description Show only cards on the user's watchlist. */
+                watchlist?: boolean;
+                /** @description Scope to a single collection (omit for the whole vault). The active collection scopes the dashboard, analytics, and statement PDF identically. */
+                collection_id?: string | null;
+                /** @description Result ordering. One of: `recent` (default), `oldest`, `value_desc`, `value_asc`, `grade_desc`, `grade_asc`, `name_asc`, `name_desc`, `number_asc`, `number_desc`. */
                 sort?: string;
             };
             header?: never;
@@ -11256,6 +11689,7 @@ export interface operations {
         parameters: {
             query?: {
                 range?: "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
+                collection_id?: string | null;
             };
             header?: never;
             path?: never;
@@ -11287,7 +11721,9 @@ export interface operations {
     };
     get_sparklines_v1_grades_sparklines_get: {
         parameters: {
-            query?: never;
+            query?: {
+                collection_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11305,11 +11741,22 @@ export interface operations {
                     }[];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     get_summary_v1_grades_summary_get: {
         parameters: {
-            query?: never;
+            query?: {
+                collection_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11325,6 +11772,15 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -12124,6 +12580,61 @@ export interface operations {
             };
         };
     };
+    public_carousels_resolved_v1_public_carousels_resolved_get: {
+        parameters: {
+            query?: {
+                game?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_games_v1_public_games_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     public_search_v1_public_search_get: {
         parameters: {
             query?: {
@@ -12132,6 +12643,8 @@ export interface operations {
                 rarity?: string | null;
                 set?: string | null;
                 sort?: string;
+                /** @description Comma-separated ISO languages to include (default English). */
+                langs?: string;
                 page?: number;
                 page_size?: number;
             };
@@ -13120,6 +13633,40 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+        };
+    };
+    get_set_checklist_v1_sets__set_id__checklist_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CardSet id */
+                set_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

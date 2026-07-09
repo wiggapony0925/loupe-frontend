@@ -20,6 +20,8 @@ export interface UsePortfolioHistoryOptions {
   timeframe: PortfolioTimeframe;
   /** Disable the query (e.g. while the user is signed out). */
   enabled?: boolean;
+  /** Scope to a single collection (omit for the whole vault). */
+  collectionId?: string | null;
 }
 
 function adapt(wire: PortfolioHistoryWire): PortfolioSeries {
@@ -34,12 +36,16 @@ function adapt(wire: PortfolioHistoryWire): PortfolioSeries {
 export function usePortfolioHistory({
   timeframe,
   enabled = true,
+  collectionId,
 }: UsePortfolioHistoryOptions): UseQueryResult<PortfolioSeries> {
   return useQuery({
-    queryKey: queryKeys.portfolio.history(timeframe),
+    queryKey: [...queryKeys.portfolio.history(timeframe), collectionId ?? "all"],
     queryFn: async () => {
+      const scope = collectionId
+        ? `&collection_id=${encodeURIComponent(collectionId)}`
+        : "";
       const wire = await apiFetch<PortfolioHistoryWire>(
-        `${ENDPOINTS.me.grades}/history?range=${encodeURIComponent(timeframe)}`,
+        `${ENDPOINTS.me.grades}/history?range=${encodeURIComponent(timeframe)}${scope}`,
       );
       return adapt(wire);
     },

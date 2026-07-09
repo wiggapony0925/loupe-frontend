@@ -35,11 +35,7 @@ import { useMoney } from "@/presentation/components/Price";
 import { TagInput } from "@/presentation/features/collection/TagInput";
 import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { queryKeys } from "@/application/queries/queryKeys";
-import {
-  useCreateGrade,
-  useDeleteGrade,
-  useUpdateGrade,
-} from "@/application/queries";
+import { useCreateGrade, useDeleteGrade, useUpdateGrade } from "@/application/queries";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
 import { ApiError } from "@/infrastructure/http/client";
 import { usePro } from "@/presentation/features/pro";
@@ -105,8 +101,7 @@ function clampNumeric(input: string, max = 10): string {
   // Allow empty, digits, and one decimal point. No leading minus.
   const cleaned = input.replace(/[^0-9.]/g, "");
   const parts = cleaned.split(".");
-  const normalized =
-    parts.length > 1 ? `${parts[0]}.${parts.slice(1).join("")}` : cleaned;
+  const normalized = parts.length > 1 ? `${parts[0]}.${parts.slice(1).join("")}` : cleaned;
   const asNum = Number(normalized);
   if (Number.isFinite(asNum) && asNum > max) return String(max);
   return normalized;
@@ -146,32 +141,24 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   // Shares the vault summary cache, so it's usually already warm.
   const tagSuggestions = useQuery({
     queryKey: queryKeys.collection.summary(),
-    queryFn: fetchCollectionSummary,
+    queryFn: () => fetchCollectionSummary(),
     staleTime: 60_000,
   });
 
-  const [grade, setGrade] = useState<string>(
-    initial?.grade != null ? String(initial.grade) : "",
-  );
+  const [grade, setGrade] = useState<string>(initial?.grade != null ? String(initial.grade) : "");
   const [house, setHouse] = useState<GradeHouse>(initial?.house ?? "psa");
-  const [condition, setCondition] = useState<RawCondition | null>(
-    initial?.condition ?? null,
-  );
+  const [condition, setCondition] = useState<RawCondition | null>(initial?.condition ?? null);
   const [purchasePrice, setPurchasePrice] = useState<string>(
     initial?.purchasePriceUsd != null ? String(initial.purchasePriceUsd) : "",
   );
-  const [purchaseDate, setPurchaseDate] = useState<string>(
-    initial?.purchaseDate ?? "",
-  );
+  const [purchaseDate, setPurchaseDate] = useState<string>(initial?.purchaseDate ?? "");
   const [estimatedValue, setEstimatedValue] = useState<string>(
     initial?.estimatedValueUsd != null ? String(initial.estimatedValueUsd) : "",
   );
   // Tracks whether the user has manually edited the estimated value
   // input. While false (create flow, untouched), the field auto-syncs
   // to the live market snapshot picked by current grade/house.
-  const estValueTouchedRef = useRef<boolean>(
-    mode === "edit" || initial?.estimatedValueUsd != null,
-  );
+  const estValueTouchedRef = useRef<boolean>(mode === "edit" || initial?.estimatedValueUsd != null);
   const [autoFilledFromMarket, setAutoFilledFromMarket] = useState(false);
   const [notes, setNotes] = useState<string>(initial?.notes ?? "");
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
@@ -211,8 +198,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   const heldDays = useMemo(() => daysBetween(purchaseDate), [purchaseDate]);
   const dateValid = purchaseDate === "" || ISO_DATE_RE.test(purchaseDate);
   const gradeNum = Number(grade);
-  const gradeValid =
-    grade !== "" && Number.isFinite(gradeNum) && gradeNum >= 0 && gradeNum <= 10;
+  const gradeValid = grade !== "" && Number.isFinite(gradeNum) && gradeNum >= 0 && gradeNum <= 10;
 
   const canSubmit =
     !submitting &&
@@ -233,8 +219,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           condition: house === "loupe" ? condition : null,
           purchasePriceUsd: purchasePrice === "" ? null : Number(purchasePrice),
           purchaseDate: purchaseDate || null,
-          estimatedValueUsd:
-            estimatedValue === "" ? null : Number(estimatedValue),
+          estimatedValueUsd: estimatedValue === "" ? null : Number(estimatedValue),
           notes: notes.trim() || null,
           tags,
         };
@@ -252,8 +237,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           condition: house === "loupe" ? condition : null,
           purchasePriceUsd: purchasePrice === "" ? null : Number(purchasePrice),
           purchaseDate: purchaseDate || null,
-          estimatedValueUsd:
-            estimatedValue === "" ? null : Number(estimatedValue),
+          estimatedValueUsd: estimatedValue === "" ? null : Number(estimatedValue),
           notes: notes.trim() || null,
           tags,
         });
@@ -394,13 +378,9 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
             >
               {card.name ?? "Unknown card"}
             </Text>
-            <Text
-              style={{ color: p.ink.muted, fontSize: 13, fontWeight: "500" }}
-              numberOfLines={1}
-            >
-              {[card.setName, card.year ? String(card.year) : null]
-                .filter(Boolean)
-                .join(" · ") || "—"}
+            <Text style={{ color: p.ink.muted, fontSize: 13, fontWeight: "500" }} numberOfLines={1}>
+              {[card.setName, card.year ? String(card.year) : null].filter(Boolean).join(" · ") ||
+                "—"}
             </Text>
           </View>
         </View>
@@ -437,82 +417,35 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           </Text>
         </View>
 
-      {/* Grade */}
-      <Field label="Grade" hint="0 – 10. Use 0 for a raw / ungraded card.">
-        <TextInput
-          value={grade}
-          onChangeText={(t) => setGrade(clampNumeric(t, 10))}
-          placeholder="e.g. 9.5"
-          placeholderTextColor={p.ink.dim}
-          keyboardType="decimal-pad"
-          inputMode="decimal"
-          style={inputStyle(p)}
-        />
-      </Field>
+        {/* Grade */}
+        <Field label="Grade" hint="0 – 10. Use 0 for a raw / ungraded card.">
+          <TextInput
+            value={grade}
+            onChangeText={(t) => setGrade(clampNumeric(t, 10))}
+            placeholder="e.g. 9.5"
+            placeholderTextColor={p.ink.dim}
+            keyboardType="decimal-pad"
+            inputMode="decimal"
+            style={inputStyle(p)}
+          />
+        </Field>
 
-      {/* House */}
-      <Field label="Grading house">
-        <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-          {HOUSES.map((h) => {
-            const active = house === h.id;
-            return (
-              <Pressable
-                key={h.id}
-                onPress={() => setHouse(h.id)}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: active ? p.accent.mint : p.line.default,
-                  backgroundColor: active
-                    ? withAlpha(p.accent.mint, 0.15)
-                    : "transparent",
-                }}
-              >
-                <Text
-                  style={{
-                    color: active ? p.accent.mint : p.ink.muted,
-                    fontSize: 12,
-                    fontWeight: "700",
-                    letterSpacing: 0.4,
-                  }}
-                >
-                  {h.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </Field>
-
-      {/* Condition — RAW only. The chip vocabulary matches per-condition
-          pricing on eBay so the future "estimated value" lookup can key
-          off the same slug without a translation table. */}
-      {house === "loupe" ? (
-        <Field
-          label="Condition"
-          hint="PSA-style vocab. Drives per-condition pricing once comps are live."
-        >
+        {/* House */}
+        <Field label="Grading house">
           <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-            {CONDITIONS.map((c) => {
-              const active = condition === c.id;
+            {HOUSES.map((h) => {
+              const active = house === h.id;
               return (
                 <Pressable
-                  key={c.id}
-                  onPress={() => setCondition(active ? null : c.id)}
+                  key={h.id}
+                  onPress={() => setHouse(h.id)}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 8,
                     borderRadius: 999,
                     borderWidth: 1,
                     borderColor: active ? p.accent.mint : p.line.default,
-                    backgroundColor: active
-                      ? withAlpha(p.accent.mint, 0.15)
-                      : "transparent",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
+                    backgroundColor: active ? withAlpha(p.accent.mint, 0.15) : "transparent",
                   }}
                 >
                   <Text
@@ -523,206 +456,242 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
                       letterSpacing: 0.4,
                     }}
                   >
-                    {c.short}
-                  </Text>
-                  <Text
-                    style={{
-                      color: active ? p.accent.mint : p.ink.dim,
-                      fontSize: 11,
-                      fontWeight: "500",
-                    }}
-                  >
-                    {c.label}
+                    {h.label}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
         </Field>
-      ) : null}
 
-      {/* Copies — create-mode only. Adds N identical holdings in one go,
+        {/* Condition — RAW only. The chip vocabulary matches per-condition
+          pricing on eBay so the future "estimated value" lookup can key
+          off the same slug without a translation table. */}
+        {house === "loupe" ? (
+          <Field
+            label="Condition"
+            hint="PSA-style vocab. Drives per-condition pricing once comps are live."
+          >
+            <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+              {CONDITIONS.map((c) => {
+                const active = condition === c.id;
+                return (
+                  <Pressable
+                    key={c.id}
+                    onPress={() => setCondition(active ? null : c.id)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: active ? p.accent.mint : p.line.default,
+                      backgroundColor: active ? withAlpha(p.accent.mint, 0.15) : "transparent",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: active ? p.accent.mint : p.ink.muted,
+                        fontSize: 12,
+                        fontWeight: "700",
+                        letterSpacing: 0.4,
+                      }}
+                    >
+                      {c.short}
+                    </Text>
+                    <Text
+                      style={{
+                        color: active ? p.accent.mint : p.ink.dim,
+                        fontSize: 11,
+                        fontWeight: "500",
+                      }}
+                    >
+                      {c.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Field>
+        ) : null}
+
+        {/* Copies — create-mode only. Adds N identical holdings in one go,
           mirroring the web "Copies" field. Editing a single holding never
           changes the count, so it's hidden in edit mode. */}
-      {mode === "create" ? (
+        {mode === "create" ? (
+          <Field label="Copies" hint="How many of this exact card you own. Adds one holding each.">
+            <TextInput
+              value={copies}
+              onChangeText={(t) => setCopies(t.replace(/[^0-9]/g, "").slice(0, 2))}
+              placeholder="1"
+              placeholderTextColor={p.ink.dim}
+              keyboardType="number-pad"
+              inputMode="numeric"
+              style={inputStyle(p)}
+            />
+          </Field>
+        ) : null}
+
+        {/* Purchase price */}
         <Field
-          label="Copies"
-          hint="How many of this exact card you own. Adds one holding each."
+          label="What you paid (USD)"
+          hint="Optional — leave blank if you don't want to track P/L."
         >
-          <TextInput
-            value={copies}
-            onChangeText={(t) => setCopies(t.replace(/[^0-9]/g, "").slice(0, 2))}
-            placeholder="1"
-            placeholderTextColor={p.ink.dim}
-            keyboardType="number-pad"
-            inputMode="numeric"
-            style={inputStyle(p)}
-          />
-        </Field>
-      ) : null}
-
-      {/* Purchase price */}
-      <Field
-        label="What you paid (USD)"
-        hint="Optional — leave blank if you don't want to track P/L."
-      >
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Text
-            style={{
-              ...inputStyle(p),
-              flex: 0,
-              borderTopRightRadius: 0,
-              borderBottomRightRadius: 0,
-              borderRightWidth: 0,
-              color: p.ink.muted,
-            }}
-          >
-            $
-          </Text>
-          <TextInput
-            value={purchasePrice}
-            onChangeText={(t) => setPurchasePrice(clampCurrency(t))}
-            placeholder="0.00"
-            placeholderTextColor={p.ink.dim}
-            keyboardType="decimal-pad"
-            inputMode="decimal"
-            style={{
-              ...inputStyle(p),
-              flex: 1,
-              borderTopLeftRadius: 0,
-              borderBottomLeftRadius: 0,
-            }}
-          />
-        </View>
-      </Field>
-
-      {/* Purchase date */}
-      <Field
-        label="Purchase date"
-        hint={
-          heldDays != null
-            ? `Held for ${heldDays.toLocaleString()} day${heldDays === 1 ? "" : "s"}.`
-            : "Format: YYYY-MM-DD"
-        }
-        error={!dateValid ? "Use YYYY-MM-DD." : null}
-      >
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <TextInput
-            value={purchaseDate}
-            onChangeText={(t) => setPurchaseDate(t.replace(/[^0-9-]/g, ""))}
-            placeholder="2024-08-15"
-            placeholderTextColor={p.ink.dim}
-            autoCapitalize="none"
-            autoCorrect={false}
-            inputMode="numeric"
-            style={{ ...inputStyle(p), flex: 1 }}
-          />
-          <Pressable
-            onPress={() => setPurchaseDate(todayIso())}
-            style={{
-              paddingHorizontal: 14,
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: p.line.default,
-              backgroundColor: p.bg.elevated,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            <Calendar size={14} color={p.ink.muted} />
-            <Text className="text-[12px] font-semibold text-ink-muted">
-              Today
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Text
+              style={{
+                ...inputStyle(p),
+                flex: 0,
+                borderTopRightRadius: 0,
+                borderBottomRightRadius: 0,
+                borderRightWidth: 0,
+                color: p.ink.muted,
+              }}
+            >
+              $
             </Text>
-          </Pressable>
-        </View>
-      </Field>
+            <TextInput
+              value={purchasePrice}
+              onChangeText={(t) => setPurchasePrice(clampCurrency(t))}
+              placeholder="0.00"
+              placeholderTextColor={p.ink.dim}
+              keyboardType="decimal-pad"
+              inputMode="decimal"
+              style={{
+                ...inputStyle(p),
+                flex: 1,
+                borderTopLeftRadius: 0,
+                borderBottomLeftRadius: 0,
+              }}
+            />
+          </View>
+        </Field>
 
-      {/* Estimated value — auto-prefilled from the live market snapshot
+        {/* Purchase date */}
+        <Field
+          label="Purchase date"
+          hint={
+            heldDays != null
+              ? `Held for ${heldDays.toLocaleString()} day${heldDays === 1 ? "" : "s"}.`
+              : "Format: YYYY-MM-DD"
+          }
+          error={!dateValid ? "Use YYYY-MM-DD." : null}
+        >
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TextInput
+              value={purchaseDate}
+              onChangeText={(t) => setPurchaseDate(t.replace(/[^0-9-]/g, ""))}
+              placeholder="2024-08-15"
+              placeholderTextColor={p.ink.dim}
+              autoCapitalize="none"
+              autoCorrect={false}
+              inputMode="numeric"
+              style={{ ...inputStyle(p), flex: 1 }}
+            />
+            <Pressable
+              onPress={() => setPurchaseDate(todayIso())}
+              style={{
+                paddingHorizontal: 14,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: p.line.default,
+                backgroundColor: p.bg.elevated,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Calendar size={14} color={p.ink.muted} />
+              <Text className="text-[12px] font-semibold text-ink-muted">Today</Text>
+            </Pressable>
+          </View>
+        </Field>
+
+        {/* Estimated value — auto-prefilled from the live market snapshot
           on create. Picks raw / graded_avg / pop_top based on the
           current grade & house, then stops syncing the moment the user
           edits the field manually. */}
-      <Field
-        label="Estimated value (USD)"
-        hint={
-          mode === "create"
-            ? marketQ.isLoading && estimatedValue === ""
-              ? "Fetching current market value…"
-              : autoFilledFromMarket && !estValueTouchedRef.current
-                ? `Auto-filled from current market ${
-                    house === "loupe"
-                      ? "(raw)"
-                      : Number(grade) >= 8
-                        ? "(top-tier comp)"
-                        : "(graded avg)"
-                  }. Edit to override.`
-                : "Edit to override the auto market estimate."
-            : "Optional — overrides the auto market estimate."
-        }
-      >
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Text
-            style={{
-              ...inputStyle(p),
-              flex: 0,
-              borderTopRightRadius: 0,
-              borderBottomRightRadius: 0,
-              borderRightWidth: 0,
-              color: p.ink.muted,
-            }}
-          >
-            $
-          </Text>
+        <Field
+          label="Estimated value (USD)"
+          hint={
+            mode === "create"
+              ? marketQ.isLoading && estimatedValue === ""
+                ? "Fetching current market value…"
+                : autoFilledFromMarket && !estValueTouchedRef.current
+                  ? `Auto-filled from current market ${
+                      house === "loupe"
+                        ? "(raw)"
+                        : Number(grade) >= 8
+                          ? "(top-tier comp)"
+                          : "(graded avg)"
+                    }. Edit to override.`
+                  : "Edit to override the auto market estimate."
+              : "Optional — overrides the auto market estimate."
+          }
+        >
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Text
+              style={{
+                ...inputStyle(p),
+                flex: 0,
+                borderTopRightRadius: 0,
+                borderBottomRightRadius: 0,
+                borderRightWidth: 0,
+                color: p.ink.muted,
+              }}
+            >
+              $
+            </Text>
+            <TextInput
+              value={estimatedValue}
+              onChangeText={(t) => {
+                estValueTouchedRef.current = true;
+                setAutoFilledFromMarket(false);
+                setEstimatedValue(clampCurrency(t));
+              }}
+              placeholder={marketQ.isLoading && mode === "create" ? "Loading…" : "0.00"}
+              placeholderTextColor={p.ink.dim}
+              keyboardType="decimal-pad"
+              inputMode="decimal"
+              style={{
+                ...inputStyle(p),
+                flex: 1,
+                borderTopLeftRadius: 0,
+                borderBottomLeftRadius: 0,
+              }}
+            />
+          </View>
+        </Field>
+
+        {/* Tags — user organization labels ("PC", "For sale", …). */}
+        <Field label="Tags" hint="Organize + filter your vault. Tap a chip to remove.">
+          <TagInput
+            value={tags}
+            onChange={setTags}
+            suggestions={tagSuggestions.data?.availableTags ?? []}
+          />
+        </Field>
+
+        {/* Notes */}
+        <Field label="Notes" hint="Slab cert #, condition notes, anything.">
           <TextInput
-            value={estimatedValue}
-            onChangeText={(t) => {
-              estValueTouchedRef.current = true;
-              setAutoFilledFromMarket(false);
-              setEstimatedValue(clampCurrency(t));
-            }}
-            placeholder={
-              marketQ.isLoading && mode === "create" ? "Loading…" : "0.00"
-            }
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Optional"
             placeholderTextColor={p.ink.dim}
-            keyboardType="decimal-pad"
-            inputMode="decimal"
+            multiline
+            numberOfLines={4}
             style={{
               ...inputStyle(p),
-              flex: 1,
-              borderTopLeftRadius: 0,
-              borderBottomLeftRadius: 0,
+              minHeight: 90,
+              paddingTop: 12,
+              textAlignVertical: "top",
             }}
           />
-        </View>
-      </Field>
-
-      {/* Tags — user organization labels ("PC", "For sale", …). */}
-      <Field label="Tags" hint="Organize + filter your vault. Tap a chip to remove.">
-        <TagInput
-          value={tags}
-          onChange={setTags}
-          suggestions={tagSuggestions.data?.availableTags ?? []}
-        />
-      </Field>
-
-      {/* Notes */}
-      <Field label="Notes" hint="Slab cert #, condition notes, anything.">
-        <TextInput
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Optional"
-          placeholderTextColor={p.ink.dim}
-          multiline
-          numberOfLines={4}
-          style={{
-            ...inputStyle(p),
-            minHeight: 90,
-            paddingTop: 12,
-            textAlignVertical: "top",
-          }}
-        />
-      </Field>
-    </ScrollView>
+        </Field>
+      </ScrollView>
 
       {/* Sticky CTA — full-width, sits above the home indicator with a
           hairline separator, the way Robinhood pins its primary action. */}
@@ -765,9 +734,7 @@ function Field({
       </Text>
       {children}
       {error ? (
-        <Text style={{ color: palette.accent.rose, fontSize: 11 }}>
-          {error}
-        </Text>
+        <Text style={{ color: palette.accent.rose, fontSize: 11 }}>{error}</Text>
       ) : hint ? (
         <Text className="text-[11px] text-ink-dim">{hint}</Text>
       ) : null}
@@ -775,9 +742,7 @@ function Field({
   );
 }
 
-function inputStyle(
-  p: ReturnType<typeof useThemedPalette>,
-): {
+function inputStyle(p: ReturnType<typeof useThemedPalette>): {
   height: number;
   paddingHorizontal: number;
   borderWidth: number;

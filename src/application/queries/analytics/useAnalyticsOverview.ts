@@ -8,13 +8,15 @@ import {
   type AnalyticsOverview,
 } from "@/infrastructure/repositories/analyticsRepository";
 import { useAuth } from "@/presentation/providers/AuthProvider";
+import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { queryKeys } from "../queryKeys";
 
 export function useAnalyticsOverview() {
   const { isAuthenticated } = useAuth();
+  const { collectionId } = useActiveCollection();
   return useQuery<AnalyticsOverview>({
-    queryKey: queryKeys.analytics.overview(),
-    queryFn: fetchAnalyticsOverview,
+    queryKey: [...queryKeys.analytics.overview(), collectionId ?? "all"],
+    queryFn: () => fetchAnalyticsOverview(collectionId),
     enabled: isAuthenticated,
     staleTime: 60_000,
   });

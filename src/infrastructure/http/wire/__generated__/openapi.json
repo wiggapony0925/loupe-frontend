@@ -2543,6 +2543,21 @@
         "title": "CollectionItemAdd",
         "type": "object"
       },
+      "CollectionMerge": {
+        "description": "Body for ``POST /v1/collections/{id}/merge`` \u2014 fold ``source_id`` into\nthe path collection, then delete the (now-empty) source.",
+        "properties": {
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id"
+        ],
+        "title": "CollectionMerge",
+        "type": "object"
+      },
       "CollectionRead": {
         "description": "Public representation of a collection.",
         "properties": {
@@ -2606,6 +2621,64 @@
           "updated_at"
         ],
         "title": "CollectionRead",
+        "type": "object"
+      },
+      "CollectionSummary": {
+        "description": "One row of the portfolio switcher (the currency-style dropdown).\n\n``id`` is null for the synthetic **All** entry \u2014 everything the user owns,\nwhich is derived (not a real row) and therefore never deletable. Custom\ncollections are categorizations layered on top; deleting one drops the\ncategorization, never the cards.",
+        "properties": {
+          "card_count": {
+            "title": "Card Count",
+            "type": "integer"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "deletable": {
+            "default": true,
+            "title": "Deletable",
+            "type": "boolean"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "is_all": {
+            "default": false,
+            "title": "Is All",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "total_value_usd": {
+            "title": "Total Value Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "card_count",
+          "total_value_usd"
+        ],
+        "title": "CollectionSummary",
         "type": "object"
       },
       "CollectionUpdate": {
@@ -4046,6 +4119,20 @@
             ],
             "title": "Subgrades"
           },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
           "upstream_id": {
             "anyOf": [
               {
@@ -4260,6 +4347,14 @@
             ],
             "title": "Subgrades"
           },
+          "tags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -4393,6 +4488,20 @@
               }
             ],
             "title": "Subgrades"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
           }
         },
         "title": "GradedCardUpdate",
@@ -6099,6 +6208,9 @@
           "card_id": {
             "anyOf": [
               {
+                "type": "string"
+              },
+              {
                 "format": "uuid",
                 "type": "string"
               },
@@ -6237,6 +6349,17 @@
               }
             ],
             "title": "Triggered Price Usd"
+          },
+          "upstream_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstream Id"
           },
           "user_id": {
             "format": "uuid",
@@ -6719,7 +6842,7 @@
           "tcg": {
             "anyOf": [
               {
-                "pattern": "^(pokemon|magic|yugioh|onepiece|lorcana|sports|all)$",
+                "pattern": "^(pokemon|magic|yugioh|onepiece|digimon|lorcana|sports|all)$",
                 "type": "string"
               },
               {
@@ -9292,7 +9415,6 @@
       "WatchlistAdd": {
         "properties": {
           "card_id": {
-            "format": "uuid",
             "title": "Card Id",
             "type": "string"
           }
@@ -9342,6 +9464,17 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "upstream_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstream Id"
           },
           "user_id": {
             "format": "uuid",
@@ -10469,6 +10602,70 @@
           }
         ],
         "summary": "Sync the Pok\u00e9mon mirror from bulk data",
+        "tags": [
+          "admin-catalog"
+        ]
+      }
+    },
+    "/v1/admin/catalog/mirror/sync-tcg": {
+      "post": {
+        "description": "Populate/refresh the Magic (Scryfall bulk) or Yu-Gi-Oh (YGOPRODeck dump)\nmirror. Both catalogs ship prices, so no separate price-refresh is needed.",
+        "operationId": "sync_mirror_tcg_v1_admin_catalog_mirror_sync_tcg_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tcg",
+            "required": true,
+            "schema": {
+              "pattern": "^(magic|yugioh)$",
+              "title": "Tcg",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Cap cards this call (0 = the full catalog). Both fit one call.",
+            "in": "query",
+            "name": "max_cards",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Cap cards this call (0 = the full catalog). Both fit one call.",
+              "minimum": 0,
+              "title": "Max Cards",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Sync Mirror Tcg V1 Admin Catalog Mirror Sync Tcg Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sync the Magic / Yu-Gi-Oh mirror",
         "tags": [
           "admin-catalog"
         ]
@@ -11984,6 +12181,93 @@
         ]
       }
     },
+    "/v1/admin/pricecharting": {
+      "get": {
+        "description": "Live-detected tier, the active price strategy, the full fallback chain,\nthe grade-field mapping, and local mirror status (cached probe).",
+        "operationId": "get_overview_v1_admin_pricecharting_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Overview V1 Admin Pricecharting Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "PriceCharting tier, capabilities & fallback chain",
+        "tags": [
+          "admin-pricecharting"
+        ]
+      }
+    },
+    "/v1/admin/pricecharting/probe": {
+      "post": {
+        "description": "Force a fresh capability probe \u2014 call after upgrading / downgrading the\nsubscription to make the app adopt the new tier immediately.",
+        "operationId": "reprobe_v1_admin_pricecharting_probe_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reprobe V1 Admin Pricecharting Probe Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Re-probe the live account now",
+        "tags": [
+          "admin-pricecharting"
+        ]
+      }
+    },
+    "/v1/admin/pricecharting/sync": {
+      "post": {
+        "description": "Full-refresh the local price mirror from the Legendary CSV. No-op with a\nclear reason on lower tiers / when no CSV URL is configured.",
+        "operationId": "sync_mirror_v1_admin_pricecharting_sync_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Sync Mirror V1 Admin Pricecharting Sync Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sync the Legendary bulk CSV price guide",
+        "tags": [
+          "admin-pricecharting"
+        ]
+      }
+    },
     "/v1/admin/pulse": {
       "get": {
         "operationId": "get_pulse_v1_admin_pulse_get",
@@ -13322,6 +13606,25 @@
       "get": {
         "description": "Returns the data the mobile Analytics tab renders, all at once. Stats, set indexes, top movers, concentration, year and grade distributions, and grader split \u2014 computed pure-DB from the authenticated user's graded cards. No N+1, no per-card fan-out.",
         "operationId": "get_overview_v1_analytics_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "collection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Collection Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -13334,6 +13637,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -14502,7 +14815,7 @@
             "required": false,
             "schema": {
               "default": "all",
-              "pattern": "^(pokemon|magic|yugioh|onepiece|lorcana|sports|all)$",
+              "pattern": "^(pokemon|magic|yugioh|onepiece|digimon|lorcana|sports|all)$",
               "title": "Tcg",
               "type": "string"
             }
@@ -14552,7 +14865,7 @@
     },
     "/v1/cards/trending": {
       "get": {
-        "description": "Mixed trending feed across the three live catalogs.\n\nCached for 15 minutes. Falls back to a small hardcoded set of\nwell-known cards if every upstream is unreachable, so the endpoint\nnever returns a 5xx.",
+        "description": "A discovery shelf across the live catalogs \u2014 the same server-shaped feed\nthe web storefront uses (`/v1/public/trending`), so mobile and web render\nidentical rails.\n\n``sort=trending`` is the movement feed; ``sort=value`` (\"most valuable\")\ndraws from a dedicated high-priced source and is deduped against trending;\n``max_price`` applies the \"steals under $X\" cut. Every card is guaranteed a\nprice + art. Cached ~15 min; never returns 5xx.",
         "operationId": "get_trending_v1_cards_trending_get",
         "parameters": [
           {
@@ -14561,9 +14874,37 @@
             "required": false,
             "schema": {
               "default": "all",
-              "pattern": "^(pokemon|magic|yugioh|all)$",
+              "pattern": "^(pokemon|magic|yugioh|onepiece|digimon|all)$",
               "title": "Tcg",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "trending",
+              "pattern": "^(trending|value)$",
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_price",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Price"
             }
           },
           {
@@ -15575,6 +15916,37 @@
         ]
       }
     },
+    "/v1/collections/overview": {
+      "get": {
+        "description": "Everything the dashboard's portfolio dropdown renders: the synthetic\n**All** entry (undeletable) plus each collection with a live card count and\ntotal value. Backend-owned \u2014 the client just displays it.",
+        "operationId": "overview_v1_collections_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CollectionSummary"
+                  },
+                  "title": "Response Overview V1 Collections Overview Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Portfolio switcher (All + collections, with counts & value)",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
     "/v1/collections/{collection_id}": {
       "delete": {
         "operationId": "delete_v1_collections__collection_id__delete",
@@ -15835,6 +16207,58 @@
         ]
       }
     },
+    "/v1/collections/{collection_id}/merge": {
+      "post": {
+        "description": "Fold ``source_id`` into ``collection_id``: its items move over (de-duped)\nand the emptied source is deleted. Holdings are untouched.",
+        "operationId": "merge_v1_collections__collection_id__merge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionMerge"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Merge another collection into this one",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
     "/v1/flags": {
       "get": {
         "operationId": "get_flags_v1_flags_get",
@@ -15930,21 +16354,23 @@
             }
           },
           {
-            "description": "Filter by grading house slug (e.g. `loupe`, `psa`, `bgs`). Case-insensitive \u2014 normalised to lower.",
+            "description": "Filter by grading house slug(s) (e.g. `loupe`, `psa`, `bgs`). Repeatable for multi-select (`?house=psa&house=bgs`); case-insensitive.",
             "in": "query",
             "name": "house",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "maxLength": 16,
-                  "type": "string"
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "description": "Filter by grading house slug (e.g. `loupe`, `psa`, `bgs`). Case-insensitive \u2014 normalised to lower.",
+              "description": "Filter by grading house slug(s) (e.g. `loupe`, `psa`, `bgs`). Repeatable for multi-select (`?house=psa&house=bgs`); case-insensitive.",
               "title": "House"
             }
           },
@@ -15969,13 +16395,155 @@
             }
           },
           {
-            "description": "Result ordering. One of: `recent` (default), `oldest`, `value_desc`, `value_asc`, `grade_desc`, `grade_asc`.",
+            "description": "Maximum grade (inclusive). Rows above this are dropped.",
+            "in": "query",
+            "name": "max_grade",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 10,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum grade (inclusive). Rows above this are dropped.",
+              "title": "Max Grade"
+            }
+          },
+          {
+            "description": "Minimum estimated value USD (inclusive).",
+            "in": "query",
+            "name": "min_value",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum estimated value USD (inclusive).",
+              "title": "Min Value"
+            }
+          },
+          {
+            "description": "Maximum estimated value USD (inclusive).",
+            "in": "query",
+            "name": "max_value",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum estimated value USD (inclusive).",
+              "title": "Max Value"
+            }
+          },
+          {
+            "description": "Filter to holdings tagged with ANY of these tags (repeatable, case-insensitive).",
+            "in": "query",
+            "name": "tags",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to holdings tagged with ANY of these tags (repeatable, case-insensitive).",
+              "title": "Tags"
+            }
+          },
+          {
+            "description": "Show only slabbed/graded cards (house \u2260 loupe).",
+            "in": "query",
+            "name": "graded_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Show only slabbed/graded cards (house \u2260 loupe).",
+              "title": "Graded Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Show only raw/ungraded cards (house = loupe).",
+            "in": "query",
+            "name": "raw_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Show only raw/ungraded cards (house = loupe).",
+              "title": "Raw Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Show only cards on the user's watchlist.",
+            "in": "query",
+            "name": "watchlist",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Show only cards on the user's watchlist.",
+              "title": "Watchlist",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Scope to a single collection (omit for the whole vault). The active collection scopes the dashboard, analytics, and statement PDF identically.",
+            "in": "query",
+            "name": "collection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Scope to a single collection (omit for the whole vault). The active collection scopes the dashboard, analytics, and statement PDF identically.",
+              "title": "Collection Id"
+            }
+          },
+          {
+            "description": "Result ordering. One of: `recent` (default), `oldest`, `value_desc`, `value_asc`, `grade_desc`, `grade_asc`, `name_asc`, `name_desc`, `number_asc`, `number_desc`.",
             "in": "query",
             "name": "sort",
             "required": false,
             "schema": {
               "default": "recent",
-              "description": "Result ordering. One of: `recent` (default), `oldest`, `value_desc`, `value_asc`, `grade_desc`, `grade_asc`.",
+              "description": "Result ordering. One of: `recent` (default), `oldest`, `value_desc`, `value_asc`, `grade_desc`, `grade_asc`, `name_asc`, `name_desc`, `number_asc`, `number_desc`.",
               "title": "Sort",
               "type": "string"
             }
@@ -16085,6 +16653,23 @@
               "title": "Range",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "collection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Collection Id"
+            }
           }
         ],
         "responses": {
@@ -16126,6 +16711,25 @@
       "get": {
         "description": "Returns `[{cardId, points: number[14], deltaPct}, ...]`. Each entry is the graded-card id (not the catalog card id) so the client can map directly to vault rows. Cards with no upstream price history yield a flat line at their current estimate.",
         "operationId": "get_sparklines_v1_grades_sparklines_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "collection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Collection Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -16141,6 +16745,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -16158,6 +16772,25 @@
       "get": {
         "description": "Returns `{ totalValueUsd, cardCount, avgGrade, avgAccuracy, totalCostUsd, costBasisCardCount, unrealizedPnlUsd, unrealizedPnlPct }`. All values are computed from the user's real graded cards; `avgAccuracy` is null until the scan pipeline reports per-job accuracy. The cost-basis fields are null when no card has a recorded purchase price (so the UI can hide P/L rather than display a misleading `$0`).",
         "operationId": "get_summary_v1_grades_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "collection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Collection Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -16170,6 +16803,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -17271,7 +17914,7 @@
             "required": false,
             "schema": {
               "default": "pokemon",
-              "pattern": "^(pokemon|magic|yugioh|lorcana|onepiece|digimon|all)$",
+              "pattern": "^(pokemon|magic|yugioh|onepiece|digimon|lorcana|sports|all)$",
               "title": "Game",
               "type": "string"
             }
@@ -17405,9 +18048,80 @@
         ]
       }
     },
+    "/v1/public/carousels/resolved": {
+      "get": {
+        "description": "A game's discovery carousels **already resolved into cards** \u2014 the recipe\npool run against the shelf/catalog server-side, with empty rails dropped. Web\nand mobile render this identically (no client-side filtering), so the\nmarketplace shows the exact same carousels everywhere.",
+        "operationId": "public_carousels_resolved_v1_public_carousels_resolved_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "game",
+            "required": false,
+            "schema": {
+              "default": "pokemon",
+              "pattern": "^(pokemon|magic|yugioh|onepiece|digimon)$",
+              "title": "Game",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Carousels Resolved V1 Public Carousels Resolved Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Marketplace carousels already resolved into cards (both clients render this)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/games": {
+      "get": {
+        "description": "The canonical marketplace/search category tags both web + mobile render,\neach with a ``status`` (``live`` | ``soon``) derived from real catalog\ncapability \u2014 so One Piece flips live everywhere from here, no client\nrelease. App-only actions (Scan/Grade/Scanner) stay client-side.",
+        "operationId": "public_games_v1_public_games_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Games V1 Public Games Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Storefront category tags (games + sections; backend-driven)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
     "/v1/public/search": {
       "get": {
-        "description": "Search (or, with no query, browse trending) with all derivation done here.\n\nReturns the paginated slice plus ``total`` and ``facets`` so the client\nrenders directly \u2014 no client-side filtering/sorting/pagination.",
+        "description": "Search (or, with no query, browse trending) with all derivation done here.\n\nReturns the paginated slice plus ``total``, ``facets`` and\n``available_languages`` so the client renders + drives its language picker\ndirectly \u2014 no client-side filtering/sorting/pagination.",
         "operationId": "public_search_v1_public_search_get",
         "parameters": [
           {
@@ -17427,7 +18141,7 @@
             "required": false,
             "schema": {
               "default": "all",
-              "pattern": "^(pokemon|magic|yugioh|digimon|onepiece|lorcana|sports|all)$",
+              "pattern": "^(pokemon|magic|yugioh|onepiece|digimon|lorcana|sports|all)$",
               "title": "Tcg",
               "type": "string"
             }
@@ -17474,6 +18188,19 @@
               "default": "best",
               "pattern": "^(best|price_asc|price_desc|name)$",
               "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated ISO languages to include (default English).",
+            "in": "query",
+            "name": "langs",
+            "required": false,
+            "schema": {
+              "default": "en",
+              "description": "Comma-separated ISO languages to include (default English).",
+              "maxLength": 80,
+              "title": "Langs",
               "type": "string"
             }
           },
@@ -17599,7 +18326,7 @@
             "required": false,
             "schema": {
               "default": "all",
-              "pattern": "^(pokemon|magic|yugioh|digimon|onepiece|all)$",
+              "pattern": "^(pokemon|magic|yugioh|onepiece|digimon|all)$",
               "title": "Tcg",
               "type": "string"
             }
@@ -19016,7 +19743,7 @@
             "required": false,
             "schema": {
               "default": "magic",
-              "pattern": "^(pokemon|magic|yugioh|digimon|onepiece|all)$",
+              "pattern": "^(pokemon|magic|yugioh|onepiece|digimon|all)$",
               "title": "Tcg",
               "type": "string"
             }
@@ -19079,6 +19806,59 @@
           }
         ],
         "summary": "Set-completion progress for the signed-in user",
+        "tags": [
+          "sets"
+        ]
+      }
+    },
+    "/v1/sets/{set_id}/checklist": {
+      "get": {
+        "description": "The complete card list for a set \u2014 every card flagged `owned` or not \u2014 so the client can render a 'you have these / still missing these' sheet. Shape: `{setId, setName, total, owned, cards: [{id, name, number, imageUrl, owned}]}`. The full list comes from the catalog mirror; `owned` is true when the signed-in user holds a copy with the same collector number in this set.",
+        "operationId": "get_set_checklist_v1_sets__set_id__checklist_get",
+        "parameters": [
+          {
+            "description": "CardSet id",
+            "in": "path",
+            "name": "set_id",
+            "required": true,
+            "schema": {
+              "description": "CardSet id",
+              "format": "uuid",
+              "title": "Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Set Checklist V1 Sets  Set Id  Checklist Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Full card checklist for one set (owned + still-missing)",
         "tags": [
           "sets"
         ]
@@ -19236,7 +20016,6 @@
             "name": "card_id",
             "required": true,
             "schema": {
-              "format": "uuid",
               "title": "Card Id",
               "type": "string"
             }
