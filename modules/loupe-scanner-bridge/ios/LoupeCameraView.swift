@@ -690,10 +690,19 @@ extension LoupeCameraView: AVCapturePhotoCaptureDelegate {
     let fw = min(g.width * visW, 1 - fx)
     let fh = min(g.height * visH, 1 - fy)
     let cropRect = CGRect(x: fx * W, y: fy * H, width: fw * W, height: fh * H).integral
-    guard cropRect.width > 40, cropRect.height > 40, let out = cg.cropping(to: cropRect) else {
-      return nil
+
+    // Pick the source: the guide crop normally, but if it's degenerate OR comes
+    // out near-uniform, fall back to the FULL frame. A near-uniform crop means
+    // the ROI landed on a blank / off-card region — the exact bug that made
+    // every scan upload a flat white ~885-byte JPEG (phash 8000…, empty OCR, no
+    // match). Better to send the whole in-focus card than a blank box.
+    var source: CGImage = cg
+    if cropRect.width > 40, cropRect.height > 40,
+       let out = cg.cropping(to: cropRect), !Self.isNearUniform(out) {
+      source = out
     }
-    let cropped = UIImage(cgImage: out)
+
+    let cropped = UIImage(cgImage: source)
     let maxEdge: CGFloat = 1200
     let longest = max(cropped.size.width, cropped.size.height)
     guard longest > maxEdge else { return cropped }
@@ -704,6 +713,31 @@ extension LoupeCameraView: AVCapturePhotoCaptureDelegate {
     return UIGraphicsImageRenderer(size: target, format: fmt).image { _ in
       cropped.draw(in: CGRect(origin: .zero, size: target))
     }
+  }
+
+  // True when an image is (near) a single flat colour — no card in it. Drawn
+  // down to 8x8 and checked for luma spread; a real card has strong contrast,
+  // a blank/blown-out region collapses to one value. Guards the crop from ever
+  // uploading a flat frame again. On any drawing failure returns false (don't
+  // reject — fail open).
+  private static func isNearUniform(_ cg: CGImage) -> Bool {
+    let n = 8
+    var buf = [UInt8](repeating: 0, count: n * n * 4)
+    guard let cs = CGColorSpace(name: CGColorSpace.sRGB),
+          let ctx = CGContext(
+            data: &buf, width: n, height: n, bitsPerComponent: 8,
+            bytesPerRow: n * 4, space: cs,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+          )
+    else { return false }
+    ctx.draw(cg, in: CGRect(x: 0, y: 0, width: n, height: n))
+    var lo = 255, hi = 0
+    for i in 0 ..< (n * n) {
+      let luma = (Int(buf[i * 4]) * 299 + Int(buf[i * 4 + 1]) * 587 + Int(buf[i * 4 + 2]) * 114) / 1000
+      lo = min(lo, luma)
+      hi = max(hi, luma)
+    }
+    return (hi - lo) < 12
   }
 }
 
