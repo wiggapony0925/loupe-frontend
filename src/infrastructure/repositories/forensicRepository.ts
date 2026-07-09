@@ -155,6 +155,8 @@ export interface CollectionQueryParams {
   tags?: string[];
   /** `recent` | `oldest` | `value_desc` | `value_asc` | `grade_desc` | `grade_asc`. */
   sort?: string;
+  /** Scope to a single collection (omit for the whole vault). */
+  collectionId?: string | null;
   /** Page offset (rows to skip). */
   cursor?: number;
   /** Page size (rows). Backend caps at 1000. */
@@ -177,6 +179,7 @@ export async function fetchCollection(params?: CollectionQueryParams): Promise<C
   if (params?.minValue !== undefined) search.set("min_value", String(params.minValue));
   if (params?.maxValue !== undefined) search.set("max_value", String(params.maxValue));
   if (params?.sort) search.set("sort", params.sort);
+  if (params?.collectionId) search.set("collection_id", params.collectionId);
   if (params?.cursor !== undefined && params.cursor > 0)
     search.set("cursor", String(params.cursor));
   if (params?.limit !== undefined) search.set("limit", String(params.limit));

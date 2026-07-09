@@ -113,7 +113,8 @@ export const queryKeys = {
   },
   home: {
     all: ["home"] as const,
-    feed: (topMovers = 5, recentScans = 6) => ["home", "feed", topMovers, recentScans] as const,
+    feed: (topMovers = 5, recentScans = 6, collectionId: string | null = null) =>
+      ["home", "feed", topMovers, recentScans, collectionId] as const,
   },
   analytics: {
     all: ["analytics"] as const,

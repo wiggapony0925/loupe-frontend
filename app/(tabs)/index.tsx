@@ -49,9 +49,9 @@ export default function CommandCenterScreen() {
     enabled: isAuthenticated,
     staleTime: 30_000,
   });
-  const feed = useHomeFeed({ topMovers: 5, recentScans: 6 });
+  const feed = useHomeFeed({ topMovers: 5, recentScans: 6, collectionId });
   const hardware = useScannerConnection();
-  const movers = useTopMovers({ enrichLimit: 12, limit: 5 });
+  const movers = useTopMovers({ enrichLimit: 12, limit: 5, collectionId });
   // Discovery rails at the bottom mirror the web home page's carousels
   // (Trending now ▸ Most valuable right now ▸ Sealed products ▸ Steals
   // under $5). Sealed is the only one we gate on data, since its rail

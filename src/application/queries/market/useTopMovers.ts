@@ -41,13 +41,16 @@ interface UseTopMoversOptions {
   limit?: number;
   /** Legacy option, ignored — the backend bounds enrichment itself. */
   enrichLimit?: number;
+  /** Scope the movers to the active collection (omit for the whole vault). */
+  collectionId?: string | null;
 }
 
 export function useTopMovers({
   limit = 5,
+  collectionId = null,
 }: UseTopMoversOptions = {}): UseTopMoversResult {
   const { isAuthenticated } = useAuth();
-  const feed = useHomeFeed({ topMovers: limit });
+  const feed = useHomeFeed({ topMovers: limit, collectionId });
 
   const rows = useMemo<TopMoverRow[]>(() => {
     const movers = feed.data?.topMovers ?? [];
@@ -84,8 +87,7 @@ export function useTopMovers({
     isAuthenticated,
     isLoading: feed.isLoading,
     isError: feed.isError,
-    isEmpty:
-      feed.isSuccess && (feed.data?.topMovers.length ?? 0) === 0,
+    isEmpty: feed.isSuccess && (feed.data?.topMovers.length ?? 0) === 0,
     refetch: () => {
       void feed.refetch();
     },

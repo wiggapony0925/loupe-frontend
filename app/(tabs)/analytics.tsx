@@ -15,6 +15,7 @@ import { LineChart } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import { useAnalyticsOverview } from "@/application/queries";
 import { GradeBars, PortfolioChart } from "@/presentation/features/analytics";
+import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { LiveAnalyticsCard } from "@/presentation/features/analytics/LiveAnalyticsCard";
 import {
   ConcentrationCard,
@@ -50,8 +51,7 @@ export default function AnalyticsScreen() {
   // A loaded-but-empty collection used to render the whole widget stack as a
   // wall of "—"/"No … yet" placeholders. Detect zero holdings and show one
   // clean empty state with a path to add a card instead.
-  const isEmptyCollection =
-    !loading && !erroredNormalized && !!data && data.stats.holdings === 0;
+  const isEmptyCollection = !loading && !erroredNormalized && !!data && data.stats.holdings === 0;
 
   // Value-by-set allocation — same derivation as the web Analytics donut.
   const allocation: DonutDatum[] = (data?.setIndexes ?? [])
@@ -73,10 +73,11 @@ export default function AnalyticsScreen() {
           <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
             Performance
           </Text>
-          <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">
-            Analytics
-          </Text>
+          <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">Analytics</Text>
         </View>
+
+        {/* Scope the entire analytics page to the active collection. */}
+        <CollectionSwitcher />
 
         <LiveAnalyticsCard />
 
@@ -102,105 +103,101 @@ export default function AnalyticsScreen() {
           />
         ) : (
           <>
-        <PortfolioChart
-          fallbackTotal={data?.stats.totalValueUsd ?? 0}
-          bleedX={20}
-          showPsa10Overlay
-        />
+            <PortfolioChart
+              fallbackTotal={data?.stats.totalValueUsd ?? 0}
+              bleedX={20}
+              showPsa10Overlay
+            />
 
-        <View>
-          <SectionHeader eyebrow="Snapshot" title="Book stats" />
-          {loading || !data ? <SkeletonGrid /> : <StatsGrid stats={data.stats} />}
-        </View>
-
-        <View>
-          <SectionHeader eyebrow="Markets" title="Set indexes" />
-          {loading || !data ? (
-            <SkeletonBlock height={220} />
-          ) : (
-            <SetIndexes indexes={data.setIndexes} />
-          )}
-        </View>
-
-        <View>
-          <SectionHeader eyebrow="Allocation" title="Value by set" />
-          {loading || !data ? (
-            <SkeletonBlock height={180} />
-          ) : allocation.length === 0 ? (
-            <Text className="text-[13px] text-ink-dim">
-              Add cards to see how your value is allocated.
-            </Text>
-          ) : (
-            <View className="rounded-2xl border border-line bg-bg-elevated p-4">
-              <DonutChart
-                data={allocation}
-                centerValue={format(data.stats.totalValueUsd)}
-                centerLabel="total"
-                format={(n) => format(n)}
-              />
+            <View>
+              <SectionHeader eyebrow="Snapshot" title="Book stats" />
+              {loading || !data ? <SkeletonGrid /> : <StatsGrid stats={data.stats} />}
             </View>
-          )}
-        </View>
 
-        {/* One Movers section (Robinhood-style), not two stacked headers —
+            <View>
+              <SectionHeader eyebrow="Markets" title="Set indexes" />
+              {loading || !data ? (
+                <SkeletonBlock height={220} />
+              ) : (
+                <SetIndexes indexes={data.setIndexes} />
+              )}
+            </View>
+
+            <View>
+              <SectionHeader eyebrow="Allocation" title="Value by set" />
+              {loading || !data ? (
+                <SkeletonBlock height={180} />
+              ) : allocation.length === 0 ? (
+                <Text className="text-[13px] text-ink-dim">
+                  Add cards to see how your value is allocated.
+                </Text>
+              ) : (
+                <View className="rounded-2xl border border-line bg-bg-elevated p-4">
+                  <DonutChart
+                    data={allocation}
+                    centerValue={format(data.stats.totalValueUsd)}
+                    centerLabel="total"
+                    format={(n) => format(n)}
+                  />
+                </View>
+              )}
+            </View>
+
+            {/* One Movers section (Robinhood-style), not two stacked headers —
             gainers and losers read as a single story about the past year. */}
-        <View>
-          <SectionHeader eyebrow="Movers · past year" title="Top movers" />
-          {loading || !data ? (
-            <SkeletonBlock height={300} />
-          ) : (
-            <View style={{ gap: 14 }}>
-              <MoverGroup
-                label="Gainers"
-                rows={data.movers.gainers}
-                emptyHint="No gainers yet"
-              />
-              <MoverGroup
-                label="Losers"
-                rows={data.movers.losers}
-                emptyHint="No losers yet"
-              />
+            <View>
+              <SectionHeader eyebrow="Movers · past year" title="Top movers" />
+              {loading || !data ? (
+                <SkeletonBlock height={300} />
+              ) : (
+                <View style={{ gap: 14 }}>
+                  <MoverGroup
+                    label="Gainers"
+                    rows={data.movers.gainers}
+                    emptyHint="No gainers yet"
+                  />
+                  <MoverGroup label="Losers" rows={data.movers.losers} emptyHint="No losers yet" />
+                </View>
+              )}
             </View>
-          )}
-        </View>
 
-        <View>
-          <SectionHeader eyebrow="Risk" title="Concentration" />
-          {loading || !data ? (
-            <SkeletonBlock height={140} />
-          ) : (
-            <ConcentrationCard concentration={data.concentration} />
-          )}
-        </View>
+            <View>
+              <SectionHeader eyebrow="Risk" title="Concentration" />
+              {loading || !data ? (
+                <SkeletonBlock height={140} />
+              ) : (
+                <ConcentrationCard concentration={data.concentration} />
+              )}
+            </View>
 
-        <View>
-          <SectionHeader eyebrow="Vintage" title="By decade" />
-          {loading || !data ? (
-            <SkeletonBlock height={150} />
-          ) : (
-            <YearDistribution buckets={data.yearDistribution} />
-          )}
-        </View>
+            <View>
+              <SectionHeader eyebrow="Vintage" title="By decade" />
+              {loading || !data ? (
+                <SkeletonBlock height={150} />
+              ) : (
+                <YearDistribution buckets={data.yearDistribution} />
+              )}
+            </View>
 
-        <View>
-          <SectionHeader eyebrow="Mix" title="Quality breakdown" />
-          {loading || !data ? (
-            <SkeletonBlock height={140} />
-          ) : (
-            <GradeBars buckets={data.gradeDistribution} />
-          )}
-        </View>
+            <View>
+              <SectionHeader eyebrow="Mix" title="Quality breakdown" />
+              {loading || !data ? (
+                <SkeletonBlock height={140} />
+              ) : (
+                <GradeBars buckets={data.gradeDistribution} />
+              )}
+            </View>
 
-        <View>
-          <SectionHeader eyebrow="Activity" title="Scanning" />
-          {loading || !data ? (
-            <SkeletonBlock height={120} />
-          ) : (
-            <ScanningKpis kpis={data.kpis} />
-          )}
-        </View>
+            <View>
+              <SectionHeader eyebrow="Activity" title="Scanning" />
+              {loading || !data ? (
+                <SkeletonBlock height={120} />
+              ) : (
+                <ScanningKpis kpis={data.kpis} />
+              )}
+            </View>
 
-        <ReportsSection />
+            <ReportsSection />
           </>
         )}
       </ScrollView>
@@ -285,10 +282,7 @@ function MoverRow({ row }: { row: AnalyticsMoverRow }) {
         </Text>
       </View>
       <View className="items-end" style={{ minWidth: 78 }}>
-        <Price
-          usd={row.valueUsd}
-          className="text-[15px] font-semibold tracking-tight text-ink"
-        />
+        <Price usd={row.valueUsd} className="text-[15px] font-semibold tracking-tight text-ink" />
         <Text className="text-[11px] font-semibold" style={{ color: tint }}>
           {up ? "+" : ""}
           {row.changePct1y.toFixed(2)}%
@@ -304,10 +298,7 @@ function ScanningKpis({ kpis }: { kpis: AnalyticsKpis }) {
   return (
     <View className="flex-row flex-wrap" style={{ gap: 8 }}>
       <KpiCell label="Total scans" value={kpis.totalScans.toLocaleString()} />
-      <KpiCell
-        label="Scan avg grade"
-        value={kpis.avgGrade ? kpis.avgGrade.toFixed(1) : "—"}
-      />
+      <KpiCell label="Scan avg grade" value={kpis.avgGrade ? kpis.avgGrade.toFixed(1) : "—"} />
       <KpiCell label="Scan gem rate" value={`${kpis.gemRatePct.toFixed(0)}%`} />
       <KpiCell
         label="Graders"
@@ -318,15 +309,7 @@ function ScanningKpis({ kpis }: { kpis: AnalyticsKpis }) {
   );
 }
 
-function KpiCell({
-  label,
-  value,
-  wide = false,
-}: {
-  label: string;
-  value: string;
-  wide?: boolean;
-}) {
+function KpiCell({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
   return (
     <View
       className="rounded-xl border border-line bg-bg-elevated px-3 py-2.5"
