@@ -15,7 +15,6 @@ import { LineChart } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import { useAnalyticsOverview } from "@/application/queries";
 import { GradeBars, PortfolioChart } from "@/presentation/features/analytics";
-import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { LiveAnalyticsCard } from "@/presentation/features/analytics/LiveAnalyticsCard";
 import {
   ConcentrationCard,
@@ -75,9 +74,6 @@ export default function AnalyticsScreen() {
           </Text>
           <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">Analytics</Text>
         </View>
-
-        {/* Scope the entire analytics page to the active collection. */}
-        <CollectionSwitcher />
 
         <LiveAnalyticsCard />
 

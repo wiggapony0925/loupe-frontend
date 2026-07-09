@@ -18,6 +18,8 @@ export interface User {
 /** Mirrors `UserSettingsRead` in `app/schemas/user.py`. */
 export interface UserSettings {
   currency: string;
+  /** Active portfolio (collection) id; null = the "All" view. Shared across devices + web. */
+  active_collection_id: string | null;
   theme: "system" | "light" | "dark";
   live_sync_enabled: boolean;
   push_notifications_enabled: boolean;
@@ -29,6 +31,8 @@ export interface UserSettings {
 /** Body for `PATCH /v1/me/settings` — mirrors `UserSettingsUpdate`; omitted fields unchanged. */
 export interface UserSettingsUpdate {
   currency?: string;
+  /** Send `null` to clear back to the "All" view; omit to leave unchanged. */
+  active_collection_id?: string | null;
   theme?: "system" | "light" | "dark";
   live_sync_enabled?: boolean;
   push_notifications_enabled?: boolean;
