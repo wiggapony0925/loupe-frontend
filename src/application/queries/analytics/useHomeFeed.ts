@@ -20,9 +20,10 @@ export function useHomeFeed(params: HomeFeedParams = {}) {
   const { isAuthenticated } = useAuth();
   const topMovers = params.topMovers ?? 5;
   const recentScans = params.recentScans ?? 6;
+  const collectionId = params.collectionId ?? null;
   return useQuery<HomeFeed>({
-    queryKey: queryKeys.home.feed(topMovers, recentScans),
-    queryFn: () => fetchHomeFeed({ topMovers, recentScans }),
+    queryKey: queryKeys.home.feed(topMovers, recentScans, collectionId),
+    queryFn: () => fetchHomeFeed({ topMovers, recentScans, collectionId }),
     enabled: isAuthenticated,
     staleTime: 60_000,
   });

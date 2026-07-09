@@ -12,6 +12,7 @@ import {
   useVaultFilters,
   type VaultType,
 } from "@/application/stores/vaultStore";
+import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 
 /**
@@ -44,6 +45,9 @@ export function useFilteredCollection() {
   const minValue = useVaultFilters((s) => s.minValue);
   const maxValue = useVaultFilters((s) => s.maxValue);
   const sort = useVaultFilters((s) => s.sort);
+  // The active collection scopes the vault list too — same seam as the
+  // dashboard/analytics; the backend filters server-side.
+  const { collectionId } = useActiveCollection();
 
   // Debounce the free-text query so every keystroke doesn't fire a new
   // request. The other filters apply immediately — deliberate taps.
@@ -73,8 +77,9 @@ export function useFilteredCollection() {
       maxValue: maxValue ?? undefined,
       tags: tags.length ? tags : undefined,
       sort,
+      collectionId: collectionId ?? undefined,
     }),
-    [debouncedQuery, serverHouses, gradeRange, minValue, maxValue, tags, sort],
+    [debouncedQuery, serverHouses, gradeRange, minValue, maxValue, tags, sort, collectionId],
   );
 
   const query = useQuery({
@@ -90,9 +95,16 @@ export function useFilteredCollection() {
     staleTime: 30_000,
   });
 
+  // The header aggregates (hero total, pills, available sets/tags) reflect
+  // the WHOLE vault regardless of the house/grade/search filters — but they
+  // DO follow the active collection, so "viewing Umbreon" shows Umbreon's
+  // total. Scope by collection only (a distinct key per collection); "All"
+  // keeps the shared key so it stays in sync with the command center.
   const summaryQuery = useQuery({
-    queryKey: queryKeys.collection.summary(),
-    queryFn: () => fetchCollectionSummary(),
+    queryKey: collectionId
+      ? [...queryKeys.collection.summary(), collectionId]
+      : queryKeys.collection.summary(),
+    queryFn: () => fetchCollectionSummary(collectionId),
     enabled: isAuthenticated,
     staleTime: 30_000,
   });

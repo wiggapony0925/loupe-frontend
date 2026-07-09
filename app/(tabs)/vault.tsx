@@ -32,6 +32,7 @@ import {
 } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import { CardThumbnail } from "@/presentation/features/collection/CardThumbnail";
+import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { FilterSheet } from "@/presentation/features/collection/FilterSheet";
 import { PositionRow } from "@/presentation/features/collection/PositionRow";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
@@ -279,6 +280,9 @@ export default function VaultScreen() {
                 onSealed={() => router.push(routes.sealed())}
               />
             )}
+            {/* Active-collection scope for the whole vault — pick one to filter
+                the list + hero below; the ✕ clears back to All. */}
+            <CollectionSwitcher />
             {isLoading ? (
               <VaultHeaderSkeleton />
             ) : (
@@ -294,11 +298,7 @@ export default function VaultScreen() {
                 <PortfolioPills stats={stats} />
                 <VaultSearchBar onOpenFilters={() => setFilterOpen(true)} />
                 <VaultActiveChips />
-                <VaultListChrome
-                  count={cards.length}
-                  viewMode={viewMode}
-                  onChange={setViewMode}
-                />
+                <VaultListChrome count={cards.length} viewMode={viewMode} onChange={setViewMode} />
               </>
             )}
           </View>
@@ -309,9 +309,7 @@ export default function VaultScreen() {
           // When in selection mode a tap toggles membership; otherwise
           // we fall back to the row/tile's built-in navigate behaviour
           // by leaving `onPress` undefined.
-          const onPress = selectionMode
-            ? () => toggleSelection(item.id)
-            : undefined;
+          const onPress = selectionMode ? () => toggleSelection(item.id) : undefined;
           const onLongPress = selectionMode
             ? () => toggleSelection(item.id)
             : () => beginSelectionWith(item.id);
@@ -330,11 +328,7 @@ export default function VaultScreen() {
               // remaining space. We also cap the tile width so an
               // unexpected single-column layout can't balloon a 5:7
               // card to fill the whole screen.
-              style={
-                viewMode === "grid"
-                  ? { flex: 1, maxWidth: 240 }
-                  : undefined
-              }
+              style={viewMode === "grid" ? { flex: 1, maxWidth: 240 } : undefined}
             >
               {viewMode === "list" ? (
                 <PositionRow
@@ -523,8 +517,7 @@ function PortfolioPills({
   // Loupe-graded is the product-defining stat — how much of the vault
   // we evaluated ourselves vs. self-reported PSA/BGS slabs. Replaces
   // the prior "Today" pill, which already lives on the Command tab.
-  const loupeLabel =
-    stats.count > 0 ? `${stats.loupeGraded}/${stats.count}` : "—";
+  const loupeLabel = stats.count > 0 ? `${stats.loupeGraded}/${stats.count}` : "—";
   return (
     <View className="flex-row gap-2">
       <PillStat label="Holdings" value={holdingsLabel} />
@@ -559,13 +552,7 @@ function PillStat({
   );
 }
 
-function ViewModeToggle({
-  value,
-  onChange,
-}: {
-  value: ViewMode;
-  onChange: (m: ViewMode) => void;
-}) {
+function ViewModeToggle({ value, onChange }: { value: ViewMode; onChange: (m: ViewMode) => void }) {
   const p = useThemedPalette();
   const options: { key: ViewMode; Icon: typeof ListIcon; label: string }[] = [
     { key: "list", Icon: ListIcon, label: "List view" },
@@ -648,9 +635,7 @@ function VaultListChrome({
         paddingTop: 4,
       }}
     >
-      <Text
-        className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim"
-      >
+      <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
         {count === 1 ? "1 Holding" : `${count} Holdings`}
       </Text>
       <ViewModeToggle value={viewMode} onChange={onChange} />
@@ -723,9 +708,7 @@ function VaultSearchBar({ onOpenFilters }: { onOpenFilters: () => void }) {
           borderRadius: 12,
           borderWidth: 1,
           borderColor: hasFilters ? withAlpha(p.accent.mint, 0.5) : p.line.default,
-          backgroundColor: hasFilters
-            ? withAlpha(p.accent.mint, 0.14)
-            : p.bg.elevated,
+          backgroundColor: hasFilters ? withAlpha(p.accent.mint, 0.14) : p.bg.elevated,
           opacity: pressed ? 0.75 : 1,
         })}
       >
@@ -749,9 +732,7 @@ function VaultSearchBar({ onOpenFilters }: { onOpenFilters: () => void }) {
               backgroundColor: p.accent.mint,
             }}
           >
-            <Text style={{ color: "#06140d", fontSize: 10, fontWeight: "800" }}>
-              {activeCount}
-            </Text>
+            <Text style={{ color: "#06140d", fontSize: 10, fontWeight: "800" }}>{activeCount}</Text>
           </View>
         ) : null}
       </Pressable>
@@ -838,9 +819,7 @@ function VaultActiveChips() {
           hitSlop={6}
           style={({ pressed }) => ({ paddingHorizontal: 8, opacity: pressed ? 0.6 : 1 })}
         >
-          <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "700" }}>
-            Clear all
-          </Text>
+          <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "700" }}>Clear all</Text>
         </Pressable>
       </View>
     </ScrollView>
@@ -959,9 +938,7 @@ function VaultPageHeader({
         <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
           Collection
         </Text>
-        <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">
-          Vault
-        </Text>
+        <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">Vault</Text>
       </View>
       {/* Add a card manually — small mint-tinted icon pill. Same target
           size as Sealed so the row reads as a balanced action cluster. */}
@@ -1106,16 +1083,10 @@ function SealedVaultCard({
           <Package size={21} color={p.accent.mint} strokeWidth={2.35} />
         </View>
         <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-          <Text
-            numberOfLines={1}
-            style={{ color: p.ink.default, fontSize: 15, fontWeight: "800" }}
-          >
+          <Text numberOfLines={1} style={{ color: p.ink.default, fontSize: 15, fontWeight: "800" }}>
             {headline}
           </Text>
-          <Text
-            numberOfLines={1}
-            style={{ color: p.ink.muted, fontSize: 12, fontWeight: "600" }}
-          >
+          <Text numberOfLines={1} style={{ color: p.ink.muted, fontSize: 12, fontWeight: "600" }}>
             {detail}
           </Text>
           {metric ? (

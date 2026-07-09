@@ -20,15 +20,15 @@ export type HomeFeed = HomeFeedValidated;
 export interface HomeFeedParams {
   topMovers?: number;
   recentScans?: number;
+  /** Scope both rails to the active collection (omit for the whole vault). */
+  collectionId?: string | null;
 }
 
-export async function fetchHomeFeed(
-  params: HomeFeedParams = {},
-): Promise<HomeFeed> {
+export async function fetchHomeFeed(params: HomeFeedParams = {}): Promise<HomeFeed> {
   const qs = new URLSearchParams();
   if (params.topMovers != null) qs.set("topMovers", String(params.topMovers));
-  if (params.recentScans != null)
-    qs.set("recentScans", String(params.recentScans));
+  if (params.recentScans != null) qs.set("recentScans", String(params.recentScans));
+  if (params.collectionId) qs.set("collection_id", params.collectionId);
   const suffix = qs.toString() ? `?${qs.toString()}` : "";
   return apiFetch<HomeFeed>(`${ENDPOINTS.home.feed}${suffix}`, {
     schema: HomeFeedSchema,
