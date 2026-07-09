@@ -595,18 +595,34 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     // (cheap; guards against a rotation/resize since the last layout).
     updateReticleFrame()
     sessionQueue.async { [weak self] in
-      guard let self else { return }
-      let settings = AVCapturePhotoSettings()
-      settings.isHighResolutionPhotoEnabled = true
-      settings.photoQualityPrioritization = .quality
-      if #available(iOS 16.0, *) {
-        settings.maxPhotoDimensions = self.photoOutput.maxPhotoDimensions
-      }
-      if let device = self.device, device.hasFlash {
-        settings.flashMode = .off
-      }
-      self.photoOutput.capturePhoto(with: settings, delegate: self)
+      self?.captureWhenFocused(attempt: 0)
     }
+  }
+
+  // Wait for autofocus + exposure to SETTLE before firing the shutter. Grabbing
+  // a frame mid-hunt is the #1 cause of soft/blurry scans that then fail to
+  // match (a sharp card pHash-matches in ~1s; a blurry one falls to slow OCR
+  // and usually misses). Polls the device up to ~1.2s, then captures regardless
+  // so a tap always yields a photo. Runs on `sessionQueue`.
+  private func captureWhenFocused(attempt: Int) {
+    if let device = device,
+       device.isAdjustingFocus || device.isAdjustingExposure,
+       attempt < 12 {
+      sessionQueue.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+        self?.captureWhenFocused(attempt: attempt + 1)
+      }
+      return
+    }
+    let settings = AVCapturePhotoSettings()
+    settings.isHighResolutionPhotoEnabled = true
+    settings.photoQualityPrioritization = .quality
+    if #available(iOS 16.0, *) {
+      settings.maxPhotoDimensions = photoOutput.maxPhotoDimensions
+    }
+    if let device = device, device.hasFlash {
+      settings.flashMode = .off
+    }
+    photoOutput.capturePhoto(with: settings, delegate: self)
   }
 }
 
