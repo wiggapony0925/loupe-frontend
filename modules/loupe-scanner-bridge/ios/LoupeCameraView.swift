@@ -103,12 +103,19 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
   // ── Fixed card guide ────────────────────────────────────────────
   // The reticle is a STATIC card-shaped frame (a guide the user aligns the
   // card into), not a box that snaps onto whatever Vision finds. On capture
-  // we crop the photo to exactly this region — "what's in the 4 corners is
-  // what gets taken" — via `cropROI`, the frame mapped to the photo's own
-  // normalized coordinates (aspect-fill-correct). Falls back to the full
-  // frame if the crop can't be computed, so capture can never break.
+  // we crop the photo to EXACTLY this region — "what's in the green box is
+  // what gets taken".
+  //
+  // The crop is computed purely from screen geometry: `guideFrac` is the guide
+  // rect as a fraction of the preview bounds, and `viewAspect` is the preview's
+  // width/height. `cropToGuide` replays the `.resizeAspectFill` mapping onto the
+  // captured still to recover the same region — orientation-robust and, crucially,
+  // valid from the first layout (it does NOT depend on a live preview connection
+  // the way `metadataOutputRectConverted` did, which used to leave the crop stuck
+  // on a wide default that captured well outside the box).
   private var reticleRect: CGRect = .zero
-  private var cropROI = CGRect(x: 0.06, y: 0.10, width: 0.88, height: 0.80)
+  private var guideFrac = CGRect(x: 0.07, y: 0.20, width: 0.86, height: 0.60)
+  private var viewAspect: CGFloat = 0.462
 
   // ── Auto-capture / steadiness ───────────────────────────────────
   // A pro scanner captures itself when the card is well-framed and held
@@ -283,13 +290,16 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
       width: rw,
       height: rh
     )
-    // Map the guide rect to the photo's normalized coordinates. Only trust a
-    // sane result (the preview layer needs a live connection first).
-    let roi = previewLayer.metadataOutputRectConverted(fromLayerRect: reticleRect)
-    if roi.width > 0.05, roi.height > 0.05, roi.minX >= -0.01, roi.minY >= -0.01,
-       roi.maxX <= 1.01, roi.maxY <= 1.01 {
-      cropROI = roi
-    }
+    // Record the guide as a fraction of the preview + the preview aspect, so
+    // the crop can be reconstructed from screen geometry alone (no dependency
+    // on a live preview connection). `cropToGuide` replays the aspect-fill.
+    guideFrac = CGRect(
+      x: reticleRect.minX / bounds.width,
+      y: reticleRect.minY / bounds.height,
+      width: reticleRect.width / bounds.width,
+      height: reticleRect.height / bounds.height
+    )
+    viewAspect = bounds.width / bounds.height
     drawFixedReticle(ready: false)
   }
 
@@ -581,19 +591,38 @@ class LoupeCameraView: ExpoView, AVCaptureVideoDataOutputSampleBufferDelegate {
     }
     capturing = true
     activeCaptureRequestId = requestId
+    // Refresh the guide geometry from the current bounds right before capture
+    // (cheap; guards against a rotation/resize since the last layout).
+    updateReticleFrame()
     sessionQueue.async { [weak self] in
-      guard let self else { return }
-      let settings = AVCapturePhotoSettings()
-      settings.isHighResolutionPhotoEnabled = true
-      settings.photoQualityPrioritization = .quality
-      if #available(iOS 16.0, *) {
-        settings.maxPhotoDimensions = self.photoOutput.maxPhotoDimensions
-      }
-      if let device = self.device, device.hasFlash {
-        settings.flashMode = .off
-      }
-      self.photoOutput.capturePhoto(with: settings, delegate: self)
+      self?.captureWhenFocused(attempt: 0)
     }
+  }
+
+  // Wait for autofocus + exposure to SETTLE before firing the shutter. Grabbing
+  // a frame mid-hunt is the #1 cause of soft/blurry scans that then fail to
+  // match (a sharp card pHash-matches in ~1s; a blurry one falls to slow OCR
+  // and usually misses). Polls the device up to ~1.2s, then captures regardless
+  // so a tap always yields a photo. Runs on `sessionQueue`.
+  private func captureWhenFocused(attempt: Int) {
+    if let device = device,
+       device.isAdjustingFocus || device.isAdjustingExposure,
+       attempt < 12 {
+      sessionQueue.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+        self?.captureWhenFocused(attempt: attempt + 1)
+      }
+      return
+    }
+    let settings = AVCapturePhotoSettings()
+    settings.isHighResolutionPhotoEnabled = true
+    settings.photoQualityPrioritization = .quality
+    if #available(iOS 16.0, *) {
+      settings.maxPhotoDimensions = photoOutput.maxPhotoDimensions
+    }
+    if let device = device, device.hasFlash {
+      settings.flashMode = .off
+    }
+    photoOutput.capturePhoto(with: settings, delegate: self)
   }
 }
 
@@ -644,23 +673,52 @@ extension LoupeCameraView: AVCapturePhotoCaptureDelegate {
     ])
   }
 
-  // Crop the captured photo to `cropROI` (the fixed guide frame in the
-  // photo's normalized coords), then downscale to a sharp ~1200px upload.
+  // Crop the captured photo to EXACTLY the green guide box, then downscale to a
+  // sharp ~1200px upload. The preview shows the sensor `.resizeAspectFill`
+  // (scaled to cover the screen, overflow cropped), so only the middle slice of
+  // the still is visible on screen. We reconstruct that visible window from the
+  // photo/preview aspect ratios, then take the guide's fractional rect within
+  // it — orientation-robust and independent of any AVFoundation coordinate
+  // conversion.
   private func cropToGuide(_ data: Data) -> UIImage? {
     guard let raw = UIImage(data: data) else { return nil }
     let up = raw.normalizedUp()
     guard let cg = up.cgImage else { return nil }
     let W = CGFloat(cg.width), H = CGFloat(cg.height)
-    let roi = cropROI
-    let rx = max(0, min(0.9, roi.minX))
-    let ry = max(0, min(0.9, roi.minY))
-    let rw = max(0.1, min(1 - rx, roi.width))
-    let rh = max(0.1, min(1 - ry, roi.height))
-    let cropRect = CGRect(x: rx * W, y: ry * H, width: rw * W, height: rh * H).integral
-    guard cropRect.width > 40, cropRect.height > 40, let out = cg.cropping(to: cropRect) else {
-      return nil
+    guard W > 0, H > 0, viewAspect > 0 else { return nil }
+
+    // Fraction of the still that is actually visible on screen under aspect-fill.
+    let photoAspect = W / H
+    var visW: CGFloat = 1, visH: CGFloat = 1
+    if photoAspect > viewAspect {
+      // Still is wider than the screen → full height shown, sides cropped.
+      visW = viewAspect / photoAspect
+    } else {
+      // Still is taller/narrower than the screen → full width shown, top/bottom cropped.
+      visH = photoAspect / viewAspect
     }
-    let cropped = UIImage(cgImage: out)
+    let visX = (1 - visW) / 2, visY = (1 - visH) / 2
+
+    // Place the guide (fractional within the visible window) into still coords.
+    let g = guideFrac
+    let fx = min(max(0, visX + g.minX * visW), 1)
+    let fy = min(max(0, visY + g.minY * visH), 1)
+    let fw = min(g.width * visW, 1 - fx)
+    let fh = min(g.height * visH, 1 - fy)
+    let cropRect = CGRect(x: fx * W, y: fy * H, width: fw * W, height: fh * H).integral
+
+    // Pick the source: the guide crop normally, but if it's degenerate OR comes
+    // out near-uniform, fall back to the FULL frame. A near-uniform crop means
+    // the ROI landed on a blank / off-card region — the exact bug that made
+    // every scan upload a flat white ~885-byte JPEG (phash 8000…, empty OCR, no
+    // match). Better to send the whole in-focus card than a blank box.
+    var source: CGImage = cg
+    if cropRect.width > 40, cropRect.height > 40,
+       let out = cg.cropping(to: cropRect), !Self.isNearUniform(out) {
+      source = out
+    }
+
+    let cropped = UIImage(cgImage: source)
     let maxEdge: CGFloat = 1200
     let longest = max(cropped.size.width, cropped.size.height)
     guard longest > maxEdge else { return cropped }
@@ -671,6 +729,31 @@ extension LoupeCameraView: AVCapturePhotoCaptureDelegate {
     return UIGraphicsImageRenderer(size: target, format: fmt).image { _ in
       cropped.draw(in: CGRect(origin: .zero, size: target))
     }
+  }
+
+  // True when an image is (near) a single flat colour — no card in it. Drawn
+  // down to 8x8 and checked for luma spread; a real card has strong contrast,
+  // a blank/blown-out region collapses to one value. Guards the crop from ever
+  // uploading a flat frame again. On any drawing failure returns false (don't
+  // reject — fail open).
+  private static func isNearUniform(_ cg: CGImage) -> Bool {
+    let n = 8
+    var buf = [UInt8](repeating: 0, count: n * n * 4)
+    guard let cs = CGColorSpace(name: CGColorSpace.sRGB),
+          let ctx = CGContext(
+            data: &buf, width: n, height: n, bitsPerComponent: 8,
+            bytesPerRow: n * 4, space: cs,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+          )
+    else { return false }
+    ctx.draw(cg, in: CGRect(x: 0, y: 0, width: n, height: n))
+    var lo = 255, hi = 0
+    for i in 0 ..< (n * n) {
+      let luma = (Int(buf[i * 4]) * 299 + Int(buf[i * 4 + 1]) * 587 + Int(buf[i * 4 + 2]) * 114) / 1000
+      lo = min(lo, luma)
+      hi = max(hi, luma)
+    }
+    return (hi - lo) < 12
   }
 }
 
