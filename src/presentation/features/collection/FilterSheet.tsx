@@ -7,7 +7,7 @@
  * `Modal` (the project has no bottom-sheet dep yet — same pattern as
  * `PriceAlertSheet`). House style: tap = do it, no confirm popups.
  */
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
@@ -18,6 +18,10 @@ import {
   type VaultType,
 } from "@/application/stores/vaultStore";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+
+// The vault can span dozens of sets — show a handful, then reveal the rest
+// behind a "+N more" chip so the SET section doesn't bury the footer.
+const SET_LIMIT = 10;
 
 const HOUSES: { key: VaultType; label: string }[] = [
   { key: "loupe", label: "Loupe" },
@@ -68,6 +72,16 @@ export function FilterSheet({
   const p = useThemedPalette();
   const s = useVaultFilters();
   const count = activeFilterCount(s);
+  const [showAllSets, setShowAllSets] = useState(false);
+
+  // Selected sets float to the front so a chosen set stays visible even when
+  // the list is collapsed; then slice unless the user expanded it.
+  const orderedSets = useMemo(() => {
+    const selected = availableSets.filter((n) => s.sets.includes(n));
+    const rest = availableSets.filter((n) => !s.sets.includes(n));
+    return [...selected, ...rest];
+  }, [availableSets, s.sets]);
+  const visibleSets = showAllSets ? orderedSets : orderedSets.slice(0, SET_LIMIT);
 
   const gradeLabel = (g: number) => (g === 1 ? "Any" : g === 10 ? "10" : String(g));
   const priceActive = (min: number | null, max: number | null) =>
@@ -248,7 +262,7 @@ export function FilterSheet({
 
             {availableSets.length > 1 ? (
               <Section label="Set">
-                {availableSets.map((name) => (
+                {visibleSets.map((name) => (
                   <Chip
                     key={name}
                     label={name.length > 22 ? `${name.slice(0, 21)}…` : name}
@@ -256,6 +270,14 @@ export function FilterSheet({
                     onPress={() => s.toggleSet(name)}
                   />
                 ))}
+                {orderedSets.length > SET_LIMIT ? (
+                  <Chip
+                    label={showAllSets ? "Show less" : `+${orderedSets.length - SET_LIMIT} more`}
+                    active={false}
+                    tint={p.accent.blue}
+                    onPress={() => setShowAllSets((v) => !v)}
+                  />
+                ) : null}
               </Section>
             ) : null}
           </ScrollView>
@@ -278,12 +300,13 @@ export function FilterSheet({
               disabled={count === 0}
               accessibilityLabel="Clear all filters"
               style={({ pressed }) => ({
-                paddingHorizontal: 18,
-                height: 48,
+                paddingHorizontal: 20,
+                height: 52,
                 justifyContent: "center",
-                borderRadius: 14,
+                borderRadius: 16,
                 borderWidth: 1,
                 borderColor: p.line.default,
+                backgroundColor: p.bg.elevated,
                 opacity: count === 0 ? 0.4 : pressed ? 0.7 : 1,
               })}
             >
@@ -296,15 +319,15 @@ export function FilterSheet({
               accessibilityLabel={`Show ${resultCount} results`}
               style={({ pressed }) => ({
                 flex: 1,
-                height: 48,
+                height: 52,
                 alignItems: "center",
                 justifyContent: "center",
-                borderRadius: 14,
+                borderRadius: 16,
                 backgroundColor: p.accent.mint,
                 opacity: pressed ? 0.85 : 1,
               })}
             >
-              <Text style={{ color: "#06140d", fontSize: 15, fontWeight: "800" }}>
+              <Text style={{ color: "#06140d", fontSize: 15.5, fontWeight: "800" }}>
                 Show {resultCount} {resultCount === 1 ? "card" : "cards"}
               </Text>
             </Pressable>
@@ -354,19 +377,22 @@ function Chip({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       style={({ pressed }) => ({
-        paddingHorizontal: 14,
-        paddingVertical: 9,
+        paddingHorizontal: 15,
+        paddingVertical: 10,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: active ? withAlpha(accent, 0.55) : p.line.default,
-        backgroundColor: active ? withAlpha(accent, 0.14) : p.bg.base,
-        opacity: pressed ? 0.7 : 1,
+        // Inactive chips sit on `bg.elevated` (raised above the sheet's
+        // `bg.base`) so they read as tappable pills instead of bare text;
+        // active chips get a tinted fill + matching border.
+        borderColor: active ? withAlpha(accent, 0.65) : p.line.default,
+        backgroundColor: active ? withAlpha(accent, 0.18) : p.bg.elevated,
+        opacity: pressed ? 0.65 : 1,
       })}
     >
       <Text
         style={{
-          color: active ? accent : p.ink.muted,
-          fontSize: 13,
+          color: active ? accent : p.ink.default,
+          fontSize: 13.5,
           fontWeight: "700",
         }}
       >
