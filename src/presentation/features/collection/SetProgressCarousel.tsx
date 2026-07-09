@@ -7,7 +7,7 @@
  * can see exactly which cards they still need.
  */
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
@@ -17,11 +17,8 @@ import { routes } from "@/shared/routes";
 import { SetLogo } from "@/presentation/brand/SetLogo";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { Skeleton } from "@/presentation/components/Skeleton";
-import {
-  palette,
-  useThemedPalette,
-  withAlpha,
-} from "@/presentation/theme/tokens";
+import { SetChecklistSheet } from "@/presentation/features/collection/SetChecklistSheet";
+import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { compactUsd } from "@/shared/format";
 import type { SetProgressWire } from "@/infrastructure/http";
 
@@ -45,6 +42,8 @@ function ringTint(percent: number): string {
 export function SetProgressCarousel() {
   const { data, isLoading, error } = useSetProgress();
   const p = useThemedPalette();
+  // Tapping a tile opens the owned/missing checklist sheet for that set.
+  const [openSet, setOpenSet] = useState<{ id: string; name: string } | null>(null);
 
   if (!isLoading && !error && (!data || data.length === 0)) {
     // Vault is empty or no owned cards belong to a known set — skip the
@@ -97,9 +96,25 @@ export function SetProgressCarousel() {
           style={{ marginHorizontal: -SCREEN_EDGE }}
           contentContainerStyle={{ paddingHorizontal: SCREEN_EDGE }}
           ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
-          renderItem={({ item }) => <SetProgressTile item={item} bgElev={p.bg.elevated} line={p.line.default} inkDim={p.ink.dim} ink={p.ink.default} />}
+          renderItem={({ item }) => (
+            <SetProgressTile
+              item={item}
+              bgElev={p.bg.elevated}
+              line={p.line.default}
+              inkDim={p.ink.dim}
+              ink={p.ink.default}
+              onOpen={() => setOpenSet({ id: item.setId, name: item.setName })}
+            />
+          )}
         />
       )}
+
+      <SetChecklistSheet
+        visible={!!openSet}
+        setId={openSet?.id ?? null}
+        setName={openSet?.name}
+        onClose={() => setOpenSet(null)}
+      />
     </View>
   );
 }
@@ -110,18 +125,20 @@ function SetProgressTile({
   line,
   inkDim,
   ink,
+  onOpen,
 }: {
   item: SetProgressWire;
   bgElev: string;
   line: string;
   inkDim: string;
   ink: string;
+  onOpen: () => void;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${item.setName}, ${item.owned} of ${item.total} cards, ${item.percent.toFixed(0)} percent complete`}
-      onPress={() => router.push(routes.sets())}
+      onPress={onOpen}
       style={({ pressed }) => ({
         width: TILE_W,
         borderRadius: 14,
@@ -169,8 +186,12 @@ function SetProgressTile({
             </Text>
           </View>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ color: inkDim, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5 }}>
+        <View
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+        >
+          <Text
+            style={{ color: inkDim, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5 }}
+          >
             {item.tcg}
           </Text>
           <Text style={{ color: ink, fontSize: 12, fontWeight: "600" }}>
@@ -189,7 +210,14 @@ function ProgressRing({ percent }: { percent: number }) {
   const clamped = useMemo(() => Math.max(0, Math.min(100, percent)), [percent]);
   const dash = (clamped / 100) * c;
   return (
-    <View style={{ width: RING_SIZE, height: RING_SIZE, alignItems: "center", justifyContent: "center" }}>
+    <View
+      style={{
+        width: RING_SIZE,
+        height: RING_SIZE,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       <Svg width={RING_SIZE} height={RING_SIZE}>
         <Circle
           cx={RING_SIZE / 2}
@@ -214,9 +242,7 @@ function ProgressRing({ percent }: { percent: number }) {
         />
       </Svg>
       <View style={{ position: "absolute" }}>
-        <Text style={{ fontSize: 12, fontWeight: "700", color: tint }}>
-          {Math.round(clamped)}%
-        </Text>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: tint }}>{Math.round(clamped)}%</Text>
       </View>
     </View>
   );
