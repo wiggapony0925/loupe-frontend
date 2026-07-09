@@ -92,7 +92,7 @@ export function useFilteredCollection() {
 
   const summaryQuery = useQuery({
     queryKey: queryKeys.collection.summary(),
-    queryFn: fetchCollectionSummary,
+    queryFn: () => fetchCollectionSummary(),
     enabled: isAuthenticated,
     staleTime: 30_000,
   });
@@ -114,11 +114,7 @@ export function useFilteredCollection() {
       const wanted = new Set<VaultType>(houses);
       rows = rows.filter((c) => {
         const bucket: VaultType =
-          c.house !== "loupe"
-            ? (c.house as VaultType)
-            : c.condition != null
-              ? "raw"
-              : "loupe";
+          c.house !== "loupe" ? (c.house as VaultType) : c.condition != null ? "raw" : "loupe";
         return wanted.has(bucket);
       });
     }
@@ -138,8 +134,7 @@ export function useFilteredCollection() {
   }, [cards]);
 
   /** Total unique catalog cards owned across the whole vault. */
-  const uniqueCount =
-    summaryQuery.data?.uniqueCardCount ?? copiesByCardId.size;
+  const uniqueCount = summaryQuery.data?.uniqueCardCount ?? copiesByCardId.size;
 
   /** Loupe-graded count across the whole vault. */
   const loupeGradedCount = summaryQuery.data?.loupeGradedCount ?? 0;

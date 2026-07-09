@@ -3,18 +3,15 @@ import { Platform, Pressable, RefreshControl, ScrollView, Text, View } from "rea
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import {
-  ArrowUpRight,
-  Bell,
-  Camera,
-  Settings2,
-} from "lucide-react-native";
+import { ArrowUpRight, Bell, Camera, Settings2 } from "lucide-react-native";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
 import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { HardwareStatusWidget, useScannerConnection } from "@/presentation/features/scanner";
 import { PortfolioChart, TodaysDeltaHero } from "@/presentation/features/analytics";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
+import { CollectionSelectorBar } from "@/presentation/features/collection/CollectionSelectorBar";
+import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { MixedTrendingRail } from "@/presentation/features/search/MixedTrendingRail";
 import { SealedRail } from "@/presentation/features/search/SealedRail";
 import { useSealedSearch } from "@/application/queries/collection/useSealed";
@@ -39,11 +36,17 @@ export default function CommandCenterScreen() {
   // attached to the HTTP client — that race returned an empty summary ($0.00)
   // that only a pull-to-refresh fixed. Enabling on `isAuthenticated` makes it
   // wait for the token, then auto-fetch (the pattern the other hooks use).
+  // The active collection scopes the whole command center. For "All"
+  // (collectionId null) we keep the original key so the totals stay
+  // cache-shared with the vault; a specific collection gets its own key
+  // + a `collection_id`-scoped fetch.
+  const { collectionId } = useActiveCollection();
   const summary = useQuery({
-    queryKey: queryKeys.collection.summary(),
-    queryFn: fetchCollectionSummary,
+    queryKey: collectionId
+      ? [...queryKeys.collection.summary(), collectionId]
+      : queryKeys.collection.summary(),
+    queryFn: () => fetchCollectionSummary(collectionId),
     enabled: isAuthenticated,
-    // Same key as useFilteredCollection's summary — keep the values in sync.
     staleTime: 30_000,
   });
   const feed = useHomeFeed({ topMovers: 5, recentScans: 6 });
@@ -84,14 +87,12 @@ export default function CommandCenterScreen() {
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={pulling}
-            onRefresh={onRefresh}
-            tintColor={p.accent.mint}
-          />
+          <RefreshControl refreshing={pulling} onRefresh={onRefresh} tintColor={p.accent.mint} />
         }
       >
         <Header />
+
+        <CollectionSelectorBar />
 
         <TodaysDeltaHero />
 
@@ -135,11 +136,7 @@ export default function CommandCenterScreen() {
               <>
                 <KpiPill
                   label="Value"
-                  value={
-                    summary.data
-                      ? compactUsd(summary.data.totalValueUsd)
-                      : "—"
-                  }
+                  value={summary.data ? compactUsd(summary.data.totalValueUsd) : "—"}
                   accent={p.accent.mint}
                 />
                 {summary.data?.unrealizedPnlUsd != null &&
@@ -151,11 +148,7 @@ export default function CommandCenterScreen() {
                     }${compactUsd(summary.data.unrealizedPnlUsd)} (${
                       summary.data.unrealizedPnlPct >= 0 ? "+" : ""
                     }${summary.data.unrealizedPnlPct.toFixed(1)}%)`}
-                    accent={
-                      summary.data.unrealizedPnlUsd >= 0
-                        ? p.accent.mint
-                        : p.accent.rose
-                    }
+                    accent={summary.data.unrealizedPnlUsd >= 0 ? p.accent.mint : p.accent.rose}
                   />
                 ) : (
                   <KpiPill
@@ -317,7 +310,6 @@ export default function CommandCenterScreen() {
           />
           <HardwareStatusWidget />
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -331,11 +323,7 @@ function Header() {
   // observed a failed fetch — otherwise the idle/fetching window
   // (isLoading false, isSuccess false, isError false) renders as down.
   const apiDown = health.isError;
-  const apiTint = apiOk
-    ? p.accent.mint
-    : apiDown
-      ? p.accent.rose
-      : p.ink.muted;
+  const apiTint = apiOk ? p.accent.mint : apiDown ? p.accent.rose : p.ink.muted;
   const apiLabel = apiOk ? "API live" : apiDown ? "API down" : "API…";
   return (
     <View>
@@ -416,9 +404,7 @@ function Header() {
 
 function RecentChip({ card }: { card: RecentScanRow }) {
   const tint = gradeColor(card.grade ?? 0);
-  const onPress = card.cardId
-    ? () => router.push(routes.card(card.cardId as string))
-    : undefined;
+  const onPress = card.cardId ? () => router.push(routes.card(card.cardId as string)) : undefined;
   return (
     <Pressable
       onPress={onPress}
@@ -478,15 +464,7 @@ function SkeletonTile({ full = false }: { full?: boolean }) {
  * Robinhood "category chip strip" pattern — a tiny accent dot, a label
  * eyebrow, and a single bold value.
  */
-function KpiPill({
-  label,
-  value,
-  accent,
-}: {
-  label?: string;
-  value?: string;
-  accent?: string;
-}) {
+function KpiPill({ label, value, accent }: { label?: string; value?: string; accent?: string }) {
   if (!label || !value) {
     return (
       <View className="flex-1 rounded-xl border border-line bg-bg-elevated px-3 py-2.5">

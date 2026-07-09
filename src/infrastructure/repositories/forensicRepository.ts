@@ -6,11 +6,7 @@
  * domain types the UI consumes. If a field isn't available from the
  * backend we surface `null` — we never fabricate values.
  */
-import type {
-  CollectionCard,
-  HardwareStatus,
-  PricePoint,
-} from "@/domain";
+import type { CollectionCard, HardwareStatus, PricePoint } from "@/domain";
 import { apiFetch } from "@/infrastructure/http/client";
 import {
   AppConfigSchema,
@@ -165,9 +161,7 @@ export interface CollectionQueryParams {
   limit?: number;
 }
 
-export async function fetchCollection(
-  params?: CollectionQueryParams,
-): Promise<CollectionCard[]> {
+export async function fetchCollection(params?: CollectionQueryParams): Promise<CollectionCard[]> {
   // Serialize only the keys the caller actually supplied so we don't
   // push `set=undefined` over the wire — keeps the URL tidy and the
   // query-key stable across React renders.
@@ -226,9 +220,14 @@ export interface CollectionSummary {
   availableTags?: string[];
 }
 
-export async function fetchCollectionSummary(): Promise<CollectionSummary> {
+export async function fetchCollectionSummary(
+  collectionId?: string | null,
+): Promise<CollectionSummary> {
   return apiFetch<PortfolioSummaryWire>("/v1/grades/summary", {
     schema: PortfolioSummarySchema,
+    // Scope the top-line totals to the active collection when one is set —
+    // the backend sums only that collection's holdings. Omit for "All".
+    query: collectionId ? { collection_id: collectionId } : undefined,
   });
 }
 
@@ -255,9 +254,7 @@ export interface PortfolioHistory {
   deltaPct: number;
 }
 
-export async function fetchPortfolioHistory(
-  range: PortfolioRange,
-): Promise<PortfolioHistory> {
+export async function fetchPortfolioHistory(range: PortfolioRange): Promise<PortfolioHistory> {
   const wire = await apiFetch<PortfolioHistoryWire>(
     `/v1/grades/history?range=${encodeURIComponent(range)}`,
   );
@@ -296,8 +293,6 @@ export interface AppConfig {
  * across launches so the app boots offline-tolerant.
  */
 export async function fetchAppConfig(clientVersion?: string): Promise<AppConfig> {
-  const qs = clientVersion
-    ? `?clientVersion=${encodeURIComponent(clientVersion)}`
-    : "";
+  const qs = clientVersion ? `?clientVersion=${encodeURIComponent(clientVersion)}` : "";
   return apiFetch<AppConfig>(`/v1/app/config${qs}`, { schema: AppConfigSchema });
 }
