@@ -10,7 +10,7 @@ import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRe
 import { HardwareStatusWidget, useScannerConnection } from "@/presentation/features/scanner";
 import { PortfolioChart, TodaysDeltaHero } from "@/presentation/features/analytics";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
-import { CollectionSelectorBar } from "@/presentation/features/collection/CollectionSelectorBar";
+import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { MixedTrendingRail } from "@/presentation/features/search/MixedTrendingRail";
 import { SealedRail } from "@/presentation/features/search/SealedRail";
@@ -92,7 +92,7 @@ export default function CommandCenterScreen() {
       >
         <Header />
 
-        <CollectionSelectorBar />
+        <CollectionSwitcher />
 
         <TodaysDeltaHero />
 
