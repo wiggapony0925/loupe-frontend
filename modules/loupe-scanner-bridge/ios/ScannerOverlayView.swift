@@ -95,7 +95,6 @@ struct ScannerOverlayView: View {
     VStack(spacing: 0) {
       topBar
       Spacer(minLength: 0)
-      zoomPresets
       bottomPanel
     }
     .padding(.horizontal, 12)
@@ -185,26 +184,36 @@ struct ScannerOverlayView: View {
 
   // MARK: Zoom
 
-  private var zoomPresets: some View {
-    HStack(spacing: 10) {
-      ForEach([1.0, 2.0, 3.0], id: \.self) { z in
+  // Digital zoom steps. 5× is safe on every device (the native clamps to the
+  // sensor's max), so the extra reach is always available for reading small
+  // set numbers / far cards.
+  private let zoomLevels: [Double] = [1, 2, 3, 5]
+
+  // One compact segmented capsule (not separate floating pills) — reads as a
+  // single control, and living just above the shutter it can't collide with
+  // the tray.
+  private var zoomControl: some View {
+    HStack(spacing: 4) {
+      ForEach(zoomLevels, id: \.self) { z in
         let on = Int(model.zoom.rounded()) == Int(z)
         Button {
           model.onZoom(z)
         } label: {
-          Text("\(Int(z))×")
-            .font(.system(size: on ? 13 : 11.5, weight: .heavy))
-            .foregroundColor(on ? Color(hexString: "#06140d") : .white.opacity(0.9))
-            .frame(minWidth: on ? 44 : 34, minHeight: 34)
-            .padding(.horizontal, on ? 12 : 0)
+          Text(on ? "\(Int(z))×" : "\(Int(z))")
+            .font(.system(size: 12.5, weight: .heavy))
+            .foregroundColor(on ? Color(hexString: "#06140d") : .white.opacity(0.85))
+            .frame(width: 40, height: 30)
             .background(
-              on ? AnyShapeStyle(Color(hexString: "#16C09C")) : AnyShapeStyle(.ultraThinMaterial),
+              on ? AnyShapeStyle(Color(hexString: "#16C09C")) : AnyShapeStyle(Color.clear),
               in: Capsule()
             )
         }
       }
     }
-    .padding(.bottom, 12)
+    .padding(4)
+    .background(.ultraThinMaterial, in: Capsule())
+    .overlay(Capsule().stroke(.white.opacity(0.14), lineWidth: 1))
+    .padding(.bottom, 4)
   }
 
   // MARK: Bottom panel
@@ -232,6 +241,11 @@ struct ScannerOverlayView: View {
       if !model.items.isEmpty {
         sessionTray
       }
+
+      // Zoom sits just ABOVE the shutter so the session tray (which grows
+      // upward as tiles arrive) can never push into it — the old placement
+      // above the tray got shoved onto the reticle.
+      zoomControl
 
       shutterRow
     }
