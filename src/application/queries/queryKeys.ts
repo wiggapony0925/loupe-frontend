@@ -53,54 +53,34 @@ export const queryKeys = {
       maxPrice: number | null = null,
     ) => ["cards", "trending", tcg, limit, sort, maxPrice] as const,
     carousels: (game: TcgOrAll) => ["cards", "carousels", game] as const,
-    resolvedCarousels: (game: TcgOrAll) =>
-      ["cards", "carousels-resolved", game] as const,
+    resolvedCarousels: (game: TcgOrAll) => ["cards", "carousels-resolved", game] as const,
     market: (id: string) => ["cards", "market", id] as const,
     analytics: (id: string) => ["cards", "analytics", id] as const,
     ownership: (id: string) => ["cards", "ownership", id] as const,
-    listings: (id: string, limit: number) =>
-      ["cards", "listings", id, limit] as const,
-    nearbyListings: (
-      id: string,
-      lat: number,
-      lng: number,
-      radiusKm: number,
-      limit: number,
-    ) => ["cards", "nearby-listings", id, lat, lng, radiusKm, limit] as const,
+    listings: (id: string, limit: number) => ["cards", "listings", id, limit] as const,
+    nearbyListings: (id: string, lat: number, lng: number, radiusKm: number, limit: number) =>
+      ["cards", "nearby-listings", id, lat, lng, radiusKm, limit] as const,
     gradeSummary: (id: string, windowDays: number) =>
       ["cards", "grade-summary", id, windowDays] as const,
     marketplacePrices: (id: string, limit: number) =>
       ["cards", "marketplace-prices", id, limit] as const,
     sparklines: () => ["cards", "sparklines"] as const,
-    publicSparklines: (idsKey: string) =>
-      ["cards", "public-sparklines", idsKey] as const,
+    publicSparklines: (idsKey: string) => ["cards", "public-sparklines", idsKey] as const,
     comps: (
       id: string,
       days: number,
       grade?: number | null,
       house?: string | null,
       limit?: number | null,
-    ) =>
-      [
-        "cards",
-        "comps",
-        id,
-        days,
-        grade ?? null,
-        house ?? null,
-        limit ?? null,
-      ] as const,
-    priceHistory: (
-      id: string,
-      range: string,
-      house: string,
-      grade?: string | number | null,
-    ) => ["card-prices", id, range, house, grade ?? null] as const,
+    ) => ["cards", "comps", id, days, grade ?? null, house ?? null, limit ?? null] as const,
+    priceHistory: (id: string, range: string, house: string, grade?: string | number | null) =>
+      ["card-prices", id, range, house, grade ?? null] as const,
   },
   sets: {
     all: ["sets"] as const,
     list: (tcg: TcgOrAll) => ["sets", tcg] as const,
     progress: () => ["sets", "progress"] as const,
+    checklist: (setId: string) => ["sets", "checklist", setId] as const,
   },
   scans: {
     all: ["scans"] as const,
@@ -116,17 +96,15 @@ export const queryKeys = {
     // gets its own cache slot. Empty/default params still produce a
     // stable key (object shape, not JSON string, so React-Query's deep
     // equality kicks in).
-    list: (
-      params?: {
-        q?: string;
-        set?: string;
-        house?: string;
-        minGrade?: number;
-        sort?: string;
-        cursor?: number;
-        limit?: number;
-      },
-    ) => ["collection", "list", params ?? {}] as const,
+    list: (params?: {
+      q?: string;
+      set?: string;
+      house?: string;
+      minGrade?: number;
+      sort?: string;
+      cursor?: number;
+      limit?: number;
+    }) => ["collection", "list", params ?? {}] as const,
     summary: () => ["collection", "summary"] as const,
   },
   appConfig: {
@@ -135,8 +113,7 @@ export const queryKeys = {
   },
   home: {
     all: ["home"] as const,
-    feed: (topMovers = 5, recentScans = 6) =>
-      ["home", "feed", topMovers, recentScans] as const,
+    feed: (topMovers = 5, recentScans = 6) => ["home", "feed", topMovers, recentScans] as const,
   },
   analytics: {
     all: ["analytics"] as const,
@@ -158,8 +135,7 @@ export const queryKeys = {
   market: {
     all: ["market"] as const,
     catalog: () => ["market", "catalog"] as const,
-    detail: (id: string, condition: string) =>
-      ["market", id, condition] as const,
+    detail: (id: string, condition: string) => ["market", id, condition] as const,
   },
   hardware: {
     all: ["hardware"] as const,
@@ -167,8 +143,7 @@ export const queryKeys = {
   },
   marketIndex: {
     all: ["market-index"] as const,
-    history: (indexId: string, range: string) =>
-      ["market-index", indexId, range] as const,
+    history: (indexId: string, range: string) => ["market-index", indexId, range] as const,
   },
   sealed: {
     all: ["sealed"] as const,
@@ -179,8 +154,7 @@ export const queryKeys = {
   },
   sealedHoldings: {
     all: ["sealed-holdings"] as const,
-    list: (includeOpened: boolean) =>
-      ["sealed-holdings", "list", includeOpened] as const,
+    list: (includeOpened: boolean) => ["sealed-holdings", "list", includeOpened] as const,
   },
   // Third-party APIs — distinct prefix so we never accidentally
   // invalidate them when wiping our backend caches.
@@ -188,8 +162,7 @@ export const queryKeys = {
     all: ["pokemon-tcg"] as const,
     card: (id: string) => ["pokemon-tcg", "card", id] as const,
     sets: () => ["pokemon-tcg", "sets"] as const,
-    search: (q: string, page: number) =>
-      ["pokemon-tcg", "search", q, page] as const,
+    search: (q: string, page: number) => ["pokemon-tcg", "search", q, page] as const,
   },
   pokeApi: {
     all: ["pokeapi"] as const,

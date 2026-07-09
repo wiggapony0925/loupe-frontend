@@ -89,6 +89,8 @@ export const ENDPOINTS = {
   sets: {
     list: `${V1}/sets`,
     progress: `${V1}/sets/progress`,
+    /** Full owned/missing checklist for one set — backs the set-progress sheet. */
+    checklist: (setId: string) => `${V1}/sets/${encodeURIComponent(setId)}/checklist`,
   },
   grades: {
     mine: `${V1}/grades`,
@@ -124,8 +126,7 @@ export const ENDPOINTS = {
   },
   market: {
     fxRates: `${V1}/market/fx/rates`,
-    indexHistory: (indexId: string) =>
-      `${V1}/market/indices/${indexId}/history`,
+    indexHistory: (indexId: string) => `${V1}/market/indices/${indexId}/history`,
   },
   ws: {
     scans: "/ws/scans",
