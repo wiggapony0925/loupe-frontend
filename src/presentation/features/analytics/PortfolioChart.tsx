@@ -32,7 +32,7 @@ import Svg, {
   Text as SvgText,
 } from "react-native-svg";
 import * as Haptics from "expo-haptics";
-import { ChevronDown } from "lucide-react-native";
+import { ChevronDown, Layers } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "@/application/stores/settingsStore";
 import { usePortfolioHistory, useMarketIndex } from "@/application/queries";
@@ -48,6 +48,9 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useMoney } from "@/presentation/components/Price";
 import { useDisplayCurrency } from "@/application/hooks/useDisplayCurrency";
 import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
+import { PortfolioPickerSheet } from "@/presentation/components/PortfolioPickerSheet";
+import { useActiveCollection } from "@/application/stores/activeCollectionStore";
+import { useCollectionsOverview } from "@/application/queries/collection/useCollectionsOverview";
 import { usePressScale } from "@/presentation/components/usePressScale";
 
 /** @deprecated Use `PortfolioTimeframe` from `@/domain/charts`. */
@@ -109,6 +112,15 @@ export function PortfolioChart({
   const { currency, setCurrency } = useDisplayCurrency();
   const { format: money, meta: ccyMeta } = useMoney();
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Active portfolio (collection) — scopes the whole dashboard.
+  const [portfolioOpen, setPortfolioOpen] = useState(false);
+  const { collectionId } = useActiveCollection();
+  const { data: portfolios } = useCollectionsOverview();
+  const portfolioName =
+    (portfolios ?? []).find((r) => (r.id ?? null) === (collectionId ?? null))
+      ?.name ??
+    (portfolios ?? []).find((r) => r.is_all)?.name ??
+    "All";
   const ccyTint = ccyMeta.kind === "crypto" ? p.accent.amber : p.accent.mint;
   const [scrub, setScrub] = useState<number | null>(null);
   // Hero delta basis: "period" (vs first point on the chart) or "cost"
@@ -128,7 +140,11 @@ export function PortfolioChart({
   // on cold boot (that race rendered a permanent "No history yet" until a
   // pull-to-refresh). They auto-fetch the moment `isAuthenticated` flips true.
   const { isAuthenticated } = useAuth();
-  const history = usePortfolioHistory({ timeframe: range, enabled: isAuthenticated });
+  const history = usePortfolioHistory({
+    timeframe: range,
+    enabled: isAuthenticated,
+    collectionId,
+  });
   const overlay = useMarketIndex({
     indexId: "psa10",
     range,
@@ -358,6 +374,27 @@ export function PortfolioChart({
             <ChevronDown size={11} color={ccyTint} strokeWidth={2.6} />
           </Pressable>
         </View>
+
+        {/* Portfolio switcher — the active collection scopes the whole
+            dashboard (backend does the scoping; we just pass the id). */}
+        <Pressable
+          onPress={() => setPortfolioOpen(true)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Portfolio ${portfolioName}. Tap to change.`}
+          className="mt-1.5 flex-row items-center gap-1.5 self-start rounded-full border px-2.5 py-1.5"
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.75 : 1,
+            borderColor: withAlpha(ccyTint, 0.35),
+            backgroundColor: withAlpha(ccyTint, 0.1),
+          })}
+        >
+          <Layers size={12} color={ccyTint} strokeWidth={2.4} />
+          <Text style={{ color: ccyTint, fontSize: 12, fontWeight: "800" }}>
+            {portfolioName}
+          </Text>
+          <ChevronDown size={11} color={ccyTint} strokeWidth={2.6} />
+        </Pressable>
 
         {/* flex-wrap: the delta + date + basis toggle + benchmark chip can
             exceed one line on small phones — wrap instead of clipping. */}
@@ -680,6 +717,11 @@ export function PortfolioChart({
         selected={currency}
         onSelect={setCurrency}
         onClose={() => setPickerOpen(false)}
+      />
+
+      <PortfolioPickerSheet
+        visible={portfolioOpen}
+        onClose={() => setPortfolioOpen(false)}
       />
     </View>
   );

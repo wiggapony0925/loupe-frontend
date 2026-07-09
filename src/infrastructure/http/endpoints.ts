@@ -95,6 +95,7 @@ export const ENDPOINTS = {
   },
   collections: {
     list: `${V1}/collections`,
+    overview: `${V1}/collections/overview`,
     item: (id: string) => `${V1}/collections/${id}`,
   },
   providers: {

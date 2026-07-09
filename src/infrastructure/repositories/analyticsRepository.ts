@@ -18,8 +18,11 @@ export type AnalyticsMoverRow = AnalyticsOverview["movers"]["gainers"][number];
 export type AnalyticsYearBucket = AnalyticsOverview["yearDistribution"][number];
 export type AnalyticsGradeBucket = AnalyticsOverview["gradeDistribution"][number];
 
-export async function fetchAnalyticsOverview(): Promise<AnalyticsOverview> {
+export async function fetchAnalyticsOverview(
+  collectionId?: string | null,
+): Promise<AnalyticsOverview> {
   return apiFetch<AnalyticsOverview>(ENDPOINTS.analytics.overview, {
     schema: AnalyticsOverviewSchema,
+    query: collectionId ? { collection_id: collectionId } : undefined,
   });
 }
