@@ -32,7 +32,8 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { COPY } from "@/shared/copy";
 import { useRecentSearches } from "@/application/stores/recentSearchesStore";
 import { useAuth } from "@/presentation/providers/AuthProvider";
-import { useCardSearchPaged, useTrendingCards } from "@/application/queries";
+import { useCardSearchPaged } from "@/application/queries";
+import { useMixedTrending } from "@/application/queries/catalog/useMixedTrending";
 import { useSealedSearch } from "@/application/queries/collection/useSealed";
 import type { SealedProductWire } from "@/infrastructure/http";
 import { sealedToCardSearchResult } from "@/presentation/features/search/sealedAdapter";
@@ -619,7 +620,7 @@ export default function SearchScreen() {
                         </Pressable>
                       }
                     />
-                    <TrendingSection tcg={selectedTcg} />
+                    <TrendingSection />
                   </View>
 
                   <View style={{ gap: 8 }}>
@@ -1111,11 +1112,14 @@ function LiveResultsSection({
 // band has consistent vertical rhythm — every rail in the band uses the
 // same tile size and scroll affordance. Previously this was a 2-column
 // wrap grid which broke the "rail stack" visual pattern below it.
-function TrendingSection({ tcg = "all" }: { tcg?: TcgChip }) {
-  const trending = useTrendingCards({ tcg, limit: 12 });
-  const cards = trending.data?.cards ?? [];
+function TrendingSection() {
+  // Robust cross-game feed: prefers the movement feed, falls back to each
+  // game's reliable value feed (see useMixedTrending), so "Trending now" never
+  // collapses to an empty "No trending cards" card.
+  const q = useMixedTrending("trending");
+  const cards = q.cards.slice(0, 12);
 
-  if (trending.isLoading) {
+  if (q.isLoading && cards.length === 0) {
     return (
       <ScrollView
         horizontal
@@ -1139,18 +1143,8 @@ function TrendingSection({ tcg = "all" }: { tcg?: TcgChip }) {
     );
   }
 
-  if (trending.isError) {
-    return (
-      <ErrorState
-        title={COPY.searchError.title}
-        message={COPY.searchError.message}
-      />
-    );
-  }
-
-  if (cards.length === 0) {
-    return <EmptyState title="No trending cards right now" message="" />;
-  }
+  // Self-hide instead of an empty-state card (matches the web marketplace).
+  if (cards.length === 0) return null;
 
   return <CardHorizontalRail cards={cards} tileSize="md" showPrice edgeBleed={20} />;
 }

@@ -15,7 +15,6 @@ import { ScrollView, View } from "react-native";
 import { useTrendingCards } from "@/application/queries/catalog/useTrendingCards";
 import { CardHorizontalRail } from "@/presentation/cards";
 import { Skeleton } from "@/presentation/components/Skeleton";
-import { QueryState } from "@/presentation/components/QueryState";
 import type { TcgKey } from "@/infrastructure/http";
 
 export function HotRightNowRail({
@@ -34,38 +33,45 @@ export function HotRightNowRail({
    */
   edgeBleed?: number;
 }) {
-  const q = useTrendingCards({ tcg, limit });
-  const results = (q.data?.cards ?? []).slice(0, limit);
+  // Prefer the movement feed, fall back to the reliable value feed. Some games
+  // (e.g. Pokémon) return an empty `sort=trending` slice, which used to surface
+  // as an ugly "No live catalog data" card; the value feed always has cards.
+  const trending = useTrendingCards({ tcg, limit, sort: "trending" });
+  const value = useTrendingCards({ tcg, limit, sort: "value" });
+  const primary = trending.data?.cards ?? [];
+  const results = (primary.length > 0 ? primary : (value.data?.cards ?? [])).slice(
+    0,
+    limit,
+  );
+  const isLoading =
+    trending.isLoading || (primary.length === 0 && value.isLoading);
+
+  if (isLoading) {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={edgeBleed > 0 ? { marginHorizontal: -edgeBleed } : undefined}
+        contentContainerStyle={{
+          gap: 12,
+          paddingLeft: edgeBleed > 0 ? edgeBleed : 0,
+          paddingRight: edgeBleed > 0 ? edgeBleed : 4,
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <View key={i} style={{ width: 120 }}>
+            <Skeleton width={120} height={168} radius={12} />
+          </View>
+        ))}
+      </ScrollView>
+    );
+  }
+
+  // Self-hide a genuinely empty rail (matches the web marketplace) rather than
+  // showing an empty-state card.
+  if (results.length === 0) return null;
 
   return (
-    <QueryState
-      isLoading={q.isLoading}
-      isError={q.isError}
-      isEmpty={!q.isLoading && !q.isError && results.length === 0}
-      loadingFallback={
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={edgeBleed > 0 ? { marginHorizontal: -edgeBleed } : undefined}
-          contentContainerStyle={{
-            gap: 12,
-            paddingLeft: edgeBleed > 0 ? edgeBleed : 0,
-            paddingRight: edgeBleed > 0 ? edgeBleed : 4,
-          }}
-        >
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={{ width: 120 }}>
-              <Skeleton width={120} height={168} radius={12} />
-            </View>
-          ))}
-        </ScrollView>
-      }
-      emptyTitle="No live catalog data"
-      emptyMessage="Backend is reachable but no results."
-      errorMessage="Live catalog unavailable"
-      onRetry={() => void q.refetch()}
-    >
-      <CardHorizontalRail cards={results} tileSize="md" showPrice edgeBleed={edgeBleed} />
-    </QueryState>
+    <CardHorizontalRail cards={results} tileSize="md" showPrice edgeBleed={edgeBleed} />
   );
 }
