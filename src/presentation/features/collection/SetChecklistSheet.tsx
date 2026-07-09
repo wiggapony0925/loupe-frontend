@@ -26,7 +26,7 @@ import { router } from "expo-router";
 import { Check, Plus, X } from "lucide-react-native";
 import { useSetChecklist } from "@/application/queries/catalog/useSetChecklist";
 import { routes } from "@/shared/routes";
-import { CardImage } from "@/presentation/components/CardImage";
+import { CardSparkRow } from "@/presentation/cards";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import type { SetChecklistCardWire } from "@/infrastructure/http";
@@ -279,54 +279,20 @@ function ChecklistRow({
   p: ReturnType<typeof useThemedPalette>;
 }) {
   const missing = !item.owned;
+  // Reuse THE card row (`CardSparkRow`) so a checklist entry looks identical
+  // to a card anywhere else — thumb, name, meta — with the price column
+  // swapped for an owned/missing status pill and missing rows dimmed.
   return (
-    <Pressable
+    <CardSparkRow
+      thumbUri={item.imageUrl ?? undefined}
+      recyclingKey={item.id}
+      title={item.name}
+      meta={item.number ? `#${item.number}` : null}
+      priceUsd={null}
       onPress={onPress}
-      accessibilityRole="button"
+      dimmed={missing}
       accessibilityLabel={`${item.name}${item.number ? `, number ${item.number}` : ""}, ${missing ? "not owned" : "owned"}`}
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingVertical: 8,
-        opacity: missing ? (pressed ? 0.6 : 0.46) : pressed ? 0.7 : 1,
-      })}
-    >
-      <View
-        style={{
-          width: THUMB_W,
-          height: THUMB_H,
-          borderRadius: 8,
-          overflow: "hidden",
-          backgroundColor: p.bg.sunken,
-        }}
-      >
-        <CardImage
-          uri={item.imageUrl}
-          width={THUMB_W}
-          height={THUMB_H}
-          rounded={0}
-          contentFit="cover"
-          priority="low"
-          recyclingKey={item.id}
-          alt={item.name}
-        />
-      </View>
-
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text
-          numberOfLines={1}
-          style={{ color: p.ink.default, fontSize: 15, fontWeight: "700", letterSpacing: -0.2 }}
-        >
-          {item.name}
-        </Text>
-        {item.number ? (
-          <Text style={{ color: p.ink.muted, fontSize: 12 }}>#{item.number}</Text>
-        ) : null}
-      </View>
-
-      {/* Owned → mint check; missing → hollow plus (go add it). */}
-      {missing ? (
+      trailing={
         <View
           style={{
             height: 26,
@@ -334,26 +300,18 @@ function ChecklistRow({
             borderRadius: 13,
             alignItems: "center",
             justifyContent: "center",
-            borderWidth: 1,
+            borderWidth: missing ? 1 : 0,
             borderColor: p.line.default,
+            backgroundColor: missing ? "transparent" : withAlpha(p.accent.mint, 0.16),
           }}
         >
-          <Plus size={14} color={p.ink.muted} strokeWidth={2.4} />
+          {missing ? (
+            <Plus size={14} color={p.ink.muted} strokeWidth={2.4} />
+          ) : (
+            <Check size={15} color={p.accent.mint} strokeWidth={3} />
+          )}
         </View>
-      ) : (
-        <View
-          style={{
-            height: 26,
-            width: 26,
-            borderRadius: 13,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: withAlpha(p.accent.mint, 0.16),
-          }}
-        >
-          <Check size={15} color={p.accent.mint} strokeWidth={3} />
-        </View>
-      )}
-    </Pressable>
+      }
+    />
   );
 }

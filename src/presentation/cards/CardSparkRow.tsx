@@ -56,6 +56,14 @@ export interface CardSparkRowProps {
   bordered?: boolean;
   priority?: "low" | "normal" | "high";
   accessibilityLabel?: string;
+  /** Dim the whole row — e.g. a "still missing" checklist entry. */
+  dimmed?: boolean;
+  /**
+   * Replace the price / right column with custom content (a status icon, a
+   * checkbox, …). Lets non-pricing surfaces reuse this ONE row instead of
+   * forking a bespoke layout.
+   */
+  trailing?: React.ReactNode;
 }
 
 function CardSparkRowImpl({
@@ -75,16 +83,16 @@ function CardSparkRowImpl({
   bordered = false,
   priority = "low",
   accessibilityLabel,
+  dimmed = false,
+  trailing,
 }: CardSparkRowProps) {
   const p = useThemedPalette();
   const { scale, onPressIn, onPressOut } = usePressScale();
 
   const hasSpark = !!spark && spark.length >= 2;
-  const hasRange =
-    !hasSpark && !!range && range.high > range.low && range.low >= 0;
+  const hasRange = !hasSpark && !!range && range.high > range.low && range.low >= 0;
   const delta = deltaPct ?? null;
-  const deltaTint =
-    delta == null ? p.ink.dim : delta >= 0 ? p.accent.mint : p.accent.rose;
+  const deltaTint = delta == null ? p.ink.dim : delta >= 0 ? p.accent.mint : p.accent.rose;
 
   return (
     <Pressable
@@ -95,7 +103,7 @@ function CardSparkRowImpl({
       accessibilityLabel={accessibilityLabel ?? `${title}${meta ? `, ${meta}` : ""}`}
     >
       <Animated.View
-        style={{ transform: [{ scale }] }}
+        style={{ transform: [{ scale }], opacity: dimmed ? 0.5 : 1 }}
         className={`flex-row items-center gap-3.5 px-1 py-3 ${
           bordered ? "border-t border-line/60" : ""
         }`}
@@ -159,10 +167,7 @@ function CardSparkRowImpl({
               </View>
             ) : null}
             {meta ? (
-              <Text
-                numberOfLines={1}
-                style={{ flexShrink: 1, color: p.ink.muted, fontSize: 12.5 }}
-              >
+              <Text numberOfLines={1} style={{ flexShrink: 1, color: p.ink.muted, fontSize: 12.5 }}>
                 {meta}
               </Text>
             ) : null}
@@ -184,49 +189,53 @@ function CardSparkRowImpl({
           <RangeMeter low={range!.low} high={range!.high} market={range!.market} />
         ) : null}
 
-        {/* Right column — price + delta% (or tiny label) */}
-        <View style={{ minWidth: 78, alignItems: "flex-end", gap: 2 }}>
-          {priceUsd != null ? (
-            <Price
-              usd={priceUsd}
-              numberOfLines={1}
-              style={{
-                color: p.ink.default,
-                fontSize: 16,
-                fontWeight: "800",
-                letterSpacing: -0.35,
-                fontVariant: ["tabular-nums"],
-              }}
-            />
-          ) : (
-            <Text style={{ color: p.ink.dim, fontSize: 16, fontWeight: "700" }}>—</Text>
-          )}
-          {delta != null ? (
-            <Text
-              numberOfLines={1}
-              style={{
-                color: deltaTint,
-                fontSize: 11,
-                fontWeight: "700",
-                fontVariant: ["tabular-nums"],
-              }}
-            >
-              {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(2)}%
-            </Text>
-          ) : (
-            <Text
-              style={{
-                color: p.ink.dim,
-                fontSize: 9,
-                fontWeight: "700",
-                letterSpacing: 1,
-                textTransform: "uppercase",
-              }}
-            >
-              {priceLabel}
-            </Text>
-          )}
-        </View>
+        {/* Right column — caller-supplied trailing content, else price + delta% */}
+        {trailing !== undefined ? (
+          trailing
+        ) : (
+          <View style={{ minWidth: 78, alignItems: "flex-end", gap: 2 }}>
+            {priceUsd != null ? (
+              <Price
+                usd={priceUsd}
+                numberOfLines={1}
+                style={{
+                  color: p.ink.default,
+                  fontSize: 16,
+                  fontWeight: "800",
+                  letterSpacing: -0.35,
+                  fontVariant: ["tabular-nums"],
+                }}
+              />
+            ) : (
+              <Text style={{ color: p.ink.dim, fontSize: 16, fontWeight: "700" }}>—</Text>
+            )}
+            {delta != null ? (
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: deltaTint,
+                  fontSize: 11,
+                  fontWeight: "700",
+                  fontVariant: ["tabular-nums"],
+                }}
+              >
+                {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(2)}%
+              </Text>
+            ) : (
+              <Text
+                style={{
+                  color: p.ink.dim,
+                  fontSize: 9,
+                  fontWeight: "700",
+                  letterSpacing: 1,
+                  textTransform: "uppercase",
+                }}
+              >
+                {priceLabel}
+              </Text>
+            )}
+          </View>
+        )}
       </Animated.View>
     </Pressable>
   );
@@ -236,21 +245,10 @@ function CardSparkRowImpl({
  * Low↔high market-range meter — where today's market price sits inside the
  * provider's low/high band. Honest pricing data for rows with no history.
  */
-function RangeMeter({
-  low,
-  high,
-  market,
-}: {
-  low: number;
-  high: number;
-  market: number | null;
-}) {
+function RangeMeter({ low, high, market }: { low: number; high: number; market: number | null }) {
   const p = useThemedPalette();
   const span = high - low;
-  const ratio =
-    market != null && span > 0
-      ? Math.min(1, Math.max(0, (market - low) / span))
-      : null;
+  const ratio = market != null && span > 0 ? Math.min(1, Math.max(0, (market - low) / span)) : null;
 
   return (
     <View style={{ width: SPARK_W, gap: 3 }}>
