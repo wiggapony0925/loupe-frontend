@@ -39,7 +39,7 @@ import { sealedToCardSearchResult } from "@/presentation/features/search/sealedA
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
-import { CarouselRails } from "@/presentation/features/search/CarouselRail";
+import { ResolvedCarousels } from "@/presentation/features/search/CarouselRail";
 import { SealedRail } from "@/presentation/features/search/SealedRail";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { SkeletonSearchResults } from "@/presentation/components/Skeletons";
@@ -598,32 +598,35 @@ export default function SearchScreen() {
                 </Text>
               </View>
 
-              <View style={{ gap: 8 }}>
-                <SectionHeader
-                  eyebrow={selectedTcg === "all" ? "All TCGs" : TCG_CHIPS.find((c) => c.key === selectedTcg)?.label ?? "Trending"}
-                  title="Trending now"
-                  trailing={
-                    <Pressable
-                      onPress={() => router.push(routes.markets())}
-                      hitSlop={10}
-                      className="flex-row items-center gap-1"
-                    >
-                      <Text className="text-xs font-medium text-ink-muted">Browse all</Text>
-                      <ChevronRight size={14} color={p.ink.dim} />
-                    </Pressable>
-                  }
-                />
-                <TrendingSection tcg={selectedTcg} />
-              </View>
-
-              <View style={{ gap: 8 }}>
-                <SectionHeader eyebrow="Sealed" title="Sealed products" />
-                <SealedRail products={sealed.data ?? []} />
-              </View>
-
               {selectedTcg === "all" ? (
-                // Mixed scope keeps the cross-game teaser rails.
+                // Mixed scope: a cross-game "Trending now" + sealed + per-game
+                // teaser rails (no single game to resolve carousels for).
                 <>
+                  <View style={{ gap: 8 }}>
+                    <SectionHeader
+                      eyebrow="All TCGs"
+                      title="Trending now"
+                      trailing={
+                        <Pressable
+                          onPress={() => router.push(routes.markets())}
+                          hitSlop={10}
+                          className="flex-row items-center gap-1"
+                        >
+                          <Text className="text-xs font-medium text-ink-muted">
+                            Browse all
+                          </Text>
+                          <ChevronRight size={14} color={p.ink.dim} />
+                        </Pressable>
+                      }
+                    />
+                    <TrendingSection tcg={selectedTcg} />
+                  </View>
+
+                  <View style={{ gap: 8 }}>
+                    <SectionHeader eyebrow="Sealed" title="Sealed products" />
+                    <SealedRail products={sealed.data ?? []} />
+                  </View>
+
                   <View style={{ gap: 8 }}>
                     <SectionHeader eyebrow="Pokémon" title="Chase rares" />
                     <HotRightNowRail tcg="pokemon" limit={12} />
@@ -638,18 +641,17 @@ export default function SearchScreen() {
                   </View>
                 </>
               ) : (
-                // Per-game: render the SAME backend-owned carousels the web
-                // marketplace shows for this game. The backend
-                // (/v1/public/carousels) is the single source of truth for the
-                // shelf set; catalog-only games return none and fall back to
-                // the Trending + Sealed anchors above.
-                <CarouselRails
-                  tcg={selectedTcg}
-                  label={
-                    TCG_CHIPS.find((c) => c.key === selectedTcg)?.label ??
-                    selectedTcg
-                  }
-                />
+                // Per-game: the EXACT same carousels the web marketplace shows,
+                // resolved by the backend (/v1/public/carousels/resolved) into
+                // trending + value/rarity rails + explore, each already filled
+                // with cards and with empty rails dropped server-side.
+                <>
+                  <ResolvedCarousels tcg={selectedTcg} />
+                  <View style={{ gap: 8 }}>
+                    <SectionHeader eyebrow="Sealed" title="Sealed products" />
+                    <SealedRail products={sealed.data ?? []} />
+                  </View>
+                </>
               )}
             </View>
 

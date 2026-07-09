@@ -224,3 +224,25 @@ export interface CarouselResponseWire {
   source: "ai" | "curated";
   carousels: CarouselRecipeWire[];
 }
+
+/**
+ * A carousel ALREADY resolved into cards server-side (`/carousels/resolved`).
+ * Unlike a recipe, this needs no client compilation — the backend ran the
+ * price/rarity/sort/limit lens and dropped empty rails, so web and mobile render
+ * the exact same carousels. `cards` is the standard search-result card shape.
+ */
+export interface ResolvedRailWire {
+  id: string;
+  title: string;
+  subtitle: string;
+  /** "cards" = a priced discovery rail; "catalog" = a browse rail (may be unpriced). */
+  kind: "cards" | "catalog";
+  cards: CardSearchResult[];
+}
+
+/** `GET /v1/public/carousels/resolved?game=<tcg>` — ready-to-render rails. */
+export interface ResolvedCarouselsWire {
+  game: string;
+  source: "ai" | "curated";
+  rails: ResolvedRailWire[];
+}
