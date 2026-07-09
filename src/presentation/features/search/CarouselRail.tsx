@@ -1,25 +1,27 @@
 /**
- * CarouselRail — renders the backend-owned marketplace carousels on mobile,
- * the mobile counterpart to the web `MarketplaceRail`. The backend
- * (`/v1/public/carousels`) is the single source of truth for WHICH shelves
- * exist and their filters; each client just compiles a recipe into a card rail.
- *
- * Compilation mirrors the web `recipeToRailSpec` + `cardFilters`:
- *   1. fetch the priced shelf via `/v1/cards/trending`
- *      (`source` → trending/value feed, `priceMax` as a coarse server hint),
- *   2. apply a client-side "lens" — price band, rarity pattern, sort, limit,
- *   3. self-hide when the slice is thinner than `minItems` (so a data-poor
- *      game or an over-narrow band never shows an empty rail).
+ * ResolvedCarousels — renders a game's backend-resolved discovery carousels,
+ * the mobile counterpart to the web marketplace rails. The backend
+ * (`/v1/public/carousels/resolved`) is the single source of truth: it decides
+ * WHICH rails exist AND fills them with cards (trending anchor + recipe rails +
+ * explore), dropping any rail too thin to show. So this component does no
+ * filtering — it just paints `rails[].cards`, guaranteeing mobile shows the
+ * exact same carousels as web.
  */
-import React, { useMemo } from "react";
+import React from "react";
 import { ScrollView, View } from "react-native";
-import { useTrendingCards } from "@/application/queries/catalog/useTrendingCards";
-import { useCarousels } from "@/application/queries/catalog/useCarousels";
+import { useResolvedCarousels } from "@/application/queries/catalog/useResolvedCarousels";
 import { CardHorizontalRail } from "@/presentation/cards";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
-import type { CarouselRecipeWire, TcgKey } from "@/infrastructure/http";
-import { applyRecipeLens } from "./carouselLens";
+import type { TcgKey } from "@/infrastructure/http";
+
+const GAME_LABELS: Partial<Record<TcgKey, string>> = {
+  pokemon: "Pokémon",
+  magic: "Magic",
+  yugioh: "Yu-Gi-Oh!",
+  onepiece: "One Piece",
+  digimon: "Digimon",
+};
 
 function RailSkeleton({ edgeBleed }: { edgeBleed: number }) {
   return (
@@ -42,83 +44,46 @@ function RailSkeleton({ edgeBleed }: { edgeBleed: number }) {
   );
 }
 
-/** One backend recipe compiled into a titled, priced card rail. */
-export function GameCarouselRail({
-  recipe,
-  tcg,
-  label,
-  edgeBleed = 20,
-}: {
-  recipe: CarouselRecipeWire;
-  tcg: TcgKey;
-  label: string;
-  edgeBleed?: number;
-}) {
-  const sort = recipe.source === "trending" ? "trending" : "value";
-  const q = useTrendingCards({
-    tcg,
-    sort,
-    maxPrice: recipe.priceMax ?? undefined,
-    limit: 24,
-  });
-
-  const cards = useMemo(
-    () => applyRecipeLens(q.data?.cards ?? [], recipe),
-    [q.data, recipe],
-  );
-
-  const minItems = recipe.minItems ?? 4;
-  // Self-hide a thin rail once it has loaded (matches the web engine).
-  if (!q.isLoading && cards.length < minItems) return null;
-
-  return (
-    <View style={{ gap: 8 }}>
-      <SectionHeader eyebrow={label} title={recipe.title} />
-      {q.isLoading ? (
-        <RailSkeleton edgeBleed={edgeBleed} />
-      ) : (
-        <CardHorizontalRail
-          cards={cards}
-          tileSize="md"
-          showPrice
-          edgeBleed={edgeBleed}
-        />
-      )}
-    </View>
-  );
-}
-
 /**
- * The full backend-owned carousel set for a game — fetches the pool and
- * renders each recipe as a `GameCarouselRail`. Renders nothing for games with
- * no priced pool (catalog-only games return `[]`), so the discover surface
- * falls back to its Trending + Sealed anchors.
+ * The full backend-resolved carousel set for one game — trending anchor +
+ * recipe rails + explore, each already filled with cards. Renders nothing for
+ * games with no rails (catalog-only games with an empty priced pool still get
+ * an explore rail from the backend).
  */
-export function CarouselRails({
+export function ResolvedCarousels({
   tcg,
-  label,
   edgeBleed = 20,
-  max = 6,
 }: {
   tcg: TcgKey;
-  label: string;
   edgeBleed?: number;
-  /** Cap the number of rails so the surface stays light on mobile. */
-  max?: number;
 }) {
-  const q = useCarousels(tcg);
-  const recipes = (q.data?.carousels ?? []).slice(0, max);
-  if (recipes.length === 0) return null;
+  const q = useResolvedCarousels(tcg);
+  const eyebrow = GAME_LABELS[tcg] ?? tcg;
+
+  if (q.isLoading) {
+    return (
+      <View style={{ gap: 8 }}>
+        <SectionHeader eyebrow={eyebrow} title="Loading marketplace…" />
+        <RailSkeleton edgeBleed={edgeBleed} />
+      </View>
+    );
+  }
+
+  const rails = q.data?.rails ?? [];
+  if (rails.length === 0) return null;
+
   return (
     <>
-      {recipes.map((r) => (
-        <GameCarouselRail
-          key={r.id}
-          recipe={r}
-          tcg={tcg}
-          label={label}
-          edgeBleed={edgeBleed}
-        />
+      {rails.map((rail) => (
+        <View key={rail.id} style={{ gap: 8 }}>
+          <SectionHeader eyebrow={eyebrow} title={rail.title} />
+          <CardHorizontalRail
+            cards={rail.cards}
+            tileSize="md"
+            showPrice={rail.kind === "cards"}
+            edgeBleed={edgeBleed}
+          />
+        </View>
       ))}
     </>
   );

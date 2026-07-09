@@ -14,7 +14,7 @@
 export { useCardSearch } from "./catalog/useCardSearch";
 export { useCardSearchPaged } from "./catalog/useCardSearchPaged";
 export { useTrendingCards } from "./catalog/useTrendingCards";
-export { useCarousels } from "./catalog/useCarousels";
+export { useResolvedCarousels } from "./catalog/useResolvedCarousels";
 export { useCard } from "./catalog/useCard";
 export { useCardPriceHistory } from "./catalog/useCardPriceHistory";
 export type { PriceHistoryRange } from "./catalog/useCardPriceHistory";

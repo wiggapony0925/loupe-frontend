@@ -40,6 +40,10 @@ export const ENDPOINTS = {
      *  pool (upgraded to AI when configured) that BOTH web and mobile render,
      *  so the marketplace carousels stay in sync. Public, no auth. */
     carousels: `${V1}/public/carousels`,
+    /** Carousels ALREADY resolved into cards server-side (`?game=<tcg>`) — the
+     *  recipe pool run against the shelf/catalog, empty rails dropped. Both
+     *  clients render this identically (no client-side filtering). */
+    carouselsResolved: `${V1}/public/carousels/resolved`,
   },
   me: {
     root: `${V1}/me`,
