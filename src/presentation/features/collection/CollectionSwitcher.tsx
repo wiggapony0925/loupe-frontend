@@ -1,19 +1,20 @@
 /**
- * `CollectionSwitcher` — the compact "which portfolio am I viewing?" control.
+ * `CollectionSwitcher` — the compact "which portfolio am I viewing?" tag.
  *
- *     Viewing  All  ⌄            (whole vault)
- *     Viewing  Umbreon Set  ⌄  ✕ (a specific collection — ✕ clears back to All)
+ *     ◈ All ⌄               (whole vault)
+ *     ◈ Umbreon Set ⌄  ✕    (a specific collection — ✕ clears back to All)
  *
- * A small self-aligned pill used on the command center (above Today), the
- * vault, and analytics. Tapping opens {@link PortfolioPickerSheet}; picking a
- * collection sets the active id in the store, which re-scopes that surface
- * (the backend does the scoping — the client just passes `collection_id`).
- * When a specific collection is active a ✕ appears to clear back to "All".
+ * One small mint pill, sat above the headline value on the command center /
+ * analytics chart and at the top of the vault. Tapping opens
+ * {@link PortfolioPickerSheet}; the active id lives in the (backend-synced)
+ * store and re-scopes every value surface — the backend does the scoping, the
+ * client just passes `collection_id`. The name is always the app's mint accent
+ * so the current scope reads at a glance.
  */
 
 import React, { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { ChevronDown, X } from "lucide-react-native";
+import { ChevronDown, Layers, X } from "lucide-react-native";
 import {
   useCollectionsOverview,
   type CollectionSummary,
@@ -35,9 +36,10 @@ export function CollectionSwitcher() {
     null;
   const isAll = !collectionId || (active?.is_all ?? true);
   const name = isAll ? "All" : (active?.name ?? "All");
+  const mint = p.accent.mint;
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start" }}>
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
@@ -47,28 +49,23 @@ export function CollectionSwitcher() {
           flexDirection: "row",
           alignItems: "center",
           gap: 6,
-          paddingVertical: 7,
-          paddingHorizontal: 12,
+          paddingVertical: 6,
+          paddingHorizontal: 11,
           borderRadius: 999,
           borderWidth: 1,
-          borderColor: isAll ? p.line.default : withAlpha(p.accent.mint, 0.4),
-          backgroundColor: isAll ? p.bg.elevated : withAlpha(p.accent.mint, 0.12),
+          borderColor: withAlpha(mint, isAll ? 0.32 : 0.5),
+          backgroundColor: withAlpha(mint, isAll ? 0.1 : 0.16),
           opacity: pressed ? 0.7 : 1,
         })}
       >
-        <Text style={{ color: p.ink.dim, fontSize: 13, fontWeight: "600" }}>Viewing</Text>
+        <Layers size={12} color={mint} strokeWidth={2.4} />
         <Text
           numberOfLines={1}
-          style={{
-            color: isAll ? p.ink.default : p.accent.mint,
-            fontSize: 13,
-            fontWeight: "700",
-            maxWidth: 200,
-          }}
+          style={{ color: mint, fontSize: 12.5, fontWeight: "800", maxWidth: 200 }}
         >
           {name}
         </Text>
-        <ChevronDown size={15} color={isAll ? p.ink.muted : p.accent.mint} strokeWidth={2.4} />
+        <ChevronDown size={12} color={mint} strokeWidth={2.6} />
       </Pressable>
 
       {!isAll ? (
@@ -78,9 +75,9 @@ export function CollectionSwitcher() {
           accessibilityLabel="Show all cards"
           hitSlop={8}
           style={({ pressed }) => ({
-            height: 28,
-            width: 28,
-            borderRadius: 14,
+            height: 26,
+            width: 26,
+            borderRadius: 13,
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
@@ -89,7 +86,7 @@ export function CollectionSwitcher() {
             opacity: pressed ? 0.6 : 1,
           })}
         >
-          <X size={14} color={p.ink.muted} strokeWidth={2.4} />
+          <X size={13} color={p.ink.muted} strokeWidth={2.4} />
         </Pressable>
       ) : null}
 
