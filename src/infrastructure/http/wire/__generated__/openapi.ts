@@ -2321,6 +2321,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/collections/{collection_id}/items/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add many holdings to a collection (idempotent) */
+        post: operations["bulk_add_items_v1_collections__collection_id__items_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/collections/{collection_id}/items/bulk-remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Remove many holdings from a collection */
+        post: operations["bulk_remove_items_v1_collections__collection_id__items_bulk_remove_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/collections/{collection_id}/items/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move holdings from another collection into this one */
+        post: operations["transfer_items_v1_collections__collection_id__items_transfer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/collections/{collection_id}/items/{graded_card_id}": {
         parameters: {
             query?: never;
@@ -2388,6 +2439,23 @@ export interface paths {
         put?: never;
         /** Create a graded-card record */
         post: operations["create_v1_grades_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/grades/filters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get metadata and option labels for all filtering options */
+        get: operations["get_filter_metadata_v1_grades_filters_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4546,6 +4614,49 @@ export interface components {
             graded_card_id: string;
         };
         /**
+         * CollectionItemsBulk
+         * @description Body for bulk add / remove / transfer of holdings into a collection.
+         *
+         *     Cap keeps a single request O(n) with a hard upper bound so a buggy
+         *     client can't fan out tens of thousands of joins in one round-trip.
+         */
+        CollectionItemsBulk: {
+            /** Graded Card Ids */
+            graded_card_ids: string[];
+        };
+        /**
+         * CollectionItemsBulkResult
+         * @description How many memberships changed — clients refresh overview from this.
+         */
+        CollectionItemsBulkResult: {
+            /**
+             * Added
+             * @default 0
+             */
+            added: number;
+            /**
+             * Removed
+             * @default 0
+             */
+            removed: number;
+        };
+        /**
+         * CollectionItemsTransfer
+         * @description Move holdings from ``source_id`` into the path collection (add + remove).
+         *
+         *     Idempotent on the destination; missing source membership is a no-op
+         *     for that id so partial selections stay safe.
+         */
+        CollectionItemsTransfer: {
+            /** Graded Card Ids */
+            graded_card_ids: string[];
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+        };
+        /**
          * CollectionMerge
          * @description Body for ``POST /v1/collections/{id}/merge`` — fold ``source_id`` into
          *     the path collection, then delete the (now-empty) source.
@@ -6211,6 +6322,8 @@ export interface components {
          * @description Body for ``POST /v1/reports`` — generate a new statement.
          */
         ReportGenerateRequest: {
+            /** Collection Id */
+            collection_id?: string | null;
             /** Month */
             month?: number | null;
             period: components["schemas"]["ReportPeriodEnum"];
@@ -6228,6 +6341,10 @@ export interface components {
          * @description Public representation of a generated portfolio statement.
          */
         ReportRead: {
+            /** Collection Id */
+            collection_id?: string | null;
+            /** Collection Name */
+            collection_name?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -7125,6 +7242,8 @@ export interface components {
          * @description Per-user settings as returned by the API.
          */
         UserSettingsRead: {
+            /** Active Collection Id */
+            active_collection_id?: string | null;
             /**
              * Currency
              * @default USD
@@ -7158,6 +7277,8 @@ export interface components {
          * @description Allowed mutations on user settings.
          */
         UserSettingsUpdate: {
+            /** Active Collection Id */
+            active_collection_id?: string | null;
             /** Currency */
             currency?: string | null;
             /** Email Announcements Enabled */
@@ -11507,6 +11628,111 @@ export interface operations {
             };
         };
     };
+    bulk_add_items_v1_collections__collection_id__items_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionItemsBulk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionItemsBulkResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_remove_items_v1_collections__collection_id__items_bulk_remove_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionItemsBulk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionItemsBulkResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_items_v1_collections__collection_id__items_transfer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionItemsTransfer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionItemsBulkResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     remove_item_v1_collections__collection_id__items__graded_card_id__delete: {
         parameters: {
             query?: never;
@@ -11601,8 +11827,8 @@ export interface operations {
                 cursor?: number;
                 /** @description Free-text search. Case-insensitive substring match across the card name and set name. Backend search keeps mobile responsive even on 5k-card vaults where client-side filtering would stall. */
                 q?: string | null;
-                /** @description Filter to a single set by exact name (case-sensitive). */
-                set?: string | null;
+                /** @description Filter to sets by exact name (repeatable). */
+                set?: string[] | null;
                 /** @description Filter by grading house slug(s) (e.g. `loupe`, `psa`, `bgs`). Repeatable for multi-select (`?house=psa&house=bgs`); case-insensitive. */
                 house?: string[] | null;
                 /** @description Minimum grade (inclusive). Rows below this are dropped. */
@@ -11681,6 +11907,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_filter_metadata_v1_grades_filters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -11885,6 +12133,8 @@ export interface operations {
             query?: {
                 topMovers?: number;
                 recentScans?: number;
+                /** @description Scope both rails to a single collection (omit for the whole vault) — the same active-collection seam the dashboard uses. */
+                collection_id?: string | null;
             };
             header?: never;
             path?: never;

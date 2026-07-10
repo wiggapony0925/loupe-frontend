@@ -136,13 +136,16 @@ export function PositionRow({
         flexDirection: "row",
         alignItems: "center",
         paddingHorizontal: indent,
-        marginVertical: selected ? 3 : 0,
-        borderRadius: selected !== undefined ? 14 : 0,
-        borderWidth: selected ? 1.5 : 0,
+        // Geometry is CONSTANT across selected/unselected inside a select
+        // session — only colors change. A conditional border/margin makes
+        // rows visibly shrink and jump on every toggle.
+        marginVertical: inSelectSession ? 3 : 0,
+        borderRadius: inSelectSession ? 14 : 0,
+        borderWidth: inSelectSession ? 1.5 : 0,
         borderColor: selected ? withAlpha(p.accent.mint, 0.55) : "transparent",
         backgroundColor: selected
-          ? withAlpha(p.accent.mint, 0.14)
-          : selected === false
+          ? withAlpha(p.accent.mint, 0.1)
+          : inSelectSession
             ? withAlpha(p.ink.dim, 0.03)
             : "transparent",
       }}
@@ -169,12 +172,12 @@ export function PositionRow({
             flexDirection: "row",
             alignItems: "center",
             paddingVertical: 12,
-            paddingHorizontal: selected !== undefined ? 8 : 0,
-            backgroundColor: pressed && selected === undefined
+            paddingHorizontal: inSelectSession ? 8 : 0,
+            backgroundColor: pressed && !inSelectSession
               ? withAlpha(p.ink.dim, 0.06)
               : "transparent",
             transform: [{ scale }],
-            opacity: selected === false ? 0.72 : 1,
+            opacity: selected === false ? 0.8 : 1,
           }}
         >
           {/* Selection checkbox — only rendered while the parent screen

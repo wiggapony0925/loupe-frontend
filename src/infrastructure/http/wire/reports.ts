@@ -22,6 +22,10 @@ export interface UserReportWire {
   period_end: ISODate;
   status: ReportStatus;
   title: string;
+  /** Collection scope; null = whole-vault statement. Name is baked at
+   *  generation time so the archive row stays labelled forever. */
+  collection_id: ID | null;
+  collection_name: string | null;
   file_size_bytes: number | null;
   error_message: string | null;
   generated_at: ISODate | null;
@@ -33,6 +37,8 @@ export interface ReportGenerateWire {
   period: ReportPeriod;
   year: number;
   month?: number; // required when period === "monthly"
+  /** Scope the statement to one collection. Omit = whole vault. */
+  collection_id?: string | null;
 }
 
 export interface ReportDownloadWire {

@@ -11,12 +11,14 @@ import React from "react";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { LineChart } from "lucide-react-native";
+import { FileText, LineChart } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import { useAnalyticsOverview } from "@/application/queries";
 import { GradeBars, PortfolioChart } from "@/presentation/features/analytics";
 import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { LiveAnalyticsCard } from "@/presentation/features/analytics/LiveAnalyticsCard";
+import { StatementsAnalyticsCard } from "@/presentation/features/reports/StatementsAnalyticsCard";
+import { useStatementSummary } from "@/presentation/features/reports/useStatementSummary";
 import {
   ConcentrationCard,
   SetIndexes,
@@ -29,18 +31,14 @@ import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { ErrorState } from "@/presentation/components/ErrorState";
 import { EmptyState } from "@/presentation/components/EmptyState";
-import { ReportsSection } from "@/presentation/features/reports";
 import { COPY } from "@/shared/copy";
 import { normalizeError } from "@/shared/errors";
 import { Price, useMoney } from "@/presentation/components/Price";
-import { useThemedPalette } from "@/presentation/theme/tokens";
-import type {
-  AnalyticsKpis,
-  AnalyticsMoverRow,
-} from "@/infrastructure/repositories/analyticsRepository";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import type { AnalyticsMoverRow } from "@/infrastructure/repositories/analyticsRepository";
 
 export default function AnalyticsScreen() {
-  useThemedPalette();
+  const p = useThemedPalette();
   // The one reusable currency hook — every $ figure on this page renders in
   // the user's chosen display currency and live-updates when they switch.
   const { format } = useMoney();
@@ -52,6 +50,7 @@ export default function AnalyticsScreen() {
   // wall of "—"/"No … yet" placeholders. Detect zero holdings and show one
   // clean empty state with a path to add a card instead.
   const isEmptyCollection = !loading && !erroredNormalized && !!data && data.stats.holdings === 0;
+  const { latestReadyMonthly } = useStatementSummary();
 
   // Value-by-set allocation — same derivation as the web Analytics donut.
   const allocation: DonutDatum[] = (data?.setIndexes ?? [])
@@ -69,17 +68,57 @@ export default function AnalyticsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View>
-          <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-            Performance
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 }}>
-            <Text className="text-3xl font-semibold tracking-tight text-ink">Analytics</Text>
-            <CollectionSwitcher />
+        <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
+          <View style={{ flex: 1 }}>
+            <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+              Performance
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 }}>
+              <Text className="text-3xl font-semibold tracking-tight text-ink">Analytics</Text>
+              <CollectionSwitcher />
+            </View>
           </View>
+          {/* Statements — first-class in the header, like a bank app. */}
+          <Pressable
+            onPress={() => router.push(routes.statements())}
+            accessibilityRole="button"
+            accessibilityLabel="Open statements"
+            hitSlop={8}
+          >
+            {({ pressed }) => (
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: withAlpha(p.accent.mint, 0.35),
+                  backgroundColor: withAlpha(p.accent.mint, pressed ? 0.2 : 0.1),
+                }}
+              >
+                <FileText size={17} color={p.accent.mint} strokeWidth={2.4} />
+                {latestReadyMonthly ? (
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      top: 2,
+                      right: 2,
+                      width: 9,
+                      height: 9,
+                      borderRadius: 5,
+                      backgroundColor: p.accent.mint,
+                      borderWidth: 2,
+                      borderColor: p.bg.base,
+                    }}
+                  />
+                ) : null}
+              </View>
+            )}
+          </Pressable>
         </View>
-
-        <LiveAnalyticsCard />
 
         {erroredNormalized ? (
           <ErrorState
@@ -113,6 +152,10 @@ export default function AnalyticsScreen() {
               <SectionHeader eyebrow="Snapshot" title="Book stats" />
               {loading || !data ? <SkeletonGrid /> : <StatsGrid stats={data.stats} />}
             </View>
+
+            {/* Statements sit with the money summary — a financial document
+                is a first-class artifact (Amex), not a page footer. */}
+            <StatementsAnalyticsCard />
 
             <View>
               <SectionHeader eyebrow="Markets" title="Set indexes" />
@@ -190,14 +233,8 @@ export default function AnalyticsScreen() {
 
             <View>
               <SectionHeader eyebrow="Activity" title="Scanning" />
-              {loading || !data ? (
-                <SkeletonBlock height={120} />
-              ) : (
-                <ScanningKpis kpis={data.kpis} />
-              )}
+              <LiveAnalyticsCard />
             </View>
-
-            <ReportsSection />
           </>
         )}
       </ScrollView>
@@ -289,39 +326,6 @@ function MoverRow({ row }: { row: AnalyticsMoverRow }) {
         </Text>
       </View>
     </Pressable>
-  );
-}
-
-/** Scanning activity KPIs — total scans, scan avg grade, gem rate, and the
- *  grading-house split (web Analytics "Scanning" section parity). */
-function ScanningKpis({ kpis }: { kpis: AnalyticsKpis }) {
-  return (
-    <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-      <KpiCell label="Total scans" value={kpis.totalScans.toLocaleString()} />
-      <KpiCell label="Scan avg grade" value={kpis.avgGrade ? kpis.avgGrade.toFixed(1) : "—"} />
-      <KpiCell label="Scan gem rate" value={`${kpis.gemRatePct.toFixed(0)}%`} />
-      <KpiCell
-        label="Graders"
-        value={`PSA ${kpis.graderSplit.psa} · BGS ${kpis.graderSplit.bgs} · CGC ${kpis.graderSplit.cgc}`}
-        wide
-      />
-    </View>
-  );
-}
-
-function KpiCell({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
-  return (
-    <View
-      className="rounded-xl border border-line bg-bg-elevated px-3 py-2.5"
-      style={{ flexBasis: wide ? "100%" : "31%", flexGrow: 1 }}
-    >
-      <Text className="text-[9px] font-semibold uppercase tracking-[2px] text-ink-dim">
-        {label}
-      </Text>
-      <Text numberOfLines={1} className="mt-1 text-base font-bold text-ink">
-        {value}
-      </Text>
-    </View>
   );
 }
 

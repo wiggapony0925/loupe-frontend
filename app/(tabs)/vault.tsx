@@ -29,7 +29,6 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
-  Trash2,
   X,
 } from "lucide-react-native";
 import { routes } from "@/shared/routes";
@@ -52,8 +51,12 @@ import { ProUsageBanner } from "@/presentation/features/pro";
 import { useMySealedHoldings } from "@/application/queries/collection/useSealed";
 import { useCollectionsOverview } from "@/application/queries/collection/useCollectionsOverview";
 import { useBulkRemoveFromCollection } from "@/application/queries/collection/useCollectionMutations";
+import {
+  useRegisterVaultSelectionChrome,
+  useVaultSelectionChrome,
+} from "@/application/hooks/useVaultSelectionChrome";
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
-import { useVaultFilters, useVaultSelection } from "@/application/stores";
+import { useVaultFilters } from "@/application/stores";
 import {
   activeFilterCount,
   GRADE_MAX,
@@ -107,16 +110,42 @@ export default function VaultScreen() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [organizeOpen, setOrganizeOpen] = useState(false);
   const [removeIds, setRemoveIds] = useState<string[] | null>(null);
-  const [removeBusy, setRemoveBusy] = useState(false);
 
-  // Multi-select state lives in its own store so filter / search
-  // re-renders don't disturb it (and vice versa). The vault page is
-  // the only screen that drives it.
-  const selectionMode = useVaultSelection((s) => s.mode === "select");
-  const selectedIds = useVaultSelection((s) => s.selected);
-  const beginSelectionWith = useVaultSelection((s) => s.beginWith);
-  const toggleSelection = useVaultSelection((s) => s.toggle);
-  const clearSelection = useVaultSelection((s) => s.clear);
+  // Multi-select + island-navbar chrome — store + hook keep the tab bar
+  // and this screen in sync without prop-drilling through TabsLayout.
+  const {
+    selecting: selectionMode,
+    selected: selectedIds,
+    busy: selectionBusy,
+    beginWith: beginSelectionWith,
+    toggle: toggleSelection,
+    selectMany,
+    clear: clearSelection,
+    setBusy: setSelectionBusy,
+  } = useVaultSelectionChrome();
+
+  const openOrganize = useCallback(() => setOrganizeOpen(true), []);
+  const openRemoveSheet = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    setRemoveIds(ids);
+  }, []);
+  const openRemoveFromIsland = useCallback(() => {
+    openRemoveSheet(Array.from(selectedIds));
+  }, [openRemoveSheet, selectedIds]);
+  // Toggle: everything visible selected → exit; otherwise select all
+  // currently filtered holdings (respects search / set / grade filters).
+  const toggleSelectAll = useCallback(() => {
+    const visibleIds = cards.map((c) => c.id);
+    const allSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+    selectMany(allSelected ? [] : visibleIds);
+  }, [cards, selectedIds, selectMany]);
+
+  useRegisterVaultSelectionChrome({
+    onOrganize: openOrganize,
+    onRemove: openRemoveFromIsland,
+    onSelectAll: toggleSelectAll,
+  });
 
   const { collectionId: activeCollectionId } = useActiveCollection();
   const { data: portfolios } = useCollectionsOverview();
@@ -157,15 +186,10 @@ export default function VaultScreen() {
     },
   });
 
-  const openRemoveSheet = useCallback((ids: string[]) => {
-    if (ids.length === 0) return;
-    setRemoveIds(ids);
-  }, []);
-
   const confirmRemove = useCallback(
     async (scope: VaultRemoveScope) => {
       if (!removeIds || removeIds.length === 0) return;
-      setRemoveBusy(true);
+      setSelectionBusy(true);
       try {
         if (scope === "collection") {
           if (!activeCollectionId) {
@@ -186,7 +210,7 @@ export default function VaultScreen() {
           String((err as Error).message ?? err),
         );
       } finally {
-        setRemoveBusy(false);
+        setSelectionBusy(false);
       }
     },
     [
@@ -195,6 +219,7 @@ export default function VaultScreen() {
       bulkRemove,
       deleteMutation,
       clearSelection,
+      setSelectionBusy,
     ],
   );
 
@@ -311,12 +336,13 @@ export default function VaultScreen() {
         ListHeaderComponent={
           <View className="gap-4 pb-3">
             {selectionMode ? (
-              <VaultSelectionBar
+              <VaultSelectionHeader
                 count={selectedIds.size}
-                onCancel={clearSelection}
-                onOrganize={() => setOrganizeOpen(true)}
-                onDelete={() => openRemoveSheet(Array.from(selectedIds))}
-                busy={deleteMutation.isPending || removeBusy}
+                valueUsd={cards.reduce(
+                  (sum, c) =>
+                    selectedIds.has(c.id) ? sum + (c.estimatedValueUsd ?? 0) : sum,
+                  0,
+                )}
               />
             ) : (
               <VaultPageHeader
@@ -522,9 +548,9 @@ export default function VaultScreen() {
         visible={removeIds != null}
         count={removeIds?.length ?? 0}
         collectionName={activeCollectionName}
-        busy={removeBusy}
+        busy={selectionBusy}
         onClose={() => {
-          if (!removeBusy) setRemoveIds(null);
+          if (!selectionBusy) setRemoveIds(null);
         }}
         onConfirm={(scope) => void confirmRemove(scope)}
       />
@@ -897,115 +923,44 @@ function VaultActiveChips() {
 }
 
 /**
- * Selection chrome — same circular icon language as VaultPageHeader
- * (mint organize · solid rose remove · soft cancel). Label leads with
- * marketing clarity: what you can do next, not just a raw count.
+ * Selection header — count + live selected value. Organize / cancel /
+ * remove live on the floating island navbar so the top stays calm.
  */
-function VaultSelectionBar({
+function VaultSelectionHeader({
   count,
-  onCancel,
-  onOrganize,
-  onDelete,
-  busy,
+  valueUsd,
 }: {
   count: number;
-  onCancel: () => void;
-  onOrganize: () => void;
-  onDelete: () => void;
-  busy: boolean;
+  valueUsd: number;
 }) {
   const p = useThemedPalette();
-  const canAct = count > 0 && !busy;
+  const { format } = useMoney();
   const countLabel = count === 1 ? "1 card" : `${count} cards`;
-
   return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "flex-end",
-        gap: 10,
-        minHeight: 56,
-      }}
-    >
-      <View style={{ flex: 1 }}>
-        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-          Selecting
-        </Text>
+    <View style={{ minHeight: 56, justifyContent: "flex-end" }}>
+      <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+        Selecting
+      </Text>
+      <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
         <Text
           className="mt-1 text-3xl font-semibold tracking-tight text-ink"
           style={{ fontVariant: ["tabular-nums"] }}
         >
           {countLabel}
         </Text>
+        {count > 0 && valueUsd > 0 ? (
+          <Text
+            style={{
+              color: p.accent.mint,
+              fontSize: 15,
+              fontWeight: "800",
+              fontVariant: ["tabular-nums"],
+            }}
+          >
+            {format(valueUsd)}
+          </Text>
+        ) : null}
       </View>
-
-      {/* Cancel — same soft circle as Sealed */}
-      <Pressable
-        onPress={onCancel}
-        accessibilityRole="button"
-        accessibilityLabel="Cancel selection"
-        hitSlop={6}
-        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-      >
-        <View
-          style={{
-            width: 38,
-            height: 38,
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: 999,
-            backgroundColor: withAlpha(p.ink.muted, 0.08),
-          }}
-        >
-          <X size={18} color={p.ink.default} strokeWidth={2.5} />
-        </View>
-      </Pressable>
-
-      {/* Organize — mint wash, matches Add */}
-      <Pressable
-        onPress={canAct ? onOrganize : undefined}
-        disabled={!canAct}
-        accessibilityRole="button"
-        accessibilityLabel="Organize selected cards into collections"
-        accessibilityState={{ disabled: !canAct }}
-        style={({ pressed }) => ({ opacity: !canAct ? 0.4 : pressed ? 0.75 : 1 })}
-      >
-        <View
-          style={{
-            width: 38,
-            height: 38,
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: 999,
-            backgroundColor: withAlpha(p.accent.mint, 0.14),
-          }}
-        >
-          <FolderKanban size={18} color={p.accent.mint} strokeWidth={2.5} />
-        </View>
-      </Pressable>
-
-      {/* Remove — solid rose, same weight as Scan mint */}
-      <Pressable
-        onPress={canAct ? onDelete : undefined}
-        disabled={!canAct}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !canAct }}
-        accessibilityLabel={`Remove ${countLabel} from vault`}
-        style={({ pressed }) => ({ opacity: !canAct ? 0.45 : pressed ? 0.85 : 1 })}
-      >
-        <View
-          style={{
-            width: 38,
-            height: 38,
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: 999,
-            backgroundColor: p.accent.rose,
-          }}
-        >
-          <Trash2 size={17} color="#fff" strokeWidth={2.5} />
-        </View>
-      </Pressable>
     </View>
   );
 }
@@ -1041,7 +996,7 @@ function VaultSelectionHint({ collectionName }: { collectionName: string | null 
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={{ color: p.ink.default, fontSize: 13, fontWeight: "700" }}>
-          Tap to select · pencil to edit · trash to remove
+          Tap to select · double-check icon selects everything in view
         </Text>
         <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "500" }}>
           {collectionName

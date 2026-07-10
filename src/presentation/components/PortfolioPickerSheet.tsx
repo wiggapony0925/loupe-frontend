@@ -285,7 +285,7 @@ export function PortfolioPickerSheet({
       <CollectionPromptModal
         visible={promptMode !== null}
         mode={promptMode}
-        initialName={promptCollection?.name}
+        subjectName={promptCollection?.name}
         busy={promptBusy}
         error={promptError}
         onClose={() => {

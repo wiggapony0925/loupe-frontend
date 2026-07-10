@@ -25,6 +25,8 @@ export const routes = {
   vault: () => "/vault" as const,
   analytics: () => "/analytics" as const,
   settings: () => "/settings" as const,
+  /** Statements archive — monthly/yearly PDF portfolio statements. */
+  statements: () => "/statements" as const,
   notifications: () => "/notifications" as const,
   sealed: () => "/sealed" as const,
   sealedDetail: (productId: string) => `/sealed/${productId}` as const,

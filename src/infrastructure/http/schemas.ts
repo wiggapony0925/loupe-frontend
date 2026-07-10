@@ -129,6 +129,8 @@ export const AnalyticsKpisSchema = z.object({
 
 export const AnalyticsSetIndexSchema = z.object({
   setName: z.string(),
+  // Official set logo (backend-resolved); web renders it and mobile now does too.
+  setLogoUrl: z.string().nullable().optional(),
   count: z.number(),
   totalValueUsd: z.number(),
   sharePct: z.number(),

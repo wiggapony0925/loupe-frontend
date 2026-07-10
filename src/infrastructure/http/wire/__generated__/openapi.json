@@ -2543,6 +2543,69 @@
         "title": "CollectionItemAdd",
         "type": "object"
       },
+      "CollectionItemsBulk": {
+        "description": "Body for bulk add / remove / transfer of holdings into a collection.\n\nCap keeps a single request O(n) with a hard upper bound so a buggy\nclient can't fan out tens of thousands of joins in one round-trip.",
+        "properties": {
+          "graded_card_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Graded Card Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "graded_card_ids"
+        ],
+        "title": "CollectionItemsBulk",
+        "type": "object"
+      },
+      "CollectionItemsBulkResult": {
+        "description": "How many memberships changed \u2014 clients refresh overview from this.",
+        "properties": {
+          "added": {
+            "default": 0,
+            "title": "Added",
+            "type": "integer"
+          },
+          "removed": {
+            "default": 0,
+            "title": "Removed",
+            "type": "integer"
+          }
+        },
+        "title": "CollectionItemsBulkResult",
+        "type": "object"
+      },
+      "CollectionItemsTransfer": {
+        "description": "Move holdings from ``source_id`` into the path collection (add + remove).\n\nIdempotent on the destination; missing source membership is a no-op\nfor that id so partial selections stay safe.",
+        "properties": {
+          "graded_card_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Graded Card Ids",
+            "type": "array"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "graded_card_ids"
+        ],
+        "title": "CollectionItemsTransfer",
+        "type": "object"
+      },
       "CollectionMerge": {
         "description": "Body for ``POST /v1/collections/{id}/merge`` \u2014 fold ``source_id`` into\nthe path collection, then delete the (now-empty) source.",
         "properties": {
@@ -6646,6 +6709,18 @@
         "additionalProperties": false,
         "description": "Body for ``POST /v1/reports`` \u2014 generate a new statement.",
         "properties": {
+          "collection_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Id"
+          },
           "month": {
             "anyOf": [
               {
@@ -6688,6 +6763,29 @@
       "ReportRead": {
         "description": "Public representation of a generated portfolio statement.",
         "properties": {
+          "collection_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Id"
+          },
+          "collection_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Name"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -8992,6 +9090,17 @@
       "UserSettingsRead": {
         "description": "Per-user settings as returned by the API.",
         "properties": {
+          "active_collection_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Collection Id"
+          },
           "currency": {
             "default": "USD",
             "title": "Currency",
@@ -9036,6 +9145,18 @@
       "UserSettingsUpdate": {
         "description": "Allowed mutations on user settings.",
         "properties": {
+          "active_collection_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Collection Id"
+          },
           "currency": {
             "anyOf": [
               {
@@ -16156,6 +16277,180 @@
         ]
       }
     },
+    "/v1/collections/{collection_id}/items/bulk": {
+      "post": {
+        "operationId": "bulk_add_items_v1_collections__collection_id__items_bulk_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionItemsBulk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionItemsBulkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add many holdings to a collection (idempotent)",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
+    "/v1/collections/{collection_id}/items/bulk-remove": {
+      "post": {
+        "operationId": "bulk_remove_items_v1_collections__collection_id__items_bulk_remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionItemsBulk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionItemsBulkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove many holdings from a collection",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
+    "/v1/collections/{collection_id}/items/transfer": {
+      "post": {
+        "operationId": "transfer_items_v1_collections__collection_id__items_transfer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionItemsTransfer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionItemsBulkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Move holdings from another collection into this one",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
     "/v1/collections/{collection_id}/items/{graded_card_id}": {
       "delete": {
         "operationId": "remove_item_v1_collections__collection_id__items__graded_card_id__delete",
@@ -16335,21 +16630,23 @@
             }
           },
           {
-            "description": "Filter to a single set by exact name (case-sensitive).",
+            "description": "Filter to sets by exact name (repeatable).",
             "in": "query",
             "name": "set",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "maxLength": 120,
-                  "type": "string"
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "description": "Filter to a single set by exact name (case-sensitive).",
+              "description": "Filter to sets by exact name (repeatable).",
               "title": "Set"
             }
           },
@@ -16625,6 +16922,34 @@
           }
         ],
         "summary": "Create a graded-card record",
+        "tags": [
+          "grades"
+        ]
+      }
+    },
+    "/v1/grades/filters": {
+      "get": {
+        "operationId": "get_filter_metadata_v1_grades_filters_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Filter Metadata V1 Grades Filters Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get metadata and option labels for all filtering options",
         "tags": [
           "grades"
         ]
@@ -16996,6 +17321,25 @@
               "minimum": 1,
               "title": "Recentscans",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Scope both rails to a single collection (omit for the whole vault) \u2014 the same active-collection seam the dashboard uses.",
+            "in": "query",
+            "name": "collection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Scope both rails to a single collection (omit for the whole vault) \u2014 the same active-collection seam the dashboard uses.",
+              "title": "Collection Id"
             }
           }
         ],

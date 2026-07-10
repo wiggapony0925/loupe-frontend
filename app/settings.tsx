@@ -184,6 +184,11 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           onPress={() => router.push("/subscription")}
         />
         <MenuRow
+          title="Statements"
+          subtitle="Monthly & annual PDF portfolio statements"
+          onPress={() => router.push("/statements")}
+        />
+        <MenuRow
           title="Preferences"
           subtitle="Currency, capture, haptics, notifications"
           onPress={() => onNavigate("general")}

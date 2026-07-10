@@ -14,14 +14,16 @@ interface GradeBarsProps {
   buckets: AnalyticsGradeBucket[];
 }
 
-// Visual centre-grade used purely for the row tint (must match backend buckets).
+// Visual centre-grade used purely for the row tint. Keys MUST match the
+// backend's `_GRADE_BUCKET_ORDER` labels ("10", "9.5", … "≤6") or every
+// bar falls back to the same tint.
 const TINT_CENTER: Record<string, number> = {
-  "Gem 10": 10,
-  "Mint 9.5": 9.5,
-  "NM 9": 9,
+  "10": 10,
+  "9.5": 9.5,
+  "9": 9,
   "8": 8,
   "7": 7,
-  "≤ 6": 6,
+  "≤6": 6,
 };
 
 export function GradeBars({ buckets }: GradeBarsProps) {

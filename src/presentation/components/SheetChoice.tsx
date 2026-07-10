@@ -141,29 +141,39 @@ export function SheetPrimaryButton({
   disabled = false,
 }: SheetPrimaryButtonProps) {
   const p = useThemedPalette();
-  const bg = tone === "rose" ? p.accent.rose : p.accent.mint;
-  const fg = tone === "rose" ? "#fff" : "#06140d";
+  // Hard fallbacks so a missing token never yields white-on-white.
+  const bg = tone === "rose" ? p.accent.rose || "#d63b30" : p.accent.mint || "#00a86e";
+  const fg = tone === "rose" ? "#ffffff" : "#06140d";
   const blocked = disabled || loading;
 
+  // All visual styles live on the inner View — style-as-function on
+  // Pressable has been observed to silently drop styles in this app
+  // (same failure as the set-index toggle), so the function only ever
+  // feeds `pressed` into the child.
   return (
     <Pressable
       onPress={blocked ? undefined : onPress}
       disabled={blocked}
       accessibilityRole="button"
       accessibilityState={{ disabled: blocked, busy: loading }}
-      style={({ pressed }) => ({
-        height: 52,
-        borderRadius: 16,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: bg,
-        opacity: blocked ? 0.45 : pressed ? 0.88 : 1,
-      })}
     >
-      {loading ? (
-        <ActivityIndicator color={fg} />
-      ) : (
-        <Text style={{ color: fg, fontSize: 16, fontWeight: "800" }}>{label}</Text>
+      {({ pressed }) => (
+        <View
+          style={{
+            height: 52,
+            borderRadius: 16,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: bg,
+            opacity: blocked ? 0.5 : pressed ? 0.88 : 1,
+          }}
+        >
+          {loading ? (
+            <ActivityIndicator color={fg} />
+          ) : (
+            <Text style={{ color: fg, fontSize: 16, fontWeight: "800" }}>{label}</Text>
+          )}
+        </View>
       )}
     </Pressable>
   );

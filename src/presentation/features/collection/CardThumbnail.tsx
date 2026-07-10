@@ -94,15 +94,16 @@ export function CardThumbnail({
       }
       className="flex-1 overflow-hidden rounded-2xl"
       style={({ pressed }) => ({
-        opacity: pressed ? 0.85 : selected === false ? 0.72 : 1,
-        borderWidth: selected ? 2 : 1,
+        opacity: pressed ? 0.85 : selected === false ? 0.8 : 1,
+        // Constant geometry in a select session — a conditional border
+        // width / scale makes tiles visibly shrink on every toggle.
+        borderWidth: inSelectSession ? 2 : 1,
         borderColor: selected
           ? p.accent.mint
-          : selected === false
+          : inSelectSession
             ? withAlpha(p.line.default, 0.7)
             : p.line.default,
         backgroundColor: p.bg.elevated,
-        transform: selected ? [{ scale: 0.98 }] : undefined,
       })}
     >
       {/* Art — 5:7 card aspect with floating chips */}

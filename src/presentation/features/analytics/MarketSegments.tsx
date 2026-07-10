@@ -5,10 +5,13 @@
  * `GET /v1/analytics/overview` (see `analyticsRepository`). No
  * client-side aggregation lives here.
  */
-import React from "react";
-import { Text, View } from "react-native";
+import React, { useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { Image } from "expo-image";
 import {
   Award,
+  ChevronDown,
+  ChevronUp,
   Layers,
   Sparkles,
   Wallet,
@@ -25,62 +28,135 @@ import type {
 
 /* ─── Set Indexes ───────────────────────────────────────────────────── */
 
+/** Rows shown before the list collapses (web Analytics parity). */
+const VISIBLE_SETS = 4;
+
 interface SetIndexesProps {
   indexes: AnalyticsSetIndex[];
 }
 
 export function SetIndexes({ indexes }: SetIndexesProps) {
   const p = useThemedPalette();
-  const { format } = useMoney();
+  const [showAll, setShowAll] = useState(false);
   if (indexes.length === 0) return null;
+  const visible = showAll ? indexes : indexes.slice(0, VISIBLE_SETS);
+  const hiddenCount = indexes.length - VISIBLE_SETS;
   return (
     <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
-      {indexes.map((idx, i) => {
-        const hasChange = idx.changePct1y != null;
-        const up = hasChange ? idx.changePct1y! >= 0 : true;
-        const tint = !hasChange ? p.ink.muted : up ? p.accent.mint : p.accent.rose;
-        return (
+      {visible.map((idx, i) => (
+        <SetIndexRow key={idx.setName} idx={idx} first={i === 0} />
+      ))}
+      {indexes.length > VISIBLE_SETS ? (
+        <Pressable
+          onPress={() => setShowAll((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            showAll ? "Show fewer sets" : `Show ${hiddenCount} more sets`
+          }
+          style={({ pressed }) => ({
+            alignItems: "center",
+            paddingVertical: 10,
+            borderTopWidth: 1,
+            borderTopColor: withAlpha(p.ink.dim, 0.14),
+            opacity: pressed ? 0.75 : 1,
+          })}
+        >
+          {/* Inner row keeps label + chevron on ONE line regardless of
+              outer layout — pill wash so the control reads as a button. */}
           <View
-            key={idx.setName}
-            className={`px-4 py-3 ${i > 0 ? "border-t border-line/60" : ""}`}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              paddingHorizontal: 14,
+              paddingVertical: 7,
+              borderRadius: 999,
+              backgroundColor: withAlpha(p.accent.mint, 0.1),
+            }}
           >
-            <View className="flex-row items-center gap-3">
-              <View style={{ flex: 1.2 }}>
-                <Text numberOfLines={1} className="text-sm font-semibold text-ink">
-                  {idx.setName}
-                </Text>
-                <Text className="text-[11px] text-ink-muted">
-                  {idx.count} {idx.count === 1 ? "holding" : "holdings"} ·{" "}
-                  {idx.sharePct.toFixed(1)}% of book
-                </Text>
-              </View>
-              <View style={{ minWidth: 84, alignItems: "flex-end" }}>
-                <Text className="text-sm font-bold text-ink">
-                  {format(idx.totalValueUsd)}
-                </Text>
-                <Text style={{ color: tint, fontSize: 11, fontWeight: "700" }}>
-                  {hasChange
-                    ? `${up ? "▲" : "▼"} ${Math.abs(idx.changePct1y!).toFixed(2)}%`
-                    : "NO DATA"}
-                </Text>
-              </View>
-            </View>
-            <View
-              className="mt-2 h-1 overflow-hidden rounded-full"
-              style={{ backgroundColor: withAlpha(p.ink.dim, 0.12) }}
+            <Text
+              numberOfLines={1}
+              style={{ color: p.accent.mint, fontSize: 12.5, fontWeight: "800" }}
             >
-              <View
-                style={{
-                  height: "100%",
-                  width: `${Math.max(2, idx.sharePct)}%`,
-                  backgroundColor: tint,
-                  borderRadius: 999,
-                }}
-              />
-            </View>
+              {showAll ? "Show less" : `Show ${hiddenCount} more sets`}
+            </Text>
+            {showAll ? (
+              <ChevronUp size={14} color={p.accent.mint} strokeWidth={2.8} />
+            ) : (
+              <ChevronDown size={14} color={p.accent.mint} strokeWidth={2.8} />
+            )}
           </View>
-        );
-      })}
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function SetIndexRow({ idx, first }: { idx: AnalyticsSetIndex; first: boolean }) {
+  const p = useThemedPalette();
+  const { format } = useMoney();
+  const hasChange = idx.changePct1y != null;
+  const up = hasChange ? idx.changePct1y! >= 0 : true;
+  const tint = !hasChange ? p.ink.muted : up ? p.accent.mint : p.accent.rose;
+  return (
+    <View className={`px-4 py-3 ${first ? "" : "border-t border-line/60"}`}>
+      <View className="flex-row items-center gap-3">
+        {/* Official set logo — Layers glyph when the catalog has none. */}
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: withAlpha(p.ink.dim, 0.08),
+            overflow: "hidden",
+          }}
+        >
+          {idx.setLogoUrl ? (
+            <Image
+              source={{ uri: idx.setLogoUrl }}
+              style={{ width: 28, height: 28 }}
+              contentFit="contain"
+              transition={120}
+            />
+          ) : (
+            <Layers size={15} color={p.ink.muted} strokeWidth={2.2} />
+          )}
+        </View>
+        <View style={{ flex: 1.2, minWidth: 0 }}>
+          <Text numberOfLines={1} className="text-sm font-semibold text-ink">
+            {idx.setName}
+          </Text>
+          <Text className="text-[11px] text-ink-muted">
+            {idx.count} {idx.count === 1 ? "holding" : "holdings"} ·{" "}
+            {idx.sharePct.toFixed(1)}% of book
+          </Text>
+        </View>
+        <View style={{ minWidth: 84, alignItems: "flex-end" }}>
+          <Text className="text-sm font-bold text-ink">
+            {format(idx.totalValueUsd)}
+          </Text>
+          <Text style={{ color: tint, fontSize: 11, fontWeight: "700" }}>
+            {hasChange
+              ? `${up ? "▲" : "▼"} ${Math.abs(idx.changePct1y!).toFixed(2)}%`
+              : "NO DATA"}
+          </Text>
+        </View>
+      </View>
+      <View
+        className="mt-2 h-1 overflow-hidden rounded-full"
+        style={{ backgroundColor: withAlpha(p.ink.dim, 0.12) }}
+      >
+        <View
+          style={{
+            height: "100%",
+            width: `${Math.max(2, idx.sharePct)}%`,
+            backgroundColor: tint,
+            borderRadius: 999,
+          }}
+        />
+      </View>
     </View>
   );
 }

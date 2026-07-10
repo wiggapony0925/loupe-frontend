@@ -30,6 +30,11 @@ interface BottomSheetProps {
   maxHeight?: ViewStyle["maxHeight"];
   /** Disable the close control while a mutation is in flight. */
   closeDisabled?: boolean;
+  /**
+   * Hug content height instead of filling the iOS page sheet.
+   * Use for short confirms (remove card) so the sheet isn't mostly empty.
+   */
+  compact?: boolean;
   children: React.ReactNode;
 }
 
@@ -42,27 +47,29 @@ export function BottomSheet({
   subtitleLines = 1,
   maxHeight = "82%",
   closeDisabled = false,
+  compact = false,
   children,
 }: BottomSheetProps) {
   const p = useThemedPalette();
-  const isIOS = Platform.OS === "ios";
+  // Compact confirms always present as a bottom overlay so height hugs content.
+  const sheetFromBottom = Platform.OS !== "ios" || compact;
 
   return (
     <Modal
       visible={visible}
       onRequestClose={closeDisabled ? () => {} : onClose}
       animationType="slide"
-      presentationStyle={isIOS ? "pageSheet" : "overFullScreen"}
-      transparent={!isIOS}
+      presentationStyle={sheetFromBottom ? "overFullScreen" : "pageSheet"}
+      transparent={sheetFromBottom}
     >
       <View
         style={{
           flex: 1,
-          justifyContent: isIOS ? "flex-start" : "flex-end",
-          backgroundColor: isIOS ? p.bg.base : "rgba(0,0,0,0.45)",
+          justifyContent: sheetFromBottom ? "flex-end" : "flex-start",
+          backgroundColor: sheetFromBottom ? "rgba(0,0,0,0.45)" : p.bg.base,
         }}
       >
-        {!isIOS ? (
+        {sheetFromBottom ? (
           <Pressable
             style={{ flex: 1 }}
             onPress={closeDisabled ? undefined : onClose}
@@ -70,18 +77,18 @@ export function BottomSheet({
         ) : null}
 
         <SafeAreaView
-          edges={isIOS ? ["top"] : ["bottom"]}
+          edges={sheetFromBottom ? ["bottom"] : ["top"]}
           style={{
-            flex: isIOS ? 1 : undefined,
-            maxHeight: isIOS ? undefined : maxHeight,
+            flex: sheetFromBottom ? undefined : 1,
+            maxHeight: sheetFromBottom ? maxHeight : undefined,
             paddingHorizontal: spacing.xl,
             paddingBottom: spacing.xl,
             backgroundColor: p.bg.base,
-            borderTopLeftRadius: isIOS ? 0 : radius.xl,
-            borderTopRightRadius: isIOS ? 0 : radius.xl,
+            borderTopLeftRadius: sheetFromBottom ? radius.xl : 0,
+            borderTopRightRadius: sheetFromBottom ? radius.xl : 0,
           }}
         >
-          {!isIOS ? (
+          {sheetFromBottom ? (
             <View style={{ alignItems: "center", paddingVertical: spacing.sm }}>
               <View
                 style={{ width: 38, height: 4, borderRadius: 2, backgroundColor: p.line.default }}

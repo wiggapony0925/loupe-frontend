@@ -124,8 +124,9 @@ export function VaultCollectionActionSheet({
       subtitle="Sort into collections without leaving your vault."
       subtitleLines={2}
       maxHeight="88%"
+      compact
     >
-      <View style={{ gap: spacing.md, flex: 1 }}>
+      <View style={{ gap: spacing.md }}>
         <View style={{ flexDirection: "row", gap: 8 }}>
           {(
             [
@@ -245,9 +246,7 @@ export function VaultCollectionActionSheet({
           </ScrollView>
         )}
 
-        <View style={{ flex: 1 }} />
-
-        <View style={{ gap: spacing.sm }}>
+        <View style={{ gap: spacing.sm, paddingTop: spacing.sm }}>
           <SheetPrimaryButton
             label={
               action === "add"
@@ -266,15 +265,20 @@ export function VaultCollectionActionSheet({
             accessibilityRole="button"
             accessibilityLabel="Cancel"
             hitSlop={8}
-            style={({ pressed }) => ({
-              alignItems: "center",
-              paddingVertical: 12,
-              opacity: busy ? 0.4 : pressed ? 0.7 : 1,
-            })}
           >
-            <Text style={{ color: p.ink.muted, fontSize: 14, fontWeight: "600" }}>
-              Cancel
-            </Text>
+            {({ pressed }) => (
+              <View
+                style={{
+                  alignItems: "center",
+                  paddingVertical: 12,
+                  opacity: busy ? 0.4 : pressed ? 0.7 : 1,
+                }}
+              >
+                <Text style={{ color: p.ink.muted, fontSize: 14, fontWeight: "600" }}>
+                  Cancel
+                </Text>
+              </View>
+            )}
           </Pressable>
         </View>
       </View>

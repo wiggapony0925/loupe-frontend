@@ -39,8 +39,14 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useSettings } from "@/application/stores/settingsStore";
+import { useVaultSelection } from "@/application/stores/vaultSelectionStore";
 import { routes } from "@/shared/routes";
-import { LiquidGlassView } from "@/presentation/components/LiquidGlassView";
+import { IslandNavPill } from "@/presentation/navigation/IslandNavPill";
+import {
+  islandMorphIn,
+  islandMorphOut,
+} from "@/presentation/navigation/islandNavMotion";
+import { VaultSelectionIsland } from "@/presentation/navigation/VaultSelectionIsland";
 
 const isIOS = Platform.OS === "ios";
 
@@ -188,6 +194,17 @@ function LoupeTabBar(
   const insets = useSafeAreaInsets();
 
   const activeName = state.routes[state.index]?.name ?? "index";
+  const selectionMode = useVaultSelection((s) => s.mode === "select");
+  const clearSelection = useVaultSelection((s) => s.clear);
+  const vaultSelecting = selectionMode && activeName === "vault";
+
+  // Leaving Vault while selecting would leave a ghost mode — clear it.
+  useEffect(() => {
+    if (selectionMode && activeName !== "vault") {
+      clearSelection();
+    }
+  }, [activeName, selectionMode, clearSelection]);
+
   // Item layout (x + width) in the pill's coordinate space, keyed by route.
   const layouts = useRef<Record<string, { x: number; width: number }>>({});
   const highlightX = useSharedValue(0);
@@ -270,6 +287,27 @@ function LoupeTabBar(
   }));
 
   if (!isIOS) {
+    // Android: overlay the selection island above the stock bar when active.
+    if (vaultSelecting) {
+      return (
+        <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+          <View
+            pointerEvents="box-none"
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: Math.max(insets.bottom, 10),
+              alignItems: "center",
+            }}
+          >
+            <Animated.View entering={islandMorphIn} exiting={islandMorphOut}>
+              <VaultSelectionIsland />
+            </Animated.View>
+          </View>
+        </View>
+      );
+    }
     return <BottomTabBar {...props} />;
   }
 
@@ -293,81 +331,72 @@ function LoupeTabBar(
         alignItems: "center",
       }}
     >
-      <GestureDetector gesture={pan}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            paddingHorizontal: 10,
-            height: 60,
-            borderRadius: 30,
-            overflow: "hidden",
-            shadowColor: "#000",
-            shadowOpacity: 0.22,
-            shadowRadius: 20,
-            shadowOffset: { width: 0, height: 10 },
-          }}
+      {vaultSelecting ? (
+        <Animated.View
+          key="selection-island"
+          entering={islandMorphIn}
+          exiting={islandMorphOut}
         >
-          <LiquidGlassView
-            glassStyle="regular"
-            intensity={40}
-            tint="default"
-            style={{
-              ...StyleSheet.absoluteFillObject,
-              borderRadius: 30,
-              borderWidth: StyleSheet.hairlineWidth,
-              borderColor: withAlpha(p.ink.default, 0.14),
-            }}
-          />
-
-          {/* Sliding active-tab highlight — follows the finger while dragging. */}
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              {
-                position: "absolute",
-                top: (60 - ITEM_H) / 2,
-                height: ITEM_H,
-                borderRadius: 999,
-                backgroundColor: withAlpha(p.accent.mint, 0.16),
-                borderWidth: StyleSheet.hairlineWidth,
-                borderColor: withAlpha(p.accent.mint, 0.5),
-              },
-              highlightStyle,
-            ]}
-          />
-
-          {left.map((t) => (
-            <NavItem
-              key={t.name}
-              tab={t}
-              active={(dragName ?? activeName) === t.name}
-              palette={p}
-              onPress={() => tap(t.name)}
-              onLayout={(x, width) => {
-                layouts.current[t.name] = { x, width };
-                if (t.name === activeName && !dragName) moveHighlightTo(t.name, false);
-              }}
+          <VaultSelectionIsland />
+        </Animated.View>
+      ) : (
+        <Animated.View
+          key="tab-island"
+          entering={islandMorphIn}
+          exiting={islandMorphOut}
+        >
+          <GestureDetector gesture={pan}>
+            <IslandNavPill>
+            {/* Sliding active-tab highlight — follows the finger while dragging. */}
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                {
+                  position: "absolute",
+                  top: (60 - ITEM_H) / 2,
+                  height: ITEM_H,
+                  borderRadius: 999,
+                  backgroundColor: withAlpha(p.accent.mint, 0.16),
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: withAlpha(p.accent.mint, 0.5),
+                },
+                highlightStyle,
+              ]}
             />
-          ))}
 
-          <ScanFab palette={p} variant="ios" />
+            {left.map((t) => (
+              <NavItem
+                key={t.name}
+                tab={t}
+                active={(dragName ?? activeName) === t.name}
+                palette={p}
+                onPress={() => tap(t.name)}
+                onLayout={(x, width) => {
+                  layouts.current[t.name] = { x, width };
+                  if (t.name === activeName && !dragName) moveHighlightTo(t.name, false);
+                }}
+              />
+            ))}
 
-          {right.map((t) => (
-            <NavItem
-              key={t.name}
-              tab={t}
-              active={(dragName ?? activeName) === t.name}
-              palette={p}
-              onPress={() => tap(t.name)}
-              onLayout={(x, width) => {
-                layouts.current[t.name] = { x, width };
-                if (t.name === activeName && !dragName) moveHighlightTo(t.name, false);
-              }}
-            />
-          ))}
-        </View>
-      </GestureDetector>
+            <ScanFab palette={p} variant="ios" />
+
+            {right.map((t) => (
+              <NavItem
+                key={t.name}
+                tab={t}
+                active={(dragName ?? activeName) === t.name}
+                palette={p}
+                onPress={() => tap(t.name)}
+                onLayout={(x, width) => {
+                  layouts.current[t.name] = { x, width };
+                  if (t.name === activeName && !dragName) moveHighlightTo(t.name, false);
+                }}
+              />
+            ))}
+          </IslandNavPill>
+        </GestureDetector>
+        </Animated.View>
+      )}
     </View>
   );
 }

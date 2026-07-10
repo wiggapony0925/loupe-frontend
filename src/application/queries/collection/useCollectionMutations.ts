@@ -20,9 +20,11 @@ export function useCreateCollection() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: CreateCollectionPayload) => {
+      // Must use `json:` so apiFetch sets Content-Type — raw `body:` alone
+      // makes FastAPI reject the payload as "Request validation failed."
       return apiFetch(ENDPOINTS.collections.list, {
         method: "POST",
-        body: JSON.stringify(payload),
+        json: payload,
       });
     },
     onSuccess: () => {
@@ -37,7 +39,7 @@ export function useUpdateCollection() {
     mutationFn: async ({ id, payload }: { id: string; payload: UpdateCollectionPayload }) => {
       return apiFetch(ENDPOINTS.collections.item(id), {
         method: "PATCH",
-        body: JSON.stringify(payload),
+        json: payload,
       });
     },
     onSuccess: () => {

@@ -1,9 +1,9 @@
 /**
- * VaultRemoveSheet — choose how to remove selected holdings.
+ * VaultRemoveSheet — confirm removing selected holdings.
  *
- * Built on the shared BottomSheet + SheetChoice primitives so it matches
- * ExternalBrowserSheet / Organize. When viewing a named collection the user
- * can drop membership only (cards stay in All) or delete from the vault.
+ * Compact BottomSheet (no full-page dead space). In a named collection the
+ * user can drop membership only or delete from the vault; in All there is
+ * a single destructive confirm.
  */
 import React, { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -49,8 +49,13 @@ export function VaultRemoveSheet({
   }, [visible, inCollection, count]);
 
   const subtitle = inCollection
-    ? `Cards removed from a collection stay in All. Deleting from the portfolio removes them everywhere.`
+    ? "Cards removed from a collection stay in All. Deleting from the portfolio removes them everywhere."
     : `Permanently removes ${noun} from your vault. The catalog card stays searchable.`;
+
+  const confirmLabel =
+    picked === "collection"
+      ? `Remove from ${collectionName}`
+      : "Remove from portfolio";
 
   return (
     <BottomSheet
@@ -61,11 +66,12 @@ export function VaultRemoveSheet({
       title={`${count} ${noun}`}
       subtitle={subtitle}
       subtitleLines={3}
-      maxHeight="78%"
+      maxHeight="72%"
+      compact
     >
-      <View style={{ gap: spacing.lg, flex: 1 }}>
-        <SheetChoiceGroup>
-          {inCollection ? (
+      <View style={{ gap: spacing.lg }}>
+        {inCollection ? (
+          <SheetChoiceGroup>
             <SheetChoiceRow
               icon={FolderMinus}
               accent={p.accent.mint}
@@ -73,29 +79,60 @@ export function VaultRemoveSheet({
               subtitle="Keeps them in your main portfolio (All)."
               selected={picked === "collection"}
               onPress={() => setPicked("collection")}
-              isLast={false}
             />
-          ) : null}
-          <SheetChoiceRow
-            icon={Trash2}
-            accent={p.accent.rose}
-            title="Remove from portfolio"
-            subtitle="Deletes the holdings from your vault for good."
-            selected={picked === "portfolio"}
-            onPress={() => setPicked("portfolio")}
-            isLast
-          />
-        </SheetChoiceGroup>
+            <SheetChoiceRow
+              icon={Trash2}
+              accent={p.accent.rose}
+              title="Remove from portfolio"
+              subtitle="Deletes the holdings from your vault for good."
+              selected={picked === "portfolio"}
+              onPress={() => setPicked("portfolio")}
+              isLast
+            />
+          </SheetChoiceGroup>
+        ) : (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: spacing.md,
+              padding: spacing.lg,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: p.line.default,
+              backgroundColor: p.bg.elevated,
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(214, 59, 48, 0.14)",
+              }}
+            >
+              <Trash2 size={18} color={p.accent.rose} strokeWidth={2.4} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+              <Text
+                style={{ color: p.ink.default, fontSize: 14, fontWeight: "800" }}
+              >
+                Remove from portfolio
+              </Text>
+              <Text
+                style={{ color: p.ink.muted, fontSize: 12, lineHeight: 16 }}
+              >
+                Deletes {noun} from your vault. Catalog entries stay searchable.
+              </Text>
+            </View>
+          </View>
+        )}
 
-        <View style={{ flex: 1 }} />
-
-        <View style={{ gap: spacing.sm }}>
+        <View style={{ gap: spacing.sm, paddingTop: spacing.sm }}>
           <SheetPrimaryButton
-            label={
-              picked === "collection"
-                ? `Remove from ${collectionName}`
-                : "Remove from portfolio"
-            }
+            label={confirmLabel}
             tone={picked === "portfolio" ? "rose" : "mint"}
             loading={busy}
             onPress={() => onConfirm(picked)}
@@ -106,15 +143,20 @@ export function VaultRemoveSheet({
             accessibilityRole="button"
             accessibilityLabel="Cancel"
             hitSlop={8}
-            style={({ pressed }) => ({
-              alignItems: "center",
-              paddingVertical: 12,
-              opacity: busy ? 0.4 : pressed ? 0.7 : 1,
-            })}
           >
-            <Text style={{ color: p.ink.muted, fontSize: 14, fontWeight: "600" }}>
-              Cancel
-            </Text>
+            {({ pressed }) => (
+              <View
+                style={{
+                  alignItems: "center",
+                  paddingVertical: 12,
+                  opacity: busy ? 0.4 : pressed ? 0.7 : 1,
+                }}
+              >
+                <Text style={{ color: p.ink.muted, fontSize: 14, fontWeight: "600" }}>
+                  Cancel
+                </Text>
+              </View>
+            )}
           </Pressable>
         </View>
       </View>
