@@ -168,34 +168,41 @@ export default function SearchScreen() {
   const clearRecent = useRecentSearches((s) => s.clear);
   const removeRecent = useRecentSearches((s) => s.remove);
   const [inputFocused, setInputFocused] = useState(false);
+  const debouncedQuery = useDebouncedValue(query.trim(), 200);
+  const showLive = debouncedQuery.length >= 2;
 
   const metaQuery = useFilterMetadata();
   const meta = metaQuery.data;
   const tcgChips = meta?.tcgs ?? TCG_CHIPS;
 
-  // Both fetch the signed-in user's own data — gate so they don't run while
-  // signed out (and don't fire token-less before auth hydrates).
   const { isAuthenticated } = useAuth();
+  // Lightweight owned lookup for badges — top 150 by value, not the full vault.
   const collection = useQuery({
-    queryKey: queryKeys.collection.list(),
-    queryFn: () => fetchCollection(),
+    queryKey: queryKeys.collection.list({ limit: 150, sort: "value_desc", lookup: true }),
+    queryFn: () => fetchCollection({ limit: 150, sort: "value_desc" }),
     enabled: isAuthenticated,
-    staleTime: 30_000,
+    staleTime: 120_000,
   });
+
+  const showResults =
+    query.trim().length > 0 || activeCategory !== null || quickfilter !== "all";
+  const showLocalResults = showResults && !showLive;
+
   const sparks = useQuery({
     queryKey: queryKeys.cards.sparklines(),
     queryFn: fetchCardSparklines,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && showLocalResults,
     staleTime: 60_000,
   });
   const catalog = useQuery({
     queryKey: queryKeys.market.catalog(),
     queryFn: fetchMarketCatalog,
+    enabled: showLocalResults,
     staleTime: 5 * 60_000,
   });
 
   const owned = useMemo(() => collection.data ?? [], [collection.data]);
-  const ownedIds = useMemo(() => new Set(owned.map((c) => c.id)), [owned]);
+  const ownedGradeIds = useMemo(() => new Set(owned.map((c) => c.id)), [owned]);
 
   // Merge catalog with vault → unified searchable universe.
   const cards: SearchableCard[] = useMemo(() => {
@@ -210,7 +217,7 @@ export default function SearchScreen() {
       owned: true,
     }));
     const fromCatalog: SearchableCard[] = (catalog.data ?? [])
-      .filter((e) => !ownedIds.has(e.id))
+      .filter((e) => !ownedGradeIds.has(e.id))
       .map((e) => ({
         id: e.id,
         title: e.title,
@@ -222,7 +229,7 @@ export default function SearchScreen() {
         owned: false,
       }));
     return [...fromOwned, ...fromCatalog];
-  }, [owned, catalog.data, ownedIds]);
+  }, [owned, catalog.data, ownedGradeIds]);
 
   const sparkMap = useMemo(
     () => new Map((sparks.data ?? []).map((s) => [s.cardId, s])),
@@ -250,15 +257,7 @@ export default function SearchScreen() {
     return out;
   }, [cards, activeCategory, quickfilter, query]);
 
-  const showResults = query.trim().length > 0 || activeCategory !== null || quickfilter !== "all";
-
   // ── Live backend catalog search ────────────────────────────────────────────
-  // Debounce the input by 200ms; map the active category to a backend `tcg`
-  // facet (unsupported facets fall through as "all"). The hook itself enforces
-  // the ≥2-character floor.
-  const debouncedQuery = useDebouncedValue(query.trim(), 200);
-  // Explicit chip beats category fallback; chips for unsupported facets
-  // collapse to "all" so we still hit the wire and don't 400.
   const chipTcg: TcgChip = SUPPORTED_TCGS.has(selectedTcg) ? selectedTcg : "all";
   const liveTcg: TcgKey | "all" =
     chipTcg !== "all"
@@ -266,28 +265,21 @@ export default function SearchScreen() {
       : activeCategory === "pokemon" || activeCategory === "magic" || activeCategory === "yugioh"
         ? activeCategory
         : "all";
-  // Deep, TRUE-paginated search so every printing of a popular name is
-  // reachable (Pikachu 177, Charizard 400+) instead of a capped top-20.
   const live = useCardSearchPaged({ q: debouncedQuery, tcg: liveTcg, pageSize: 24 });
-  const liveResults = React.useMemo(
-    () => (live.data?.pages ?? []).flatMap((pg) => pg.results ?? []),
-    [live.data],
-  );
+  const liveResults = React.useMemo(() => {
+    let out = (live.data?.pages ?? []).flatMap((pg) => pg.results ?? []);
+    if (quickfilter === "vintage") {
+      out = out.filter((c) => (c.year ?? 0) < 2010);
+    }
+    if (quickfilter === "modern") {
+      out = out.filter((c) => (c.year ?? 9999) >= 2020);
+    }
+    return out;
+  }, [live.data, quickfilter]);
   const liveTotal = live.data?.pages?.[0]?.total ?? liveResults.length;
   const liveError = live.data?.pages?.[0]?.error;
   const livePartial = live.data?.pages?.[0]?.partial;
-  const showLive = debouncedQuery.length >= 2;
-  // Sealed catalog runs alongside singles — same debounced query, same
-  // ≥2-char gate — so "booster box" surfaces alongside cards instead of
-  // returning an empty live panel. Hits the local DB so it's cheap and
-  // doesn't compete with the upstream TCG fan-out.
   const sealed = useSealedSearch(showLive ? debouncedQuery : "");
-  // When the user is actively typing a free-text query the *live catalog*
-  // is the authoritative answer — the local vault/catalog filter below is
-  // almost always empty and produces a confusing "No matches" panel
-  // directly under a successful live result. Suppress the local filtered
-  // block whenever live search is the primary surface.
-  const showLocalResults = showResults && !showLive;
 
   const commitRecentSearch = (q: string) => {
     pushRecent(q);

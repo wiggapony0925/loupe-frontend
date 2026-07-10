@@ -1,13 +1,16 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
+  LayoutAnimation,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -80,6 +83,28 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 type ViewMode = "list" | "grid";
 
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+function animateVaultSelectionChrome() {
+  LayoutAnimation.configureNext({
+    duration: 240,
+    create: {
+      type: LayoutAnimation.Types.easeInEaseOut,
+      property: LayoutAnimation.Properties.opacity,
+    },
+    update: { type: LayoutAnimation.Types.easeInEaseOut },
+    delete: {
+      type: LayoutAnimation.Types.easeInEaseOut,
+      property: LayoutAnimation.Properties.opacity,
+    },
+  });
+}
+
 type SealedVaultStats = {
   holdingCount: number;
   unitCount: number;
@@ -103,6 +128,8 @@ export default function VaultScreen() {
     availableSets,
     availableTags,
     summary,
+    filteredCount,
+    isCountFetching,
   } = useFilteredCollection();
   const { isAuthenticated } = useAuth();
   const sealedHoldings = useMySealedHoldings({ includeOpened: false });
@@ -146,6 +173,10 @@ export default function VaultScreen() {
     onRemove: openRemoveFromIsland,
     onSelectAll: toggleSelectAll,
   });
+
+  useEffect(() => {
+    animateVaultSelectionChrome();
+  }, [selectionMode]);
 
   const { collectionId: activeCollectionId } = useActiveCollection();
   const { data: portfolios } = useCollectionsOverview();
@@ -536,7 +567,8 @@ export default function VaultScreen() {
         onClose={() => setFilterOpen(false)}
         availableSets={availableSets}
         availableTags={availableTags}
-        resultCount={cards.length}
+        resultCount={filteredCount}
+        isCountFetching={isCountFetching}
       />
       <VaultCollectionActionSheet
         visible={organizeOpen}

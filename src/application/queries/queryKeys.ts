@@ -101,10 +101,27 @@ export const queryKeys = {
       sets?: string[];
       houses?: string[];
       minGrade?: number;
+      maxGrade?: number;
+      minValue?: number;
+      maxValue?: number;
+      tags?: string[];
       sort?: string;
       cursor?: number;
       limit?: number;
+      collectionId?: string | null;
+      lookup?: boolean;
     }) => ["collection", "list", params ?? {}] as const,
+    count: (params?: {
+      q?: string;
+      sets?: string[];
+      houses?: string[];
+      minGrade?: number;
+      maxGrade?: number;
+      minValue?: number;
+      maxValue?: number;
+      tags?: string[];
+      collectionId?: string | null;
+    }) => ["collection", "count", params ?? {}] as const,
     summary: () => ["collection", "summary"] as const,
     filters: () => ["collection", "filters"] as const,
   },

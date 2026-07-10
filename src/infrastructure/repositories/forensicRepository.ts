@@ -163,10 +163,7 @@ export interface CollectionQueryParams {
   limit?: number;
 }
 
-export async function fetchCollection(params?: CollectionQueryParams): Promise<CollectionCard[]> {
-  // Serialize only the keys the caller actually supplied so we don't
-  // push `set=undefined` over the wire — keeps the URL tidy and the
-  // query-key stable across React renders.
+function collectionParamsToSearch(params?: CollectionQueryParams): string {
   const search = new URLSearchParams();
   if (params?.q) search.set("q", params.q);
   for (const s of params?.sets ?? []) search.append("set", s);
@@ -183,12 +180,24 @@ export async function fetchCollection(params?: CollectionQueryParams): Promise<C
   if (params?.cursor !== undefined && params.cursor > 0)
     search.set("cursor", String(params.cursor));
   if (params?.limit !== undefined) search.set("limit", String(params.limit));
-  const qs = search.toString();
+  return search.toString();
+}
+
+export async function fetchCollection(params?: CollectionQueryParams): Promise<CollectionCard[]> {
+  const qs = collectionParamsToSearch(params);
   const url = qs ? `/v1/grades?${qs}` : "/v1/grades";
   const wire = await apiFetch<GradedCardWire[]>(url, {
     schema: GradedCardListSchema,
   });
   return wire.map(toCollectionCard);
+}
+
+/** Fast filtered count — powers the vault filter sheet footer. */
+export async function fetchCollectionCount(params?: CollectionQueryParams): Promise<number> {
+  const qs = collectionParamsToSearch(params);
+  const url = qs ? `/v1/grades/count?${qs}` : "/v1/grades/count";
+  const wire = await apiFetch<{ count: number }>(url);
+  return wire.count ?? 0;
 }
 
 export interface CollectionSummary {

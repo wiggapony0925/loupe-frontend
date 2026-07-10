@@ -1,28 +1,23 @@
 /**
- * Shared island navbar morph — subtle scale + lift, no spring bounce.
- * Used when swapping between the tab dial and vault selection chrome.
+ * Shared island navbar motion — the glass pill shell stays opaque; only
+ * inner content crossfades so the bar never flashes transparent.
  */
-import { Easing, FadeIn, Keyframe } from "react-native-reanimated";
+import { Easing, FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 
 const easeOut = Easing.out(Easing.cubic);
 
-export const islandMorphIn = FadeIn.duration(210)
+/** Width / layout morph on the persistent pill shell. */
+export const islandShellLayout = LinearTransition.duration(220).easing(easeOut);
+
+/** Inner content swap (tab dial ↔ selection actions). */
+export const islandContentIn = FadeIn.duration(220)
   .easing(easeOut)
   .withInitialValues({
     opacity: 0,
-    transform: [{ scale: 0.975 }, { translateY: 3 }],
+    transform: [{ scale: 0.94 }],
   });
 
-export const islandMorphOut = new Keyframe({
-  from: {
-    opacity: 1,
-    transform: [{ scale: 1 }, { translateY: 0 }],
-  },
-  to: {
-    opacity: 0,
-    transform: [{ scale: 0.985 }, { translateY: 2 }],
-  },
-}).duration(140);
+export const islandContentOut = FadeOut.duration(150).easing(Easing.in(Easing.quad));
 
 export const islandBadgeIn = FadeIn.duration(120)
   .easing(Easing.out(Easing.quad))

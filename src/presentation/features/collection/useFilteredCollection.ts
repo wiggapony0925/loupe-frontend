@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchCollection,
+  fetchCollectionCount,
   fetchCollectionSummary,
   type CollectionQueryParams,
 } from "@/infrastructure/repositories/forensicRepository";
@@ -10,7 +11,6 @@ import {
   GRADE_MAX,
   GRADE_MIN,
   useVaultFilters,
-  type VaultType,
 } from "@/application/stores/vaultStore";
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { useAuth } from "@/presentation/providers/AuthProvider";
@@ -22,18 +22,9 @@ import { useAuth } from "@/presentation/providers/AuthProvider";
  * backend do the SQL — keeps mobile snappy on 5k-card vaults where
  * client-side `.filter()` over the entire collection stalls the JS
  * thread for a noticeable beat.
- *
- * Aggregates that drive the header chips (unique-card count, loupe-
- * graded count, the Category chip row) are read from
- * `/v1/grades/summary` so they reflect the *whole* vault, not whatever
- * the current filter happens to expose.
- *
- * The hook degrades gracefully against a backend that hasn't deployed
- * the summary aggregates yet — it falls back to client-side derivation
- * over the (filtered) list so nothing crashes during the rollout
- * window.
  */
-const DEBOUNCE_MS = 250;
+const DEBOUNCE_MS = 150;
+const VAULT_PAGE_LIMIT = 300;
 
 export function useFilteredCollection() {
   const { isAuthenticated } = useAuth();
@@ -45,12 +36,8 @@ export function useFilteredCollection() {
   const minValue = useVaultFilters((s) => s.minValue);
   const maxValue = useVaultFilters((s) => s.maxValue);
   const sort = useVaultFilters((s) => s.sort);
-  // The active collection scopes the vault list too — same seam as the
-  // dashboard/analytics; the backend filters server-side.
   const { collectionId } = useActiveCollection();
 
-  // Debounce the free-text query so every keystroke doesn't fire a new
-  // request. The other filters apply immediately — deliberate taps.
   const [debouncedQuery, setDebouncedQuery] = useState(searchTerm);
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(searchTerm), DEBOUNCE_MS);
@@ -62,8 +49,6 @@ export function useFilteredCollection() {
       q: debouncedQuery.trim() || undefined,
       houses: houses.length ? houses : undefined,
       sets: sets.length ? sets : undefined,
-      // The slider's "show everything" bounds (1 / 10) are dropped — no wasted
-      // predicate.
       minGrade: gradeRange[0] > GRADE_MIN ? gradeRange[0] : undefined,
       maxGrade: gradeRange[1] < GRADE_MAX ? gradeRange[1] : undefined,
       minValue: minValue ?? undefined,
@@ -71,45 +56,52 @@ export function useFilteredCollection() {
       tags: tags.length ? tags : undefined,
       sort,
       collectionId: collectionId ?? undefined,
+      limit: VAULT_PAGE_LIMIT,
     }),
     [debouncedQuery, houses, sets, gradeRange, minValue, maxValue, tags, sort, collectionId],
+  );
+
+  const countParams = useMemo(
+    () => ({
+      q: params.q,
+      houses: params.houses,
+      sets: params.sets,
+      minGrade: params.minGrade,
+      maxGrade: params.maxGrade,
+      minValue: params.minValue,
+      maxValue: params.maxValue,
+      tags: params.tags,
+      collectionId: params.collectionId,
+    }),
+    [params],
   );
 
   const query = useQuery({
     queryKey: queryKeys.collection.list(params),
     queryFn: () => fetchCollection(params),
-    // Gate on auth so it doesn't fire before the stored token is attached on
-    // cold boot (that race returned an empty vault until a pull-to-refresh).
     enabled: isAuthenticated,
-    // Keep previous data visible while a new filter is in flight so the
-    // list doesn't blank to a skeleton on every keystroke — feels much
-    // closer to "instant" even on a slow network.
     placeholderData: (prev) => prev,
-    staleTime: 30_000,
+    staleTime: 45_000,
   });
 
-  // The header aggregates (hero total, pills, available sets/tags) reflect
-  // the WHOLE vault regardless of the house/grade/search filters — but they
-  // DO follow the active collection, so "viewing Umbreon" shows Umbreon's
-  // total. Scope by collection only (a distinct key per collection); "All"
-  // keeps the shared key so it stays in sync with the command center.
+  const countQuery = useQuery({
+    queryKey: queryKeys.collection.count(countParams),
+    queryFn: () => fetchCollectionCount(countParams),
+    enabled: isAuthenticated,
+    placeholderData: (prev) => prev,
+    staleTime: 45_000,
+  });
+
   const summaryQuery = useQuery({
     queryKey: collectionId
       ? [...queryKeys.collection.summary(), collectionId]
       : queryKeys.collection.summary(),
     queryFn: () => fetchCollectionSummary(collectionId),
     enabled: isAuthenticated,
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 
-  // Per-card copy counts — currently we only have the *filtered* page
-  // available client-side, so this badge can under-count when a sibling
-  // copy is hidden by the active filter. Backend `copies_owned` is
-  // already correct for each row; we leave the local map as a
-  // best-effort fallback for any UI that wants O(1) lookup.
-  const cards = useMemo(() => {
-    return query.data ?? [];
-  }, [query.data]);
+  const cards = useMemo(() => query.data ?? [], [query.data]);
 
   const copiesByCardId = useMemo(() => {
     const map = new Map<string, number>();
@@ -119,16 +111,9 @@ export function useFilteredCollection() {
     return map;
   }, [cards]);
 
-  /** Total unique catalog cards owned across the whole vault. */
   const uniqueCount = summaryQuery.data?.uniqueCardCount ?? copiesByCardId.size;
-
-  /** Loupe-graded count across the whole vault. */
   const loupeGradedCount = summaryQuery.data?.loupeGradedCount ?? 0;
 
-  // Set names the user actually owns. Prefer the server-computed list
-  // (covers the whole vault) and fall back to deriving from whatever
-  // page we have loaded so the chip row never disappears entirely on
-  // older backends.
   const availableSets = useMemo<string[]>(() => {
     if (summaryQuery.data?.availableSets) {
       return summaryQuery.data.availableSets;
@@ -138,9 +123,8 @@ export function useFilteredCollection() {
     return Array.from(seen).sort((a, b) => a.localeCompare(b));
   }, [summaryQuery.data, query.data]);
 
-  // Distinct tags across the whole vault (server-computed) — powers the
-  // filter sheet + the tag editor's suggestions.
   const availableTags = summaryQuery.data?.availableTags ?? [];
+  const filteredCount = countQuery.data ?? cards.length;
 
   return {
     ...query,
@@ -150,7 +134,8 @@ export function useFilteredCollection() {
     loupeGradedCount,
     availableSets,
     availableTags,
-    /** Whole-vault aggregates (value, P/L, etc.). May be undefined while loading. */
+    filteredCount,
+    isCountFetching: countQuery.isFetching,
     summary: summaryQuery.data,
   };
 }

@@ -43,10 +43,14 @@ import { useVaultSelection } from "@/application/stores/vaultSelectionStore";
 import { routes } from "@/shared/routes";
 import { IslandNavPill } from "@/presentation/navigation/IslandNavPill";
 import {
-  islandMorphIn,
-  islandMorphOut,
+  islandContentIn,
+  islandContentOut,
+  islandShellLayout,
 } from "@/presentation/navigation/islandNavMotion";
-import { VaultSelectionIsland } from "@/presentation/navigation/VaultSelectionIsland";
+import {
+  VaultSelectionIslandBadge,
+  VaultSelectionIslandContent,
+} from "@/presentation/navigation/VaultSelectionIsland";
 
 const isIOS = Platform.OS === "ios";
 
@@ -111,6 +115,8 @@ export default function TabsLayout() {
       tabBar={(props) => <LoupeTabBar {...props} palette={p} />}
       screenOptions={{
         headerShown: false,
+        // Subtle horizontal shift when switching tabs — avoids the hard cut.
+        animation: isIOS ? "shift" : "fade",
         tabBarActiveTintColor: p.accent.mint,
         tabBarInactiveTintColor: p.ink.dim,
         tabBarStyle: {
@@ -291,20 +297,10 @@ function LoupeTabBar(
     if (vaultSelecting) {
       return (
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-          <View
-            pointerEvents="box-none"
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: Math.max(insets.bottom, 10),
-              alignItems: "center",
-            }}
-          >
-            <Animated.View entering={islandMorphIn} exiting={islandMorphOut}>
-              <VaultSelectionIsland />
-            </Animated.View>
-          </View>
+          <LoupeFloatingIsland
+            bottomInset={Math.max(insets.bottom, 10)}
+            selecting
+          />
         </View>
       );
     }
@@ -321,33 +317,12 @@ function LoupeTabBar(
   const right = NAV_TABS.slice(2);
 
   return (
-    <View
-      pointerEvents="box-none"
-      style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: Math.max(insets.bottom, 10),
-        alignItems: "center",
-      }}
-    >
-      {vaultSelecting ? (
-        <Animated.View
-          key="selection-island"
-          entering={islandMorphIn}
-          exiting={islandMorphOut}
-        >
-          <VaultSelectionIsland />
-        </Animated.View>
-      ) : (
-        <Animated.View
-          key="tab-island"
-          entering={islandMorphIn}
-          exiting={islandMorphOut}
-        >
-          <GestureDetector gesture={pan}>
-            <IslandNavPill>
-            {/* Sliding active-tab highlight — follows the finger while dragging. */}
+    <LoupeFloatingIsland
+      bottomInset={Math.max(insets.bottom, 10)}
+      selecting={vaultSelecting}
+      tabDial={
+        <GestureDetector gesture={pan}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Animated.View
               pointerEvents="none"
               style={[
@@ -393,10 +368,61 @@ function LoupeTabBar(
                 }}
               />
             ))}
-          </IslandNavPill>
+          </View>
         </GestureDetector>
-        </Animated.View>
-      )}
+      }
+    />
+  );
+}
+
+/**
+ * Persistent glass pill — shell never fades; only inner content crossfades
+ * when vault multi-select replaces the tab dial.
+ */
+function LoupeFloatingIsland({
+  bottomInset,
+  selecting,
+  tabDial,
+}: {
+  bottomInset: number;
+  selecting: boolean;
+  tabDial?: React.ReactNode;
+}) {
+  return (
+    <View
+      pointerEvents="box-none"
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: bottomInset,
+        alignItems: "center",
+      }}
+    >
+      <Animated.View layout={islandShellLayout} style={{ position: "relative" }}>
+        <IslandNavPill>
+          {selecting ? (
+            <Animated.View
+              key="selection-content"
+              entering={islandContentIn}
+              exiting={islandContentOut}
+              style={{ flexDirection: "row", alignItems: "center" }}
+            >
+              <VaultSelectionIslandContent />
+            </Animated.View>
+          ) : (
+            <Animated.View
+              key="tab-content"
+              entering={islandContentIn}
+              exiting={islandContentOut}
+              style={{ flexDirection: "row", alignItems: "center" }}
+            >
+              {tabDial}
+            </Animated.View>
+          )}
+        </IslandNavPill>
+        {selecting ? <VaultSelectionIslandBadge /> : null}
+      </Animated.View>
     </View>
   );
 }

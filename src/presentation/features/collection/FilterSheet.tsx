@@ -5,7 +5,7 @@
  * Active filters shown as removable mint tags above the footer.
  */
 import React, { useMemo, useState } from "react";
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   X,
@@ -69,6 +69,7 @@ export interface FilterSheetProps {
   availableSets: string[];
   availableTags: string[];
   resultCount: number;
+  isCountFetching?: boolean;
 }
 
 type FilterStep = "main" | "sort" | "house" | "minGrade" | "maxGrade" | "price" | "tags" | "sets";
@@ -155,11 +156,14 @@ export function FilterSheet({
   availableSets,
   availableTags,
   resultCount,
+  isCountFetching = false,
 }: FilterSheetProps) {
   const p = useThemedPalette();
   const s = useVaultFilters();
   const count = activeFilterCount(s);
   const [step, setStep] = useState<FilterStep>("main");
+  const [setQuery, setSetQuery] = useState("");
+  const [tagQuery, setTagQuery] = useState("");
 
   // Call hook to get filtering options metadata from the backend
   const metaQuery = useFilterMetadata();
@@ -181,6 +185,18 @@ export function FilterSheet({
 
   const activeFilters = useMemo(() => buildActiveFilters(s, sorts, housesList, priceBands), [s, sorts, housesList, priceBands]);
 
+  const filteredSets = useMemo(() => {
+    const q = setQuery.trim().toLowerCase();
+    if (!q) return availableSets;
+    return availableSets.filter((name) => name.toLowerCase().includes(q));
+  }, [availableSets, setQuery]);
+
+  const filteredTags = useMemo(() => {
+    const q = tagQuery.trim().toLowerCase();
+    if (!q) return availableTags;
+    return availableTags.filter((tag) => tag.toLowerCase().includes(q));
+  }, [availableTags, tagQuery]);
+
   const handleSelectPriceBand = (min: number | null, max: number | null) => {
     s.setValueRange(min, max);
     setCustomMin(min != null ? String(min) : "");
@@ -189,6 +205,8 @@ export function FilterSheet({
 
   const handleClose = () => {
     setStep("main");
+    setSetQuery("");
+    setTagQuery("");
     onClose();
   };
 
@@ -401,13 +419,67 @@ export function FilterSheet({
               </View>
             )}
 
-            {step === "tags" && availableTags.map((t) => (
-              <OptionRow key={t} label={t} selected={s.tags.includes(t)} onPress={() => s.toggleTag(t)} />
-            ))}
+            {step === "tags" && (
+              <>
+                <StepSearchInput
+                  value={tagQuery}
+                  onChangeText={setTagQuery}
+                  placeholder="Search tags…"
+                />
+                {filteredTags.length === 0 ? (
+                  <Text
+                    style={{
+                      color: p.ink.muted,
+                      fontSize: 13,
+                      paddingHorizontal: spacing.xl,
+                      paddingVertical: spacing.md,
+                    }}
+                  >
+                    No tags match.
+                  </Text>
+                ) : (
+                  filteredTags.map((t) => (
+                    <OptionRow
+                      key={t}
+                      label={t}
+                      selected={s.tags.includes(t)}
+                      onPress={() => s.toggleTag(t)}
+                    />
+                  ))
+                )}
+              </>
+            )}
 
-            {step === "sets" && availableSets.map((name) => (
-              <OptionRow key={name} label={name} selected={s.sets.includes(name)} onPress={() => s.toggleSet(name)} />
-            ))}
+            {step === "sets" && (
+              <>
+                <StepSearchInput
+                  value={setQuery}
+                  onChangeText={setSetQuery}
+                  placeholder="Search sets…"
+                />
+                {filteredSets.length === 0 ? (
+                  <Text
+                    style={{
+                      color: p.ink.muted,
+                      fontSize: 13,
+                      paddingHorizontal: spacing.xl,
+                      paddingVertical: spacing.md,
+                    }}
+                  >
+                    No sets match.
+                  </Text>
+                ) : (
+                  filteredSets.map((name) => (
+                    <OptionRow
+                      key={name}
+                      label={name}
+                      selected={s.sets.includes(name)}
+                      onPress={() => s.toggleSet(name)}
+                    />
+                  ))
+                )}
+              </>
+            )}
           </ScrollView>
 
           {/* Active filter tags — removable mint pills */}
@@ -492,9 +564,13 @@ export function FilterSheet({
                 opacity: pressed ? 0.85 : 1,
               })}
             >
-              <Text style={{ color: "#06140d", fontSize: 14, fontWeight: "800" }}>
-                Show {resultCount} {resultCount === 1 ? "card" : "cards"}
-              </Text>
+              {isCountFetching ? (
+                <ActivityIndicator color="#06140d" />
+              ) : (
+                <Text style={{ color: "#06140d", fontSize: 14, fontWeight: "800" }}>
+                  Show {resultCount} {resultCount === 1 ? "card" : "cards"}
+                </Text>
+              )}
             </Pressable>
           </View>
         </SafeAreaView>
@@ -504,6 +580,39 @@ export function FilterSheet({
 }
 
 /* ─── Row primitives ─────────────────────────────────────────────────── */
+
+function StepSearchInput({
+  value,
+  onChangeText,
+  placeholder,
+}: {
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder: string;
+}) {
+  const p = useThemedPalette();
+  return (
+    <View style={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.sm }}>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={p.ink.dim}
+        autoCorrect={false}
+        autoCapitalize="none"
+        style={{
+          height: 40,
+          borderRadius: 12,
+          paddingHorizontal: 14,
+          backgroundColor: withAlpha(p.ink.default, 0.06),
+          color: p.ink.default,
+          fontSize: 14,
+          fontWeight: "600",
+        }}
+      />
+    </View>
+  );
+}
 
 function MenuRow({
   icon: Icon,

@@ -71,7 +71,8 @@ function IslandAction({
   );
 }
 
-export function VaultSelectionIsland() {
+/** Selection actions row — meant to live inside a persistent IslandNavPill. */
+export function VaultSelectionIslandContent() {
   const p = useThemedPalette();
   const {
     count,
@@ -109,120 +110,132 @@ export function VaultSelectionIsland() {
   };
 
   return (
+    <>
+      <IslandAction
+        label="Select every card in view"
+        onPress={onSelectAll}
+        disabled={busy}
+        accent={p.accent.blue}
+      >
+        <CheckCheck size={18} color={p.accent.blue} strokeWidth={2.5} />
+      </IslandAction>
+
+      <IslandAction
+        label="Organize selected cards into collections"
+        onPress={onOrganize}
+        disabled={!canAct}
+        accent={p.accent.mint}
+      >
+        <FolderKanban size={18} color={p.accent.mint} strokeWidth={2.5} />
+      </IslandAction>
+
+      <Pressable
+        onPress={onCancel}
+        disabled={busy}
+        accessibilityRole="button"
+        accessibilityLabel="Cancel selection"
+        style={{
+          width: 60,
+          height: ISLAND_PILL_HEIGHT,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {({ pressed }) => (
+          <View
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: p.accent.rose || "#d63b30",
+              opacity: busy ? 0.5 : pressed ? 0.88 : 1,
+              transform: [{ scale: pressed ? 0.94 : 1 }],
+              shadowColor: p.accent.rose,
+              shadowOpacity: 0.35,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+            }}
+          >
+            <X size={22} color="#ffffff" strokeWidth={2.6} />
+          </View>
+        )}
+      </Pressable>
+
+      <IslandAction
+        label={`Remove ${countLabel} selected ${count === 1 ? "card" : "cards"}`}
+        onPress={onRemove}
+        disabled={!canAct}
+        accent={p.accent.rose}
+      >
+        <Trash2 size={18} color={p.accent.rose} strokeWidth={2.5} />
+      </IslandAction>
+    </>
+  );
+}
+
+/** Count badge overlapping the pill's top-right corner. */
+export function VaultSelectionIslandBadge() {
+  const p = useThemedPalette();
+  const { count, busy } = useVaultSelectionChrome();
+  const countLabel = count > 99 ? "99+" : String(count);
+
+  if (count <= 0) return null;
+
+  return (
+    <Animated.View
+      key={count}
+      entering={islandBadgeIn}
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        top: -8,
+        right: -6,
+        minWidth: 24,
+        height: 24,
+        paddingHorizontal: 7,
+        borderRadius: 999,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: p.accent.rose || "#d63b30",
+        borderWidth: 2,
+        borderColor: p.bg.base,
+        shadowColor: "#000",
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 3 },
+      }}
+    >
+      {busy ? (
+        <ActivityIndicator
+          size="small"
+          color="#fff"
+          style={{ transform: [{ scale: 0.7 }] }}
+        />
+      ) : (
+        <Text
+          style={{
+            color: "#fff",
+            fontSize: 12,
+            fontWeight: "900",
+            fontVariant: ["tabular-nums"],
+          }}
+        >
+          {countLabel}
+        </Text>
+      )}
+    </Animated.View>
+  );
+}
+
+export function VaultSelectionIsland() {
+  return (
     <View>
       <IslandNavPill>
-        {/* Select all — far left */}
-        <IslandAction
-          label="Select every card in view"
-          onPress={onSelectAll}
-          disabled={busy}
-          accent={p.accent.blue}
-        >
-          <CheckCheck size={18} color={p.accent.blue} strokeWidth={2.5} />
-        </IslandAction>
-
-        {/* Organize */}
-        <IslandAction
-          label="Organize selected cards into collections"
-          onPress={onOrganize}
-          disabled={!canAct}
-          accent={p.accent.mint}
-        >
-          <FolderKanban size={18} color={p.accent.mint} strokeWidth={2.5} />
-        </IslandAction>
-
-        {/* Cancel — rose center (replaces Scan FAB) */}
-        <Pressable
-          onPress={onCancel}
-          disabled={busy}
-          accessibilityRole="button"
-          accessibilityLabel="Cancel selection"
-          style={{
-            width: 60,
-            height: ISLAND_PILL_HEIGHT,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {({ pressed }) => (
-            <View
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: p.accent.rose || "#d63b30",
-                opacity: busy ? 0.5 : pressed ? 0.88 : 1,
-                transform: [{ scale: pressed ? 0.94 : 1 }],
-                shadowColor: p.accent.rose,
-                shadowOpacity: 0.35,
-                shadowRadius: 10,
-                shadowOffset: { width: 0, height: 4 },
-              }}
-            >
-              <X size={22} color="#ffffff" strokeWidth={2.6} />
-            </View>
-          )}
-        </Pressable>
-
-        {/* Remove — far right */}
-        <IslandAction
-          label={`Remove ${countLabel} selected ${count === 1 ? "card" : "cards"}`}
-          onPress={onRemove}
-          disabled={!canAct}
-          accent={p.accent.rose}
-        >
-          <Trash2 size={18} color={p.accent.rose} strokeWidth={2.5} />
-        </IslandAction>
+        <VaultSelectionIslandContent />
       </IslandNavPill>
-
-      {/* Count badge — bubble overlapping the pill's top-right corner,
-          like an app-icon notification. Re-keyed per count so it pops. */}
-      {count > 0 ? (
-        <Animated.View
-          key={count}
-          entering={islandBadgeIn}
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            top: -8,
-            right: -6,
-            minWidth: 24,
-            height: 24,
-            paddingHorizontal: 7,
-            borderRadius: 999,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: p.accent.rose || "#d63b30",
-            borderWidth: 2,
-            borderColor: p.bg.base,
-            shadowColor: "#000",
-            shadowOpacity: 0.25,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 3 },
-          }}
-        >
-          {busy ? (
-            <ActivityIndicator
-              size="small"
-              color="#fff"
-              style={{ transform: [{ scale: 0.7 }] }}
-            />
-          ) : (
-            <Text
-              style={{
-                color: "#fff",
-                fontSize: 12,
-                fontWeight: "900",
-                fontVariant: ["tabular-nums"],
-              }}
-            >
-              {countLabel}
-            </Text>
-          )}
-        </Animated.View>
-      ) : null}
+      <VaultSelectionIslandBadge />
     </View>
   );
 }

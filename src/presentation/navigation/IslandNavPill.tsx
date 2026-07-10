@@ -35,6 +35,15 @@ export function IslandNavPill({ children, style }: IslandNavPillProps) {
         style,
       ]}
     >
+      {/* Solid underlay keeps the pill color stable while inner content animates. */}
+      <View
+        pointerEvents="none"
+        style={{
+          ...StyleSheet.absoluteFillObject,
+          borderRadius: 30,
+          backgroundColor: withAlpha(p.bg.elevated, 0.88),
+        }}
+      />
       <LiquidGlassView
         glassStyle="regular"
         intensity={40}

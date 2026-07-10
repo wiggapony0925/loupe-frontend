@@ -6,7 +6,7 @@
  */
 import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
-import { ArrowRightLeft, FolderMinus, FolderPlus } from "lucide-react-native";
+import { ArrowRightLeft, FolderKanban, FolderMinus, FolderPlus } from "lucide-react-native";
 import { BottomSheet } from "@/presentation/components/BottomSheet";
 import {
   SheetChoiceGroup,
@@ -33,6 +33,12 @@ interface VaultCollectionActionSheetProps {
   onClose: () => void;
   onDone: () => void;
 }
+
+const ACTION_OPTIONS = [
+  { key: "add" as const, label: "Add to", Icon: FolderPlus },
+  { key: "remove" as const, label: "Remove", Icon: FolderMinus },
+  { key: "transfer" as const, label: "Transfer", Icon: ArrowRightLeft },
+] as const;
 
 export function VaultCollectionActionSheet({
   visible,
@@ -114,6 +120,26 @@ export function VaultCollectionActionSheet({
     gradedCardIds.length > 0 &&
     (action === "remove" || Boolean(targetId));
 
+  const listLabel =
+    action === "transfer" ? "Move into" : "Choose collection";
+
+  const primaryLabel =
+    action === "add"
+      ? targetId
+        ? `Add to ${destinations.find((c) => c.id === targetId)?.name ?? "collection"}`
+        : "Add to collection"
+      : action === "remove"
+        ? "Remove from collection"
+        : targetId
+          ? `Move to ${destinations.find((c) => c.id === targetId)?.name ?? "collection"}`
+          : "Transfer";
+
+  const isActionEnabled = (key: Action) => {
+    if (key === "add") return true;
+    if (key === "remove") return canRemove;
+    return canTransfer;
+  };
+
   return (
     <BottomSheet
       visible={visible}
@@ -127,61 +153,71 @@ export function VaultCollectionActionSheet({
       compact
     >
       <View style={{ gap: spacing.md }}>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {(
-            [
-              { key: "add" as const, label: "Add to", Icon: FolderPlus, enabled: true },
-              {
-                key: "remove" as const,
-                label: "Remove",
-                Icon: FolderMinus,
-                enabled: canRemove,
-              },
-              {
-                key: "transfer" as const,
-                label: "Transfer",
-                Icon: ArrowRightLeft,
-                enabled: canTransfer,
-              },
-            ] as const
-          ).map((opt) => {
+        {/* Segmented action picker */}
+        <View
+          style={{
+            flexDirection: "row",
+            padding: 4,
+            gap: 4,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: p.line.default,
+            backgroundColor: withAlpha(p.ink.default, 0.04),
+          }}
+        >
+          {ACTION_OPTIONS.map((opt) => {
             const active = action === opt.key;
+            const enabled = isActionEnabled(opt.key);
             return (
               <Pressable
                 key={opt.key}
-                disabled={!opt.enabled || busy}
+                disabled={!enabled || busy}
                 onPress={() => {
                   setAction(opt.key);
                   setTargetId(null);
                 }}
-                style={{
-                  flex: 1,
-                  alignItems: "center",
-                  gap: 4,
-                  paddingVertical: 10,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: active ? withAlpha(p.accent.mint, 0.5) : p.line.default,
-                  backgroundColor: active
-                    ? withAlpha(p.accent.mint, 0.12)
-                    : p.bg.elevated,
-                  opacity: opt.enabled ? 1 : 0.35,
-                }}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active, disabled: !enabled }}
+                style={{ flex: 1 }}
               >
-                <opt.Icon
-                  size={16}
-                  color={active ? p.accent.mint : p.ink.muted}
-                  strokeWidth={2.4}
-                />
-                <Text
-                  style={{
-                    color: active ? p.accent.mint : p.ink.muted,
-                    fontSize: 11,
-                    fontWeight: "700",
-                  }}
-                >
-                  {opt.label}
-                </Text>
+                {({ pressed }) => (
+                  <View
+                    style={{
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 4,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      borderWidth: active ? 1 : 0,
+                      borderColor: active ? withAlpha(p.accent.mint, 0.35) : "transparent",
+                      backgroundColor: active
+                        ? p.bg.base
+                        : pressed && enabled
+                          ? withAlpha(p.ink.default, 0.05)
+                          : "transparent",
+                      opacity: enabled ? 1 : 0.35,
+                      shadowColor: "#000",
+                      shadowOpacity: active ? 0.06 : 0,
+                      shadowRadius: 6,
+                      shadowOffset: { width: 0, height: 2 },
+                    }}
+                  >
+                    <opt.Icon
+                      size={16}
+                      color={active ? p.accent.mint : p.ink.muted}
+                      strokeWidth={2.4}
+                    />
+                    <Text
+                      style={{
+                        color: active ? p.accent.mint : p.ink.muted,
+                        fontSize: 11,
+                        fontWeight: "700",
+                      }}
+                    >
+                      {opt.label}
+                    </Text>
+                  </View>
+                )}
               </Pressable>
             );
           })}
@@ -190,6 +226,9 @@ export function VaultCollectionActionSheet({
         {action === "remove" ? (
           <View
             style={{
+              flexDirection: "row",
+              alignItems: "flex-start",
+              gap: spacing.md,
               padding: spacing.lg,
               borderRadius: 16,
               borderWidth: 1,
@@ -197,7 +236,19 @@ export function VaultCollectionActionSheet({
               backgroundColor: p.bg.elevated,
             }}
           >
-            <Text style={{ color: p.ink.muted, fontSize: 13, lineHeight: 19 }}>
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: withAlpha(p.accent.mint, 0.14),
+              }}
+            >
+              <FolderMinus size={16} color={p.accent.mint} strokeWidth={2.4} />
+            </View>
+            <Text style={{ flex: 1, color: p.ink.muted, fontSize: 13, lineHeight: 19 }}>
               Remove these {noun} from{" "}
               <Text style={{ color: p.ink.default, fontWeight: "700" }}>
                 {activeName ?? "the current collection"}
@@ -207,32 +258,41 @@ export function VaultCollectionActionSheet({
           </View>
         ) : (
           <ScrollView
-            style={{ flexGrow: 0, maxHeight: 320 }}
+            style={{ flexGrow: 0, maxHeight: 300 }}
             contentContainerStyle={{ gap: 0 }}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            <Text
-              style={{
-                marginBottom: spacing.sm,
-                color: p.ink.dim,
-                fontSize: 10,
-                fontWeight: "800",
-                letterSpacing: 2,
-                textTransform: "uppercase",
-              }}
-            >
-              {action === "transfer" ? "Move into" : "Add to"}
-            </Text>
             {destinations.length === 0 ? (
-              <Text style={{ color: p.ink.muted, fontSize: 13, lineHeight: 18 }}>
-                Create a collection from the portfolio switcher first.
-              </Text>
+              <View
+                style={{
+                  padding: spacing.lg,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: p.line.default,
+                  backgroundColor: p.bg.elevated,
+                }}
+              >
+                <Text style={{ color: p.ink.default, fontSize: 14, fontWeight: "700" }}>
+                  No collections yet
+                </Text>
+                <Text
+                  style={{
+                    color: p.ink.muted,
+                    fontSize: 13,
+                    lineHeight: 18,
+                    marginTop: 4,
+                  }}
+                >
+                  Create one from the portfolio switcher at the top of your vault.
+                </Text>
+              </View>
             ) : (
-              <SheetChoiceGroup>
+              <SheetChoiceGroup label={listLabel}>
                 {destinations.map((c, i) => (
                   <SheetChoiceRow
                     key={c.id!}
-                    icon={FolderPlus}
+                    icon={FolderKanban}
                     accent={p.accent.mint}
                     title={c.name}
                     subtitle={`${c.card_count} ${c.card_count === 1 ? "card" : "cards"}`}
@@ -246,15 +306,9 @@ export function VaultCollectionActionSheet({
           </ScrollView>
         )}
 
-        <View style={{ gap: spacing.sm, paddingTop: spacing.sm }}>
+        <View style={{ gap: spacing.sm, paddingTop: spacing.xs }}>
           <SheetPrimaryButton
-            label={
-              action === "add"
-                ? "Add to collection"
-                : action === "remove"
-                  ? "Remove from collection"
-                  : "Transfer"
-            }
+            label={primaryLabel}
             loading={busy}
             disabled={!canSubmit}
             onPress={() => void run()}
