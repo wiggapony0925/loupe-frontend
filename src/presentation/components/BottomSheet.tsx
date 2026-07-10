@@ -24,8 +24,12 @@ interface BottomSheetProps {
   eyebrow?: string;
   title: string;
   subtitle?: string | null;
+  /** Allow longer helper copy under the title. Default 1. */
+  subtitleLines?: number;
   /** Cap the Android sheet height as a fraction of the screen. Default "82%". */
   maxHeight?: ViewStyle["maxHeight"];
+  /** Disable the close control while a mutation is in flight. */
+  closeDisabled?: boolean;
   children: React.ReactNode;
 }
 
@@ -35,7 +39,9 @@ export function BottomSheet({
   eyebrow,
   title,
   subtitle,
+  subtitleLines = 1,
   maxHeight = "82%",
+  closeDisabled = false,
   children,
 }: BottomSheetProps) {
   const p = useThemedPalette();
@@ -44,7 +50,7 @@ export function BottomSheet({
   return (
     <Modal
       visible={visible}
-      onRequestClose={onClose}
+      onRequestClose={closeDisabled ? () => {} : onClose}
       animationType="slide"
       presentationStyle={isIOS ? "pageSheet" : "overFullScreen"}
       transparent={!isIOS}
@@ -56,7 +62,12 @@ export function BottomSheet({
           backgroundColor: isIOS ? p.bg.base : "rgba(0,0,0,0.45)",
         }}
       >
-        {!isIOS ? <Pressable style={{ flex: 1 }} onPress={onClose} /> : null}
+        {!isIOS ? (
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={closeDisabled ? undefined : onClose}
+          />
+        ) : null}
 
         <SafeAreaView
           edges={isIOS ? ["top"] : ["bottom"]}
@@ -81,12 +92,12 @@ export function BottomSheet({
           <View
             style={{
               flexDirection: "row",
-              alignItems: "center",
+              alignItems: "flex-start",
               paddingTop: spacing.lg,
               paddingBottom: spacing.md,
             }}
           >
-            <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+            <View style={{ flex: 1, minWidth: 0, gap: 4, paddingRight: spacing.sm }}>
               {eyebrow ? (
                 <Text
                   numberOfLines={1}
@@ -108,13 +119,17 @@ export function BottomSheet({
                 {title}
               </Text>
               {subtitle ? (
-                <Text numberOfLines={1} style={{ color: p.ink.muted, fontSize: 12 }}>
+                <Text
+                  numberOfLines={subtitleLines}
+                  style={{ color: p.ink.muted, fontSize: 13, lineHeight: 18 }}
+                >
                   {subtitle}
                 </Text>
               ) : null}
             </View>
             <Pressable
-              onPress={onClose}
+              onPress={closeDisabled ? undefined : onClose}
+              disabled={closeDisabled}
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel="Close"
@@ -127,7 +142,7 @@ export function BottomSheet({
                 borderWidth: 1,
                 borderColor: p.line.default,
                 backgroundColor: p.bg.elevated,
-                opacity: pressed ? 0.72 : 1,
+                opacity: closeDisabled ? 0.4 : pressed ? 0.72 : 1,
               })}
             >
               <X size={16} color={p.ink.muted} strokeWidth={2.4} />

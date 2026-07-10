@@ -98,14 +98,15 @@ export const queryKeys = {
     // equality kicks in).
     list: (params?: {
       q?: string;
-      set?: string;
-      house?: string;
+      sets?: string[];
+      houses?: string[];
       minGrade?: number;
       sort?: string;
       cursor?: number;
       limit?: number;
     }) => ["collection", "list", params ?? {}] as const,
     summary: () => ["collection", "summary"] as const,
+    filters: () => ["collection", "filters"] as const,
   },
   appConfig: {
     all: ["appConfig"] as const,

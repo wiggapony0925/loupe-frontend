@@ -1,5 +1,6 @@
 import React from "react";
-import { Image, View } from "react-native";
+import { View } from "react-native";
+import { Image } from "expo-image";
 import Svg, { Circle, Path, Polygon, G } from "react-native-svg";
 import type { CardSet } from "@/domain";
 import { getBrandLogo, type BrandKey } from "@/shared/brandAssets";
@@ -11,6 +12,8 @@ interface TcgMarkProps {
   color?: string;
   /** Background fill — usually the chip body color. */
   background?: string;
+  /** Skip bundled wordmarks and always render the SVG glyph. */
+  preferGlyph?: boolean;
 }
 
 /**
@@ -25,9 +28,10 @@ function brandKeyForSet(set: CardSet | "All" | string): BrandKey {
   const s = String(set).toLowerCase().trim();
   // Fast path: already a canonical brand key.
   const exact: ReadonlySet<BrandKey> = new Set([
-    "pokemon", "magic", "yugioh", "onepiece", "lorcana", "sports", "topps", "soccer", "all",
+    "pokemon", "magic", "yugioh", "onepiece", "digimon", "lorcana", "sports", "topps", "soccer", "all",
   ]);
   if (exact.has(s as BrandKey)) return s as BrandKey;
+  if (/digimon/.test(s)) return "digimon";
   if (/yu-?gi-?oh/.test(s)) return "yugioh";
   if (/one\s?piece/.test(s)) return "onepiece";
   if (/lorcana/.test(s)) return "lorcana";
@@ -45,9 +49,15 @@ function brandKeyForSet(set: CardSet | "All" | string): BrandKey {
  * registered in `src/lib/brandAssets.ts`, that takes precedence and
  * the SVG glyph is used as fallback only.
  */
-export function TcgMark({ set, size = 16, color = "#0B0F14", background = "#FFFFFF" }: TcgMarkProps) {
+export function TcgMark({
+  set,
+  size = 16,
+  color = "#0B0F14",
+  background = "#FFFFFF",
+  preferGlyph = false,
+}: TcgMarkProps) {
   const key = brandKeyForSet(set);
-  const logo = getBrandLogo(key);
+  const logo = preferGlyph ? null : getBrandLogo(key);
   if (logo) {
     return (
       <View
@@ -61,7 +71,8 @@ export function TcgMark({ set, size = 16, color = "#0B0F14", background = "#FFFF
         <Image
           source={logo}
           style={{ width: size, height: size }}
-          resizeMode="contain"
+          contentFit="contain"
+          transition={0}
         />
       </View>
     );

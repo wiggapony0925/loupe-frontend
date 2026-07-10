@@ -67,7 +67,8 @@ import {
 type Detect = { detected: boolean; steady: boolean; fill: number };
 
 /** RAW grade stamped on a batch-added card — Near Mint ≈ 9 (see identify.tsx). */
-const BATCH_RAW_GRADE = 9;
+/** RAW batches: grade is a placeholder — backend forces 0 for house=loupe. */
+const BATCH_RAW_GRADE = 0;
 
 /** TCG hint → the label + accent the native overlay shows. */
 const TCG_META: Record<string, { label: string; hex: string }> = {

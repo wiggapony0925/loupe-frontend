@@ -59,29 +59,34 @@ export function QueryState({
   if (isError) {
     return (
       <View
-        className="items-center rounded-2xl border px-4 py-6"
         style={{
-          borderColor: withAlpha(p.accent.rose, 0.4),
-          backgroundColor: withAlpha(p.accent.rose, 0.06),
+          alignItems: "center",
+          paddingVertical: 20,
+          gap: 12,
         }}
       >
-        <Text className="text-sm font-semibold text-ink">{errorMessage}</Text>
+        <Text style={{ color: p.ink.default, fontSize: 14, fontWeight: "700" }}>{errorMessage}</Text>
         {onRetry ? (
           <Pressable
             onPress={onRetry}
             hitSlop={8}
-            className="mt-2 rounded-full px-3 py-1.5"
-            style={{ backgroundColor: withAlpha(p.accent.mint, 0.15) }}
+            style={({ pressed }) => ({
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 999,
+              backgroundColor: withAlpha(p.accent.mint, 0.15),
+              opacity: pressed ? 0.75 : 1,
+            })}
           >
             <Text
               style={{
                 color: p.accent.mint,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: "700",
-                letterSpacing: 0.5,
+                letterSpacing: 0.4,
               }}
             >
-              RETRY
+              Retry
             </Text>
           </Pressable>
         ) : null}
@@ -93,10 +98,10 @@ export function QueryState({
     return (
       <>
         {emptyFallback ?? (
-          <View className="items-center rounded-2xl border border-line bg-bg-elevated px-4 py-8">
-            <Text className="text-sm font-semibold text-ink">{emptyTitle}</Text>
+          <View style={{ alignItems: "center", paddingVertical: 24, gap: 6 }}>
+            <Text style={{ color: p.ink.default, fontSize: 14, fontWeight: "700" }}>{emptyTitle}</Text>
             {emptyMessage ? (
-              <Text className="mt-1 text-center text-[11px] text-ink-muted">
+              <Text style={{ color: p.ink.muted, fontSize: 12, textAlign: "center", maxWidth: 300 }}>
                 {emptyMessage}
               </Text>
             ) : null}

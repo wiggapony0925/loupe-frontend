@@ -148,19 +148,24 @@ export default function CardDetailScreen() {
     title: string;
     subtitle?: string;
     tone: "success" | "error";
+    /** Holding id from quick-add — opens GradeForm with Apply. */
+    gradeId?: string | null;
   } | null>(null);
 
   const handleQuickAdd = useCallback(() => {
     if (!cardId || createGrade.isPending) return;
+    // Quick-add = RAW NM into the vault (All). Backend forces grade=0.
+    // Long-press never picks a custom collection — open the form for that.
     createGrade.mutate(
-      { cardId, grade: 9, house: "loupe", condition: "nm" },
+      { cardId, grade: 0, house: "loupe", condition: "nm" },
       {
-        onSuccess: () => {
+        onSuccess: (created) => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
           setBanner({
             title: "Added to vault",
             subtitle: `${cardQ.data?.name ?? "Card"} · Raw · NM`,
             tone: "success",
+            gradeId: created?.id ?? null,
           });
         },
         onError: (err) => {
@@ -175,6 +180,7 @@ export default function CardDetailScreen() {
             title: "Couldn't add to vault",
             subtitle: "Tap to open the full form instead.",
             tone: "error",
+            gradeId: null,
           });
         },
       },
@@ -881,11 +887,28 @@ export default function CardDetailScreen() {
         title={banner?.title ?? ""}
         subtitle={banner?.subtitle}
         tone={banner?.tone ?? "success"}
-        actionLabel={banner?.tone === "success" && ownedGrade ? "View" : undefined}
+        actionLabel={
+          banner?.tone === "success" && banner.gradeId
+            ? "Edit"
+            : banner?.tone === "error"
+              ? "Open form"
+              : undefined
+        }
         onAction={
-          banner?.tone === "success" && ownedGrade
-            ? () => router.push(routes.gradeEdit(ownedGrade.id))
-            : undefined
+          banner?.tone === "success" && banner.gradeId
+            ? () => router.push(routes.gradeEdit(banner.gradeId!))
+            : banner?.tone === "error" && card
+              ? () =>
+                  router.push(
+                    routes.gradeNew({
+                      cardId,
+                      cardName: card.name ?? undefined,
+                      cardImage: imageUrl ?? undefined,
+                      cardSet: card.set_name ?? undefined,
+                      cardYear: card.year ?? undefined,
+                    }),
+                  )
+              : undefined
         }
         onHide={() => setBanner(null)}
       />

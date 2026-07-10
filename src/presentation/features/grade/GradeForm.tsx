@@ -1,19 +1,17 @@
 /**
  * GradeForm — reusable form for adding a card to the vault manually
- * and for editing an existing holding.
+ * and for editing an existing holding (including post–quick-add).
  *
  * The same form is used by two screens:
  *   • `/grade/new?cardId=…|upstreamId=…` — POST /v1/grades
  *   • `/grade/[id]`                       — PATCH /v1/grades/{id}
  *
- * Field set mirrors the web CollectionForm + backend `app/schemas/grade.py`:
- *   grade · house · condition (raw) · copies · purchase price ·
- *   purchase date · estimated value · notes
+ * Almost every field is optional. Defaults:
+ *   create → RAW · NM · vault All · copy count 1
+ *   edit   → whatever is already on the holding
  *
- * Card identity is shown read-only at the top (thumbnail · title · set /
- * year); the form does not let the user re-pick the card once it's bound.
- * For a true "I don't know which card this is yet" flow, send them
- * through the search screen first.
+ * Backend owns raw-vs-slab normalization; this form mirrors it so the
+ * payload is honest before the server rewrite.
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -36,27 +34,24 @@ import { TagInput } from "@/presentation/features/collection/TagInput";
 import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { useCreateGrade, useDeleteGrade, useUpdateGrade } from "@/application/queries";
+import { useCollectionsOverview } from "@/application/queries/collection/useCollectionsOverview";
+import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
 import { ApiError } from "@/infrastructure/http/client";
 import { usePro } from "@/presentation/features/pro";
 import type { GradeHouse, RawCondition } from "@/infrastructure/http";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
-/** Houses surfaced in the segmented control. Order matches the rest of the app. */
+/** RAW first — matches quick-add and the most common vault entry. */
 const HOUSES: { id: GradeHouse; label: string }[] = [
+  { id: "loupe", label: "RAW" },
   { id: "psa", label: "PSA" },
   { id: "bgs", label: "BGS" },
   { id: "sgc", label: "SGC" },
   { id: "cgc", label: "CGC" },
   { id: "tag", label: "TAG" },
-  { id: "loupe", label: "RAW" },
 ];
 
-/**
- * Condition vocabulary for RAW (ungraded) cards. Mirrors the standard
- * PSA / TCG vocabulary so per-condition pricing maps directly. Only
- * surfaced when the user selects `RAW` as the grading house.
- */
 const CONDITIONS: { id: RawCondition; label: string; short: string }[] = [
   { id: "nm", short: "NM", label: "Near Mint" },
   { id: "lp", short: "LP", label: "Lightly Played" },
@@ -65,12 +60,19 @@ const CONDITIONS: { id: RawCondition; label: string; short: string }[] = [
   { id: "dmg", short: "DMG", label: "Damaged" },
 ];
 
+/** Org tags only — never grade/house labels. */
+const STARTER_TAGS = [
+  "PC",
+  "Chase",
+  "Grail",
+  "For Trade",
+  "Investment",
+  "Vintage",
+] as const;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface GradeFormCardMeta {
-  /** Local catalog UUID. One of cardId/upstreamId must be set on create. */
   cardId?: string | null;
-  /** Composite upstream id (e.g. `pokemontcg:base1-4`). */
   upstreamId?: string | null;
   name: string | null;
   imageUrl: string | null;
@@ -98,7 +100,6 @@ export interface GradeFormProps {
 }
 
 function clampNumeric(input: string, max = 10): string {
-  // Allow empty, digits, and one decimal point. No leading minus.
   const cleaned = input.replace(/[^0-9.]/g, "");
   const parts = cleaned.split(".");
   const normalized = parts.length > 1 ? `${parts[0]}.${parts.slice(1).join("")}` : cleaned;
@@ -137,17 +138,30 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   const createMut = useCreateGrade();
   const updateMut = useUpdateGrade();
   const deleteMut = useDeleteGrade();
-  // Tags the user already uses elsewhere — offered as tap-to-add suggestions.
-  // Shares the vault summary cache, so it's usually already warm.
   const tagSuggestions = useQuery({
     queryKey: queryKeys.collection.summary(),
     queryFn: () => fetchCollectionSummary(),
     staleTime: 60_000,
   });
+  const { data: portfolios } = useCollectionsOverview();
+  const { collectionId: activeCollectionId } = useActiveCollection();
 
-  const [grade, setGrade] = useState<string>(initial?.grade != null ? String(initial.grade) : "");
-  const [house, setHouse] = useState<GradeHouse>(initial?.house ?? "psa");
-  const [condition, setCondition] = useState<RawCondition | null>(initial?.condition ?? null);
+  // Create defaults to RAW so users can submit with almost nothing filled.
+  const defaultHouse: GradeHouse = initial?.house ?? (mode === "create" ? "loupe" : "psa");
+  const [grade, setGrade] = useState<string>(
+    defaultHouse === "loupe"
+      ? ""
+      : initial?.grade != null
+        ? String(initial.grade)
+        : "",
+  );
+  const [house, setHouse] = useState<GradeHouse>(defaultHouse);
+  const [condition, setCondition] = useState<RawCondition | null>(
+    initial?.condition ?? (defaultHouse === "loupe" ? "nm" : null),
+  );
+  const [targetCollectionId, setTargetCollectionId] = useState<string | null>(
+    mode === "create" ? activeCollectionId : null,
+  );
   const [purchasePrice, setPurchasePrice] = useState<string>(
     initial?.purchasePriceUsd != null ? String(initial.purchasePriceUsd) : "",
   );
@@ -155,28 +169,19 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   const [estimatedValue, setEstimatedValue] = useState<string>(
     initial?.estimatedValueUsd != null ? String(initial.estimatedValueUsd) : "",
   );
-  // Tracks whether the user has manually edited the estimated value
-  // input. While false (create flow, untouched), the field auto-syncs
-  // to the live market snapshot picked by current grade/house.
-  const estValueTouchedRef = useRef<boolean>(mode === "edit" || initial?.estimatedValueUsd != null);
+  const estValueTouchedRef = useRef<boolean>(
+    mode === "edit" || initial?.estimatedValueUsd != null,
+  );
   const [autoFilledFromMarket, setAutoFilledFromMarket] = useState(false);
   const [notes, setNotes] = useState<string>(initial?.notes ?? "");
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
-  // How many identical holdings to create. Create-mode only — editing a
-  // single holding never changes the count. Mirrors the web CollectionForm.
   const [copies, setCopies] = useState<string>("1");
   const [submitting, setSubmitting] = useState(false);
 
-  // Live market snapshot for the bound card. Only fetched on create —
-  // edit flows already have the user's chosen value persisted.
   const marketEnabled = mode === "create" && Boolean(card.cardId);
   const marketQ = useCardMarket(marketEnabled ? card.cardId : null);
   const marketSummary = marketQ.data?.snapshot?.summary;
 
-  // Pick the right headline from the snapshot for the user's current
-  // grade selection. RAW → raw; high grade (>= 8) → pop_top (top tier);
-  // anything else → graded_avg. Falls back across the trio so we always
-  // surface *something* when the snapshot has any pricing.
   const suggestedEstimate = useMemo<number | null>(() => {
     if (!marketSummary) return null;
     const raw = marketSummary.raw?.amount ?? null;
@@ -197,14 +202,53 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
 
   const heldDays = useMemo(() => daysBetween(purchaseDate), [purchaseDate]);
   const dateValid = purchaseDate === "" || ISO_DATE_RE.test(purchaseDate);
+  const isRaw = house === "loupe";
   const gradeNum = Number(grade);
-  const gradeValid = grade !== "" && Number.isFinite(gradeNum) && gradeNum >= 0 && gradeNum <= 10;
+  // RAW: grade locked (backend → 0). Slabs: grade required only if user picks a house.
+  const gradeValid =
+    isRaw || (grade !== "" && Number.isFinite(gradeNum) && gradeNum >= 0 && gradeNum <= 10);
+  // Condition is optional in the UI; backend defaults RAW → nm when omitted.
+  const conditionValid = true;
 
   const canSubmit =
     !submitting &&
     gradeValid &&
+    conditionValid &&
     dateValid &&
     (mode === "edit" || Boolean(card.cardId || card.upstreamId));
+
+  const tagSuggestionList = useMemo(() => {
+    const fromVault = tagSuggestions.data?.availableTags ?? [];
+    const blocked = new Set(["raw", "gem 10", "gem10", "psa", "bgs", "cgc", "sgc", "tag"]);
+    const merged = [...STARTER_TAGS, ...fromVault].filter(
+      (t) => t && !blocked.has(t.toLowerCase()),
+    );
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const t of merged) {
+      const k = t.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(t);
+    }
+    return out;
+  }, [tagSuggestions.data?.availableTags]);
+
+  const customCollections = useMemo(
+    () => (portfolios ?? []).filter((r) => r.id && !r.is_all),
+    [portfolios],
+  );
+
+  const selectHouse = (next: GradeHouse) => {
+    setHouse(next);
+    if (next === "loupe") {
+      setGrade("");
+      setCondition((c) => c ?? "nm");
+    } else {
+      setCondition(null);
+      if (grade === "") setGrade("10");
+    }
+  };
 
   const onSubmit = async () => {
     if (!canSubmit) return;
@@ -214,17 +258,16 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
         const payload = {
           cardId: card.cardId ?? null,
           upstreamId: card.upstreamId ?? null,
-          grade: gradeNum,
+          grade: isRaw ? 0 : gradeNum,
           house,
-          condition: house === "loupe" ? condition : null,
+          condition: isRaw ? (condition ?? "nm") : null,
           purchasePriceUsd: purchasePrice === "" ? null : Number(purchasePrice),
           purchaseDate: purchaseDate || null,
           estimatedValueUsd: estimatedValue === "" ? null : Number(estimatedValue),
           notes: notes.trim() || null,
           tags,
+          collectionId: targetCollectionId,
         };
-        // One row per copy — the backend models copies as distinct holdings,
-        // so we POST once each (mirrors the web CollectionForm).
         const count = Math.max(1, Math.min(99, parseInt(copies, 10) || 1));
         for (let i = 0; i < count; i++) {
           await createMut.mutateAsync(payload);
@@ -232,9 +275,9 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
       } else if (mode === "edit" && gradeId) {
         await updateMut.mutateAsync({
           id: gradeId,
-          grade: gradeNum,
+          grade: isRaw ? 0 : gradeNum,
           house,
-          condition: house === "loupe" ? condition : null,
+          condition: isRaw ? (condition ?? "nm") : null,
           purchasePriceUsd: purchasePrice === "" ? null : Number(purchasePrice),
           purchaseDate: purchaseDate || null,
           estimatedValueUsd: estimatedValue === "" ? null : Number(estimatedValue),
@@ -244,14 +287,12 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
       }
       router.back();
     } catch (e) {
-      // Free-tier cap reached — turn the 402 into the upgrade paywall
-      // rather than a dead-end error (mirrors the web CollectionForm).
       if (e instanceof ApiError && e.status === 402) {
         openPaywall("card_limit");
         return;
       }
       Alert.alert(
-        mode === "create" ? "Couldn't add card" : "Couldn't update",
+        mode === "create" ? "Couldn't add card" : "Couldn't apply changes",
         e instanceof Error ? e.message : "Try again in a moment.",
       );
     } finally {
@@ -285,10 +326,11 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
     );
   };
 
-  // Live headline figure for the hero — the user's typed estimate when
-  // present, otherwise the market suggestion. Drives the big number.
   const displayValue: number | null =
     estimatedValue !== "" ? Number(estimatedValue) : suggestedEstimate;
+
+  const ctaLabel = mode === "create" ? "Add to vault" : "Apply";
+  const headerTitle = mode === "create" ? "Add to vault" : "Edit holding";
 
   return (
     <KeyboardAvoidingView
@@ -296,7 +338,6 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
     >
-      {/* Top bar — stays pinned above the scroll content. */}
       <View
         style={{
           flexDirection: "row",
@@ -317,7 +358,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           <ChevronLeft size={18} color={p.ink.default} />
         </Pressable>
         <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-          {mode === "create" ? "Add to vault" : "Edit holding"}
+          {headerTitle}
         </Text>
         {mode === "edit" && gradeId ? (
           <Pressable
@@ -339,12 +380,12 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           paddingHorizontal: 20,
           paddingTop: 4,
           paddingBottom: 40,
-          gap: 22,
+          gap: 20,
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero — centered card portrait, title, set/year, TCG pill. */}
+        {/* Hero */}
         <View style={{ alignItems: "center", gap: 14, paddingTop: 4 }}>
           <View
             style={{
@@ -385,14 +426,12 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           </View>
         </View>
 
-        {/* Estimated-value headline — Robinhood-style big number framed
-            by hairline rules. Reflects the live estimate as the user
-            tweaks grade / house / the value field. */}
+        {/* Value headline */}
         <View
           style={{
             alignItems: "center",
             gap: 4,
-            paddingVertical: 18,
+            paddingVertical: 16,
             borderTopWidth: 1,
             borderBottomWidth: 1,
             borderColor: p.line.default,
@@ -415,30 +454,28 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
                 ? "—"
                 : money(0, { compact: false })}
           </Text>
+          {mode === "create" ? (
+            <Text style={{ color: p.ink.dim, fontSize: 11, marginTop: 2 }}>
+              Everything below is optional — tap {ctaLabel} anytime.
+            </Text>
+          ) : (
+            <Text style={{ color: p.ink.dim, fontSize: 11, marginTop: 2 }}>
+              Tweak details, then tap Apply.
+            </Text>
+          )}
         </View>
 
-        {/* Grade */}
-        <Field label="Grade" hint="0 – 10. Use 0 for a raw / ungraded card.">
-          <TextInput
-            value={grade}
-            onChangeText={(t) => setGrade(clampNumeric(t, 10))}
-            placeholder="e.g. 9.5"
-            placeholderTextColor={p.ink.dim}
-            keyboardType="decimal-pad"
-            inputMode="decimal"
-            style={inputStyle(p)}
-          />
-        </Field>
+        {/* Essentials */}
+        <SectionLabel>Grading</SectionLabel>
 
-        {/* House */}
-        <Field label="Grading house">
+        <Field label="House" hint={isRaw ? "Ungraded card — no slab grade." : undefined}>
           <View className="flex-row flex-wrap" style={{ gap: 8 }}>
             {HOUSES.map((h) => {
               const active = house === h.id;
               return (
                 <Pressable
                   key={h.id}
-                  onPress={() => setHouse(h.id)}
+                  onPress={() => selectHouse(h.id)}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 8,
@@ -464,13 +501,23 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           </View>
         </Field>
 
-        {/* Condition — RAW only. The chip vocabulary matches per-condition
-          pricing on eBay so the future "estimated value" lookup can key
-          off the same slug without a translation table. */}
-        {house === "loupe" ? (
+        {!isRaw ? (
+          <Field label="Grade" hint="Required for slabs · 0 – 10">
+            <TextInput
+              value={grade}
+              onChangeText={(t) => setGrade(clampNumeric(t, 10))}
+              placeholder="e.g. 9.5"
+              placeholderTextColor={p.ink.dim}
+              keyboardType="decimal-pad"
+              inputMode="decimal"
+              style={inputStyle(p)}
+            />
+          </Field>
+        ) : (
           <Field
             label="Condition"
-            hint="PSA-style vocab. Drives per-condition pricing once comps are live."
+            optional
+            hint="Defaults to Near Mint if you skip it."
           >
             <View className="flex-row flex-wrap" style={{ gap: 8 }}>
               {CONDITIONS.map((c) => {
@@ -478,7 +525,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
                 return (
                   <Pressable
                     key={c.id}
-                    onPress={() => setCondition(active ? null : c.id)}
+                    onPress={() => setCondition(c.id)}
                     style={{
                       paddingHorizontal: 14,
                       paddingVertical: 8,
@@ -515,13 +562,71 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
               })}
             </View>
           </Field>
+        )}
+
+        {mode === "create" ? (
+          <Field label="Collection" optional hint="Leave on All to keep it in the vault only.">
+            <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+              <Pressable
+                onPress={() => setTargetCollectionId(null)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: targetCollectionId == null ? p.accent.mint : p.line.default,
+                  backgroundColor:
+                    targetCollectionId == null
+                      ? withAlpha(p.accent.mint, 0.15)
+                      : "transparent",
+                }}
+              >
+                <Text
+                  style={{
+                    color: targetCollectionId == null ? p.accent.mint : p.ink.muted,
+                    fontSize: 12,
+                    fontWeight: "700",
+                  }}
+                >
+                  All
+                </Text>
+              </Pressable>
+              {customCollections.map((c) => {
+                const active = targetCollectionId === c.id;
+                return (
+                  <Pressable
+                    key={c.id!}
+                    onPress={() => setTargetCollectionId(c.id)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: active ? p.accent.mint : p.line.default,
+                      backgroundColor: active
+                        ? withAlpha(p.accent.mint, 0.15)
+                        : "transparent",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: active ? p.accent.mint : p.ink.muted,
+                        fontSize: 12,
+                        fontWeight: "700",
+                      }}
+                      numberOfLines={1}
+                    >
+                      {c.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Field>
         ) : null}
 
-        {/* Copies — create-mode only. Adds N identical holdings in one go,
-          mirroring the web "Copies" field. Editing a single holding never
-          changes the count, so it's hidden in edit mode. */}
         {mode === "create" ? (
-          <Field label="Copies" hint="How many of this exact card you own. Adds one holding each.">
+          <Field label="Copies" optional hint="Adds one vault holding per copy.">
             <TextInput
               value={copies}
               onChangeText={(t) => setCopies(t.replace(/[^0-9]/g, "").slice(0, 2))}
@@ -534,11 +639,10 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           </Field>
         ) : null}
 
-        {/* Purchase price */}
-        <Field
-          label="What you paid (USD)"
-          hint="Optional — leave blank if you don't want to track P/L."
-        >
+        {/* Optional details */}
+        <SectionLabel>Details · optional</SectionLabel>
+
+        <Field label="What you paid (USD)" optional hint="Blank = no P/L tracking.">
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Text
               style={{
@@ -569,9 +673,9 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           </View>
         </Field>
 
-        {/* Purchase date */}
         <Field
           label="Purchase date"
+          optional
           hint={
             heldDays != null
               ? `Held for ${heldDays.toLocaleString()} day${heldDays === 1 ? "" : "s"}.`
@@ -609,26 +713,23 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           </View>
         </Field>
 
-        {/* Estimated value — auto-prefilled from the live market snapshot
-          on create. Picks raw / graded_avg / pop_top based on the
-          current grade & house, then stops syncing the moment the user
-          edits the field manually. */}
         <Field
           label="Estimated value (USD)"
+          optional
           hint={
             mode === "create"
               ? marketQ.isLoading && estimatedValue === ""
                 ? "Fetching current market value…"
                 : autoFilledFromMarket && !estValueTouchedRef.current
-                  ? `Auto-filled from current market ${
+                  ? `Auto-filled from market ${
                       house === "loupe"
                         ? "(raw)"
                         : Number(grade) >= 8
-                          ? "(top-tier comp)"
+                          ? "(top-tier)"
                           : "(graded avg)"
-                    }. Edit to override.`
-                  : "Edit to override the auto market estimate."
-              : "Optional — overrides the auto market estimate."
+                    }. Clear or edit anytime.`
+                  : "Leave blank to rely on live market later."
+              : "Leave blank to clear your override."
           }
         >
           <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -665,17 +766,11 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
           </View>
         </Field>
 
-        {/* Tags — user organization labels ("PC", "For sale", …). */}
-        <Field label="Tags" hint="Organize + filter your vault. Tap a chip to remove.">
-          <TagInput
-            value={tags}
-            onChange={setTags}
-            suggestions={tagSuggestions.data?.availableTags ?? []}
-          />
+        <Field label="Tags" optional hint="Organize + filter. Tap a chip to remove.">
+          <TagInput value={tags} onChange={setTags} suggestions={tagSuggestionList} />
         </Field>
 
-        {/* Notes */}
-        <Field label="Notes" hint="Slab cert #, condition notes, anything.">
+        <Field label="Notes" optional hint="Slab cert #, condition notes, anything.">
           <TextInput
             value={notes}
             onChangeText={setNotes}
@@ -693,8 +788,6 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
         </Field>
       </ScrollView>
 
-      {/* Sticky CTA — full-width, sits above the home indicator with a
-          hairline separator, the way Robinhood pins its primary action. */}
       <View
         style={{
           paddingHorizontal: 20,
@@ -706,7 +799,7 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
         }}
       >
         <PrimaryButton
-          label={mode === "create" ? "Add to vault" : "Save changes"}
+          label={ctaLabel}
           onPress={onSubmit}
           loading={submitting}
           disabled={!canSubmit}
@@ -716,22 +809,42 @@ export function GradeForm({ mode, gradeId, card, initial }: GradeFormProps) {
   );
 }
 
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <Text
+      className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim"
+      style={{ marginTop: 4 }}
+    >
+      {children}
+    </Text>
+  );
+}
+
 function Field({
   label,
   hint,
   error,
+  optional,
   children,
 }: {
   label: string;
   hint?: string;
   error?: string | null;
+  optional?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <View style={{ gap: 8 }}>
-      <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-        {label}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+          {label}
+        </Text>
+        {optional ? (
+          <Text style={{ color: palette.ink.dim, fontSize: 10, fontWeight: "600" }}>
+            optional
+          </Text>
+        ) : null}
+      </View>
       {children}
       {error ? (
         <Text style={{ color: palette.accent.rose, fontSize: 11 }}>{error}</Text>

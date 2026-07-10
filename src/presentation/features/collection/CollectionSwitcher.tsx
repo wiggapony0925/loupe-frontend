@@ -36,61 +36,39 @@ export function CollectionSwitcher() {
     null;
   const isAll = !collectionId || (active?.is_all ?? true);
   const name = isAll ? "All" : (active?.name ?? "All");
-  const mint = p.accent.mint;
+  const tint = isAll ? p.accent.mint : p.accent.blue;
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start" }}>
+    <>
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
         accessibilityLabel={`Viewing ${name}. Tap to switch portfolio.`}
         hitSlop={8}
+        className="flex-row items-center gap-1.5 rounded-full border px-2.5 py-1.5"
         style={({ pressed }) => ({
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 6,
-          paddingVertical: 6,
-          paddingHorizontal: 11,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: withAlpha(mint, isAll ? 0.32 : 0.5),
-          backgroundColor: withAlpha(mint, isAll ? 0.1 : 0.16),
-          opacity: pressed ? 0.7 : 1,
+          opacity: pressed ? 0.75 : 1,
+          borderColor: withAlpha(tint, 0.45),
+          backgroundColor: withAlpha(tint, 0.12),
         })}
       >
-        <Layers size={12} color={mint} strokeWidth={2.4} />
+        <Layers size={11} color={tint} strokeWidth={2.6} />
         <Text
           numberOfLines={1}
-          style={{ color: mint, fontSize: 12.5, fontWeight: "800", maxWidth: 200 }}
+          style={{
+            color: tint,
+            fontSize: 11,
+            fontWeight: "800",
+            letterSpacing: 0.6,
+            maxWidth: 100,
+          }}
         >
-          {name}
+          {name.toUpperCase()}
         </Text>
-        <ChevronDown size={12} color={mint} strokeWidth={2.6} />
+        <ChevronDown size={11} color={tint} strokeWidth={2.6} />
       </Pressable>
 
-      {!isAll ? (
-        <Pressable
-          onPress={() => setCollectionId(null)}
-          accessibilityRole="button"
-          accessibilityLabel="Show all cards"
-          hitSlop={8}
-          style={({ pressed }) => ({
-            height: 26,
-            width: 26,
-            borderRadius: 13,
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 1,
-            borderColor: p.line.default,
-            backgroundColor: p.bg.elevated,
-            opacity: pressed ? 0.6 : 1,
-          })}
-        >
-          <X size={13} color={p.ink.muted} strokeWidth={2.4} />
-        </Pressable>
-      ) : null}
-
       <PortfolioPickerSheet visible={open} onClose={() => setOpen(false)} />
-    </View>
+    </>
   );
 }

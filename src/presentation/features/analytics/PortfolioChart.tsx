@@ -35,7 +35,7 @@ import * as Haptics from "expo-haptics";
 import { ChevronDown } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "@/application/stores/settingsStore";
-import { usePortfolioHistory, useMarketIndex } from "@/application/queries";
+import { usePortfolioHistory, useMarketIndex, useTopMovers } from "@/application/queries";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import {
   PORTFOLIO_TIMEFRAMES,
@@ -49,7 +49,6 @@ import { useMoney } from "@/presentation/components/Price";
 import { useDisplayCurrency } from "@/application/hooks/useDisplayCurrency";
 import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
-import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { usePressScale } from "@/presentation/components/usePressScale";
 
 /** @deprecated Use `PortfolioTimeframe` from `@/domain/charts`. */
@@ -61,6 +60,8 @@ const CHART_HEIGHT = 200;
 interface PortfolioChartProps {
   /** Live total to anchor the right-edge value when the API is loading. */
   fallbackTotal?: number;
+  /** Callback fired when the user starts or stops dragging the chart crosshair. */
+  onScrubStateChange?: (isScrubbing: boolean) => void;
   /**
    * Total purchase cost across cards with recorded cost basis. When
    * provided (non-null), a "vs Cost" toggle appears next to the delta
@@ -92,6 +93,7 @@ export function PortfolioChart({
   costBasisUsd = null,
   showPsa10Overlay = false,
   bleedX = 0,
+  onScrubStateChange,
 }: PortfolioChartProps) {
   const p = useThemedPalette();
   const insets = useSafeAreaInsets();
@@ -137,6 +139,15 @@ export function PortfolioChart({
   const history = usePortfolioHistory({
     timeframe: range,
     enabled: isAuthenticated,
+    collectionId,
+  });
+  const todayHistory = usePortfolioHistory({
+    timeframe: "1D",
+    enabled: isAuthenticated,
+    collectionId,
+  });
+  const topMovers = useTopMovers({
+    limit: 1,
     collectionId,
   });
   const overlay = useMarketIndex({
@@ -232,11 +243,27 @@ export function PortfolioChart({
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (e) => setScrub(getX(e)),
-      onPanResponderMove: (e) => setScrub(getX(e)),
-      onPanResponderRelease: () => setScrub(null),
-      onPanResponderTerminate: () => setScrub(null),
+      onMoveShouldSetPanResponder: (e, gestureState) => {
+        // Only claim the gesture if the user is swiping horizontally.
+        // This lets vertical swipes naturally scroll the screen.
+        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderTerminationRequest: () => false, // Try to hold onto the gesture
+      onPanResponderGrant: (e) => {
+        setScrub(getX(e));
+        onScrubStateChange?.(true);
+      },
+      onPanResponderMove: (e) => {
+        setScrub(getX(e));
+      },
+      onPanResponderRelease: () => {
+        setScrub(null);
+        onScrubStateChange?.(false);
+      },
+      onPanResponderTerminate: () => {
+        setScrub(null);
+        onScrubStateChange?.(false);
+      },
     }),
   ).current;
 
@@ -322,11 +349,6 @@ export function PortfolioChart({
 
   return (
     <View>
-      {/* Scope tag sits ON TOP of the headline value — one mint pill that says
-          which portfolio the number is for, and switches it. */}
-      <View style={{ marginBottom: 8 }}>
-        <CollectionSwitcher />
-      </View>
 
       {/* Hero value */}
       <View>
@@ -435,6 +457,31 @@ export function PortfolioChart({
                 {outperformPts >= 0 ? "+" : "−"}
                 {Math.abs(outperformPts).toFixed(1)} pts vs PSA-10
               </Text>
+            </View>
+          ) : null}
+          
+          {/* Today Mini Card (Requested by user) */}
+          {todayHistory.data && !todayHistory.isLoading && !scrubLabel ? (
+            <View className="flex-row items-center gap-1.5 ml-1">
+              <View
+                style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: todayHistory.data.deltaUsd >= 0 ? p.accent.mint : p.accent.rose,
+                }}
+              />
+              <Text style={{ color: p.ink.dim, fontSize: 10, fontWeight: "700", letterSpacing: 0.5 }}>TODAY</Text>
+              <Text style={{ color: todayHistory.data.deltaUsd >= 0 ? p.accent.mint : p.accent.rose, fontSize: 11, fontWeight: "700" }}>
+                {todayHistory.data.deltaUsd >= 0 ? "+" : "−"}
+                {money(Math.abs(todayHistory.data.deltaUsd))} ({todayHistory.data.deltaUsd >= 0 ? "+" : "−"}
+                {Math.abs(todayHistory.data.deltaPct).toFixed(1)}%)
+              </Text>
+              {topMovers.rows[0]?.card.name ? (
+                <Text style={{ color: p.ink.muted, fontSize: 11, marginLeft: 2 }}>
+                  Led by <Text style={{ color: p.ink.default, fontWeight: "600" }}>{topMovers.rows[0].card.name}</Text>
+                </Text>
+              ) : null}
             </View>
           ) : null}
         </View>

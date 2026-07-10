@@ -55,6 +55,7 @@ export default function EditGradeScreen() {
         initial={{
           grade: Number(row.grade),
           house: row.house,
+          condition: row.condition ?? null,
           purchasePriceUsd:
             row.purchase_price_usd != null ? Number(row.purchase_price_usd) : null,
           purchaseDate: row.purchase_date,

@@ -32,7 +32,7 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { COPY } from "@/shared/copy";
 import { useRecentSearches } from "@/application/stores/recentSearchesStore";
 import { useAuth } from "@/presentation/providers/AuthProvider";
-import { useCardSearchPaged } from "@/application/queries";
+import { useCardSearchPaged, useFilterMetadata } from "@/application/queries";
 import { useMixedTrending } from "@/application/queries/catalog/useMixedTrending";
 import { useSealedSearch } from "@/application/queries/collection/useSealed";
 import type { SealedProductWire } from "@/infrastructure/http";
@@ -46,7 +46,7 @@ import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { SkeletonSearchResults } from "@/presentation/components/Skeletons";
 import { CardHorizontalRail, CardSparkRow } from "@/presentation/cards";
 import type { CardSearchResult, TcgKey } from "@/infrastructure/http";
-import { TcgMark } from "@/presentation/brand/TcgMark";
+import { BrowseCategoryCarousel } from "@/presentation/features/search/BrowseCategoryCarousel";
 import { gradeColor, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /** All TCG facets supported by the chip row, in render order. */
@@ -128,6 +128,13 @@ const CATEGORIES: Category[] = [
     match: (c) => /one\s?piece/i.test(c.set),
   },
   {
+    key: "digimon",
+    label: "Digimon",
+    mono: "DIG",
+    accent: "blue",
+    match: (c) => /digimon/i.test(c.set),
+  },
+  {
     key: "lorcana",
     label: "Lorcana",
     mono: "LRC",
@@ -161,6 +168,10 @@ export default function SearchScreen() {
   const clearRecent = useRecentSearches((s) => s.clear);
   const removeRecent = useRecentSearches((s) => s.remove);
   const [inputFocused, setInputFocused] = useState(false);
+
+  const metaQuery = useFilterMetadata();
+  const meta = metaQuery.data;
+  const tcgChips = meta?.tcgs ?? TCG_CHIPS;
 
   // Both fetch the signed-in user's own data — gate so they don't run while
   // signed out (and don't fire token-less before auth hydrates).
@@ -355,13 +366,13 @@ export default function SearchScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: 8, paddingTop: 12, paddingRight: 8 }}
         >
-          {TCG_CHIPS.map((c) => {
+          {tcgChips.map((c) => {
             const active = selectedTcg === c.key;
-            const supported = SUPPORTED_TCGS.has(c.key);
+            const supported = SUPPORTED_TCGS.has(c.key as any);
             return (
               <Pressable
                 key={c.key}
-                onPress={() => setSelectedTcg(c.key)}
+                onPress={() => setSelectedTcg(c.key as any)}
                 style={{
                   paddingHorizontal: 12,
                   paddingVertical: 6,
@@ -496,86 +507,19 @@ export default function SearchScreen() {
               <Text className="mt-1 text-2xl font-semibold tracking-tight text-ink">
                 Start browsing
               </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 12, paddingTop: 16, paddingRight: 8 }}
-              >
-                {CATEGORIES.map((cat) => {
-                  const count = cards.filter(cat.match).length;
-                  const active = activeCategory === cat.key;
-                  const tint = p.accent[cat.accent];
-                  return (
-                    <Pressable
-                      key={cat.key}
-                      onPress={() => {
-                        setActiveCategory((prev) => (prev === cat.key ? null : cat.key));
-                        setSelectedTcg(cat.key as TcgChip);
-                      }}
-                      style={({ pressed }) => ({
-                        width: 156,
-                        minHeight: 136,
-                        padding: 14,
-                        justifyContent: "space-between",
-                        opacity: pressed ? 0.9 : 1,
-                        transform: pressed ? [{ scale: 0.96 }] : undefined,
-                        borderRadius: 18,
-                        borderWidth: 1,
-                        borderColor: active ? withAlpha(tint, 0.55) : p.line.default,
-                        backgroundColor: active ? withAlpha(tint, 0.10) : p.bg.elevated,
-                      })}
-                    >
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                        <View
-                          style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: 14,
-                            backgroundColor: p.bg.base,
-                            alignItems: "center",
-                            justifyContent: "center",
-                            borderWidth: 1,
-                            borderColor: withAlpha(tint, 0.34),
-                          }}
-                        >
-                          <TcgMark
-                            set={cat.key}
-                            size={28}
-                            color={tint}
-                            background={p.bg.base}
-                          />
-                        </View>
-                        <Text
-                          numberOfLines={2}
-                          style={{
-                            flex: 1,
-                            color: p.ink.default,
-                            fontSize: 14,
-                            fontWeight: "800",
-                            lineHeight: 17,
-                          }}
-                        >
-                          {cat.label}
-                        </Text>
-                      </View>
-                      <View>
-                        <Text
-                          numberOfLines={1}
-                          style={{ color: p.ink.muted, fontSize: 11, fontWeight: "700" }}
-                        >
-                          {count} {count === 1 ? "card" : "cards"}
-                        </Text>
-                        <Text
-                          numberOfLines={1}
-                          style={{ color: active ? tint : p.ink.dim, fontSize: 10, marginTop: 2 }}
-                        >
-                          {active ? "Selected" : "Tap to filter"}
-                        </Text>
-                      </View>
-                    </Pressable>
+              <BrowseCategoryCarousel
+                categories={CATEGORIES}
+                activeKey={selectedTcg}
+                onSelect={(key) => {
+                  // Same facet as the TCG chips above — drives
+                  // ResolvedCarousels (/v1/public/carousels/resolved),
+                  // identical to the web marketplace. Toggle off → All.
+                  setSelectedTcg((prev) =>
+                    prev === key ? "all" : (key as TcgChip),
                   );
-                })}
-              </ScrollView>
+                  setActiveCategory(null);
+                }}
+              />
             </View>
 
             {/* ── BAND 2 · DISCOVER ───────────────────────────

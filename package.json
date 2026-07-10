@@ -26,6 +26,7 @@
     "web": "npm run kill && expo start --web",
     "prebuild": "expo prebuild",
     "generate:set-logos": "node scripts/generate-set-logo-registry.mjs",
+    "fetch:brand-logos": "node scripts/fetch-brand-logos.mjs",
     "generate:api-types": "./scripts/generate-api-types.sh",
     "eas-build-pre-install": "node scripts/generate-set-logo-registry.mjs || true",
     "doctor": "npx expo-doctor",

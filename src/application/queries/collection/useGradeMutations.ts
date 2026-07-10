@@ -24,10 +24,10 @@ export interface CreateGradeInput {
   cardId?: string | null;
   /** Composite upstream id like `"pokemontcg:base1-4"`. */
   upstreamId?: string | null;
-  /** Numeric grade in [0, 10]. */
+  /** Numeric grade in [0, 10]. Ignored when `house === "loupe"` (backend forces 0). */
   grade: number;
   house: GradeHouse;
-  /** Raw-card condition. Only meaningful when `house === "loupe"`. */
+  /** Raw-card condition. Required when `house === "loupe"`; ignored for slabs. */
   condition?: RawCondition | null;
   /** What the user paid (USD). Optional — null means "no cost recorded". */
   purchasePriceUsd?: number | null;
@@ -38,6 +38,12 @@ export interface CreateGradeInput {
   notes?: string | null;
   /** User organization tags for this holding. */
   tags?: string[];
+  /**
+   * Optional portfolio to categorize into after create. ``null`` / omitted
+   * = vault "All" only (no collection membership). Backend still owns the
+   * membership write via ``POST …/items/bulk``.
+   */
+  collectionId?: string | null;
 }
 
 const UUID_RE =
@@ -72,12 +78,32 @@ function toCreateBody(input: CreateGradeInput): Record<string, unknown> {
 export function useCreateGrade() {
   const qc = useQueryClient();
   return useMutation<GradedCard, Error, CreateGradeInput>({
-    mutationFn: (input) =>
-      apiFetch<GradedCard>(ENDPOINTS.grades.mine, {
+    mutationFn: async (input) => {
+      // RAW holdings: client mirrors backend normalization so the payload
+      // is honest even before the server rewrites it.
+      const isRaw = input.house === "loupe";
+      const body = toCreateBody({
+        ...input,
+        grade: isRaw ? 0 : input.grade,
+        condition: isRaw ? (input.condition ?? "nm") : null,
+      });
+      const created = await apiFetch<GradedCard>(ENDPOINTS.grades.mine, {
         method: "POST",
-        json: toCreateBody(input),
-      }),
-    onSuccess: () => invalidateHoldingCaches(qc),
+        json: body,
+      });
+      // Optional portfolio membership — one bulk call, O(1) round-trips.
+      if (input.collectionId && created?.id) {
+        await apiFetch(ENDPOINTS.collections.itemsBulk(input.collectionId), {
+          method: "POST",
+          json: { graded_card_ids: [created.id] },
+        });
+      }
+      return created;
+    },
+    onSuccess: () => {
+      invalidateHoldingCaches(qc);
+      qc.invalidateQueries({ queryKey: ["collection", "overview"] });
+    },
   });
 }
 

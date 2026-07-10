@@ -15,6 +15,7 @@ import { LineChart } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import { useAnalyticsOverview } from "@/application/queries";
 import { GradeBars, PortfolioChart } from "@/presentation/features/analytics";
+import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { LiveAnalyticsCard } from "@/presentation/features/analytics/LiveAnalyticsCard";
 import {
   ConcentrationCard,
@@ -72,7 +73,10 @@ export default function AnalyticsScreen() {
           <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
             Performance
           </Text>
-          <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">Analytics</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 }}>
+            <Text className="text-3xl font-semibold tracking-tight text-ink">Analytics</Text>
+            <CollectionSwitcher />
+          </View>
         </View>
 
         <LiveAnalyticsCard />

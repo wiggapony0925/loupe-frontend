@@ -58,6 +58,8 @@ export {
   useRemoveFromWatchlist,
   useWatchlist,
 } from "./collection/useWatchlist";
+export { useFilterMetadata } from "./collection/useFilterMetadata";
+
 
 // scans
 export { useMyScans } from "./scans/useMyScans";

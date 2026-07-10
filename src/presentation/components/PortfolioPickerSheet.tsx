@@ -1,13 +1,19 @@
-import React from "react";
+import React, { useState } from "react";
 import { FlatList, Modal, Platform, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Check, Layers, X } from "lucide-react-native";
+import { Check, Layers, Pencil, Plus, Trash2, X } from "lucide-react-native";
 import {
   useCollectionsOverview,
   type CollectionSummary,
 } from "@/application/queries/collection/useCollectionsOverview";
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { CollectionPromptModal, type PromptMode } from "./CollectionPromptModal";
+import {
+  useCreateCollection,
+  useUpdateCollection,
+  useDeleteCollection,
+} from "@/application/queries/collection/useCollectionMutations";
 
 interface PortfolioPickerSheetProps {
   visible: boolean;
@@ -36,6 +42,39 @@ export function PortfolioPickerSheet({
   const { collectionId, setCollectionId } = useActiveCollection();
   const { data } = useCollectionsOverview();
   const rows: CollectionSummary[] = data ?? [];
+
+  const [isManaging, setIsManaging] = useState(false);
+  const [promptMode, setPromptMode] = useState<PromptMode | null>(null);
+  const [promptCollection, setPromptCollection] = useState<CollectionSummary | null>(null);
+  const [promptError, setPromptError] = useState<string | null>(null);
+  const [promptBusy, setPromptBusy] = useState(false);
+
+  const createCol = useCreateCollection();
+  const updateCol = useUpdateCollection();
+  const deleteCol = useDeleteCollection();
+
+  const handlePromptSubmit = async (value: string) => {
+    setPromptBusy(true);
+    setPromptError(null);
+    try {
+      if (promptMode === "create") {
+        await createCol.mutateAsync({ name: value });
+      } else if (promptMode === "rename" && promptCollection?.id) {
+        await updateCol.mutateAsync({ id: promptCollection.id, payload: { name: value } });
+      } else if (promptMode === "delete" && promptCollection?.id) {
+        await deleteCol.mutateAsync(promptCollection.id);
+        if (collectionId === promptCollection.id) {
+          setCollectionId(null);
+        }
+      }
+      setPromptMode(null);
+      setPromptCollection(null);
+    } catch (e) {
+      setPromptError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setPromptBusy(false);
+    }
+  };
 
   return (
     <Modal
@@ -93,16 +132,36 @@ export function PortfolioPickerSheet({
                 Choose a portfolio
               </Text>
             </View>
-            <Pressable
-              onPress={onClose}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Close portfolio picker"
-              className="h-9 w-9 items-center justify-center rounded-full border border-line"
-              style={{ backgroundColor: p.bg.elevated }}
-            >
-              <X size={16} color={p.ink.muted} />
-            </Pressable>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Pressable
+                onPress={() => setIsManaging(!isManaging)}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  backgroundColor: isManaging ? p.ink.default : p.bg.elevated,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Text style={{ color: isManaging ? p.bg.base : p.ink.default, fontWeight: "600", fontSize: 13 }}>
+                  {isManaging ? "Done" : "Manage"}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setIsManaging(false);
+                  onClose();
+                }}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Close portfolio picker"
+                className="h-9 w-9 items-center justify-center rounded-full border border-line"
+                style={{ backgroundColor: p.bg.elevated }}
+              >
+                <X size={16} color={p.ink.muted} />
+              </Pressable>
+            </View>
           </View>
 
           {/* List */}
@@ -117,6 +176,7 @@ export function PortfolioPickerSheet({
               return (
                 <Pressable
                   onPress={() => {
+                    if (isManaging) return;
                     setCollectionId(item.id);
                     onClose();
                   }}
@@ -153,15 +213,88 @@ export function PortfolioPickerSheet({
                       {money(item.total_value_usd)}
                     </Text>
                   </View>
-                  {active ? (
+                  
+                  {isManaging ? (
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      {item.deletable ? (
+                        <Pressable
+                          onPress={() => {
+                            setPromptError(null);
+                            setPromptCollection(item);
+                            setPromptMode("delete");
+                          }}
+                          hitSlop={8}
+                          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 8 })}
+                        >
+                          <Trash2 size={18} color={p.accent.rose} />
+                        </Pressable>
+                      ) : null}
+                      {item.id ? (
+                        <Pressable
+                          onPress={() => {
+                            setPromptError(null);
+                            setPromptCollection(item);
+                            setPromptMode("rename");
+                          }}
+                          hitSlop={8}
+                          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 8 })}
+                        >
+                          <Pencil size={18} color={p.ink.muted} />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ) : active ? (
                     <Check size={18} color={tint} strokeWidth={2.6} />
                   ) : null}
                 </Pressable>
               );
             }}
+            ListFooterComponent={
+              <Pressable
+                onPress={() => {
+                  setPromptError(null);
+                  setPromptCollection(null);
+                  setPromptMode("create");
+                }}
+                className="mx-3 mt-4 flex-row items-center gap-3 rounded-2xl border border-dashed border-line px-3 py-3"
+                style={({ pressed }) => ({
+                  backgroundColor: pressed ? p.bg.elevated : "transparent",
+                })}
+              >
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: p.bg.elevated,
+                  }}
+                >
+                  <Plus size={16} color={p.ink.default} strokeWidth={2.4} />
+                </View>
+                <Text style={{ flex: 1, fontSize: 15, fontWeight: "600", color: p.ink.default }}>
+                  New Collection
+                </Text>
+              </Pressable>
+            }
           />
         </SafeAreaView>
       </View>
+      
+      <CollectionPromptModal
+        visible={promptMode !== null}
+        mode={promptMode}
+        initialName={promptCollection?.name}
+        busy={promptBusy}
+        error={promptError}
+        onClose={() => {
+          if (promptBusy) return;
+          setPromptMode(null);
+          setPromptError(null);
+        }}
+        onSubmit={handlePromptSubmit}
+      />
     </Modal>
   );
 }

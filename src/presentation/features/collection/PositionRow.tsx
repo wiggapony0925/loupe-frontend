@@ -12,7 +12,7 @@
  */
 import React from "react";
 import { Animated, Pressable, Text, View } from "react-native";
-import { CheckCircle2, Circle, TrendingDown, TrendingUp } from "lucide-react-native";
+import { Check, Circle, Pencil, Trash2, TrendingDown, TrendingUp } from "lucide-react-native";
 import { router } from "expo-router";
 import { routes } from "@/shared/routes";
 import { CardImage } from "@/presentation/components/CardImage";
@@ -41,6 +41,18 @@ interface PositionRowProps {
   onLongPress?: () => void;
   /** When true, render the row in its selected state (check + tint). */
   selected?: boolean;
+  /**
+   * Opens GradeForm (Apply) for this holding. Shown on every row while
+   * multi-select is active (replaces the price pill with edit/remove).
+   */
+  onEdit?: () => void;
+  /** Remove this holding — parent shows collection-vs-portfolio sheet. */
+  onRemove?: () => void;
+  /**
+   * Horizontal padding. Defaults to {@link POSITION_ROW_INDENT}. Pass `0`
+   * when the parent list already applies page gutters (Vault).
+   */
+  indent?: number;
 }
 
 /** Horizontal padding for the row — vault.tsx uses this to align separators. */
@@ -54,10 +66,23 @@ const SPARK_W = 56;
 const SPARK_H = 24;
 const PILL_MIN_W = 84;
 
-export function PositionRow({ card, spark, copies = 1, onPress, onLongPress, selected }: PositionRowProps) {
+export function PositionRow({
+  card,
+  spark,
+  copies = 1,
+  onPress,
+  onLongPress,
+  selected,
+  onEdit,
+  onRemove,
+  indent = POSITION_ROW_INDENT,
+}: PositionRowProps) {
   const p = useThemedPalette();
   const tint = gradeColor(card.grade);
   const hasDuplicates = copies > 1;
+  // Selection session: hide market chrome, show edit + remove on every row.
+  const inSelectSession = selected !== undefined;
+  const handleEdit = onEdit ?? (() => router.push(routes.gradeEdit(card.id)));
   // Robinhood-style press feedback — row gently scales to 0.97 on
   // touch. Native-driver spring so the list keeps scrolling smoothly.
   const { scale, onPressIn, onPressOut } = usePressScale();
@@ -106,6 +131,22 @@ export function PositionRow({ card, spark, copies = 1, onPress, onLongPress, sel
     Math.abs(apiDelta ?? 0) >= FLAT_THRESHOLD;
 
   return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: indent,
+        marginVertical: selected ? 3 : 0,
+        borderRadius: selected !== undefined ? 14 : 0,
+        borderWidth: selected ? 1.5 : 0,
+        borderColor: selected ? withAlpha(p.accent.mint, 0.55) : "transparent",
+        backgroundColor: selected
+          ? withAlpha(p.accent.mint, 0.14)
+          : selected === false
+            ? withAlpha(p.ink.dim, 0.03)
+            : "transparent",
+      }}
+    >
     <Pressable
       onPress={onPress ?? (() => router.push(routes.card(card.cardId)))}
       onLongPress={onLongPress}
@@ -120,6 +161,7 @@ export function PositionRow({ card, spark, copies = 1, onPress, onLongPress, sel
           : `${card.title}, grade ${card.grade.toFixed(1)}`
       }
       android_ripple={{ color: withAlpha(p.ink.dim, 0.1) }}
+      style={{ flex: 1 }}
     >
       {({ pressed }) => (
         <Animated.View
@@ -127,13 +169,12 @@ export function PositionRow({ card, spark, copies = 1, onPress, onLongPress, sel
             flexDirection: "row",
             alignItems: "center",
             paddingVertical: 12,
-            paddingHorizontal: POSITION_ROW_INDENT,
-            backgroundColor: selected
-              ? withAlpha(p.accent.mint, 0.12)
-              : pressed
-                ? withAlpha(p.ink.dim, 0.06)
-                : "transparent",
+            paddingHorizontal: selected !== undefined ? 8 : 0,
+            backgroundColor: pressed && selected === undefined
+              ? withAlpha(p.ink.dim, 0.06)
+              : "transparent",
             transform: [{ scale }],
+            opacity: selected === false ? 0.72 : 1,
           }}
         >
           {/* Selection checkbox — only rendered while the parent screen
@@ -142,7 +183,18 @@ export function PositionRow({ card, spark, copies = 1, onPress, onLongPress, sel
           {selected !== undefined ? (
             <View style={{ marginRight: 10 }}>
               {selected ? (
-                <CheckCircle2 size={22} color={p.accent.mint} strokeWidth={2.5} />
+                <View
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: p.accent.mint,
+                  }}
+                >
+                  <Check size={14} color="#06140d" strokeWidth={3} />
+                </View>
               ) : (
                 <Circle size={22} color={p.ink.dim} strokeWidth={2} />
               )}
@@ -285,78 +337,124 @@ export function PositionRow({ card, spark, copies = 1, onPress, onLongPress, sel
             ) : null}
           </View>
 
-          {/* Sparkline */}
-          <View
-            style={{
-              width: SPARK_W,
-              height: SPARK_H,
-              justifyContent: "center",
-              marginRight: 10,
-            }}
-          >
-            <Sparkline
-              values={points}
-              width={SPARK_W}
-              height={SPARK_H}
-              showBaseline={false}
-              color={directionTint}
-            />
-          </View>
-
-          {/* Price pill */}
-          <View style={{ alignItems: "flex-end" }}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 8,
-                backgroundColor: pillBg,
-                minWidth: PILL_MIN_W,
-                justifyContent: "center",
-              }}
-            >
-              {/* Direction glyph — mirrors Collectr's trending tiles
-                  where each price carries a tiny up/down marker. */}
-              {direction === "up" ? (
-                <TrendingUp size={11} color="#fff" strokeWidth={2.75} />
-              ) : direction === "down" ? (
-                <TrendingDown size={11} color="#fff" strokeWidth={2.75} />
-              ) : null}
-              <Price
-                usd={card.estimatedValueUsd}
-                compact
-                numberOfLines={1}
+          {/* Sparkline + price — browse only. Select session swaps these
+              for edit/remove siblings outside this Pressable. */}
+          {!inSelectSession ? (
+            <>
+              <View
                 style={{
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: "700",
-                  letterSpacing: -0.1,
-                  fontVariant: ["tabular-nums"],
-                }}
-              />
-            </View>
-            {showDeltaChip ? (
-              <Text
-                numberOfLines={1}
-                style={{
-                  marginTop: 4,
-                  color: directionTint,
-                  fontSize: 11,
-                  fontWeight: "700",
-                  letterSpacing: 0.2,
-                  fontVariant: ["tabular-nums"],
+                  width: SPARK_W,
+                  height: SPARK_H,
+                  justifyContent: "center",
+                  marginRight: 10,
                 }}
               >
-                {direction === "up" ? "+" : ""}
-                {((apiDelta as number) * 100).toFixed(2)}%
-              </Text>
-            ) : null}
-          </View>
+                <Sparkline
+                  values={points}
+                  width={SPARK_W}
+                  height={SPARK_H}
+                  showBaseline={false}
+                  color={directionTint}
+                />
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 8,
+                    backgroundColor: pillBg,
+                    minWidth: PILL_MIN_W,
+                    justifyContent: "center",
+                  }}
+                >
+                  {direction === "up" ? (
+                    <TrendingUp size={11} color="#fff" strokeWidth={2.75} />
+                  ) : direction === "down" ? (
+                    <TrendingDown size={11} color="#fff" strokeWidth={2.75} />
+                  ) : null}
+                  <Price
+                    usd={card.estimatedValueUsd}
+                    compact
+                    numberOfLines={1}
+                    style={{
+                      color: "#fff",
+                      fontSize: 13,
+                      fontWeight: "700",
+                      letterSpacing: -0.1,
+                      fontVariant: ["tabular-nums"],
+                    }}
+                  />
+                </View>
+                {showDeltaChip ? (
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      marginTop: 4,
+                      color: directionTint,
+                      fontSize: 11,
+                      fontWeight: "700",
+                      letterSpacing: 0.2,
+                      fontVariant: ["tabular-nums"],
+                    }}
+                  >
+                    {direction === "up" ? "+" : ""}
+                    {((apiDelta as number) * 100).toFixed(2)}%
+                  </Text>
+                ) : null}
+              </View>
+            </>
+          ) : null}
         </Animated.View>
       )}
     </Pressable>
+      {inSelectSession ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 4 }}>
+          <Pressable
+            onPress={handleEdit}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Edit ${card.title}`}
+            style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+          >
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 999,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: withAlpha(p.accent.mint, 0.16),
+              }}
+            >
+              <Pencil size={15} color={p.accent.mint} strokeWidth={2.5} />
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => onRemove?.()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${card.title}`}
+            style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+          >
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 999,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: withAlpha(p.accent.rose, 0.16),
+              }}
+            >
+              <Trash2 size={15} color={p.accent.rose} strokeWidth={2.5} />
+            </View>
+          </Pressable>
+        </View>
+      ) : null}
+    </View>
   );
 }

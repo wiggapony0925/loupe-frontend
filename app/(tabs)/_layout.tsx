@@ -455,27 +455,27 @@ function ScanFab({
           <View
             style={[
               {
-                // On iOS the pill is only 60 tall, so a gentle raise (not the
-                // big Android cut-out) keeps the FAB inside the glass.
-                marginTop: variant === "android" ? -16 : -18,
-                width: 54,
-                height: 54,
-                borderRadius: 27,
+                // On iOS, keep the FAB perfectly centered inside the 60px glass pill
+                // instead of popping out and breaking the shape.
+                marginTop: variant === "android" ? -16 : 0,
+                width: variant === "android" ? 54 : 48,
+                height: variant === "android" ? 54 : 48,
+                borderRadius: variant === "android" ? 27 : 24,
                 backgroundColor: p.accent.mint,
                 alignItems: "center",
                 justifyContent: "center",
-                borderWidth: 4,
-                borderColor: variant === "android" ? p.bg.base : withAlpha(p.bg.base, 0.0),
+                borderWidth: variant === "android" ? 4 : 0,
+                borderColor: variant === "android" ? p.bg.base : "transparent",
                 shadowColor: p.accent.mint,
-                shadowOpacity: 0.45,
+                shadowOpacity: variant === "android" ? 0.45 : 0.3,
                 shadowRadius: 10,
                 shadowOffset: { width: 0, height: 4 },
                 elevation: 8,
               },
-              pressed && { transform: [{ scale: 0.94 }], shadowOpacity: 0.3 },
+              pressed && { transform: [{ scale: 0.94 }], shadowOpacity: 0.2 },
             ]}
           >
-            <Camera size={24} color="#06140d" strokeWidth={2.4} />
+            <Camera size={variant === "android" ? 24 : 22} color="#06140d" strokeWidth={2.4} />
           </View>
         )}
       </Pressable>

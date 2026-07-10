@@ -8,8 +8,9 @@ import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
 import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { HardwareStatusWidget, useScannerConnection } from "@/presentation/features/scanner";
-import { PortfolioChart, TodaysDeltaHero } from "@/presentation/features/analytics";
+import { PortfolioChart } from "@/presentation/features/analytics/PortfolioChart";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
+import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { MixedTrendingRail } from "@/presentation/features/search/MixedTrendingRail";
 import { SealedRail } from "@/presentation/features/search/SealedRail";
@@ -19,7 +20,7 @@ import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { ErrorState } from "@/presentation/components/ErrorState";
 import { LoupeMark } from "@/presentation/brand/LoupeMark";
-import { useApiHealth, useHomeFeed, useTopMovers } from "@/application/queries";
+import { useHomeFeed, useTopMovers } from "@/application/queries";
 import { useCardSparklines } from "@/application/queries/catalog/useCardSparklines";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { MoverSparkRow } from "@/presentation/cards";
@@ -58,6 +59,8 @@ export default function CommandCenterScreen() {
   const sealed = useSealedSearch("");
   const hasSealed = (sealed.data?.length ?? 0) > 0;
 
+  const [isScrubbing, setIsScrubbing] = useState(false);
+
   // Manual-only refresh flag — using TanStack's `isFetching` made the
   // RefreshControl spin on initial mount, which pushed the screen header
   // below the viewport on Android.
@@ -76,11 +79,14 @@ export default function CommandCenterScreen() {
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
+      <StaticNavbar />
       <ScrollView
+        scrollEnabled={!isScrubbing}
         // iOS floats a tab-bar pill over the content, so pad past it (bar
         // height + home-indicator inset) instead of the flat-bar gap.
         contentContainerStyle={{
           padding: 20,
+          paddingTop: 8,
           paddingBottom: Platform.OS === "ios" ? 116 : 48,
           gap: 24,
         }}
@@ -89,16 +95,13 @@ export default function CommandCenterScreen() {
           <RefreshControl refreshing={pulling} onRefresh={onRefresh} tintColor={p.accent.mint} />
         }
       >
-        <Header />
-
-        <TodaysDeltaHero />
-
-        <PortfolioChart
-          fallbackTotal={summary.data?.totalValueUsd ?? 0}
-          costBasisUsd={summary.data?.totalCostUsd ?? null}
-          showPsa10Overlay
-          bleedX={20}
-        />
+        <View style={{ gap: 8 }}>
+          <Header />
+          <PortfolioChart 
+            showPsa10Overlay={true} 
+            onScrubStateChange={setIsScrubbing} 
+          />
+        </View>
 
         <View>
           <SectionHeader
@@ -312,89 +315,55 @@ export default function CommandCenterScreen() {
   );
 }
 
-function Header() {
+function StaticNavbar() {
   const p = useThemedPalette();
-  const health = useApiHealth();
-  const apiOk = health.isSuccess && (health.data?.status ?? "").toLowerCase().startsWith("ok");
-  // Only flip to the rose "down" state once React Query has actually
-  // observed a failed fetch — otherwise the idle/fetching window
-  // (isLoading false, isSuccess false, isError false) renders as down.
-  const apiDown = health.isError;
-  const apiTint = apiOk ? p.accent.mint : apiDown ? p.accent.rose : p.ink.muted;
-  const apiLabel = apiOk ? "API live" : apiDown ? "API down" : "API…";
+  return (
+    <View className="flex-row items-center justify-between px-5 py-2">
+      <View className="flex-row items-center gap-2">
+        <LoupeMark size={26} />
+        <Text className="text-base font-semibold tracking-tight text-ink">Loupe</Text>
+      </View>
+      <View className="flex-row items-center gap-2">
+        <Pressable
+          onPress={() => router.push(routes.notifications())}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Open notifications"
+          className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
+          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        >
+          <Bell size={16} color={p.ink.muted} />
+        </Pressable>
+        <Pressable
+          onPress={() => router.push(routes.settings())}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+          className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
+          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        >
+          <Settings2 size={16} color={p.ink.muted} />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function Header() {
+  const { user } = useAuth();
+  const firstName = user?.display_name ? user.display_name.split(" ")[0] : "operator";
+
   return (
     <View>
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center gap-2">
-          <LoupeMark size={26} />
-          <Text className="text-base font-semibold tracking-tight text-ink">Loupe</Text>
-        </View>
-        <View className="flex-row items-center gap-2">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Loupe backend ${apiLabel}. Tap to retry.`}
-            onPress={() => {
-              health.refetch().catch((err) => {
-                // Surface the underlying network error so we can tell a
-                // genuine outage from a stale-bundle / wedged-simulator
-                // false negative. ApiError instances include status+code.
-                // eslint-disable-next-line no-console
-                console.warn("[health] manual refetch failed:", err);
-              });
-            }}
-            hitSlop={6}
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: apiTint,
-              backgroundColor: "transparent",
-              opacity: pressed ? 0.6 : 1,
-            })}
-          >
-            <View
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: apiTint,
-              }}
-            />
-            <Text style={{ color: apiTint, fontSize: 10, fontWeight: "700", letterSpacing: 0.4 }}>
-              {apiLabel}
-            </Text>
-          </Pressable>
-          {/* LIVE sync chip intentionally hidden — diagnostic-only; will
-              also remove the API pill before shipping to production. */}
-          <Pressable
-            onPress={() => router.push(routes.notifications())}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Open notifications"
-            className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-          >
-            <Bell size={16} color={p.ink.muted} />
-          </Pressable>
-          <Pressable
-            onPress={() => router.push(routes.settings())}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Open settings"
-            className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-          >
-            <Settings2 size={16} color={p.ink.muted} />
-          </Pressable>
-        </View>
+      <View className="flex-row items-center justify-start mb-1">
+        <CollectionSwitcher />
       </View>
-      <Text className="mt-5 text-xs uppercase tracking-[3px] text-ink-dim">
-        {greeting()}, operator
-      </Text>
+      
+      <View>
+        <Text className="text-xs uppercase tracking-[3px] text-ink-dim">
+          {greeting()}, {firstName}
+        </Text>
+      </View>
     </View>
   );
 }

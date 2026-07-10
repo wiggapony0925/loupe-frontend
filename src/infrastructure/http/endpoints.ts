@@ -103,6 +103,10 @@ export const ENDPOINTS = {
     list: `${V1}/collections`,
     overview: `${V1}/collections/overview`,
     item: (id: string) => `${V1}/collections/${id}`,
+    items: (id: string) => `${V1}/collections/${id}/items`,
+    itemsBulk: (id: string) => `${V1}/collections/${id}/items/bulk`,
+    itemsBulkRemove: (id: string) => `${V1}/collections/${id}/items/bulk-remove`,
+    itemsTransfer: (id: string) => `${V1}/collections/${id}/items/transfer`,
   },
   providers: {
     status: `${V1}/providers/status`,

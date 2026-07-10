@@ -139,8 +139,8 @@ export async function pairScanner(input: PairScannerInput): Promise<HardwareStat
 export interface CollectionQueryParams {
   /** Free-text search across card + set name. */
   q?: string;
-  /** Exact set-name filter (matches `card_set_name` from the backend). */
-  set?: string;
+  /** Exact set-name filter (matches `card_set_name` from the backend) — repeated for multi. */
+  sets?: string[];
   /** Grading-house slug(s) (`loupe`, `psa`, `bgs`, …) — repeated for multi. */
   houses?: string[];
   /** Minimum grade (inclusive). */
@@ -169,7 +169,7 @@ export async function fetchCollection(params?: CollectionQueryParams): Promise<C
   // query-key stable across React renders.
   const search = new URLSearchParams();
   if (params?.q) search.set("q", params.q);
-  if (params?.set) search.set("set", params.set);
+  for (const s of params?.sets ?? []) search.append("set", s);
   for (const h of params?.houses ?? []) search.append("house", h);
   for (const t of params?.tags ?? []) search.append("tags", t);
   if (params?.minGrade !== undefined && params.minGrade > 0)
@@ -298,4 +298,19 @@ export interface AppConfig {
 export async function fetchAppConfig(clientVersion?: string): Promise<AppConfig> {
   const qs = clientVersion ? `?clientVersion=${encodeURIComponent(clientVersion)}` : "";
   return apiFetch<AppConfig>(`/v1/app/config${qs}`, { schema: AppConfigSchema });
+}
+
+/* ─── Filtering metadata ────────────────────────────────────────────── */
+
+export interface FilterMetadata {
+  sorts: { key: string; label: string }[];
+  houses: { key: string; label: string }[];
+  priceBands: { label: string; min: number | null; max: number | null }[];
+  minGrades: number[];
+  maxGrades: number[];
+  tcgs: { key: string; label: string }[];
+}
+
+export async function fetchFilterMetadata(): Promise<FilterMetadata> {
+  return apiFetch<FilterMetadata>("/v1/grades/filters");
 }

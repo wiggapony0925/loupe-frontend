@@ -36,7 +36,8 @@ const ALLOWED: readonly NonNullable<IdentifyTcgHint>[] = [
  * the standard 1–10 raw scale, which matches the `"nm"` condition we
  * stamp, so the two stay consistent. The user can refine any card later.
  */
-const BATCH_RAW_GRADE = 9;
+/** RAW batches: grade is a placeholder — backend forces 0 for house=loupe. */
+const BATCH_RAW_GRADE = 0;
 
 export default function IdentifyScanScreen() {
   const { tcg } = useLocalSearchParams<{ tcg?: string }>();

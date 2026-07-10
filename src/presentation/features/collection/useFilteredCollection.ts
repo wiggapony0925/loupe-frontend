@@ -57,18 +57,11 @@ export function useFilteredCollection() {
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  // "Raw" and "Loupe" both live under `house=loupe` server-side; collapse +
-  // dedupe. The raw↔loupe split is narrowed client-side via `condition` below.
-  const serverHouses = useMemo(() => {
-    const out = new Set<string>();
-    for (const h of houses) out.add(h === "raw" ? "loupe" : h);
-    return [...out];
-  }, [houses]);
-
   const params = useMemo<CollectionQueryParams>(
     () => ({
       q: debouncedQuery.trim() || undefined,
-      houses: serverHouses.length ? serverHouses : undefined,
+      houses: houses.length ? houses : undefined,
+      sets: sets.length ? sets : undefined,
       // The slider's "show everything" bounds (1 / 10) are dropped — no wasted
       // predicate.
       minGrade: gradeRange[0] > GRADE_MIN ? gradeRange[0] : undefined,
@@ -79,7 +72,7 @@ export function useFilteredCollection() {
       sort,
       collectionId: collectionId ?? undefined,
     }),
-    [debouncedQuery, serverHouses, gradeRange, minValue, maxValue, tags, sort, collectionId],
+    [debouncedQuery, houses, sets, gradeRange, minValue, maxValue, tags, sort, collectionId],
   );
 
   const query = useQuery({
@@ -114,28 +107,9 @@ export function useFilteredCollection() {
   // copy is hidden by the active filter. Backend `copies_owned` is
   // already correct for each row; we leave the local map as a
   // best-effort fallback for any UI that wants O(1) lookup.
-  // Client-side refinements the server can't do:
-  //  • house buckets — the server can't tell a RAW card from a Loupe-graded
-  //    slab (both are `house=loupe`); the `condition` column is the
-  //    discriminator, so we split them here.
-  //  • sets — the list endpoint takes a single set; multi-select is applied
-  //    over the returned page (which covers the whole vault at limit 500).
   const cards = useMemo(() => {
-    let rows = query.data ?? [];
-    if (houses.length > 0) {
-      const wanted = new Set<VaultType>(houses);
-      rows = rows.filter((c) => {
-        const bucket: VaultType =
-          c.house !== "loupe" ? (c.house as VaultType) : c.condition != null ? "raw" : "loupe";
-        return wanted.has(bucket);
-      });
-    }
-    if (sets.length > 0) {
-      const wantedSets = new Set(sets);
-      rows = rows.filter((c) => wantedSets.has(c.set));
-    }
-    return rows;
-  }, [query.data, houses, sets]);
+    return query.data ?? [];
+  }, [query.data]);
 
   const copiesByCardId = useMemo(() => {
     const map = new Map<string, number>();

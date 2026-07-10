@@ -9,11 +9,12 @@
  * (or your own) PNG/SVG assets into `assets/brands/` and uncomment the
  * matching `require(...)` lines below.
  *
- * The expected files (transparent PNG, square, ~256×256, ≤30 KB):
+ * The expected files (transparent PNG, ~256×256 or wide wordmark):
  *   assets/brands/pokemon.png
  *   assets/brands/magic.png
  *   assets/brands/yugioh.png
  *   assets/brands/onepiece.png
+ *   assets/brands/digimon.png
  *   assets/brands/lorcana.png
  *   assets/brands/sports.png
  *   assets/brands/topps.png
@@ -31,6 +32,7 @@ export type BrandKey =
   | "magic"
   | "yugioh"
   | "onepiece"
+  | "digimon"
   | "lorcana"
   | "sports"
   | "topps"
@@ -47,12 +49,13 @@ export type BrandKey =
  *   3. Reload the app — chips and tiles pick it up automatically.
  */
 const REGISTRY: Partial<Record<BrandKey, ImageSourcePropType>> = {
-  // pokemon: require("../../assets/brands/pokemon.png"),
-  // magic: require("../../assets/brands/magic.png"),
-  // yugioh: require("../../assets/brands/yugioh.png"),
-  // onepiece: require("../../assets/brands/onepiece.png"),
-  // lorcana: require("../../assets/brands/lorcana.png"),
-  // sports: require("../../assets/brands/sports.png"),
+  pokemon: require("../../assets/brands/pokemon.png"),
+  magic: require("../../assets/brands/magic.png"),
+  yugioh: require("../../assets/brands/yugioh.png"),
+  onepiece: require("../../assets/brands/onepiece.png"),
+  digimon: require("../../assets/brands/digimon.png"),
+  lorcana: require("../../assets/brands/lorcana.png"),
+  sports: require("../../assets/brands/sports.png"),
   // topps: require("../../assets/brands/topps.png"),
   // soccer: require("../../assets/brands/soccer.png"),
 };

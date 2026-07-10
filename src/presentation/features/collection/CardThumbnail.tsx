@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
-import { CheckCircle2 } from "lucide-react-native";
+import { Check, Circle, Pencil, Trash2 } from "lucide-react-native";
 import { router } from "expo-router";
 import { routes } from "@/shared/routes";
 import type { CollectionCard } from "@/domain";
@@ -27,6 +27,13 @@ interface CardThumbnailProps {
   onLongPress?: () => void;
   /** When true, render the tile in its selected state (mint ring + check). */
   selected?: boolean;
+  /**
+   * Opens GradeForm (Apply). Shown on every tile during multi-select,
+   * replacing the price footer with edit/remove actions.
+   */
+  onEdit?: () => void;
+  /** Remove this holding — parent shows collection-vs-portfolio sheet. */
+  onRemove?: () => void;
 }
 
 // Reserved heights so every tile in the grid is identical regardless of
@@ -48,10 +55,21 @@ function formatDelta(delta: number): { label: string; up: boolean; valid: boolea
   return { label: `${up ? "+" : ""}${(delta * 100).toFixed(2)}%`, up, valid: true };
 }
 
-export function CardThumbnail({ card, spark, copies = 1, onPress, onLongPress, selected }: CardThumbnailProps) {
+export function CardThumbnail({
+  card,
+  spark,
+  copies = 1,
+  onPress,
+  onLongPress,
+  selected,
+  onEdit,
+  onRemove,
+}: CardThumbnailProps) {
   const p = useThemedPalette();
   const tint = gradeColor(card.grade);
   const hasDuplicates = copies > 1;
+  const inSelectSession = selected !== undefined;
+  const handleEdit = onEdit ?? (() => router.push(routes.gradeEdit(card.id)));
 
   // Fall back to a deterministic walk so the tile never feels empty.
   const points =
@@ -62,6 +80,7 @@ export function CardThumbnail({ card, spark, copies = 1, onPress, onLongPress, s
   const deltaTint = !delta.valid ? p.ink.dim : delta.up ? p.accent.mint : p.accent.rose;
 
   return (
+    <View style={{ flex: 1, position: "relative" }}>
     <Pressable
       onPress={onPress ?? (() => router.push(routes.card(card.cardId)))}
       onLongPress={onLongPress}
@@ -75,10 +94,15 @@ export function CardThumbnail({ card, spark, copies = 1, onPress, onLongPress, s
       }
       className="flex-1 overflow-hidden rounded-2xl"
       style={({ pressed }) => ({
-        opacity: pressed ? 0.85 : 1,
+        opacity: pressed ? 0.85 : selected === false ? 0.72 : 1,
         borderWidth: selected ? 2 : 1,
-        borderColor: selected ? p.accent.mint : p.line.default,
+        borderColor: selected
+          ? p.accent.mint
+          : selected === false
+            ? withAlpha(p.line.default, 0.7)
+            : p.line.default,
         backgroundColor: p.bg.elevated,
+        transform: selected ? [{ scale: 0.98 }] : undefined,
       })}
     >
       {/* Art — 5:7 card aspect with floating chips */}
@@ -107,10 +131,7 @@ export function CardThumbnail({ card, spark, copies = 1, onPress, onLongPress, s
             </Text>
           </View>
         </View>
-        {/* Delta micro-chip — top-left, mirrors Robinhood watchlist tiles.
-            Hidden when the delta is exactly 0 or invalid so we don't
-            crowd the art with noise. */}
-        {delta.valid && delta.label !== "0.00%" ? (
+        {delta.valid && delta.label !== "0.00%" && !inSelectSession ? (
           <View className="absolute left-2 top-2">
             <View
               className="rounded-md px-1.5 py-0.5"
@@ -125,8 +146,6 @@ export function CardThumbnail({ card, spark, copies = 1, onPress, onLongPress, s
             </View>
           </View>
         ) : null}
-        {/* Duplicate-copies badge — bottom-left, mint pill so it reads
-            as an inventory fact (not market signal). */}
         {hasDuplicates ? (
           <View className="absolute bottom-2 left-2">
             <View
@@ -144,23 +163,32 @@ export function CardThumbnail({ card, spark, copies = 1, onPress, onLongPress, s
             </View>
           </View>
         ) : null}
-        {/* Selected overlay — mint scrim + checkmark so it reads as a
-            staged action, not just a passive highlight. */}
         {selected ? (
           <View
             className="absolute inset-0 items-center justify-center"
-            style={{ backgroundColor: withAlpha(p.accent.mint, 0.22) }}
+            style={{ backgroundColor: withAlpha(p.accent.mint, 0.28) }}
             pointerEvents="none"
           >
             <View
               style={{
+                width: 40,
+                height: 40,
                 borderRadius: 999,
-                backgroundColor: p.bg.elevated,
-                padding: 2,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: p.accent.mint,
+                shadowColor: "#000",
+                shadowOpacity: 0.25,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 4 },
               }}
             >
-              <CheckCircle2 size={32} color={p.accent.mint} strokeWidth={2.5} />
+              <Check size={20} color="#06140d" strokeWidth={3} />
             </View>
+          </View>
+        ) : selected === false ? (
+          <View className="absolute left-2 top-2" pointerEvents="none">
+            <Circle size={22} color={withAlpha("#fff", 0.85)} strokeWidth={2.25} />
           </View>
         ) : null}
       </View>
@@ -184,21 +212,90 @@ export function CardThumbnail({ card, spark, copies = 1, onPress, onLongPress, s
           {card.title}
         </Text>
 
-        {/* Price + sparkline footer */}
-        <View className="mt-2 flex-row items-end justify-between">
-          <Price
-            usd={card.estimatedValueUsd}
-            numberOfLines={1}
-            className="text-[15px] font-semibold text-ink"
-          />
-          <Sparkline
-            values={points}
-            width={48}
-            height={18}
-            showBaseline={false}
-          />
-        </View>
+        {!inSelectSession ? (
+          <View className="mt-2 flex-row items-end justify-between">
+            <Price
+              usd={card.estimatedValueUsd}
+              numberOfLines={1}
+              className="text-[15px] font-semibold text-ink"
+            />
+            <Sparkline
+              values={points}
+              width={48}
+              height={18}
+              showBaseline={false}
+            />
+          </View>
+        ) : (
+          // Spacer so tile height stays stable while actions sit outside.
+          <View style={{ height: 34, marginTop: 8 }} />
+        )}
       </View>
     </Pressable>
+      {inSelectSession ? (
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: "absolute",
+            right: 10,
+            bottom: 10,
+            flexDirection: "row",
+            gap: 8,
+            zIndex: 4,
+          }}
+        >
+          <Pressable
+            onPress={handleEdit}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Edit ${card.title}`}
+            style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+          >
+            <View
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 999,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: withAlpha(p.accent.mint, 0.92),
+                shadowColor: "#000",
+                shadowOpacity: 0.18,
+                shadowRadius: 4,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 3,
+              }}
+            >
+              <Pencil size={14} color="#06140d" strokeWidth={2.6} />
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => onRemove?.()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${card.title}`}
+            style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+          >
+            <View
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 999,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: p.accent.rose,
+                shadowColor: "#000",
+                shadowOpacity: 0.18,
+                shadowRadius: 4,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 3,
+              }}
+            >
+              <Trash2 size={14} color="#fff" strokeWidth={2.6} />
+            </View>
+          </Pressable>
+        </View>
+      ) : null}
+    </View>
   );
 }

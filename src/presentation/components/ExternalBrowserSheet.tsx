@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Linking, Pressable, Text, View } from "react-native";
+import { Linking, Text, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as WebBrowser from "expo-web-browser";
-import { Check, Compass, Copy, ExternalLink, type LucideIcon } from "lucide-react-native";
+import { Check, Compass, Copy, ExternalLink } from "lucide-react-native";
 import { BottomSheet } from "@/presentation/components/BottomSheet";
-import { radius, spacing, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import {
+  SheetChoiceGroup,
+  SheetChoiceRow,
+} from "@/presentation/components/SheetChoice";
+import { spacing, useThemedPalette } from "@/presentation/theme/tokens";
 
 export interface ExternalBrowserTarget {
   title: string;
@@ -55,30 +59,22 @@ export function ExternalBrowserSheet({ visible, target, onClose }: ExternalBrows
       title={target?.title ?? "Marketplace"}
       subtitle={target?.subtitle ?? null}
     >
-      <View
-        style={{
-          borderRadius: radius.lg,
-          borderWidth: 1,
-          borderColor: p.line.default,
-          backgroundColor: p.bg.elevated,
-          overflow: "hidden",
-        }}
-      >
-        <SheetAction
+      <SheetChoiceGroup>
+        <SheetChoiceRow
           icon={Compass}
           title="Open in app"
           subtitle="Use the native browser popup"
           accent={p.accent.mint}
           onPress={openInApp}
         />
-        <SheetAction
+        <SheetChoiceRow
           icon={ExternalLink}
           title="Open in browser"
           subtitle="Leave Loupe and open the marketplace"
           accent={p.accent.blue}
           onPress={openExternal}
         />
-        <SheetAction
+        <SheetChoiceRow
           icon={copied ? Check : Copy}
           title={copied ? "Copied" : "Copy link"}
           subtitle={copied ? "Marketplace URL copied" : "Save the URL to your clipboard"}
@@ -86,7 +82,7 @@ export function ExternalBrowserSheet({ visible, target, onClose }: ExternalBrows
           onPress={copyUrl}
           isLast
         />
-      </View>
+      </SheetChoiceGroup>
 
       <View style={{ paddingTop: spacing.md }}>
         <Text numberOfLines={2} style={{ color: p.ink.dim, fontSize: 11, lineHeight: 16 }}>
@@ -94,62 +90,5 @@ export function ExternalBrowserSheet({ visible, target, onClose }: ExternalBrows
         </Text>
       </View>
     </BottomSheet>
-  );
-}
-
-function SheetAction({
-  icon: Icon,
-  title,
-  subtitle,
-  accent,
-  onPress,
-  isLast = false,
-}: {
-  icon: LucideIcon;
-  title: string;
-  subtitle: string;
-  accent: string;
-  onPress: () => void;
-  isLast?: boolean;
-}) {
-  const p = useThemedPalette();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: spacing.md,
-        minHeight: 64,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.md,
-        borderBottomWidth: isLast ? 0 : 1,
-        borderBottomColor: p.line.default,
-        backgroundColor: pressed ? withAlpha(p.ink.default, 0.04) : "transparent",
-        opacity: pressed ? 0.78 : 1,
-      })}
-    >
-      <View
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: 17,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: withAlpha(accent, 0.13),
-        }}
-      >
-        <Icon size={16} color={accent} strokeWidth={2.35} />
-      </View>
-      <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-        <Text numberOfLines={1} style={{ color: p.ink.default, fontSize: 14, fontWeight: "800" }}>
-          {title}
-        </Text>
-        <Text numberOfLines={1} style={{ color: p.ink.muted, fontSize: 12 }}>
-          {subtitle}
-        </Text>
-      </View>
-    </Pressable>
   );
 }

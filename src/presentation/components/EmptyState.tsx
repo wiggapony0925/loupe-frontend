@@ -40,11 +40,11 @@ export function EmptyState({
   return (
     <View
       accessibilityRole="summary"
-      className="items-center rounded-2xl border border-line bg-bg-elevated"
       style={{
+        alignItems: "center",
         paddingHorizontal: compact ? 16 : 20,
-        paddingVertical: compact ? 16 : 28,
-        gap: compact ? 6 : 10,
+        paddingVertical: compact ? 20 : 36,
+        gap: compact ? 8 : 12,
       }}
     >
       <View

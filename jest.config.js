@@ -54,6 +54,8 @@ module.exports = {
         "<rootDir>/src/shared/**/__tests__/**/*.test.ts",
         "<rootDir>/src/infrastructure/**/__tests__/**/*.test.ts",
         "<rootDir>/src/application/**/__tests__/**/*.test.ts",
+        // Pure layout helpers under presentation (no RN runtime needed).
+        "<rootDir>/src/presentation/**/__tests__/**/*.test.ts",
       ],
     },
     {

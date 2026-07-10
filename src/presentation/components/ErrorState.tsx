@@ -76,13 +76,9 @@ export function ErrorState({
       accessibilityRole="alert"
       style={{
         alignItems: "center",
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: withAlpha(accent, 0.35),
-        backgroundColor: withAlpha(accent, 0.06),
         paddingHorizontal: compact ? 16 : 20,
-        paddingVertical: compact ? 16 : 28,
-        gap: compact ? 6 : 10,
+        paddingVertical: compact ? 20 : 36,
+        gap: compact ? 8 : 12,
       }}
     >
       <View

@@ -12,13 +12,15 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
 import {
   ArrowDownRight,
   ArrowUpRight,
   Camera,
+  ChevronRight,
+  FolderKanban,
   Grid2x2,
   Layers,
   List as ListIcon,
@@ -37,8 +39,20 @@ import { FilterSheet } from "@/presentation/features/collection/FilterSheet";
 import { PositionRow } from "@/presentation/features/collection/PositionRow";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { useFilteredCollection } from "@/presentation/features/collection/useFilteredCollection";
+import { VaultCollectionActionSheet } from "@/presentation/features/collection/VaultCollectionActionSheet";
+import {
+  VaultRemoveSheet,
+  type VaultRemoveScope,
+} from "@/presentation/features/collection/VaultRemoveSheet";
+import {
+  vaultGridColumns,
+  vaultListRows,
+} from "@/presentation/features/collection/vaultLayout";
 import { ProUsageBanner } from "@/presentation/features/pro";
 import { useMySealedHoldings } from "@/application/queries/collection/useSealed";
+import { useCollectionsOverview } from "@/application/queries/collection/useCollectionsOverview";
+import { useBulkRemoveFromCollection } from "@/application/queries/collection/useCollectionMutations";
+import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { useVaultFilters, useVaultSelection } from "@/application/stores";
 import {
   activeFilterCount,
@@ -91,6 +105,9 @@ export default function VaultScreen() {
   const sealedHoldings = useMySealedHoldings({ includeOpened: false });
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [organizeOpen, setOrganizeOpen] = useState(false);
+  const [removeIds, setRemoveIds] = useState<string[] | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
 
   // Multi-select state lives in its own store so filter / search
   // re-renders don't disturb it (and vice versa). The vault page is
@@ -100,6 +117,29 @@ export default function VaultScreen() {
   const beginSelectionWith = useVaultSelection((s) => s.beginWith);
   const toggleSelection = useVaultSelection((s) => s.toggle);
   const clearSelection = useVaultSelection((s) => s.clear);
+
+  const { collectionId: activeCollectionId } = useActiveCollection();
+  const { data: portfolios } = useCollectionsOverview();
+  const bulkRemove = useBulkRemoveFromCollection();
+  const activeCollectionName = useMemo(() => {
+    if (!activeCollectionId) return null;
+    return portfolios?.find((c) => c.id === activeCollectionId)?.name ?? null;
+  }, [activeCollectionId, portfolios]);
+
+  const enterSelection = useCallback(
+    (id: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      beginSelectionWith(id);
+    },
+    [beginSelectionWith],
+  );
+  const tapToggle = useCallback(
+    (id: string) => {
+      Haptics.selectionAsync().catch(() => {});
+      toggleSelection(id);
+    },
+    [toggleSelection],
+  );
 
   // Bulk-delete fans out one DELETE per selected grade id. Backend has
   // no batch endpoint yet — if/when it ships we can swap this in
@@ -117,30 +157,45 @@ export default function VaultScreen() {
     },
   });
 
-  const confirmAndDelete = useCallback(
-    (ids: string[]) => {
-      if (ids.length === 0) return;
-      const noun = ids.length === 1 ? "card" : "cards";
-      Alert.alert(
-        `Remove ${ids.length} ${noun}?`,
-        "They'll be removed from your vault. This can't be undone from the app.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Remove",
-            style: "destructive",
-            onPress: () => {
-              deleteMutation.mutate(ids, {
-                onSuccess: () => clearSelection(),
-                onError: (err) =>
-                  Alert.alert("Couldn't remove cards", String((err as Error).message ?? err)),
-              });
-            },
-          },
-        ],
-      );
+  const openRemoveSheet = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    setRemoveIds(ids);
+  }, []);
+
+  const confirmRemove = useCallback(
+    async (scope: VaultRemoveScope) => {
+      if (!removeIds || removeIds.length === 0) return;
+      setRemoveBusy(true);
+      try {
+        if (scope === "collection") {
+          if (!activeCollectionId) {
+            throw new Error("Switch into a collection to remove membership only.");
+          }
+          await bulkRemove.mutateAsync({
+            collectionId: activeCollectionId,
+            gradedCardIds: removeIds,
+          });
+        } else {
+          await deleteMutation.mutateAsync(removeIds);
+        }
+        setRemoveIds(null);
+        clearSelection();
+      } catch (err) {
+        Alert.alert(
+          "Couldn't remove cards",
+          String((err as Error).message ?? err),
+        );
+      } finally {
+        setRemoveBusy(false);
+      }
     },
-    [deleteMutation, clearSelection],
+    [
+      removeIds,
+      activeCollectionId,
+      bulkRemove,
+      deleteMutation,
+      clearSelection,
+    ],
   );
 
   // Pair each holding with its sparkline + delta. Same query Analytics uses,
@@ -156,20 +211,16 @@ export default function VaultScreen() {
     [sparks.data],
   );
 
-  // Adaptive column count for grid mode. On phones we always want 2
-  // columns — relying on `screenWidth / 180` was flaky during the first
-  // measurement pass (it could resolve to < 360 px before the safe-area
-  // settled, falling back to a 1-column grid that ballooned each 5:7
-  // tile to fill the entire screen). Tablets keep the proportional
-  // formula but clamp to 4.
+  // Grid column count is derived once from screen width. FlatList itself
+  // always stays at numColumns=1 — we chunk cards into rows ourselves so
+  // toggling list↔grid never remounts the list (RN forbids changing
+  // numColumns without a remount, which was shoving the header down).
   const { width: screenWidth } = useWindowDimensions();
-  const isTablet = screenWidth >= 768;
-  const numColumns =
-    viewMode === "list"
-      ? 1
-      : isTablet
-        ? Math.max(2, Math.min(4, Math.floor(screenWidth / 220)))
-        : 2;
+  const gridColumns = vaultGridColumns(screenWidth);
+  const rows = useMemo(
+    () => vaultListRows(isLoading ? [] : cards, viewMode, gridColumns),
+    [cards, viewMode, gridColumns, isLoading],
+  );
 
   const stats = useMemo(() => {
     const value = cards.reduce((s, c) => s + c.estimatedValueUsd, 0);
@@ -216,23 +267,26 @@ export default function VaultScreen() {
     invalidateHoldingCaches(qc);
   }, [qc]);
 
-  const headerPadX = viewMode === "grid" ? 0 : 14;
+  // Constant gutter — never changes with viewMode, so the header
+  // doesn't shift when the user toggles list↔grid.
+  const PAGE_GUTTER = 20;
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
       <FlatList
-        data={isLoading ? [] : cards}
-        keyExtractor={(c) => c.id}
-        numColumns={numColumns}
-        // Force-remount the list when toggling between layouts so FlatList
-        // doesn't blow up about numColumns changing mid-flight.
-        key={`${viewMode}-${numColumns}`}
-        columnWrapperStyle={viewMode === "grid" ? { gap: 12 } : undefined}
+        data={rows}
+        keyExtractor={(row) => row.map((c) => c.id).join("|")}
+        // Always 1 — grid is simulated by chunking into row arrays.
+        // Never remounts on viewMode change → header stays put.
+        numColumns={1}
         contentContainerStyle={{
-          paddingHorizontal: viewMode === "grid" ? 20 : 6,
+          // Constant padding — changing this with viewMode was part of
+          // the "everything jumps down" bug on toggle.
+          paddingHorizontal: PAGE_GUTTER,
           paddingTop: 20,
           paddingBottom: 132,
           gap: viewMode === "grid" ? 12 : 0,
+          flexGrow: 1,
         }}
         ItemSeparatorComponent={
           viewMode === "list"
@@ -241,9 +295,6 @@ export default function VaultScreen() {
                   style={{
                     height: 1,
                     backgroundColor: p.line.default,
-                    // Robinhood-style edge-to-edge hairline, with the row's own
-                    // horizontal padding inset (POSITION_ROW_INDENT = 16).
-                    marginHorizontal: 16,
                   }}
                 />
               )
@@ -252,43 +303,42 @@ export default function VaultScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isFetching}
-            // Disable pull-to-refresh while selecting so a stray drag
-            // doesn't kick off a network round-trip mid-selection.
             onRefresh={selectionMode ? () => {} : onRefresh}
             enabled={!selectionMode}
             tintColor={p.accent.mint}
           />
         }
         ListHeaderComponent={
-          <View className="gap-4 pb-3" style={{ paddingHorizontal: headerPadX }}>
-            {/* Page anchor — swaps to a selection toolbar when the
-                user is staging cards for bulk delete so the header
-                action cluster doesn't compete for tap targets. */}
+          <View className="gap-4 pb-3">
             {selectionMode ? (
               <VaultSelectionBar
                 count={selectedIds.size}
                 onCancel={clearSelection}
-                onDelete={() => confirmAndDelete(Array.from(selectedIds))}
-                busy={deleteMutation.isPending}
+                onOrganize={() => setOrganizeOpen(true)}
+                onDelete={() => openRemoveSheet(Array.from(selectedIds))}
+                busy={deleteMutation.isPending || removeBusy}
               />
             ) : (
               <VaultPageHeader
                 onAdd={() => router.push(routes.gradeNew())}
-                // Scan = the identify camera (shutter → tray → "Add all"),
-                // the same flow as the center tab — not the old capture mode.
                 onScan={() => router.push(routes.scanEntry())}
                 onSealed={() => router.push(routes.sealed())}
               />
             )}
-            {/* Active-collection scope for the whole vault — pick one to filter
-                the list + hero below; the ✕ clears back to All. */}
-            <CollectionSwitcher />
             {isLoading ? (
               <VaultHeaderSkeleton />
+            ) : selectionMode ? (
+              // Focus mode — hide portfolio chrome so selection feels intentional.
+              <>
+                <VaultSelectionHint collectionName={activeCollectionName} />
+                <VaultListChrome
+                  count={cards.length}
+                  viewMode={viewMode}
+                  onChange={setViewMode}
+                />
+              </>
             ) : (
               <>
-                {/* Free-tier "X of 50 cards" meter — renders nothing for Pro
-                    users or while subscriptions are switched off. */}
                 <ProUsageBanner />
                 <PortfolioHero
                   totalValueUsd={summary?.totalValueUsd ?? stats.value}
@@ -298,64 +348,91 @@ export default function VaultScreen() {
                 <PortfolioPills stats={stats} />
                 <VaultSearchBar onOpenFilters={() => setFilterOpen(true)} />
                 <VaultActiveChips />
-                <VaultListChrome count={cards.length} viewMode={viewMode} onChange={setViewMode} />
+                <VaultListChrome
+                  count={cards.length}
+                  viewMode={viewMode}
+                  onChange={setViewMode}
+                />
               </>
             )}
           </View>
         }
-        renderItem={({ item, index }) => {
-          const copies = copiesByCardId.get(item.cardId) ?? 1;
-          const isSelected = selectedIds.has(item.id);
-          // When in selection mode a tap toggles membership; otherwise
-          // we fall back to the row/tile's built-in navigate behaviour
-          // by leaving `onPress` undefined.
-          const onPress = selectionMode ? () => toggleSelection(item.id) : undefined;
-          const onLongPress = selectionMode
-            ? () => toggleSelection(item.id)
-            : () => beginSelectionWith(item.id);
-          // `selected` is only forwarded while in selection mode so the
-          // checkbox / overlay are hidden during normal browsing.
-          const selectedProp = selectionMode ? isSelected : undefined;
-          // Staggered fade-in — each row enters ~40ms after the one
-          // above it for a Robinhood-style cascade. Only the first
-          // dozen are staggered so a long list doesn't queue a 2-second
-          // animation chain when the user scrolls back into view.
-          const delay = Math.min(index, 12) * 40;
+        renderItem={({ item: row }) => {
+          if (viewMode === "list") {
+            const item = row[0]!;
+            const copies = copiesByCardId.get(item.cardId) ?? 1;
+            const isSelected = selectedIds.has(item.id);
+            const onPress = selectionMode ? () => tapToggle(item.id) : undefined;
+            const onLongPress = selectionMode
+              ? () => tapToggle(item.id)
+              : () => enterSelection(item.id);
+            return (
+              <PositionRow
+                card={item}
+                spark={sparkMap.get(item.cardId)}
+                copies={copies}
+                // FlatList already applies PAGE_GUTTER — don't double-indent.
+                indent={0}
+                onPress={onPress}
+                onLongPress={onLongPress}
+                selected={selectionMode ? isSelected : undefined}
+                onEdit={
+                  selectionMode
+                    ? () => router.push(routes.gradeEdit(item.id))
+                    : undefined
+                }
+                onRemove={
+                  selectionMode ? () => openRemoveSheet([item.id]) : undefined
+                }
+              />
+            );
+          }
+
+          // Grid row — fill missing slots with spacers so the last
+          // incomplete row keeps equal tile widths.
+          const slots = Array.from({ length: gridColumns }, (_, i) => row[i] ?? null);
           return (
-            <Animated.View
-              entering={FadeInDown.delay(delay).duration(260)}
-              // In grid mode each item gets `flex: 1` of the row's
-              // remaining space. We also cap the tile width so an
-              // unexpected single-column layout can't balloon a 5:7
-              // card to fill the whole screen.
-              style={viewMode === "grid" ? { flex: 1, maxWidth: 240 } : undefined}
-            >
-              {viewMode === "list" ? (
-                <PositionRow
-                  card={item}
-                  spark={sparkMap.get(item.cardId)}
-                  copies={copies}
-                  onPress={onPress}
-                  onLongPress={onLongPress}
-                  selected={selectedProp}
-                />
-              ) : (
-                <CardThumbnail
-                  card={item}
-                  spark={sparkMap.get(item.cardId)}
-                  copies={copies}
-                  onPress={onPress}
-                  onLongPress={onLongPress}
-                  selected={selectedProp}
-                />
-              )}
-            </Animated.View>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              {slots.map((item, i) => {
+                if (!item) {
+                  return <View key={`pad-${i}`} style={{ flex: 1 }} />;
+                }
+                const copies = copiesByCardId.get(item.cardId) ?? 1;
+                const isSelected = selectedIds.has(item.id);
+                const onPress = selectionMode ? () => tapToggle(item.id) : undefined;
+                const onLongPress = selectionMode
+                  ? () => tapToggle(item.id)
+                  : () => enterSelection(item.id);
+                return (
+                  <View key={item.id} style={{ flex: 1 }}>
+                    <CardThumbnail
+                      card={item}
+                      spark={sparkMap.get(item.cardId)}
+                      copies={copies}
+                      onPress={onPress}
+                      onLongPress={onLongPress}
+                      selected={selectionMode ? isSelected : undefined}
+                      onEdit={
+                        selectionMode
+                          ? () => router.push(routes.gradeEdit(item.id))
+                          : undefined
+                      }
+                      onRemove={
+                        selectionMode
+                          ? () => openRemoveSheet([item.id])
+                          : undefined
+                      }
+                    />
+                  </View>
+                );
+              })}
+            </View>
           );
         }}
         ListFooterComponent={
-          !isLoading ? (
+          !isLoading && !selectionMode ? (
             <VaultSupplementalSections
-              padX={headerPadX}
+              padX={0}
               sealedStats={sealedStats}
               sealedLoading={sealedHoldings.isLoading}
               onOpenSealed={() => router.push(routes.sealed())}
@@ -365,13 +442,8 @@ export default function VaultScreen() {
         }
         ListEmptyComponent={
           isLoading ? (
-            // Header skeleton (pills/carousel/search/chips) is already
-            // rendered by VaultHeaderSkeleton above — here we only need
-            // bones for the list rows themselves so the page stops short
-            // of the empty-state copy until data lands.
             <View
               className={viewMode === "grid" ? "flex-row gap-3" : "gap-3"}
-              style={{ paddingHorizontal: viewMode === "grid" ? 0 : 14 }}
             >
               {viewMode === "grid"
                 ? [0, 1].map((i) => (
@@ -402,15 +474,7 @@ export default function VaultScreen() {
                   ))}
             </View>
           ) : isError ? (
-            // A failed load used to fall through to the "Add a card" empty
-            // state — making a network/server error look like an empty
-            // vault. Surface a real error with retry instead.
-            <View
-              style={{
-                paddingTop: 16,
-                paddingHorizontal: viewMode === "grid" ? 0 : 14,
-              }}
-            >
+            <View style={{ paddingTop: 16 }}>
               <ErrorState
                 title="Couldn't load your vault"
                 message="We hit a snag fetching your collection. Check your connection and try again."
@@ -419,15 +483,7 @@ export default function VaultScreen() {
               />
             </View>
           ) : uniqueCount === 0 ? (
-            // Genuinely empty vault (whole-vault aggregate, not just the
-            // filtered page) — lead with the scanner, the fastest way to a
-            // first card. Filter copy here would be nonsense.
-            <View
-              style={{
-                paddingTop: 16,
-                paddingHorizontal: viewMode === "grid" ? 0 : 14,
-              }}
-            >
+            <View style={{ paddingTop: 16 }}>
               <EmptyState
                 title={COPY.vaultEmpty.title}
                 message={COPY.vaultEmpty.message}
@@ -437,13 +493,7 @@ export default function VaultScreen() {
               />
             </View>
           ) : (
-            // Cards exist but the active search/filters exclude them all.
-            <View
-              style={{
-                paddingTop: 16,
-                paddingHorizontal: viewMode === "grid" ? 0 : 14,
-              }}
-            >
+            <View style={{ paddingTop: 16 }}>
               <EmptyState
                 title={COPY.vaultFiltersEmpty.title}
                 message={COPY.vaultFiltersEmpty.message}
@@ -461,6 +511,22 @@ export default function VaultScreen() {
         availableSets={availableSets}
         availableTags={availableTags}
         resultCount={cards.length}
+      />
+      <VaultCollectionActionSheet
+        visible={organizeOpen}
+        gradedCardIds={Array.from(selectedIds)}
+        onClose={() => setOrganizeOpen(false)}
+        onDone={() => clearSelection()}
+      />
+      <VaultRemoveSheet
+        visible={removeIds != null}
+        count={removeIds?.length ?? 0}
+        collectionName={activeCollectionName}
+        busy={removeBusy}
+        onClose={() => {
+          if (!removeBusy) setRemoveIds(null);
+        }}
+        onConfirm={(scope) => void confirmRemove(scope)}
       />
     </SafeAreaView>
   );
@@ -558,20 +624,14 @@ function ViewModeToggle({ value, onChange }: { value: ViewMode; onChange: (m: Vi
     { key: "list", Icon: ListIcon, label: "List view" },
     { key: "grid", Icon: Grid2x2, label: "Grid view" },
   ];
-  // Segmented control. We tried text+icon (overflowed) and tinted
-  // icon-only (active state was invisible against the track). This
-  // version uses the classic iOS treatment: an inset track with a
-  // raised "thumb" pill that contrasts hard against it via the
-  // surface color + a shadow. There's no ambiguity about which side
-  // is selected.
-  const CELL = 34;
+  const CELL = 36;
   return (
     <View
       style={{
         flexDirection: "row",
         padding: 3,
         borderRadius: 999,
-        backgroundColor: withAlpha(p.ink.muted, 0.14),
+        backgroundColor: withAlpha(p.ink.muted, 0.1),
       }}
     >
       {options.map((opt) => {
@@ -584,26 +644,29 @@ function ViewModeToggle({ value, onChange }: { value: ViewMode; onChange: (m: Vi
             accessibilityState={{ selected: active }}
             accessibilityLabel={opt.label}
             hitSlop={4}
-            style={({ pressed }) => ({
-              width: CELL,
-              height: CELL,
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: 999,
-              backgroundColor: active ? p.bg.elevated : "transparent",
-              shadowColor: active ? "#000" : "transparent",
-              shadowOpacity: active ? 0.18 : 0,
-              shadowRadius: active ? 4 : 0,
-              shadowOffset: { width: 0, height: 1 },
-              elevation: active ? 2 : 0,
-              opacity: pressed ? 0.85 : 1,
-            })}
+            style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
           >
-            <opt.Icon
-              size={16}
-              color={active ? p.ink.default : withAlpha(p.ink.muted, 0.85)}
-              strokeWidth={active ? 2.6 : 2.1}
-            />
+            <View
+              style={{
+                width: CELL,
+                height: CELL,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 999,
+                backgroundColor: active ? p.accent.mint : "transparent",
+                shadowColor: active ? p.accent.mint : "transparent",
+                shadowOpacity: active ? 0.3 : 0,
+                shadowRadius: active ? 6 : 0,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: active ? 3 : 0,
+              }}
+            >
+              <opt.Icon
+                size={16}
+                color={active ? "#06140d" : withAlpha(p.ink.muted, 0.7)}
+                strokeWidth={active ? 2.6 : 2}
+              />
+            </View>
           </Pressable>
         );
       })}
@@ -786,7 +849,7 @@ function VaultActiveChips() {
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingRight: 8 }}>
         {chips.map((c) => {
-          const tint = c.tint ?? p.accent.blue;
+          const tint = p.accent.mint;
           return (
             <Pressable
               key={c.key}
@@ -794,21 +857,26 @@ function VaultActiveChips() {
               accessibilityRole="button"
               accessibilityLabel={`Remove filter ${c.label}`}
               style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 5,
-                paddingLeft: 11,
-                paddingRight: 7,
-                paddingVertical: 6,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: withAlpha(tint, 0.5),
-                backgroundColor: withAlpha(tint, 0.13),
-                opacity: pressed ? 0.7 : 1,
+                opacity: pressed ? 0.75 : 1,
               })}
             >
-              <Text style={{ color: tint, fontSize: 12, fontWeight: "700" }}>{c.label}</Text>
-              <X size={12} color={tint} strokeWidth={2.5} />
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  paddingLeft: 12,
+                  paddingRight: 8,
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: withAlpha(tint, 0.35),
+                  backgroundColor: withAlpha(tint, 0.12),
+                }}
+              >
+                <Text style={{ color: tint, fontSize: 12, fontWeight: "700", letterSpacing: 0.2 }}>{c.label}</Text>
+                <X size={12} color={tint} strokeWidth={2.5} />
+              </View>
             </Pressable>
           );
         })}
@@ -816,10 +884,12 @@ function VaultActiveChips() {
           onPress={s.clearAll}
           accessibilityRole="button"
           accessibilityLabel="Clear all filters"
-          hitSlop={6}
-          style={({ pressed }) => ({ paddingHorizontal: 8, opacity: pressed ? 0.6 : 1 })}
+          hitSlop={8}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
         >
-          <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "700" }}>Clear all</Text>
+          <View style={{ paddingHorizontal: 8, paddingVertical: 6 }}>
+            <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "700" }}>Clear all</Text>
+          </View>
         </Pressable>
       </View>
     </ScrollView>
@@ -827,86 +897,158 @@ function VaultActiveChips() {
 }
 
 /**
- * Replaces `VaultPageHeader` while the user is staging cards for bulk
- * delete. Reads as a "selection mode" affordance the way iOS Mail's
- * trash bar does — Cancel exits without action, the destructive button
- * is colour-coded rose and shows a live count so the user can't
- * accidentally fire off a delete on the wrong number of cards.
+ * Selection chrome — same circular icon language as VaultPageHeader
+ * (mint organize · solid rose remove · soft cancel). Label leads with
+ * marketing clarity: what you can do next, not just a raw count.
  */
 function VaultSelectionBar({
   count,
   onCancel,
+  onOrganize,
   onDelete,
   busy,
 }: {
   count: number;
   onCancel: () => void;
+  onOrganize: () => void;
   onDelete: () => void;
   busy: boolean;
 }) {
   const p = useThemedPalette();
-  const canDelete = count > 0 && !busy;
+  const canAct = count > 0 && !busy;
+  const countLabel = count === 1 ? "1 card" : `${count} cards`;
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "flex-end",
+        gap: 10,
+        minHeight: 56,
+      }}
+    >
+      <View style={{ flex: 1 }}>
+        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+          Selecting
+        </Text>
+        <Text
+          className="mt-1 text-3xl font-semibold tracking-tight text-ink"
+          style={{ fontVariant: ["tabular-nums"] }}
+        >
+          {countLabel}
+        </Text>
+      </View>
+
+      {/* Cancel — same soft circle as Sealed */}
+      <Pressable
+        onPress={onCancel}
+        accessibilityRole="button"
+        accessibilityLabel="Cancel selection"
+        hitSlop={6}
+        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+      >
+        <View
+          style={{
+            width: 38,
+            height: 38,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 999,
+            backgroundColor: withAlpha(p.ink.muted, 0.08),
+          }}
+        >
+          <X size={18} color={p.ink.default} strokeWidth={2.5} />
+        </View>
+      </Pressable>
+
+      {/* Organize — mint wash, matches Add */}
+      <Pressable
+        onPress={canAct ? onOrganize : undefined}
+        disabled={!canAct}
+        accessibilityRole="button"
+        accessibilityLabel="Organize selected cards into collections"
+        accessibilityState={{ disabled: !canAct }}
+        style={({ pressed }) => ({ opacity: !canAct ? 0.4 : pressed ? 0.75 : 1 })}
+      >
+        <View
+          style={{
+            width: 38,
+            height: 38,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 999,
+            backgroundColor: withAlpha(p.accent.mint, 0.14),
+          }}
+        >
+          <FolderKanban size={18} color={p.accent.mint} strokeWidth={2.5} />
+        </View>
+      </Pressable>
+
+      {/* Remove — solid rose, same weight as Scan mint */}
+      <Pressable
+        onPress={canAct ? onDelete : undefined}
+        disabled={!canAct}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !canAct }}
+        accessibilityLabel={`Remove ${countLabel} from vault`}
+        style={({ pressed }) => ({ opacity: !canAct ? 0.45 : pressed ? 0.85 : 1 })}
+      >
+        <View
+          style={{
+            width: 38,
+            height: 38,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 999,
+            backgroundColor: p.accent.rose,
+          }}
+        >
+          <Trash2 size={17} color="#fff" strokeWidth={2.5} />
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
+/** Soft coach mark shown only while selecting — replaces portfolio clutter. */
+function VaultSelectionHint({ collectionName }: { collectionName: string | null }) {
+  const p = useThemedPalette();
   return (
     <View
       style={{
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        minHeight: 56,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: withAlpha(p.accent.mint, 0.28),
+        backgroundColor: withAlpha(p.accent.mint, 0.08),
       }}
     >
-      <Pressable
-        onPress={onCancel}
-        accessibilityRole="button"
-        accessibilityLabel="Cancel selection"
-        hitSlop={6}
-        style={({ pressed }) => ({
-          width: 36,
-          height: 36,
+      <View
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: 999,
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: p.line.default,
-          backgroundColor: p.bg.elevated,
-          opacity: pressed ? 0.75 : 1,
-        })}
+          backgroundColor: withAlpha(p.accent.mint, 0.18),
+        }}
       >
-        <X size={18} color={p.ink.default} strokeWidth={2.5} />
-      </Pressable>
-      <View style={{ flex: 1 }}>
-        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-          Selecting
+        <FolderKanban size={14} color={p.accent.mint} strokeWidth={2.5} />
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ color: p.ink.default, fontSize: 13, fontWeight: "700" }}>
+          Tap to select · pencil to edit · trash to remove
         </Text>
-        <Text
-          className="mt-1 text-2xl font-semibold tracking-tight text-ink"
-          style={{ fontVariant: ["tabular-nums"] }}
-        >
-          {count === 1 ? "1 card" : `${count} cards`}
+        <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "500" }}>
+          {collectionName
+            ? `Remove from ${collectionName} or your whole portfolio.`
+            : "Organize into collections — or remove from your vault."}
         </Text>
       </View>
-      <Pressable
-        onPress={canDelete ? onDelete : undefined}
-        disabled={!canDelete}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !canDelete }}
-        accessibilityLabel={`Remove ${count} card${count === 1 ? "" : "s"} from vault`}
-        style={({ pressed }) => ({
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 6,
-          paddingHorizontal: 14,
-          height: 36,
-          borderRadius: 999,
-          backgroundColor: canDelete ? p.accent.rose : withAlpha(p.accent.rose, 0.35),
-          opacity: pressed ? 0.85 : 1,
-        })}
-      >
-        <Trash2 size={15} color="#fff" strokeWidth={2.5} />
-        <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
-          {busy ? "Removing…" : "Remove"}
-        </Text>
-      </Pressable>
     </View>
   );
 }
@@ -933,72 +1075,78 @@ function VaultPageHeader({
 }) {
   const p = useThemedPalette();
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+    <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
       <View style={{ flex: 1 }}>
         <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
           Collection
         </Text>
-        <Text className="mt-1 text-3xl font-semibold tracking-tight text-ink">Vault</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 }}>
+          <Text className="text-3xl font-semibold tracking-tight text-ink">Vault</Text>
+          <CollectionSwitcher />
+        </View>
       </View>
-      {/* Add a card manually — small mint-tinted icon pill. Same target
-          size as Sealed so the row reads as a balanced action cluster. */}
+      {/* Add a card manually */}
       <Pressable
         onPress={onAdd}
         accessibilityRole="button"
         accessibilityLabel="Add a card manually"
         hitSlop={6}
-        style={({ pressed }) => ({
-          width: 36,
-          height: 36,
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: withAlpha(p.accent.mint, 0.45),
-          backgroundColor: withAlpha(p.accent.mint, 0.14),
-          opacity: pressed ? 0.75 : 1,
-        })}
+        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       >
-        <Plus size={18} color={p.accent.mint} strokeWidth={2.5} />
+        <View
+          style={{
+            width: 38,
+            height: 38,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 999,
+            backgroundColor: withAlpha(p.accent.mint, 0.12),
+          }}
+        >
+          <Plus size={19} color={p.accent.mint} strokeWidth={2.5} />
+        </View>
       </Pressable>
-      {/* Scan — the high-value primary path. Same icon pill shape. Dark
-          ink on the mint fill (white-on-mint fails contrast — mint is a
-          light accent; matches the tab-bar FAB treatment). */}
+      {/* Scan — primary action */}
       <Pressable
         onPress={onScan}
         accessibilityRole="button"
         accessibilityLabel="Scan a new card"
         hitSlop={6}
-        style={({ pressed }) => ({
-          width: 36,
-          height: 36,
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 999,
-          backgroundColor: p.accent.mint,
-          opacity: pressed ? 0.85 : 1,
-        })}
+        style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
       >
-        <Camera size={17} color="#06140d" strokeWidth={2.5} />
+        <View
+          style={{
+            width: 38,
+            height: 38,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 999,
+            backgroundColor: p.accent.mint,
+          }}
+        >
+          <Camera size={18} color="#06140d" strokeWidth={2.5} />
+        </View>
       </Pressable>
+      {/* Sealed vault */}
       <Pressable
         onPress={onSealed}
         accessibilityRole="button"
         accessibilityLabel="Open sealed vault"
         hitSlop={6}
-        style={({ pressed }) => ({
-          width: 36,
-          height: 36,
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: withAlpha(p.ink.muted, 0.2),
-          backgroundColor: withAlpha(p.ink.muted, 0.1),
-          opacity: pressed ? 0.75 : 1,
-        })}
+        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
       >
-        <Package size={17} color={p.ink.default} strokeWidth={2.35} />
+        <View
+          style={{
+            width: 38,
+            height: 38,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 999,
+            backgroundColor: withAlpha(p.ink.muted, 0.08),
+          }}
+        >
+          <Package size={18} color={p.ink.default} strokeWidth={2.25} />
+        </View>
       </Pressable>
     </View>
   );
@@ -1018,7 +1166,7 @@ function SealedVaultCard({
   const p = useThemedPalette();
   const { format } = useMoney();
   if (loading) {
-    return <Skeleton width="100%" height={78} radius={18} />;
+    return <Skeleton width="100%" height={56} radius={8} />;
   }
 
   const hasHoldings = stats.holdingCount > 0;
@@ -1048,13 +1196,10 @@ function SealedVaultCard({
       style={{
         flexDirection: "row",
         alignItems: "center",
-        gap: 10,
-        minHeight: 82,
-        padding: 12,
-        borderRadius: 16,
-        borderWidth: StyleSheet.hairlineWidth,
+        paddingVertical: 14,
+        paddingHorizontal: 4,
+        borderTopWidth: StyleSheet.hairlineWidth,
         borderColor: p.line.default,
-        backgroundColor: withAlpha(p.accent.mint, 0.06),
       }}
     >
       <Pressable
@@ -1063,106 +1208,105 @@ function SealedVaultCard({
         accessibilityLabel={hasHoldings ? "Open sealed vault" : "Add sealed product"}
         style={({ pressed }) => ({
           flex: 1,
-          minWidth: 0,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 12,
           opacity: pressed ? 0.76 : 1,
         })}
       >
-        <View
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 14,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: withAlpha(p.accent.mint, 0.14),
-          }}
-        >
-          <Package size={21} color={p.accent.mint} strokeWidth={2.35} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: withAlpha(p.accent.mint, 0.12),
+            }}
+          >
+            <Package size={18} color={p.accent.mint} strokeWidth={2.2} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text numberOfLines={1} style={{ color: p.ink.default, fontSize: 14.5, fontWeight: "700" }}>
+              {headline}
+            </Text>
+            <Text numberOfLines={1} style={{ color: p.ink.muted, fontSize: 11.5, fontWeight: "500", marginTop: 2 }}>
+              {detail}
+            </Text>
+          </View>
         </View>
-        <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-          <Text numberOfLines={1} style={{ color: p.ink.default, fontSize: 15, fontWeight: "800" }}>
-            {headline}
-          </Text>
-          <Text numberOfLines={1} style={{ color: p.ink.muted, fontSize: 12, fontWeight: "600" }}>
-            {detail}
-          </Text>
-          {metric ? (
-            <View
+      </Pressable>
+
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        {metric ? (
+          <View style={{ alignItems: "flex-end" }}>
+            <Text
               style={{
-                flexDirection: "row",
-                alignItems: "baseline",
-                gap: 7,
-                marginTop: 4,
+                color: p.ink.default,
+                fontSize: 14,
+                fontWeight: "700",
+                fontVariant: ["tabular-nums"],
               }}
             >
-              <Text
-                numberOfLines={1}
-                style={{
-                  color: p.ink.dim,
-                  fontSize: 9,
-                  fontWeight: "800",
-                  letterSpacing: 1.3,
-                  textTransform: "uppercase",
-                }}
-              >
-                {valueLabel}
-              </Text>
-              <Text
-                numberOfLines={1}
-                style={{
-                  color: p.ink.default,
-                  fontSize: 13,
-                  fontWeight: "800",
-                  fontVariant: ["tabular-nums"],
-                }}
-              >
-                {metric}
-              </Text>
+              {metric}
+            </Text>
+            <Text
+              style={{
+                color: p.ink.dim,
+                fontSize: 9,
+                fontWeight: "800",
+                letterSpacing: 0.5,
+                textTransform: "uppercase",
+                marginTop: 2,
+              }}
+            >
+              {valueLabel}
+            </Text>
+          </View>
+        ) : null}
+
+        {hasHoldings ? (
+          <Pressable
+            onPress={onOpen}
+            accessibilityRole="button"
+            accessibilityLabel="Open sealed vault"
+            hitSlop={6}
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          >
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: withAlpha(p.accent.mint, 0.12),
+              }}
+            >
+              <ChevronRight size={16} color={p.accent.mint} strokeWidth={2.5} />
             </View>
-          ) : null}
-        </View>
-      </Pressable>
-      {hasHoldings ? (
-        <Pressable
-          onPress={onOpen}
-          accessibilityRole="button"
-          accessibilityLabel="Open sealed vault"
-          hitSlop={6}
-          style={({ pressed }) => ({
-            width: 38,
-            height: 38,
-            borderRadius: 19,
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 1,
-            borderColor: withAlpha(p.accent.mint, 0.34),
-            backgroundColor: withAlpha(p.accent.mint, 0.1),
-            opacity: pressed ? 0.72 : 1,
-          })}
-        >
-          <PackageOpen size={18} color={p.accent.mint} strokeWidth={2.35} />
-        </Pressable>
-      ) : null}
-      <Pressable
-        onPress={onAdd}
-        accessibilityRole="button"
-        accessibilityLabel="Add sealed product"
-        hitSlop={6}
-        style={({ pressed }) => ({
-          width: 38,
-          height: 38,
-          borderRadius: 19,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: withAlpha(p.accent.mint, 0.16),
-          opacity: pressed ? 0.72 : 1,
-        })}
-      >
-        <Plus size={18} color={p.accent.mint} strokeWidth={2.6} />
-      </Pressable>
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={onAdd}
+            accessibilityRole="button"
+            accessibilityLabel="Add sealed product"
+            hitSlop={6}
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          >
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: withAlpha(p.accent.mint, 0.12),
+              }}
+            >
+              <Plus size={16} color={p.accent.mint} strokeWidth={2.5} />
+            </View>
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }

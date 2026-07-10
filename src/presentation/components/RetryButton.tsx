@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { Pressable, Text } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { RefreshCcw } from "lucide-react-native";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
@@ -77,32 +77,37 @@ export function RetryButton({
       accessibilityState={{ disabled: isDisabled }}
       hitSlop={8}
       style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        paddingHorizontal: compact ? 10 : 14,
-        paddingVertical: compact ? 6 : 9,
-        borderRadius: 999,
-        backgroundColor: withAlpha(p.accent.mint, isDisabled ? 0.06 : 0.15),
-        borderWidth: 1,
-        borderColor: withAlpha(p.accent.mint, isDisabled ? 0.15 : 0.45),
         opacity: pressed ? 0.85 : 1,
       })}
     >
-      <RefreshCcw
-        size={compact ? 12 : 14}
-        color={isDisabled ? p.ink.dim : p.accent.mint}
-      />
-      <Text
+      <View
         style={{
-          color: isDisabled ? p.ink.dim : p.accent.mint,
-          fontSize: compact ? 11 : 12,
-          fontWeight: "700",
-          letterSpacing: 0.4,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          paddingHorizontal: compact ? 10 : 14,
+          paddingVertical: compact ? 6 : 9,
+          borderRadius: 999,
+          backgroundColor: withAlpha(p.accent.mint, isDisabled ? 0.06 : 0.15),
+          borderWidth: 1,
+          borderColor: withAlpha(p.accent.mint, isDisabled ? 0.15 : 0.45),
         }}
       >
-        {text}
-      </Text>
+        <RefreshCcw
+          size={compact ? 12 : 14}
+          color={isDisabled ? p.ink.dim : p.accent.mint}
+        />
+        <Text
+          style={{
+            color: isDisabled ? p.ink.dim : p.accent.mint,
+            fontSize: compact ? 11 : 12,
+            fontWeight: "700",
+            letterSpacing: 0.4,
+          }}
+        >
+          {text}
+        </Text>
+      </View>
     </Pressable>
   );
 }
