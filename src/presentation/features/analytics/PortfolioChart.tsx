@@ -51,6 +51,7 @@ import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerShe
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { usePressScale } from "@/presentation/components/usePressScale";
+import { ChartInsights } from "./ChartInsights";
 
 /** @deprecated Use `PortfolioTimeframe` from `@/domain/charts`. */
 type PortfolioRange = PortfolioTimeframe;
@@ -234,8 +235,7 @@ export function PortfolioChart({
   // uses the user's total purchase price so the chip shows true
   // unrealized P/L regardless of timeframe. We swap silently if cost
   // basis is missing to avoid a divide-by-zero "NaN%" flash.
-  const basisVal =
-    basis === "cost" && hasCost ? (costBasisUsd as number) : firstVal;
+  const basisVal = basis === "cost" && hasCost ? (costBasisUsd as number) : firstVal;
   const displayDeltaUsd = displayVal - basisVal;
   const displayDeltaPct = basisVal > 0 ? (displayDeltaUsd / basisVal) * 100 : 0;
   const up = displayDeltaUsd >= 0;
@@ -293,24 +293,18 @@ export function PortfolioChart({
   // overlay bucket), so the tooltip compares You vs PSA-10 at the same date.
   const benchAtScrub =
     bench && scrubX !== null && width > 0
-      ? bench.equivUsd[
-          Math.round((scrubX / width) * (bench.equivUsd.length - 1))
-        ] ?? null
+      ? (bench.equivUsd[Math.round((scrubX / width) * (bench.equivUsd.length - 1))] ?? null)
       : null;
 
   // Outperformance vs the PSA-10 cohort over the visible period, in points
   // (your period % − cohort period %). Only meaningful on the period basis.
-  const portfolioPeriodPct =
-    firstVal > 0 ? ((latestVal - firstVal) / firstVal) * 100 : null;
+  const portfolioPeriodPct = firstVal > 0 ? ((latestVal - firstVal) / firstVal) * 100 : null;
   const outperformPts =
-    bench && portfolioPeriodPct !== null
-      ? portfolioPeriodPct - bench.deltaPct
-      : null;
+    bench && portfolioPeriodPct !== null ? portfolioPeriodPct - bench.deltaPct : null;
 
   // High/low watermarks for the visible window (Robinhood expanded style).
   const hiLo = useMemo(() => {
-    if (!points || points.length < 2 || coords.length !== points.length)
-      return null;
+    if (!points || points.length < 2 || coords.length !== points.length) return null;
     let loI = 0;
     let hiI = 0;
     points.forEach((pt, i) => {
@@ -350,7 +344,6 @@ export function PortfolioChart({
 
   return (
     <View>
-
       {/* Two matched pills bracket the top of the hero — which portfolio the
           number is for (left) and the currency it's shown in (right). Same pill
           style, so they read as a set that scopes the value below. */}
@@ -414,12 +407,10 @@ export function PortfolioChart({
             {scrubLabel
               ? formatScrubDate(scrubLabel, range)
               : basis === "cost"
-              ? "vs Cost"
-              : labelForRange(range)}
+                ? "vs Cost"
+                : labelForRange(range)}
           </Text>
-          {hasCost ? (
-            <BasisToggle basis={basis} tint={tint} onChange={setBasis} />
-          ) : null}
+          {hasCost ? <BasisToggle basis={basis} tint={tint} onChange={setBasis} /> : null}
           {bench && outperformPts !== null && !scrubLabel ? (
             /* Benchmark verdict chip — "you vs the PSA-10 market" in points.
                The single most interesting number a collector's chart can show. */
@@ -463,10 +454,10 @@ export function PortfolioChart({
               </Text>
             </View>
           ) : null}
-          
+
           {/* Today Mini Card (Requested by user) */}
           {todayHistory.data && !todayHistory.isLoading && !scrubLabel ? (
-            <View className="flex-row items-center gap-1.5 ml-1">
+            <View className="ml-1 flex-row items-center gap-1.5">
               <View
                 style={{
                   width: 4,
@@ -475,15 +466,29 @@ export function PortfolioChart({
                   backgroundColor: todayHistory.data.deltaUsd >= 0 ? p.accent.mint : p.accent.rose,
                 }}
               />
-              <Text style={{ color: p.ink.dim, fontSize: 10, fontWeight: "700", letterSpacing: 0.5 }}>TODAY</Text>
-              <Text style={{ color: todayHistory.data.deltaUsd >= 0 ? p.accent.mint : p.accent.rose, fontSize: 11, fontWeight: "700" }}>
+              <Text
+                style={{ color: p.ink.dim, fontSize: 10, fontWeight: "700", letterSpacing: 0.5 }}
+              >
+                TODAY
+              </Text>
+              <Text
+                style={{
+                  color: todayHistory.data.deltaUsd >= 0 ? p.accent.mint : p.accent.rose,
+                  fontSize: 11,
+                  fontWeight: "700",
+                }}
+              >
                 {todayHistory.data.deltaUsd >= 0 ? "+" : "−"}
-                {money(Math.abs(todayHistory.data.deltaUsd))} ({todayHistory.data.deltaUsd >= 0 ? "+" : "−"}
+                {money(Math.abs(todayHistory.data.deltaUsd))} (
+                {todayHistory.data.deltaUsd >= 0 ? "+" : "−"}
                 {Math.abs(todayHistory.data.deltaPct).toFixed(1)}%)
               </Text>
               {topMovers.rows[0]?.card.name ? (
                 <Text style={{ color: p.ink.muted, fontSize: 11, marginLeft: 2 }}>
-                  Led by <Text style={{ color: p.ink.default, fontWeight: "600" }}>{topMovers.rows[0].card.name}</Text>
+                  Led by{" "}
+                  <Text style={{ color: p.ink.default, fontWeight: "600" }}>
+                    {topMovers.rows[0].card.name}
+                  </Text>
                 </Text>
               ) : null}
             </View>
@@ -637,12 +642,7 @@ export function PortfolioChart({
                     elevation: 4,
                   }}
                 >
-                  <TipRow
-                    color={tint}
-                    label="You"
-                    value={money(displayVal)}
-                    ink={p.ink}
-                  />
+                  <TipRow color={tint} label="You" value={money(displayVal)} ink={p.ink} />
                   <TipRow
                     color={p.accent.blue}
                     label="PSA-10"
@@ -651,8 +651,7 @@ export function PortfolioChart({
                   />
                   <Text
                     style={{
-                      color:
-                        displayVal >= benchAtScrub ? p.accent.mint : p.accent.amber,
+                      color: displayVal >= benchAtScrub ? p.accent.mint : p.accent.amber,
                       fontSize: 9.5,
                       fontWeight: "800",
                       fontVariant: ["tabular-nums"],
@@ -742,6 +741,11 @@ export function PortfolioChart({
         ))}
       </View>
 
+      {/* Backend-computed chart intelligence: attribution, best/worst
+          day, range band, in-range acquisitions. Hidden while scrubbing so
+          the finger owns the surface. */}
+      {scrub === null ? <ChartInsights series={data} /> : null}
+
       <CurrencyPickerSheet
         visible={pickerOpen}
         selected={currency}
@@ -818,14 +822,8 @@ function TipRow({
 }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-      <View
-        style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }}
-      />
-      <Text
-        style={{ flex: 1, color: ink.muted, fontSize: 11, fontWeight: "600" }}
-      >
-        {label}
-      </Text>
+      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} />
+      <Text style={{ flex: 1, color: ink.muted, fontSize: 11, fontWeight: "600" }}>{label}</Text>
       <Text
         style={{
           color: ink.default,
@@ -939,11 +937,7 @@ function ChartPlaceholder({
     const norm = [0.62, 0.54, 0.66, 0.5, 0.58, 0.44, 0.38];
     const PAD_Y = 26;
     const coords = norm.map(
-      (y, i) =>
-        [
-          (i / (norm.length - 1)) * width,
-          PAD_Y + y * (height - PAD_Y * 2),
-        ] as const,
+      (y, i) => [(i / (norm.length - 1)) * width, PAD_Y + y * (height - PAD_Y * 2)] as const,
     );
     const line = monotoneCubic(coords);
     const area = line + ` L ${width} ${height} L 0 ${height} Z`;
@@ -1053,13 +1047,20 @@ function ChartPlaceholder({
 
 function labelForRange(r: PortfolioRange): string {
   switch (r) {
-    case "1D": return "Today";
-    case "1W": return "Past Week";
-    case "1M": return "Past Month";
-    case "3M": return "Past 3 Months";
-    case "YTD": return "Year to Date";
-    case "1Y": return "Past Year";
-    case "ALL": return "All Time";
+    case "1D":
+      return "Today";
+    case "1W":
+      return "Past Week";
+    case "1M":
+      return "Past Month";
+    case "3M":
+      return "Past 3 Months";
+    case "YTD":
+      return "Year to Date";
+    case "1Y":
+      return "Past Year";
+    case "ALL":
+      return "All Time";
   }
 }
 

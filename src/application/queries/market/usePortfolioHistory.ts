@@ -30,6 +30,14 @@ function adapt(wire: PortfolioHistoryWire): PortfolioSeries {
     points: wire.points.map((p) => ({ date: p.date, priceUsd: p.priceUsd })),
     deltaUsd: wire.deltaUsd,
     deltaPct: wire.deltaPct,
+    // Chart intelligence (additive) — absent on older backends.
+    highUsd: wire.highUsd ?? null,
+    lowUsd: wire.lowUsd ?? null,
+    costBasisUsd: wire.costBasisUsd ?? null,
+    bestDay: wire.bestDay ?? null,
+    worstDay: wire.worstDay ?? null,
+    movers: wire.movers ?? [],
+    events: wire.events ?? [],
   };
 }
 
@@ -41,9 +49,7 @@ export function usePortfolioHistory({
   return useQuery({
     queryKey: [...queryKeys.portfolio.history(timeframe), collectionId ?? "all"],
     queryFn: async () => {
-      const scope = collectionId
-        ? `&collection_id=${encodeURIComponent(collectionId)}`
-        : "";
+      const scope = collectionId ? `&collection_id=${encodeURIComponent(collectionId)}` : "";
       const wire = await apiFetch<PortfolioHistoryWire>(
         `${ENDPOINTS.me.grades}/history?range=${encodeURIComponent(timeframe)}${scope}`,
       );

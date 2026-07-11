@@ -91,14 +91,7 @@ export interface PortfolioSummaryWire {
   unrealizedPnlPct: number | null;
 }
 
-export type PortfolioRangeWire =
-  | "1D"
-  | "1W"
-  | "1M"
-  | "3M"
-  | "YTD"
-  | "1Y"
-  | "ALL";
+export type PortfolioRangeWire = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
 
 export interface PortfolioPointWire {
   /** ISO date (UTC). */
@@ -107,12 +100,38 @@ export interface PortfolioPointWire {
   priceUsd: number;
 }
 
+/** One holding's contribution to the range move (chart intelligence). */
+export interface PortfolioMoverWire {
+  gradeId: ID;
+  cardId: ID | null;
+  name: string | null;
+  imageUrl: string | null;
+  deltaUsd: number;
+  deltaPct: number;
+}
+
+/** In-range acquisitions grouped by day (chart intelligence). */
+export interface PortfolioEventWire {
+  date: ISODate;
+  count: number;
+  valueUsd: number;
+  name: string | null;
+}
+
 /** Mirrors `portfolio_service.PortfolioHistory.to_dict()`. */
 export interface PortfolioHistoryWire {
   range: PortfolioRangeWire;
   points: PortfolioPointWire[];
   deltaUsd: number;
   deltaPct: number;
+  /** Chart intelligence — optional so older backends still parse. */
+  highUsd?: number | null;
+  lowUsd?: number | null;
+  costBasisUsd?: number | null;
+  bestDay?: { date: ISODate; deltaUsd: number } | null;
+  worstDay?: { date: ISODate; deltaUsd: number } | null;
+  movers?: PortfolioMoverWire[];
+  events?: PortfolioEventWire[];
 }
 
 /** Mirrors `portfolio_service.CardSparkline.to_dict()`. */

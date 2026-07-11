@@ -12,17 +12,28 @@
 import type { PricePoint } from "@/domain/market";
 
 /** Timeframe vocabulary the API speaks for portfolio history. */
-export type PortfolioTimeframe =
-  | "1D"
-  | "1W"
-  | "1M"
-  | "3M"
-  | "YTD"
-  | "1Y"
-  | "ALL";
+export type PortfolioTimeframe = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
 
 /** Timeframe vocabulary for per-card price history. */
 export type PriceHistoryTimeframe = "7d" | "30d" | "90d" | "180d" | "1y";
+
+/** One holding's contribution to the charted range's move. */
+export interface PortfolioMover {
+  gradeId: string;
+  cardId: string | null;
+  name: string | null;
+  imageUrl: string | null;
+  deltaUsd: number;
+  deltaPct: number;
+}
+
+/** In-range acquisitions grouped by day. */
+export interface PortfolioEvent {
+  date: string;
+  count: number;
+  valueUsd: number;
+  name: string | null;
+}
 
 /** A portfolio history response, post-adaptation from the wire. */
 export interface PortfolioSeries {
@@ -32,6 +43,14 @@ export interface PortfolioSeries {
   deltaUsd: number;
   /** `deltaUsd / points[0]` × 100, or 0 when first point is zero. */
   deltaPct: number;
+  /** Chart intelligence — absent on older backends; render progressively. */
+  highUsd?: number | null;
+  lowUsd?: number | null;
+  costBasisUsd?: number | null;
+  bestDay?: { date: string; deltaUsd: number } | null;
+  worstDay?: { date: string; deltaUsd: number } | null;
+  movers?: PortfolioMover[];
+  events?: PortfolioEvent[];
 }
 
 /** A per-card sparkline, as served by `/v1/grades/sparklines`. */
