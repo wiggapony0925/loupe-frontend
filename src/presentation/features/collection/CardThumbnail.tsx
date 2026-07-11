@@ -44,15 +44,16 @@ const TITLE_LINES = 2;
 /**
  * Clamp truly absurd deltas (data glitches surface as ±300%+ moves that
  * are clearly noise, not market signal). Anything outside ±99% is shown
- * as "—" so the UI doesn't lie. Mirrors the guard we should add in
- * `PortfolioPills` so the value/delta story stays internally consistent.
+ * as "—" so the UI doesn't lie. `deltaPct` arrives from
+ * `/v1/grades/sparklines` already in percent units (12.5 = +12.5%) —
+ * the same convention `CardSparkRow` renders.
  */
-function formatDelta(delta: number): { label: string; up: boolean; valid: boolean } {
-  const valid = Number.isFinite(delta) && Math.abs(delta) < 1;
-  const up = delta >= 0;
+function formatDelta(deltaPct: number): { label: string; up: boolean; valid: boolean } {
+  const valid = Number.isFinite(deltaPct) && Math.abs(deltaPct) < 99;
+  const up = deltaPct >= 0;
   if (!valid) return { label: "—", up, valid: false };
-  if (delta === 0) return { label: "0.00%", up: true, valid: true };
-  return { label: `${up ? "+" : ""}${(delta * 100).toFixed(2)}%`, up, valid: true };
+  if (deltaPct === 0) return { label: "0.00%", up: true, valid: true };
+  return { label: `${up ? "+" : ""}${deltaPct.toFixed(2)}%`, up, valid: true };
 }
 
 export function CardThumbnail({

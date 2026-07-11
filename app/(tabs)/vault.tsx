@@ -28,7 +28,6 @@ import {
   Layers,
   List as ListIcon,
   Package,
-  PackageOpen,
   Plus,
   Search,
   SlidersHorizontal,
@@ -398,7 +397,12 @@ export default function VaultScreen() {
               <>
                 <ProUsageBanner />
                 <PortfolioHero
-                  totalValueUsd={summary?.totalValueUsd ?? stats.value}
+                  // Canonical headline (cards + unopened sealed) — scoped
+                  // summaries return combined == cards-only, so preferring
+                  // combinedValueUsd is always safe.
+                  totalValueUsd={
+                    summary?.combinedValueUsd ?? summary?.totalValueUsd ?? stats.value
+                  }
                   pnlUsd={summary?.unrealizedPnlUsd ?? null}
                   pnlPct={summary?.unrealizedPnlPct ?? null}
                 />

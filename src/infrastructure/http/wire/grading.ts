@@ -89,6 +89,15 @@ export interface PortfolioSummaryWire {
   costBasisCardCount: number;
   unrealizedPnlUsd: number | null;
   unrealizedPnlPct: number | null;
+  /**
+   * Sealed rollup + the canonical combined headline (cards + unopened
+   * sealed, qty-weighted). Optional: older backend deployments may not
+   * return them — fall back to `totalValueUsd`.
+   */
+  sealedValueUsd?: number;
+  sealedCostUsd?: number;
+  sealedHoldingCount?: number;
+  combinedValueUsd?: number;
 }
 
 export type PortfolioRangeWire =

@@ -135,7 +135,17 @@ export default function CommandCenterScreen() {
               <>
                 <KpiPill
                   label="Value"
-                  value={summary.data ? compactUsd(summary.data.totalValueUsd) : "—"}
+                  // Canonical headline = combinedValueUsd (cards + unopened
+                  // sealed, backend-defined) — the SAME number the web vault
+                  // shows. Falls back to cards-only on older backends.
+                  value={
+                    summary.data
+                      ? compactUsd(
+                          summary.data.combinedValueUsd ??
+                            summary.data.totalValueUsd,
+                        )
+                      : "—"
+                  }
                   accent={p.accent.mint}
                 />
                 {summary.data?.unrealizedPnlUsd != null &&

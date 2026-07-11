@@ -95,23 +95,27 @@ export function PositionRow({
   // so the pill/line color always matches what the row actually draws.
   // Falling back to the API delta when present keeps small intraday
   // moves accurate; otherwise the seeded-walk anchors the visual.
+  // `deltaPct` arrives from `/v1/grades/sparklines` in percent units
+  // (12.5 = +12.5%); the walk fallback is scaled to the same units so
+  // the thresholds below read one convention. The ±99% clamp mirrors
+  // CardThumbnail — glitch-sized moves fall back to the walk direction
+  // rather than stating a number.
   const apiDelta = spark?.deltaPct;
-  const walkDelta = points.length >= 2
-    ? (points[points.length - 1]! - points[0]!) / (points[0]! || 1)
+  const apiDeltaUsable = Number.isFinite(apiDelta) && Math.abs(apiDelta ?? 0) < 99;
+  const walkDeltaPct = points.length >= 2
+    ? ((points[points.length - 1]! - points[0]!) / (points[0]! || 1)) * 100
     : 0;
-  const rawDelta = Number.isFinite(apiDelta) && Math.abs(apiDelta ?? 0) < 1
-    ? (apiDelta as number)
-    : walkDelta;
+  const rawDeltaPct = apiDeltaUsable ? (apiDelta as number) : walkDeltaPct;
   // Robinhood rule:
   //   • move ≥ +0.05%  → green (mint)
   //   • move ≤ -0.05%  → red   (rose)
   //   • effectively flat → neutral gray
   // The 0.05% floor stops sub-cent rounding noise from flipping rows.
-  const FLAT_THRESHOLD = 0.0005;
+  const FLAT_THRESHOLD_PCT = 0.05;
   const direction: "up" | "down" | "flat" =
-    rawDelta >= FLAT_THRESHOLD
+    rawDeltaPct >= FLAT_THRESHOLD_PCT
       ? "up"
-      : rawDelta <= -FLAT_THRESHOLD
+      : rawDeltaPct <= -FLAT_THRESHOLD_PCT
         ? "down"
         : "flat";
   const directionTint =
@@ -125,10 +129,7 @@ export function PositionRow({
   const pillBg = directionTint;
   // Only surface the % chip when we have a *real* API delta — the
   // seeded walk is for visual continuity, not for stating numbers.
-  const showDeltaChip =
-    Number.isFinite(apiDelta) &&
-    Math.abs(apiDelta ?? 0) < 1 &&
-    Math.abs(apiDelta ?? 0) >= FLAT_THRESHOLD;
+  const showDeltaChip = apiDeltaUsable && Math.abs(apiDelta ?? 0) >= FLAT_THRESHOLD_PCT;
 
   return (
     <View
@@ -405,7 +406,7 @@ export function PositionRow({
                     }}
                   >
                     {direction === "up" ? "+" : ""}
-                    {((apiDelta as number) * 100).toFixed(2)}%
+                    {(apiDelta as number).toFixed(2)}%
                   </Text>
                 ) : null}
               </View>

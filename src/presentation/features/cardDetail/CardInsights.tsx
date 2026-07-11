@@ -3,20 +3,24 @@
  * useful number we already have on hand without adding any new
  * endpoints:
  *
- *   1. `CardQuickStats` — Spread (Raw → PSA10), Volatility (90d stdev
+ *   1. `CardQuickStats` — server-derived via `/v1/cards/{id}/analytics`:
+ *      Spread (Raw → PSA10), Volatility (90d stdev
  *      %), Liquidity (sales in last 30d), Last sale (relative time).
  *
  *   2. `CardMarketSignals` — 52-week high/low pills, "X% off high"
  *      chip, trend-agreement chip, cross-house arbitrage spread
  *      (BGS 10 vs PSA 10), and auction-ending-soon count.
  *
- *   3. `CardCostBasisStrip` — owned-card P/L vs purchase price.
+ *   3. `CardCostBasisStrip` — owned-card unrealized P/L, straight from
+ *      the backend `/v1/cards/{id}/ownership` rollup (the SAME numbers
+ *      `CardOwnershipSection` and the web ownership panel render — the
+ *      client never re-derives P/L from market price).
  *
  * Each component renders nothing (returns `null`) when its inputs
  * aren't available, so the parent can mount all three unconditionally
  * and the screen stays clean for cards with thin data.
  */
-import React, { useMemo } from "react";
+import React from "react";
 import { Text, View } from "react-native";
 import {
   ArrowDownRight,
@@ -29,10 +33,11 @@ import {
 } from "lucide-react-native";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { Price, useMoney } from "@/presentation/components/Price";
+import { useCardAnalytics } from "@/application/queries/catalog/useCardAnalytics";
 import { useCardComps } from "@/application/queries/catalog/useCardComps";
 import { useCardListings } from "@/application/queries/catalog/useCardListings";
+import { useCardOwnership } from "@/application/queries/collection/useCardOwnership";
 import type {
-  GradedCard,
   HouseBlockWire,
   MarketSnapshotWire,
 } from "@/infrastructure/http";
@@ -51,14 +56,6 @@ function formatRelative(iso: string | null | undefined): string | null {
   if (days < 30) return `${days}d ago`;
   if (days < 365) return `${Math.round(days / 30)}mo ago`;
   return `${Math.round(days / 365)}y ago`;
-}
-
-function stdev(values: number[]): number {
-  if (values.length < 2) return 0;
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const variance =
-    values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
-  return Math.sqrt(variance);
 }
 
 function findGrade(
@@ -132,27 +129,19 @@ export function CardQuickStats({
   snapshot: MarketSnapshotWire | undefined;
   cardId: string;
 }) {
+  // Spread / volatility / liquidity come from the backend
+  // `/v1/cards/{id}/analytics` — the SAME payload CardAnalyticsSection
+  // renders (React Query dedupes), so web + mobile show identical figures
+  // and the client never re-derives them from raw history/comps.
+  const analyticsQ = useCardAnalytics(cardId);
+  const analytics = analyticsQ.data;
+  // Comps are only the last-sale fallback now — never re-aggregated.
   const compsQ = useCardComps(cardId, { days: 90, limit: 100 });
   const comps = compsQ.data?.comps ?? [];
 
-  const raw = snapshot?.summary.raw?.amount ?? null;
-  const psa10 = snapshot?.summary.pop_top?.amount ?? null;
-
-  // Spread: PSA10 / Raw multiplier.
-  const spread = raw && psa10 && raw > 0 ? psa10 / raw : null;
-
-  // Volatility: stdev of 90d daily prices as a % of mean.
-  const ninety = snapshot?.history?.["90d"]?.points ?? [];
-  const prices = ninety.map((pt) => pt.price);
-  const mean = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
-  const vol = prices.length > 1 && mean > 0 ? (stdev(prices) / mean) * 100 : null;
-
-  // Liquidity: comps in last 30 days.
-  const cutoff = Date.now() - 30 * 86_400_000;
-  const last30 = comps.filter((c) => {
-    const t = new Date(c.sold_at).getTime();
-    return !Number.isNaN(t) && t >= cutoff;
-  }).length;
+  const spread = analytics?.grade_premium ?? null;
+  const vol = analytics?.volatility_pct ?? null;
+  const last30 = analytics?.liquidity_30d ?? 0;
 
   // Last sale freshness — prefer summary, fall back to newest comp.
   const lastSaleIso =
@@ -382,27 +371,36 @@ export function CardMarketSignals({
 
 /* ── 3. Cost basis strip (owned card) ────────────────────────────── */
 
-export function CardCostBasisStrip({
-  ownedGrade,
-  marketAmount,
-}: {
-  ownedGrade: GradedCard | null;
-  marketAmount: number | null;
-}) {
+/** Decimal-string wire value → finite number (null-safe). */
+function decimalNum(v: string | null | undefined): number | null {
+  if (v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function CardCostBasisStrip({ cardId }: { cardId: string }) {
   const { format: money } = useMoney();
   const p = useThemedPalette();
-  const cost = useMemo(() => {
-    const raw = ownedGrade?.purchase_price_usd;
-    if (raw === null || raw === undefined) return null;
-    const n = Number(raw);
-    return Number.isFinite(n) ? n : null;
-  }, [ownedGrade?.purchase_price_usd]);
+  // Backend-composed rollup across every owned copy — grade-aware holding
+  // value vs recorded cost. React Query dedupes with CardOwnershipSection's
+  // call on the same screen, so this costs no extra request.
+  const { data: ownership } = useCardOwnership(cardId);
 
-  const current = marketAmount;
-  if (!ownedGrade || cost === null || current === null) return null;
+  const cost = decimalNum(ownership?.cost_basis_usd);
+  const current = decimalNum(ownership?.holding_value_usd);
+  const pnl = decimalNum(ownership?.unrealized_pl_usd);
+  const pnlPct = ownership?.unrealized_pl_pct ?? null;
 
-  const pnl = current - cost;
-  const pnlPct = cost > 0 ? (pnl / cost) * 100 : 0;
+  if (
+    !ownership?.owned ||
+    cost === null ||
+    current === null ||
+    pnl === null ||
+    pnlPct === null
+  ) {
+    return null;
+  }
+
   const positive = pnl >= 0;
   const color = positive ? p.accent.mint : p.accent.rose;
 

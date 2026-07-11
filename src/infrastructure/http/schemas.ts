@@ -53,6 +53,13 @@ export const PortfolioSummarySchema = z.object({
   availableSets: z.array(z.string()).optional(),
   // Distinct user tags across the vault — feeds the filter sheet + tag editor.
   availableTags: z.array(z.string()).optional(),
+  // Sealed rollup + canonical combined headline (cards + unopened sealed).
+  // Optional for the same older-backend reason; consumers fall back to
+  // totalValueUsd when absent.
+  sealedValueUsd: z.number().optional(),
+  sealedCostUsd: z.number().optional(),
+  sealedHoldingCount: z.number().optional(),
+  combinedValueUsd: z.number().optional(),
 });
 
 /* ─── remote app config (feature flags / min version / SDUI) ─────────── */
