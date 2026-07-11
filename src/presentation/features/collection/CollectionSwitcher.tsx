@@ -13,8 +13,8 @@
  */
 
 import React, { useState } from "react";
-import { Pressable, Text, View } from "react-native";
-import { ChevronDown, Layers, X } from "lucide-react-native";
+import { Pressable, Text } from "react-native";
+import { ChevronDown, Layers } from "lucide-react-native";
 import {
   useCollectionsOverview,
   type CollectionSummary,
@@ -26,7 +26,7 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 export function CollectionSwitcher() {
   const p = useThemedPalette();
   const [open, setOpen] = useState(false);
-  const { collectionId, setCollectionId } = useActiveCollection();
+  const { collectionId } = useActiveCollection();
   const { data } = useCollectionsOverview();
   const rows: CollectionSummary[] = data ?? [];
 
