@@ -49,6 +49,7 @@ import { useMoney } from "@/presentation/components/Price";
 import { useDisplayCurrency } from "@/application/hooks/useDisplayCurrency";
 import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
+import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { usePressScale } from "@/presentation/components/usePressScale";
 
 /** @deprecated Use `PortfolioTimeframe` from `@/domain/charts`. */
@@ -350,52 +351,55 @@ export function PortfolioChart({
   return (
     <View>
 
-      {/* Hero value */}
-      <View>
-        <View className="flex-row items-end justify-between">
+      {/* Two matched pills bracket the top of the hero — which portfolio the
+          number is for (left) and the currency it's shown in (right). Same pill
+          style, so they read as a set that scopes the value below. */}
+      <View className="mb-2 flex-row items-center justify-between">
+        <CollectionSwitcher />
+        {/* Currency bubble — opens a native bottom-sheet picker. */}
+        <Pressable
+          onPress={() => setPickerOpen(true)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Currency ${ccyMeta.code}. Tap to change.`}
+          className="flex-row items-center gap-1.5 rounded-full border px-2.5 py-1.5"
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.75 : 1,
+            borderColor: withAlpha(ccyTint, 0.45),
+            backgroundColor: withAlpha(ccyTint, 0.12),
+          })}
+        >
+          <Text style={{ fontSize: 12 }}>{ccyMeta.flag}</Text>
           <Text
-            className="font-semibold text-ink"
             style={{
-              fontSize: 36,
-              lineHeight: 40,
-              letterSpacing: -1.2,
-              // Tabular numerals keep digits a fixed width so the
-              // headline value doesn't jitter as the scrubber moves
-              // across the chart.
-              fontVariant: ["tabular-nums"],
+              color: ccyTint,
+              fontSize: 11,
+              fontWeight: "800",
+              letterSpacing: 0.6,
             }}
           >
-            {money(displayVal)}
+            {ccyMeta.code}
           </Text>
-          {/* Currency bubble — Robinhood-style: lives next to the headline value
-              it denominates, opens a native bottom-sheet picker. */}
-          <Pressable
-            onPress={() => setPickerOpen(true)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Currency ${ccyMeta.code}. Tap to change.`}
-            className="flex-row items-center gap-1.5 rounded-full border px-2.5 py-1.5"
-            style={({ pressed }) => ({
-              opacity: pressed ? 0.75 : 1,
-              borderColor: withAlpha(ccyTint, 0.45),
-              backgroundColor: withAlpha(ccyTint, 0.12),
-              marginBottom: 4,
-            })}
-          >
-            <Text style={{ fontSize: 12 }}>{ccyMeta.flag}</Text>
-            <Text
-              style={{
-                color: ccyTint,
-                fontSize: 11,
-                fontWeight: "800",
-                letterSpacing: 0.6,
-              }}
-            >
-              {ccyMeta.code}
-            </Text>
-            <ChevronDown size={11} color={ccyTint} strokeWidth={2.6} />
-          </Pressable>
-        </View>
+          <ChevronDown size={11} color={ccyTint} strokeWidth={2.6} />
+        </Pressable>
+      </View>
+
+      {/* Hero value */}
+      <View>
+        <Text
+          className="font-semibold text-ink"
+          style={{
+            fontSize: 36,
+            lineHeight: 40,
+            letterSpacing: -1.2,
+            // Tabular numerals keep digits a fixed width so the
+            // headline value doesn't jitter as the scrubber moves
+            // across the chart.
+            fontVariant: ["tabular-nums"],
+          }}
+        >
+          {money(displayVal)}
+        </Text>
 
         {/* flex-wrap: the delta + date + basis toggle + benchmark chip can
             exceed one line on small phones — wrap instead of clipping. */}

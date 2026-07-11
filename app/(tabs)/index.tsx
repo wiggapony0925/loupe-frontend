@@ -10,7 +10,6 @@ import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRe
 import { HardwareStatusWidget, useScannerConnection } from "@/presentation/features/scanner";
 import { PortfolioChart } from "@/presentation/features/analytics/PortfolioChart";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
-import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { MixedTrendingRail } from "@/presentation/features/search/MixedTrendingRail";
 import { SealedRail } from "@/presentation/features/search/SealedRail";
@@ -355,15 +354,9 @@ function Header() {
 
   return (
     <View>
-      <View className="flex-row items-center justify-start mb-1">
-        <CollectionSwitcher />
-      </View>
-      
-      <View>
-        <Text className="text-xs uppercase tracking-[3px] text-ink-dim">
-          {greeting()}, {firstName}
-        </Text>
-      </View>
+      <Text className="text-xs uppercase tracking-[3px] text-ink-dim">
+        {greeting()}, {firstName}
+      </Text>
     </View>
   );
 }
