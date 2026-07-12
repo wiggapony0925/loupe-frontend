@@ -20,12 +20,23 @@ import { EmptyState } from "@/presentation/components/EmptyState";
 import { ErrorState } from "@/presentation/components/ErrorState";
 import { LoupeMark } from "@/presentation/brand/LoupeMark";
 import { useHomeFeed, useTopMovers } from "@/application/queries";
+import { useAppConfig } from "@/application/queries/ops/useAppConfig";
 import { useCardSparklines } from "@/application/queries/catalog/useCardSparklines";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { MoverSparkRow } from "@/presentation/cards";
 import { compactUsd, greeting, relativeTime } from "@/shared/format";
 import { gradeColor, useThemedPalette } from "@/presentation/theme/tokens";
 import type { RecentScanRow } from "@/infrastructure/repositories/homeRepository";
+
+// Pre-config / older-backend fallback for the discovery carousel order.
+// Mirrors `_DEFAULT_DISCOVERY_RAILS` in the backend's app_config.py — the
+// backend copy is the one that counts once `/v1/app/config` loads.
+const DEFAULT_DISCOVERY_RAILS = [
+  "trendingNow",
+  "mostValuable",
+  "sealedProducts",
+  "stealsUnder5",
+];
 
 export default function CommandCenterScreen() {
   const p = useThemedPalette();
@@ -51,10 +62,16 @@ export default function CommandCenterScreen() {
   const feed = useHomeFeed({ topMovers: 5, recentScans: 6, collectionId });
   const hardware = useScannerConnection();
   const movers = useTopMovers({ enrichLimit: 12, limit: 5, collectionId });
-  // Discovery rails at the bottom mirror the web home page's carousels
-  // (Trending now ▸ Most valuable right now ▸ Sealed products ▸ Steals
-  // under $5). Sealed is the only one we gate on data, since its rail
-  // renders nothing when empty (leaving a lone header otherwise).
+  // Discovery rails at the bottom mirror the web home page's carousels.
+  // WHICH rails render, and in what ORDER, is backend-owned via
+  // `/v1/app/config` → `discoveryRails` (unknown ids are skipped, so the
+  // backend can ship new rails ahead of the client). The static list is
+  // only the pre-config / older-backend fallback. Sealed is the only rail
+  // gated on data, since it renders nothing when empty (leaving a lone
+  // header otherwise).
+  const appConfig = useAppConfig();
+  const discoveryRails =
+    appConfig.data?.discoveryRails ?? DEFAULT_DISCOVERY_RAILS;
   const sealed = useSealedSearch("");
   const hasSealed = (sealed.data?.length ?? 0) > 0;
 
@@ -234,64 +251,79 @@ export default function CommandCenterScreen() {
           )}
         </View>
 
-        {/* Discovery carousels — the same rails the web home page shows,
-            in the same order: Trending now ▸ Most valuable right now ▸
-            Sealed products ▸ Steals under $5. These give the home screen a
-            "what's out there" heartbeat below the personal feed. The mixed
-            rails interleave Pokémon · Magic · Yu-Gi-Oh! (with a value
-            fallback) so they stay populated even when a trending upstream
-            times out. Full discovery still lives in the Search tab. */}
-        <View>
-          <SectionHeader
-            eyebrow="Live"
-            title="Trending now"
-            trailing={
-              <Pressable
-                onPress={() => router.push("/search")}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel="See all discovery rails in Search"
-                className="flex-row items-center gap-1"
-              >
-                <Text className="text-xs font-medium text-ink-muted">More</Text>
-                <ArrowUpRight size={14} color={p.ink.muted} />
-              </Pressable>
-            }
-          />
-          <MixedTrendingRail sort="trending" limit={12} />
-        </View>
-
-        <View>
-          <SectionHeader eyebrow="Market" title="Most valuable right now" />
-          <MixedTrendingRail sort="value" limit={12} />
-        </View>
-
-        {hasSealed ? (
-          <View>
-            <SectionHeader
-              eyebrow="Sealed"
-              title="Sealed products"
-              trailing={
-                <Pressable
-                  onPress={() => router.push(routes.sealed())}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel="See all sealed products"
-                  className="flex-row items-center gap-1"
-                >
-                  <Text className="text-xs font-medium text-ink-muted">More</Text>
-                  <ArrowUpRight size={14} color={p.ink.muted} />
-                </Pressable>
-              }
-            />
-            <SealedRail products={sealed.data ?? []} />
-          </View>
-        ) : null}
-
-        <View>
-          <SectionHeader eyebrow="Under $5" title="Steals under $5" />
-          <MixedTrendingRail sort="value" maxPrice={5} limit={12} />
-        </View>
+        {/* Discovery carousels — the same rails the web home page shows.
+            The rail SET + ORDER come from `/v1/app/config` (discoveryRails);
+            unknown ids are skipped so the backend can ship rails ahead of
+            the client. These give the home screen a "what's out there"
+            heartbeat below the personal feed. The mixed rails interleave
+            Pokémon · Magic · Yu-Gi-Oh! (with a value fallback) so they stay
+            populated even when a trending upstream times out. Full
+            discovery still lives in the Search tab. */}
+        {discoveryRails.map((railId) => {
+          switch (railId) {
+            case "trendingNow":
+              return (
+                <View key={railId}>
+                  <SectionHeader
+                    eyebrow="Live"
+                    title="Trending now"
+                    trailing={
+                      <Pressable
+                        onPress={() => router.push("/search")}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel="See all discovery rails in Search"
+                        className="flex-row items-center gap-1"
+                      >
+                        <Text className="text-xs font-medium text-ink-muted">More</Text>
+                        <ArrowUpRight size={14} color={p.ink.muted} />
+                      </Pressable>
+                    }
+                  />
+                  <MixedTrendingRail sort="trending" limit={12} />
+                </View>
+              );
+            case "mostValuable":
+              return (
+                <View key={railId}>
+                  <SectionHeader eyebrow="Market" title="Most valuable right now" />
+                  <MixedTrendingRail sort="value" limit={12} />
+                </View>
+              );
+            case "sealedProducts":
+              return hasSealed ? (
+                <View key={railId}>
+                  <SectionHeader
+                    eyebrow="Sealed"
+                    title="Sealed products"
+                    trailing={
+                      <Pressable
+                        onPress={() => router.push(routes.sealed())}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel="See all sealed products"
+                        className="flex-row items-center gap-1"
+                      >
+                        <Text className="text-xs font-medium text-ink-muted">More</Text>
+                        <ArrowUpRight size={14} color={p.ink.muted} />
+                      </Pressable>
+                    }
+                  />
+                  <SealedRail products={sealed.data ?? []} />
+                </View>
+              ) : null;
+            case "stealsUnder5":
+              return (
+                <View key={railId}>
+                  <SectionHeader eyebrow="Under $5" title="Steals under $5" />
+                  <MixedTrendingRail sort="value" maxPrice={5} limit={12} />
+                </View>
+              );
+            default:
+              // Unknown id from a newer backend — skip, never crash.
+              return null;
+          }
+        })}
 
         {/* Hardware scanner status pushed below the personal feed —
             most users never own a Loupe scanner, so it's a tertiary

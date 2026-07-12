@@ -72,6 +72,9 @@ export const AppConfigSchema = z.object({
   // flags ahead of the client without breaking validation.
   flags: z.record(z.string(), z.boolean()),
   homeRails: z.array(z.string()),
+  // Home-tab discovery carousel order (backend-owned; unknown ids are
+  // skipped). Optional until every deployed backend ships it.
+  discoveryRails: z.array(z.string()).optional(),
 });
 export type AppConfigValidated = z.infer<typeof AppConfigSchema>;
 
@@ -88,6 +91,9 @@ export const TopMoverRowSchema = z.object({
   cardSetName: z.string().nullable().optional(),
   priceUsd: z.number().nullable(),
   changePct1y: z.number().nullable(),
+  // Absolute 1Y move (USD) from the same history baseline as the % —
+  // optional until every deployed backend ships it.
+  changeUsd1y: z.number().nullable().optional(),
 });
 export type TopMoverRowValidated = z.infer<typeof TopMoverRowSchema>;
 
@@ -152,6 +158,9 @@ export const AnalyticsMoverRowSchema = z.object({
   setName: z.string().nullable(),
   valueUsd: z.number(),
   changePct1y: z.number(),
+  // Absolute 1Y move (USD) from the same history baseline as the % —
+  // optional until every deployed backend ships it.
+  changeUsd1y: z.number().nullable().optional(),
 });
 
 export const AnalyticsConcentrationSchema = z.object({

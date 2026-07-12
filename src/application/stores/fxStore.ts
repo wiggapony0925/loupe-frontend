@@ -8,12 +8,17 @@
  * the offline / first-paint fallback.
  */
 import { create } from "zustand";
+import type { ServerCurrencyEntry } from "@/shared/currency";
 
 export interface FxRatesDoc {
   base: string;
   as_of: string | null;
   source: string;
   rates: Record<string, number>;
+  /** Currency metadata catalog (name/symbol/flag/kind/decimals) — the
+   *  backend-owned counterpart of `shared/currency.ts`'s static table.
+   *  Optional until every deployed backend ships it. */
+  currencies?: ServerCurrencyEntry[];
 }
 
 interface FxState {

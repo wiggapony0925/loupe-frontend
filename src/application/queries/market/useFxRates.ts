@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import { useFxStore, type FxRatesDoc } from "@/application/stores/fxStore";
+import { installServerCurrencies } from "@/shared/currency";
 
 export function useFxRatesSync() {
   const setRates = useFxStore((s) => s.setRates);
@@ -23,6 +24,10 @@ export function useFxRatesSync() {
   });
 
   useEffect(() => {
+    // Catalog first so a server-added currency exists before its rate lands.
+    if (q.data?.currencies?.length) {
+      installServerCurrencies(q.data.currencies);
+    }
     if (q.data?.rates && Object.keys(q.data.rates).length > 0) {
       setRates(q.data);
     }

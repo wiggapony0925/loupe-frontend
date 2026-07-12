@@ -135,6 +135,8 @@ export const ENDPOINTS = {
   },
   ws: {
     scans: "/ws/scans",
+    /** Live `price.tick` frames for the cards the user owns. */
+    prices: "/ws/prices",
   },
   appConfig: {
     get: `${V1}/app/config`,

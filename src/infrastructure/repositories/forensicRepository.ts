@@ -306,6 +306,9 @@ export interface AppConfig {
   forceUpdate: boolean;
   flags: Record<string, boolean>;
   homeRails: string[];
+  /** Home-tab discovery carousel order (backend-owned; unknown ids are
+   *  skipped). Optional until every deployed backend ships it. */
+  discoveryRails?: string[];
 }
 
 /**
