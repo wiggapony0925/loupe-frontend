@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { ChevronRight, Download, Eye } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import { Skeleton } from "@/presentation/components/Skeleton";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 import { StatementCard, StatementFileIcon } from "./StatementFileIcon";
 import {
   formatCloseDate,

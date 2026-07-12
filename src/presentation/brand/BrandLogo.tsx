@@ -6,7 +6,7 @@
  * if a file is missing or fails to decode.
  */
 import React, { useState } from "react";
-import { View, type ImageStyle, type ViewStyle } from "react-native";
+import { View, type ImageStyle } from "react-native";
 import { Image } from "expo-image";
 import { getBrandLogo, type BrandKey } from "@/shared/brandAssets";
 import { TcgMark } from "@/presentation/brand/TcgMark";
