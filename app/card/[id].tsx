@@ -135,7 +135,6 @@ export default function CardDetailScreen() {
     () => (myGradesQ.data ?? []).filter((g) => g.card_id === cardId),
     [myGradesQ.data, cardId],
   );
-  const ownedGrade = ownedGrades[0] ?? null;
   const ownedCount = ownedGrades.length;
 
   // ── Hold-to-quick-add ────────────────────────────────────────────
@@ -246,7 +245,6 @@ export default function CardDetailScreen() {
     );
     return total > 0 ? total : null;
   }, [verifiedGradeRowsAll]);
-  const verifiedTopAmount = verifiedGradeRowsAll[0]?.market.amount ?? null;
   // Real (non-synthetic) history gates the market signals + quick stats —
   // those are meaningless on a modeled walk.
   const hasRealHistory = useMemo(
@@ -680,11 +678,10 @@ export default function CardDetailScreen() {
                   auctions) — renders nothing when no signals fire. */}
               {hasRealHistory ? <CardMarketSignals snapshot={snapshot} cardId={cardId} /> : null}
 
-              {/* 4c. Owned-card P/L vs purchase price. */}
-              <CardCostBasisStrip
-                ownedGrade={ownedGrade}
-                marketAmount={verifiedTopAmount ?? snapshot?.summary.raw?.amount ?? null}
-              />
+              {/* 4c. Owned-card unrealized P/L — the backend /ownership
+                  rollup, so this strip and CardOwnershipSection below can
+                  never disagree. */}
+              <CardCostBasisStrip cardId={cardId} />
 
               {/* 5. Quick-stats row (spread, volatility, liquidity,
                   last-sale freshness). */}

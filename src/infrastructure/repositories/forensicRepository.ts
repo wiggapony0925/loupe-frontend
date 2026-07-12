@@ -230,6 +230,15 @@ export interface CollectionSummary {
   availableSets?: string[];
   /** Distinct user tags across the vault — powers the filter sheet + tag editor. */
   availableTags?: string[];
+  /**
+   * Sealed rollup + the canonical combined headline (cards + unopened
+   * sealed). Optional for the same older-backend reason — fall back to
+   * `totalValueUsd` when missing.
+   */
+  sealedValueUsd?: number;
+  sealedCostUsd?: number;
+  sealedHoldingCount?: number;
+  combinedValueUsd?: number;
 }
 
 export async function fetchCollectionSummary(
