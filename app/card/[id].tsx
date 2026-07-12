@@ -5,11 +5,12 @@
  * chart + attributes" stack with the scan/[id] aesthetic merged on top
  * of live `/v1/cards/{id}/market` data:
  *
- *   1. Header bar (back · MARKET label · heart/bell)
- *   2. Hero strip (small art left · name/set/year right)
- *   3. Big price block (pop_top + change_pct_1y)
- *   4. Sparkline chart (range-driven)
- *   5. Range chips (1D · 1W · 1M · 3M · YTD · 1Y · ALL)
+ *   1. Header bar (back · name · heart/bell)
+ *   2. Hero — Robinhood security-detail: overline (set · # · year),
+ *      huge name, small art thumb (→ 3D preview)
+ *   3. Chart hero (big $ + Δ) + full-bleed line + range pills +
+ *      "Advanced" (compare-grades overlay toggle)
+ *   4. Trade position (Add to collection · Grade)
  *   6. Three-up RAW / GRADED / POP tiles
  *   7. GRADED PRICES section header
  *   8. House filter chips (ALL · PSA · CGC · BGS · SGC · TAG)
@@ -23,16 +24,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
-import {
-  Bell,
-  ChevronDown,
-  ChevronLeft,
-  ChevronUp,
-  Expand,
-  Gauge,
-  Heart,
-  Plus,
-} from "lucide-react-native";
+import { Bell, ChevronDown, ChevronLeft, ChevronUp, Gauge, Heart, Plus } from "lucide-react-native";
 import { useCard } from "@/application/queries/catalog/useCard";
 import { useCanonicalCard } from "@/application/queries/catalog/useCanonicalCard";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
@@ -203,22 +195,20 @@ export default function CardDetailScreen() {
   const comparePresets = useMemo(
     () =>
       buildComparePresets(
-        chartFilter
-          ? { house: chartFilter.house, grade: chartFilter.grade }
-          : { house: "raw" },
+        chartFilter ? { house: chartFilter.house, grade: chartFilter.grade } : { house: "raw" },
       ),
     [chartFilter],
   );
   const compareTiers = comparePresets.filter((c) => compareKeys.includes(c.key));
   const toggleCompare = (key: string) =>
-    setCompareKeys((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-    );
+    setCompareKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   // Tapping the hero art opens a full-screen 3D-tilt preview (Card3DModal).
   // Lives on the detail screen so re-renders elsewhere don't reset it.
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Robinhood's "Advanced" toggle — reveals the compare-grades overlay row.
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const card = cardQ.data;
   const snapshot = marketQ.data?.snapshot;
@@ -259,9 +249,7 @@ export default function CardDetailScreen() {
   // the "unavailable" note.
   const hasAnyHistory = useMemo(
     () =>
-      Object.values(snapshot?.history ?? {}).some(
-        (history) => (history.points ?? []).length >= 2,
-      ),
+      Object.values(snapshot?.history ?? {}).some((history) => (history.points ?? []).length >= 2),
     [snapshot?.history],
   );
   const rows = useMemo(
@@ -347,77 +335,19 @@ export default function CardDetailScreen() {
         >
           {card ? (
             <>
-              {/* 2. Hero strip */}
-              <View style={{ flexDirection: "row", gap: 16 }}>
-                <Pressable
-                  onPress={() => setPreviewOpen(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open 3D preview of ${card.name}`}
-                  hitSlop={6}
-                  style={({ pressed }) => ({
-                    transform: [{ scale: pressed ? 0.97 : 1 }],
-                    position: "relative",
-                    // Soft lift so the art reads as the hero object.
-                    shadowColor: "#000",
-                    shadowOpacity: 0.18,
-                    shadowRadius: 14,
-                    shadowOffset: { width: 0, height: 7 },
-                  })}
-                >
-                  <CardImage
-                    uri={imageUrl}
-                    blurhash={blurhash}
-                    width={128}
-                    height={179}
-                    rounded={14}
-                    contentFit="contain"
-                    priority="high"
-                    recyclingKey={card.id}
-                    alt={card.name}
-                  />
-                  {/* Expand affordance — small icon pill in the top-right
-                      so the user knows tapping the art opens a bigger,
-                      tilt-enabled preview rather than navigating away. */}
-                  <View
-                    pointerEvents="none"
-                    style={{
-                      position: "absolute",
-                      top: 6,
-                      right: 6,
-                      width: 26,
-                      height: 26,
-                      borderRadius: 999,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: withAlpha(p.bg.base, 0.78),
-                      borderWidth: 1,
-                      borderColor: withAlpha(p.ink.default, 0.18),
-                    }}
-                  >
-                    <Expand size={13} color={p.ink.default} strokeWidth={2.5} />
-                  </View>
-                </Pressable>
-                <View style={{ flex: 1, justifyContent: "center", gap: 7 }}>
-                  <Text
-                    numberOfLines={2}
-                    style={{
-                      color: p.ink.default,
-                      fontSize: 21,
-                      lineHeight: 25,
-                      fontWeight: "800",
-                      letterSpacing: -0.4,
-                    }}
-                  >
-                    {card.name}
-                  </Text>
-
-                  {/* Set line — official set symbol when the catalog has one. */}
+              {/* 2. Hero — Robinhood security-detail style: tiny muted
+                  overline ("TSLA"), huge name ("Tesla"), price+delta live in
+                  the chart header directly below. The card art shrinks to a
+                  tappable thumb on the right (→ 3D preview) instead of
+                  dominating the fold. */}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                <View style={{ flex: 1, gap: 4 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     {card.set?.symbol?.url ? (
                       <CardImage
                         uri={card.set.symbol.url}
-                        width={15}
-                        height={15}
+                        width={13}
+                        height={13}
                         rounded={0}
                         contentFit="contain"
                         priority="low"
@@ -425,134 +355,68 @@ export default function CardDetailScreen() {
                       />
                     ) : null}
                     <Text
-                      className="text-[12.5px] leading-4 text-ink-muted"
-                      numberOfLines={2}
-                      ellipsizeMode="tail"
-                      style={{ flexShrink: 1 }}
+                      numberOfLines={1}
+                      style={{
+                        flexShrink: 1,
+                        color: p.ink.dim,
+                        fontSize: 11,
+                        fontWeight: "700",
+                        letterSpacing: 1.2,
+                        textTransform: "uppercase",
+                      }}
                     >
-                      {card.set_name ?? "Unknown set"}
+                      {[
+                        card.set_name ?? formatTcgName(card.tcg) ?? "TCG",
+                        card.number
+                          ? card.set?.printed_total
+                            ? `#${card.number}/${card.set.printed_total}`
+                            : `#${card.number}`
+                          : null,
+                        card.year ? String(card.year) : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </Text>
                   </View>
-
-                  {/* Identity chips — TCG (tinted) · rarity · number/run · year */}
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      flexWrap: "wrap",
-                      gap: 5,
-                      marginTop: 2,
-                    }}
-                  >
-                    <HeroChip
-                      label={formatTcgName(card.tcg) ?? "TCG"}
-                      tint={heroTcgTint(card.tcg, p)}
-                      solid
-                    />
-                    {card.rarity ? <HeroChip label={card.rarity} /> : null}
-                    {card.number ? (
-                      <HeroChip
-                        label={
-                          card.set?.printed_total
-                            ? `#${card.number} / ${card.set.printed_total}`
-                            : `#${card.number}`
-                        }
-                      />
-                    ) : null}
-                    {card.year ? <HeroChip label={String(card.year)} /> : null}
-                  </View>
-                </View>
-              </View>
-
-              {/* Action row — Robinhood-style side-by-side pair: the primary
-                  "Add" CTA plus a compact "Grade" companion (pre-screen the
-                  grade before slabbing). Replaces the old stacked purple
-                  banner that dominated the fold. */}
-              {isAuthenticated ? (
-                <View style={{ gap: 8 }}>
-                  <View style={{ flexDirection: "row", gap: 10 }}>
-                    <View style={{ flex: 1 }}>
-                      <PrimaryButton
-                        label="Add to collection"
-                        icon={Plus}
-                        variant="mint"
-                        onPress={() => {
-                          router.push(
-                            routes.gradeNew({
-                              cardId,
-                              cardName: card.name,
-                              cardImage: imageUrl ?? undefined,
-                              cardSet: card.set_name ?? undefined,
-                              cardYear: card.year ?? undefined,
-                            }),
-                          );
-                        }}
-                        onLongPress={handleQuickAdd}
-                        accessibilityLabel="Add to collection. Press and hold to quick-add as a raw card."
-                      />
-                    </View>
-                    <Pressable
-                      onPress={() => router.push(routes.scanPhone("studio"))}
-                      accessibilityRole="button"
-                      accessibilityLabel="Grade this card"
-                      style={({ pressed }) => ({
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 6,
-                        paddingHorizontal: 18,
-                        borderRadius: 16,
-                        borderWidth: 1,
-                        borderColor: p.line.default,
-                        backgroundColor: p.bg.elevated,
-                        opacity: pressed ? 0.7 : 1,
-                      })}
-                    >
-                      <Gauge size={16} color={p.ink.default} strokeWidth={2.25} />
-                      <Text
-                        style={{ color: p.ink.default, fontWeight: "700", fontSize: 14 }}
-                      >
-                        Grade
-                      </Text>
-                    </Pressable>
-                  </View>
                   <Text
+                    numberOfLines={2}
                     style={{
-                      color: p.ink.dim,
-                      fontSize: 11,
-                      fontWeight: "600",
-                      textAlign: "center",
+                      color: p.ink.default,
+                      fontSize: 34,
+                      lineHeight: 38,
+                      fontWeight: "800",
+                      letterSpacing: -0.8,
                     }}
                   >
-                    Hold to quick-add as Raw · NM
-                    {ownedCount > 0
-                      ? ` · ${ownedCount} ${ownedCount === 1 ? "copy" : "copies"} in your vault`
-                      : ""}
+                    {card.name}
                   </Text>
                 </View>
-              ) : (
-                /* Guests previously saw no add/track affordance in the body
-                   (the whole action block was auth-gated), leaving the card
-                   a dead end. Surface a clear sign-in CTA instead. */
-                <View style={{ gap: 8 }}>
-                  <PrimaryButton
-                    label="Sign in to add & track"
-                    icon={Plus}
-                    variant="mint"
-                    onPress={() => router.push("/(auth)/sign-in")}
-                    accessibilityLabel="Sign in to add this card to your collection"
+                <Pressable
+                  onPress={() => setPreviewOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open 3D preview of ${card.name}`}
+                  hitSlop={8}
+                  style={({ pressed }) => ({
+                    transform: [{ scale: pressed ? 0.95 : 1 }],
+                    shadowColor: "#000",
+                    shadowOpacity: 0.16,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 4 },
+                  })}
+                >
+                  <CardImage
+                    uri={imageUrl}
+                    blurhash={blurhash}
+                    width={52}
+                    height={73}
+                    rounded={8}
+                    contentFit="contain"
+                    priority="high"
+                    recyclingKey={card.id}
+                    alt={card.name}
                   />
-                  <Text
-                    style={{
-                      color: p.ink.dim,
-                      fontSize: 11,
-                      fontWeight: "600",
-                      textAlign: "center",
-                    }}
-                  >
-                    Track its price, set alerts, and build your vault.
-                  </Text>
-                </View>
-              )}
+                </Pressable>
+              </View>
 
               {/* 3. (BigPrice removed — chart hero already shows live
                   $/Δ, Robinhood-style.) */}
@@ -600,63 +464,63 @@ export default function CardDetailScreen() {
                 <View style={{ gap: 12 }}>
                   {/* Compare grades — overlay other grading houses' price lines
                       so PSA vs BGS vs CGC vs raw read at a glance (web parity). */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ gap: 8, paddingRight: 8 }}
-                  >
-                    <Text
-                      style={{
-                        color: p.ink.dim,
-                        fontSize: 11,
-                        fontWeight: "700",
-                        alignSelf: "center",
-                        marginRight: 2,
-                      }}
+                  {advancedOpen ? (
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ gap: 8, paddingRight: 8 }}
                     >
-                      Compare
-                    </Text>
-                    {comparePresets.map((c) => {
-                      const on = compareKeys.includes(c.key);
-                      return (
-                        <Pressable
-                          key={c.key}
-                          onPress={() => toggleCompare(c.key)}
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 6,
-                            paddingHorizontal: 12,
-                            paddingVertical: 6,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                            borderColor: on ? c.color : p.line.default,
-                            backgroundColor: on
-                              ? withAlpha(c.color, 0.16)
-                              : "transparent",
-                          }}
-                        >
-                          <View
+                      <Text
+                        style={{
+                          color: p.ink.dim,
+                          fontSize: 11,
+                          fontWeight: "700",
+                          alignSelf: "center",
+                          marginRight: 2,
+                        }}
+                      >
+                        Compare
+                      </Text>
+                      {comparePresets.map((c) => {
+                        const on = compareKeys.includes(c.key);
+                        return (
+                          <Pressable
+                            key={c.key}
+                            onPress={() => toggleCompare(c.key)}
                             style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: 4,
-                              backgroundColor: c.color,
-                            }}
-                          />
-                          <Text
-                            style={{
-                              color: on ? c.color : p.ink.muted,
-                              fontSize: 12,
-                              fontWeight: "700",
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 6,
+                              paddingHorizontal: 12,
+                              paddingVertical: 6,
+                              borderRadius: 999,
+                              borderWidth: 1,
+                              borderColor: on ? c.color : p.line.default,
+                              backgroundColor: on ? withAlpha(c.color, 0.16) : "transparent",
                             }}
                           >
-                            {c.label}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </ScrollView>
+                            <View
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: 4,
+                                backgroundColor: c.color,
+                              }}
+                            />
+                            <Text
+                              style={{
+                                color: on ? c.color : p.ink.muted,
+                                fontSize: 12,
+                                fontWeight: "700",
+                              }}
+                            >
+                              {c.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  ) : null}
                   <CardPriceChart
                     history={snapshot?.history}
                     cardId={cardId}
@@ -664,6 +528,37 @@ export default function CardDetailScreen() {
                     gradeFilter={chartFilter?.grade}
                     compare={compareTiers}
                     defaultRange="1Y"
+                    height={280}
+                    bleedX={20}
+                    rangeTrailing={
+                      <Pressable
+                        onPress={() => setAdvancedOpen((v) => !v)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityState={{ expanded: advancedOpen }}
+                        accessibilityLabel="Toggle advanced chart overlays"
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: advancedOpen ? p.accent.mint : p.line.default,
+                          backgroundColor: advancedOpen
+                            ? withAlpha(p.accent.mint, 0.14)
+                            : "transparent",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: advancedOpen ? p.accent.mint : p.ink.muted,
+                            fontSize: 12,
+                            fontWeight: "700",
+                          }}
+                        >
+                          Advanced
+                        </Text>
+                      </Pressable>
+                    }
                     onScrubbingChange={handleChartScrubbing}
                   />
                 </View>
@@ -672,6 +567,93 @@ export default function CardDetailScreen() {
                   title="Price history unavailable"
                   subtitle="Loupe will chart this card once a provider returns real historical points."
                 />
+              )}
+
+              {/* Trade position — Robinhood puts the CTA under the
+                  ranges; Add-to-collection + Grade live here now. */}
+              {isAuthenticated ? (
+                <View style={{ gap: 8 }}>
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <PrimaryButton
+                        label="Add to collection"
+                        icon={Plus}
+                        variant="mint"
+                        onPress={() => {
+                          router.push(
+                            routes.gradeNew({
+                              cardId,
+                              cardName: card.name,
+                              cardImage: imageUrl ?? undefined,
+                              cardSet: card.set_name ?? undefined,
+                              cardYear: card.year ?? undefined,
+                            }),
+                          );
+                        }}
+                        onLongPress={handleQuickAdd}
+                        accessibilityLabel="Add to collection. Press and hold to quick-add as a raw card."
+                      />
+                    </View>
+                    <Pressable
+                      onPress={() => router.push(routes.scanPhone("studio"))}
+                      accessibilityRole="button"
+                      accessibilityLabel="Grade this card"
+                      style={({ pressed }) => ({
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        paddingHorizontal: 18,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: p.line.default,
+                        backgroundColor: p.bg.elevated,
+                        opacity: pressed ? 0.7 : 1,
+                      })}
+                    >
+                      <Gauge size={16} color={p.ink.default} strokeWidth={2.25} />
+                      <Text style={{ color: p.ink.default, fontWeight: "700", fontSize: 14 }}>
+                        Grade
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <Text
+                    style={{
+                      color: p.ink.dim,
+                      fontSize: 11,
+                      fontWeight: "600",
+                      textAlign: "center",
+                    }}
+                  >
+                    Hold to quick-add as Raw · NM
+                    {ownedCount > 0
+                      ? ` · ${ownedCount} ${ownedCount === 1 ? "copy" : "copies"} in your vault`
+                      : ""}
+                  </Text>
+                </View>
+              ) : (
+                /* Guests previously saw no add/track affordance in the body
+                   (the whole action block was auth-gated), leaving the card
+                   a dead end. Surface a clear sign-in CTA instead. */
+                <View style={{ gap: 8 }}>
+                  <PrimaryButton
+                    label="Sign in to add & track"
+                    icon={Plus}
+                    variant="mint"
+                    onPress={() => router.push("/(auth)/sign-in")}
+                    accessibilityLabel="Sign in to add this card to your collection"
+                  />
+                  <Text
+                    style={{
+                      color: p.ink.dim,
+                      fontSize: 11,
+                      fontWeight: "600",
+                      textAlign: "center",
+                    }}
+                  >
+                    Track its price, set alerts, and build your vault.
+                  </Text>
+                </View>
               )}
 
               {/* 4b. Market signals row (52w hi/lo, trend, arbitrage,
@@ -910,63 +892,5 @@ export default function CardDetailScreen() {
         onHide={() => setBanner(null)}
       />
     </SafeAreaView>
-  );
-}
-
-/** Brand tint per game — matches the search-row badge colors. */
-function heroTcgTint(tcg: string, p: ReturnType<typeof useThemedPalette>): string {
-  switch (tcg) {
-    case "pokemon":
-      return p.accent.amber;
-    case "magic":
-      return p.accent.blue;
-    case "yugioh":
-      return p.accent.purple;
-    default:
-      return p.accent.mint;
-  }
-}
-
-/** Small identity chip under the hero title. `solid` = tinted TCG pill. */
-function HeroChip({
-  label,
-  tint,
-  solid = false,
-}: {
-  label: string;
-  tint?: string;
-  solid?: boolean;
-}) {
-  const p = useThemedPalette();
-  const color = tint ?? p.ink.muted;
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 999,
-        backgroundColor: solid ? withAlpha(color, 0.13) : "transparent",
-        borderWidth: solid ? 0 : 1,
-        borderColor: solid ? "transparent" : p.line.default,
-      }}
-    >
-      {solid ? (
-        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: color }} />
-      ) : null}
-      <Text
-        numberOfLines={1}
-        style={{
-          color: solid ? color : p.ink.muted,
-          fontSize: 10.5,
-          fontWeight: "700",
-          letterSpacing: 0.3,
-        }}
-      >
-        {label}
-      </Text>
-    </View>
   );
 }

@@ -68,10 +68,17 @@ export interface MarketChartProps {
    * the chart, so a left→right scrub never pops the page.
    */
   onScrubbingChange?: (active: boolean) => void;
+  /**
+   * Bleed the PLOT (not the header/pills) past the host's horizontal padding
+   * so the line runs edge-to-edge, Robinhood-style. Same semantics as
+   * `PortfolioChart.bleedX`. Default 0.
+   */
+  bleedX?: number;
+  /** Rendered at the right end of the range row (e.g. an "Advanced" pill). */
+  rangeTrailing?: React.ReactNode;
 }
 
-const defaultFormat = (v: number) =>
-  v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+const defaultFormat = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
 export function MarketChart({
   series,
@@ -88,6 +95,8 @@ export function MarketChart({
   fillArea = true,
   onRangeChange,
   onScrubbingChange,
+  bleedX = 0,
+  rangeTrailing,
 }: MarketChartProps) {
   const p = useThemedPalette();
   const [width, setWidth] = useState(0);
@@ -113,9 +122,8 @@ export function MarketChart({
 
   const effectiveRange: RangeKey = controlled
     ? range
-    : ((availableRanges.includes(range)
-        ? range
-        : availableRanges[availableRanges.length - 1]) ?? "ALL");
+    : ((availableRanges.includes(range) ? range : availableRanges[availableRanges.length - 1]) ??
+      "ALL");
 
   const geo = useMemo(
     () =>
@@ -137,8 +145,7 @@ export function MarketChart({
     if (formatTime) return formatTime;
     const spanDays = (geo.tHi - geo.tMin) / DAY;
     if (spanDays > 730)
-      return (t: number) =>
-        new Date(t).toLocaleDateString(undefined, { year: "numeric" });
+      return (t: number) => new Date(t).toLocaleDateString(undefined, { year: "numeric" });
     if (spanDays > 75)
       return (t: number) =>
         new Date(t).toLocaleDateString(undefined, {
@@ -193,8 +200,7 @@ export function MarketChart({
   const tipVals = tipRows.map((r) => r.v);
   const tipMax = tipVals.length ? Math.max(...tipVals) : 0;
   const tipMin = tipVals.length ? Math.min(...tipVals) : 0;
-  const equilibrium =
-    tipRows.length > 1 && tipMin > 0 && (tipMax - tipMin) / tipMax < 0.015;
+  const equilibrium = tipRows.length > 1 && tipMin > 0 && (tipMax - tipMin) / tipMax < 0.015;
 
   const pickRange = (r: RangeKey) => {
     if (!controlled) setRange(r);
@@ -245,9 +251,7 @@ export function MarketChart({
       {header ? (
         <View style={{ gap: 2 }}>
           {title ? (
-            <Text style={{ color: p.ink.dim, fontSize: 11, fontWeight: "600" }}>
-              {title}
-            </Text>
+            <Text style={{ color: p.ink.dim, fontSize: 11, fontWeight: "600" }}>{title}</Text>
           ) : null}
           <Text
             style={{
@@ -267,8 +271,7 @@ export function MarketChart({
                 fontWeight: "700",
               }}
             >
-              {deltaUp ? "▲" : "▼"} {format(Math.abs(delta))} (
-              {deltaPct >= 0 ? "+" : ""}
+              {deltaUp ? "▲" : "▼"} {format(Math.abs(delta))} ({deltaPct >= 0 ? "+" : ""}
               {deltaPct.toFixed(2)}%) ·{" "}
               {active !== null && scrubT !== undefined
                 ? fmtTime(scrubT)
@@ -284,10 +287,8 @@ export function MarketChart({
 
       <GestureDetector gesture={pan}>
         <View
-          onLayout={(e: LayoutChangeEvent) =>
-            setWidth(e.nativeEvent.layout.width)
-          }
-          style={{ height }}
+          onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
+          style={{ height, marginHorizontal: -bleedX }}
         >
           {width > 0 ? (
             <Svg width={width} height={height}>
@@ -295,14 +296,7 @@ export function MarketChart({
                 {geo.built.map((b, i) => {
                   const c = isSingle ? accent : (b.color ?? PALETTE[0]!);
                   return (
-                    <LinearGradient
-                      key={`grad-${i}`}
-                      id={`grad-${i}`}
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
+                    <LinearGradient key={`grad-${i}`} id={`grad-${i}`} x1="0" y1="0" x2="0" y2="1">
                       <Stop offset="0" stopColor={c} stopOpacity={0.26} />
                       <Stop offset="1" stopColor={c} stopOpacity={0} />
                     </LinearGradient>
@@ -388,10 +382,7 @@ export function MarketChart({
                     strokeWidth={1}
                   />
                   {geo.built.map((b, i) => {
-                    const j = nearestIndexByT(
-                      b.series.points,
-                      primaryPts[active]?.t ?? 0,
-                    );
+                    const j = nearestIndexByT(b.series.points, primaryPts[active]?.t ?? 0);
                     const c = b.coords[j];
                     if (!c) return null;
                     return (
@@ -490,9 +481,7 @@ export function MarketChart({
                   </Text>
                 ) : null}
                 {equilibrium ? (
-                  <View
-                    style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-                  >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <View
                       style={{
                         width: 7,
@@ -570,30 +559,29 @@ export function MarketChart({
         </View>
       </GestureDetector>
 
-      {/* Range pills. */}
-      <View style={{ flexDirection: "row", gap: 8 }}>
+      {/* Range pills — Robinhood-style: bare labels, the ACTIVE range gets a
+          solid accent pill (dark text on mint). `rangeTrailing` (e.g. an
+          "Advanced" toggle) right-aligns after the pills. */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
         {availableRanges.map((r) => {
           const on = r === effectiveRange;
           return (
             <Pressable
               key={r}
               onPress={() => pickRange(r)}
+              hitSlop={6}
               style={{
-                paddingHorizontal: 12,
+                paddingHorizontal: 11,
                 paddingVertical: 6,
                 borderRadius: 999,
-                backgroundColor: on
-                  ? withAlpha(p.accent.mint, 0.16)
-                  : "transparent",
-                borderWidth: 1,
-                borderColor: on ? p.accent.mint : p.line.default,
+                backgroundColor: on ? p.accent.mint : "transparent",
               }}
             >
               <Text
                 style={{
-                  color: on ? p.accent.mint : p.ink.muted,
-                  fontSize: 12,
-                  fontWeight: "700",
+                  color: on ? "#06140d" : p.ink.muted,
+                  fontSize: 12.5,
+                  fontWeight: "800",
                 }}
               >
                 {r}
@@ -601,6 +589,7 @@ export function MarketChart({
             </Pressable>
           );
         })}
+        {rangeTrailing ? <View style={{ marginLeft: "auto" }}>{rangeTrailing}</View> : null}
       </View>
 
       {/* Legend — names each compare line (web parity). Last value per series
@@ -617,10 +606,7 @@ export function MarketChart({
           {geo.built.map((b, i) => {
             const last = b.series.points[b.series.points.length - 1]?.v;
             return (
-              <View
-                key={i}
-                style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
-              >
+              <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 <View
                   style={{
                     width: 8,
@@ -629,9 +615,7 @@ export function MarketChart({
                     backgroundColor: b.color ?? PALETTE[0]!,
                   }}
                 />
-                <Text
-                  style={{ color: p.ink.muted, fontSize: 11, fontWeight: "600" }}
-                >
+                <Text style={{ color: p.ink.muted, fontSize: 11, fontWeight: "600" }}>
                   {b.series.label ?? b.series.id}
                 </Text>
                 {last != null ? (
