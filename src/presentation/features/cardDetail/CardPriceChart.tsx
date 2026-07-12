@@ -42,8 +42,6 @@ const RANGE_TO_BUCKET: Record<RangeKey, Bucket> = {
  *  read from the live palette so it tracks the active theme. */
 const primaryColor = () => palette.accent.mint;
 
-
-
 function toPoints(wire: PriceHistoryWire | undefined) {
   return (wire?.points ?? [])
     .filter((pt) => Number.isFinite(pt.price))
@@ -64,6 +62,10 @@ export interface CardPriceChartProps {
   title?: string;
   /** Suspends the navigator swipe-back while scrubbing (see MarketChart). */
   onScrubbingChange?: (active: boolean) => void;
+  /** Bleed the plot past host padding (Robinhood full-bleed). */
+  bleedX?: number;
+  /** Rendered at the right end of the range row (e.g. Advanced). */
+  rangeTrailing?: React.ReactNode;
 }
 
 export function CardPriceChart({
@@ -76,6 +78,8 @@ export function CardPriceChart({
   height = 220,
   title,
   onScrubbingChange,
+  bleedX,
+  rangeTrailing,
 }: CardPriceChartProps) {
   const [range, setRange] = useState<RangeKey>(defaultRange);
   // Chart header + axis render in the display currency via the shared
@@ -104,9 +108,7 @@ export function CardPriceChart({
       queryFn: () => {
         const qs = new URLSearchParams({ range: bucket, house: t.house });
         if (t.grade) qs.set("grade", t.grade);
-        return apiFetch<PriceHistoryWire>(
-          `${ENDPOINTS.cards.prices(cardId!)}?${qs.toString()}`,
-        );
+        return apiFetch<PriceHistoryWire>(`${ENDPOINTS.cards.prices(cardId!)}?${qs.toString()}`);
       },
       enabled: !!cardId,
       staleTime: 5 * 60_000,
@@ -148,6 +150,8 @@ export function CardPriceChart({
       ranges={RANGES}
       onRangeChange={setRange}
       onScrubbingChange={onScrubbingChange}
+      bleedX={bleedX}
+      rangeTrailing={rangeTrailing}
       format={formatUsd}
       colorByChange={!comparing}
       fillArea={!comparing}
