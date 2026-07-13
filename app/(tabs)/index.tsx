@@ -26,6 +26,8 @@ import { useAppConfig } from "@/application/queries/ops/useAppConfig";
 import { useCardSparklines } from "@/application/queries/catalog/useCardSparklines";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { MoverSparkRow } from "@/presentation/cards";
+import { HomeTour } from "@/presentation/features/onboarding/HomeTour";
+import { TourTarget } from "@/presentation/features/onboarding/TourTarget";
 import { greeting, relativeTime, useCompactUsd } from "@/shared/format";
 import { gradeColor, useThemedPalette } from "@/presentation/theme/tokens";
 import type { RecentScanRow } from "@/infrastructure/repositories/homeRepository";
@@ -122,15 +124,15 @@ export default function CommandCenterScreen() {
           <RefreshControl refreshing={pulling} onRefresh={onRefresh} tintColor={p.accent.mint} />
         }
       >
-        <View style={{ gap: 8 }}>
+        <TourTarget id="portfolio" style={{ gap: 8 }}>
           <Header />
           <PortfolioChart 
             showPsa10Overlay={true} 
             onScrubStateChange={setIsScrubbing} 
           />
-        </View>
+        </TourTarget>
 
-        <View>
+        <TourTarget id="movers">
           <SectionHeader
             eyebrow="Markets"
             title="Top movers"
@@ -152,7 +154,7 @@ export default function CommandCenterScreen() {
               we render the strip with whatever we have — using "—" for
               missing values — so a 401/404/network blip can't pin the
               page on a forever-skeleton. */}
-          <View className="mb-3 flex-row gap-3">
+          <TourTarget id="kpis" className="mb-3 flex-row gap-3">
             {summary.isLoading && !summary.data ? (
               <>
                 <KpiPill />
@@ -209,7 +211,7 @@ export default function CommandCenterScreen() {
                 />
               </>
             )}
-          </View>
+          </TourTarget>
 
           {/* Hand the entire loading/error/empty/loaded decision to
               TopMoversSection — it already renders skeleton on
@@ -218,7 +220,7 @@ export default function CommandCenterScreen() {
               on the legacy `collection` query left this section stuck
               on skeleton whenever /v1/grades returned [] or errored. */}
           <TopMoversSection movers={movers} isAuthenticated={isAuthenticated} />
-        </View>
+        </TourTarget>
 
         <SetProgressCarousel />
 
@@ -387,6 +389,11 @@ export default function CommandCenterScreen() {
           <HardwareStatusWidget />
         </View>
       </ScrollView>
+
+      {/* First-login guided tour — blurs the screen and walks the four
+          core surfaces. Per-account; skippable; admins can replay from
+          Settings. Renders null once seen. */}
+      <HomeTour />
     </SafeAreaView>
   );
 }

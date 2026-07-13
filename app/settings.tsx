@@ -24,6 +24,7 @@ import {
   Wand2,
   type LucideIcon,
 } from "lucide-react-native";
+import { useOnboarding } from "@/application/stores/onboardingStore";
 import { useSettings, type Currency, type ThemeMode } from "@/application/stores/settingsStore";
 import { useDisplayCurrency } from "@/application/hooks/useDisplayCurrency";
 import {
@@ -208,6 +209,16 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
             title="Developer portal"
             subtitle="Admin — users, Pro plan, flags, announcements"
             onPress={() => router.push("/admin")}
+          />
+        ) : null}
+        {user?.is_admin ? (
+          <MenuRow
+            title="Replay login tutorial"
+            subtitle="Admin — re-arm the first-login home tour for this account"
+            onPress={() => {
+              useOnboarding.getState().reset(String(user.id));
+              router.replace("/(tabs)");
+            }}
           />
         ) : null}
         <MenuRow
