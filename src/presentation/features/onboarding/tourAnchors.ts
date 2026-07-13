@@ -17,11 +17,20 @@ export interface AnchorRect {
 
 interface TourAnchorsState {
   rects: Record<string, AnchorRect>;
+  /** First rect ever recorded per id — captured at scroll offset 0, so
+   *  step N's scroll target is `initial[N].y - initial[first].y`. */
+  initialRects: Record<string, AnchorRect>;
+  /** Bump to make every TourTarget re-measure (after a programmatic scroll). */
+  remeasure: number;
   setRect: (id: string, rect: AnchorRect) => void;
+  bumpRemeasure: () => void;
 }
 
 export const useTourAnchors = create<TourAnchorsState>()((set) => ({
   rects: {},
+  initialRects: {},
+  remeasure: 0,
+  bumpRemeasure: () => set((s) => ({ remeasure: s.remeasure + 1 })),
   setRect: (id, rect) =>
     set((s) => {
       const prev = s.rects[id];
@@ -36,6 +45,11 @@ export const useTourAnchors = create<TourAnchorsState>()((set) => ({
       ) {
         return s;
       }
-      return { rects: { ...s.rects, [id]: rect } };
+      return {
+        rects: { ...s.rects, [id]: rect },
+        initialRects: s.initialRects[id]
+          ? s.initialRects
+          : { ...s.initialRects, [id]: rect },
+      };
     }),
 }));

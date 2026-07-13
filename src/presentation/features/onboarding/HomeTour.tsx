@@ -1,19 +1,19 @@
 /**
  * HomeTour — the first-login guided tour of the Command Center.
  *
- * Blurs the live screen, rings one real section at a time (measured via
- * `TourTarget`, never hardcoded offsets), and explains it in a card that
- * positions itself above or below the highlight. Skippable at any step;
- * completing OR skipping marks the tour seen for THIS account only
- * (`onboardingStore`), so it never replays on later sign-ins. Admins can
- * re-arm it from Settings ("Replay login tutorial").
+ * A REAL spotlight: four blur+dim strips frame the highlighted section,
+ * so the thing being explained stays crystal clear while everything
+ * around it softens. The hole (and its mint ring) spring-morphs from
+ * section to section; each step auto-scrolls its section into view and
+ * re-measures, so the spotlight is always on-screen and exact. Skippable
+ * at any step; completing OR skipping marks the tour seen for THIS
+ * account only (`onboardingStore`) — later sign-ins never replay it.
+ * Admins re-arm it from Settings ("Replay login tutorial").
  *
- * Motion (Reanimated, matching the island-nav feel): the overlay fades
- * in, the ring MORPHS between sections on a spring instead of jumping,
- * breathes a soft pulse while parked, the step card springs up fresh per
- * step, and the scan-step chevron bobs toward the FAB. Haptic tick per
- * step (respects the haptics setting). Still flat and quiet: blur + dim,
- * one mint ring, one card — no confetti.
+ * Motion: overlay fade, spring-morphing spotlight with a soft breathing
+ * pulse, per-step card on a FadeInDown spring, fluid step dots, bobbing
+ * chevron on the scan step, haptic tick per step (respects the setting).
+ * Flat and quiet throughout — no confetti.
  */
 import { useEffect, useState } from "react";
 import {
@@ -75,11 +75,13 @@ const STEPS: Step[] = [
   },
 ];
 
-const RING_PAD = 6;
+const RING_PAD = 8;
 const CARD_MARGIN = 20;
-const RING_SPRING = { damping: 19, stiffness: 190, mass: 0.7 };
+const SPOT_SPRING = { damping: 19, stiffness: 190, mass: 0.7 };
+/** Time for the scroll + settle before re-measuring anchors. */
+const SCROLL_SETTLE_MS = 420;
 
-export function HomeTour() {
+export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
   const p = useThemedPalette();
   const { user, isAuthenticated } = useAuth();
   const markSeen = useOnboarding((s) => s.markSeen);
@@ -87,6 +89,8 @@ export function HomeTour() {
   // reset re-shows the tour reactively.
   const seenBy = useOnboarding((s) => s.seenBy);
   const rects = useTourAnchors((s) => s.rects);
+  const initialRects = useTourAnchors((s) => s.initialRects);
+  const bumpRemeasure = useTourAnchors((s) => s.bumpRemeasure);
   const { width: winW, height: winH } = useWindowDimensions();
   const themeMode = useSettings((s) => s.themeMode);
   const hapticsEnabled = useSettings((s) => s.hapticsEnabled);
@@ -108,20 +112,34 @@ export function HomeTour() {
   const current = STEPS[Math.min(step, STEPS.length - 1)]!;
   const scanStep = current.anchor === "scan";
   const rect: AnchorRect | null = scanStep
-    ? { x: winW / 2 - 36, y: winH - 92, width: 72, height: 72 }
+    ? { x: winW / 2 - 40, y: winH - 96, width: 80, height: 80 }
     : (rects[current.anchor] ?? null);
 
-  // ── Ring motion: spring-morph between sections, soft pulse in place ──
-  const ringX = useSharedValue(0);
-  const ringY = useSharedValue(0);
-  const ringW = useSharedValue(0);
-  const ringH = useSharedValue(0);
+  // ── Auto-scroll each step's section into view, then re-measure ──
+  useEffect(() => {
+    if (!visible || !scrollTo) return;
+    const first = initialRects[STEPS[0]!.anchor];
+    const target = scanStep ? null : initialRects[current.anchor];
+    const y =
+      scanStep || !first || !target ? 0 : Math.max(0, target.y - first.y - 8);
+    scrollTo(y);
+    const t = setTimeout(bumpRemeasure, SCROLL_SETTLE_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, visible]);
+
+  // ── Spotlight geometry: shared values drive the ring AND the 4 strips ──
+  const hx = useSharedValue(0);
+  const hy = useSharedValue(0);
+  const hw = useSharedValue(0);
+  const hh = useSharedValue(0);
+  const holeRadius = useSharedValue(20);
   const ringShown = useSharedValue(0);
   const pulse = useSharedValue(0);
-  const [ringInitialized, setRingInitialized] = useState(false);
+  const [spotInitialized, setSpotInitialized] = useState(false);
 
   useEffect(() => {
-    if (!rect || scanStep) {
+    if (!rect) {
       ringShown.value = withTiming(0, { duration: 160 });
       return;
     }
@@ -129,19 +147,22 @@ export function HomeTour() {
     const y = rect.y - RING_PAD;
     const w = rect.width + RING_PAD * 2;
     const h = rect.height + RING_PAD * 2;
-    if (!ringInitialized) {
-      // First appearance: land in place, just fade/scale in.
-      ringX.value = x;
-      ringY.value = y;
-      ringW.value = w;
-      ringH.value = h;
-      setRingInitialized(true);
+    const radius = scanStep ? (rect.width + RING_PAD * 2) / 2 : 20;
+    if (!spotInitialized) {
+      // First appearance: land in place, just fade in.
+      hx.value = x;
+      hy.value = y;
+      hw.value = w;
+      hh.value = h;
+      holeRadius.value = radius;
+      setSpotInitialized(true);
     } else {
-      // Subsequent steps: MORPH — the ring travels to the next section.
-      ringX.value = withSpring(x, RING_SPRING);
-      ringY.value = withSpring(y, RING_SPRING);
-      ringW.value = withSpring(w, RING_SPRING);
-      ringH.value = withSpring(h, RING_SPRING);
+      // Subsequent steps: MORPH — the spotlight travels to the next section.
+      hx.value = withSpring(x, SPOT_SPRING);
+      hy.value = withSpring(y, SPOT_SPRING);
+      hw.value = withSpring(w, SPOT_SPRING);
+      hh.value = withSpring(h, SPOT_SPRING);
+      holeRadius.value = withTiming(radius, { duration: 260 });
     }
     ringShown.value = withTiming(1, { duration: 220 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -159,11 +180,38 @@ export function HomeTour() {
     );
   }, [pulse]);
 
+  // Four frames around the hole — the target itself stays UNBLURRED.
+  const topStrip = useAnimatedStyle(() => ({
+    left: 0,
+    top: 0,
+    width: winW,
+    height: Math.max(0, hy.value),
+  }));
+  const bottomStrip = useAnimatedStyle(() => ({
+    left: 0,
+    top: hy.value + hh.value,
+    width: winW,
+    height: Math.max(0, winH - (hy.value + hh.value)),
+  }));
+  const leftStrip = useAnimatedStyle(() => ({
+    left: 0,
+    top: hy.value,
+    width: Math.max(0, hx.value),
+    height: hh.value,
+  }));
+  const rightStrip = useAnimatedStyle(() => ({
+    left: hx.value + hw.value,
+    top: hy.value,
+    width: Math.max(0, winW - (hx.value + hw.value)),
+    height: hh.value,
+  }));
+
   const ringStyle = useAnimatedStyle(() => ({
-    left: ringX.value,
-    top: ringY.value,
-    width: ringW.value,
-    height: ringH.value,
+    left: hx.value,
+    top: hy.value,
+    width: hw.value,
+    height: hh.value,
+    borderRadius: holeRadius.value,
     opacity: ringShown.value,
     transform: [{ scale: 1 + pulse.value * 0.012 }],
     shadowOpacity: 0.25 + pulse.value * 0.2,
@@ -203,16 +251,24 @@ export function HomeTour() {
     setStep(step + 1);
   };
 
-  // Card placement: below the ring when the target sits in the top half,
-  // above it otherwise — never off-screen.
+  // Card placement: below the spotlight when the target sits in the top
+  // half, above it otherwise — clamped clear of the tab bar.
   const below = rect ? rect.y + rect.height / 2 < winH / 2 : true;
   const cardTop = rect
     ? below
-      ? Math.min(rect.y + rect.height + RING_PAD + CARD_MARGIN, winH - 260)
+      ? Math.min(rect.y + rect.height + RING_PAD + CARD_MARGIN, winH - 330)
       : undefined
     : winH * 0.35;
   const cardBottom =
-    rect && !below ? Math.max(winH - rect.y + RING_PAD + CARD_MARGIN, 120) : undefined;
+    rect && !below
+      ? Math.max(winH - rect.y + RING_PAD + CARD_MARGIN, 140)
+      : undefined;
+
+  const dim = withAlpha(isDark ? "#000000" : "#0B0B0B", 0.38);
+  const stripBase = {
+    position: "absolute" as const,
+    overflow: "hidden" as const,
+  };
 
   return (
     <Animated.View
@@ -221,32 +277,35 @@ export function HomeTour() {
       style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
       pointerEvents="auto"
     >
-      <BlurView
-        intensity={26}
-        tint={isDark ? "dark" : "light"}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: withAlpha(isDark ? "#000000" : "#0B0B0B", 0.35),
-        }}
-      />
+      {/* Spotlight frame — blur + dim everywhere EXCEPT the hole. */}
+      {[topStrip, bottomStrip, leftStrip, rightStrip].map((strip, i) => (
+        <Animated.View key={i} style={[stripBase, strip]} pointerEvents="none">
+          <BlurView
+            intensity={26}
+            tint={isDark ? "dark" : "light"}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+          />
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: dim,
+            }}
+          />
+        </Animated.View>
+      ))}
 
-      {/* Highlight ring — springs from section to section, breathing softly. */}
+      {/* The ring hugging the clear window. */}
       <Animated.View
         pointerEvents="none"
         style={[
           {
             position: "absolute",
-            borderRadius: 18,
             borderWidth: 2,
             borderColor: p.accent.mint,
-            backgroundColor: withAlpha(p.accent.mint, 0.06),
             shadowColor: p.accent.mint,
             shadowOffset: { width: 0, height: 0 },
             shadowRadius: 12,
@@ -265,6 +324,12 @@ export function HomeTour() {
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="Skip the tour"
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 999,
+            backgroundColor: withAlpha("#000000", 0.35),
+          }}
         >
           <Text style={{ color: "#FFFFFFE6", fontSize: 13, fontWeight: "700" }}>
             Skip
@@ -294,6 +359,11 @@ export function HomeTour() {
             borderWidth: 1,
             borderColor: p.line.default,
             backgroundColor: p.bg.elevated,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 8 },
+            shadowRadius: 24,
+            shadowOpacity: 0.18,
+            elevation: 8,
           }}
         >
           <Text

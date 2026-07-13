@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { Platform, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -89,6 +89,7 @@ export default function CommandCenterScreen() {
   const hasNewestSets = (newestSets.data?.length ?? 0) > 0;
 
   const [isScrubbing, setIsScrubbing] = useState(false);
+  const homeScrollRef = useRef<ScrollView>(null);
 
   // Manual-only refresh flag — using TanStack's `isFetching` made the
   // RefreshControl spin on initial mount, which pushed the screen header
@@ -110,6 +111,7 @@ export default function CommandCenterScreen() {
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
       <StaticNavbar />
       <ScrollView
+        ref={homeScrollRef}
         scrollEnabled={!isScrubbing}
         // iOS floats a tab-bar pill over the content, so pad past it (bar
         // height + home-indicator inset) instead of the flat-bar gap.
@@ -124,13 +126,16 @@ export default function CommandCenterScreen() {
           <RefreshControl refreshing={pulling} onRefresh={onRefresh} tintColor={p.accent.mint} />
         }
       >
-        <TourTarget id="portfolio" style={{ gap: 8 }}>
+        <View style={{ gap: 8 }}>
           <Header />
-          <PortfolioChart 
-            showPsa10Overlay={true} 
-            onScrubStateChange={setIsScrubbing} 
-          />
-        </TourTarget>
+          {/* Tour ring hugs the CHART, not the whole header block. */}
+          <TourTarget id="portfolio">
+            <PortfolioChart 
+              showPsa10Overlay={true} 
+              onScrubStateChange={setIsScrubbing} 
+            />
+          </TourTarget>
+        </View>
 
         <TourTarget id="movers">
           <SectionHeader
@@ -393,7 +398,9 @@ export default function CommandCenterScreen() {
       {/* First-login guided tour — blurs the screen and walks the four
           core surfaces. Per-account; skippable; admins can replay from
           Settings. Renders null once seen. */}
-      <HomeTour />
+      <HomeTour
+        scrollTo={(y) => homeScrollRef.current?.scrollTo({ y, animated: true })}
+      />
     </SafeAreaView>
   );
 }

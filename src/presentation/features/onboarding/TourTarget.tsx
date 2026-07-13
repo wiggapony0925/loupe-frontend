@@ -6,7 +6,7 @@
  * layout impact (`collapsable={false}` only forces a real native view
  * so `measureInWindow` has something to measure).
  */
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { View, type ViewProps } from "react-native";
 import { useTourAnchors } from "./tourAnchors";
 
@@ -17,6 +17,7 @@ export function TourTarget({
 }: ViewProps & { id: string }) {
   const ref = useRef<View>(null);
   const setRect = useTourAnchors((s) => s.setRect);
+  const remeasure = useTourAnchors((s) => s.remeasure);
 
   const measure = useCallback(() => {
     // measureInWindow (not onLayout coords) — the overlay is window-
@@ -25,6 +26,15 @@ export function TourTarget({
       if (width > 0 && height > 0) setRect(id, { x, y, width, height });
     });
   }, [id, setRect]);
+
+  // Re-measure after programmatic scrolls (the tour scrolls each step's
+  // section into view, which moves every window-coordinate rect).
+  useEffect(() => {
+    if (remeasure > 0) {
+      const t = setTimeout(measure, 60);
+      return () => clearTimeout(t);
+    }
+  }, [remeasure, measure]);
 
   return (
     <View ref={ref} collapsable={false} onLayout={measure} {...rest}>
