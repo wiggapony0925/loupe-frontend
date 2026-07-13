@@ -287,10 +287,19 @@ export default function CommandCenterScreen() {
                     title="Trending now"
                     trailing={
                       <Pressable
-                        onPress={() => router.push("/search")}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/search",
+                            params: {
+                              railId: "trending",
+                              railGame: "all",
+                              railTitle: "Trending now",
+                            },
+                          })
+                        }
                         hitSlop={10}
                         accessibilityRole="button"
-                        accessibilityLabel="See all discovery rails in Search"
+                        accessibilityLabel="See every trending card in Search"
                         className="flex-row items-center gap-1"
                       >
                         <Text className="text-xs font-medium text-ink-muted">More</Text>

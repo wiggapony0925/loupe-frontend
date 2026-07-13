@@ -178,6 +178,25 @@ export interface CardSearchResponse {
  * (e.g. 177 for Pikachu) and results are pageable, so every printing of a
  * popular name is reachable rather than capped at a top-N.
  */
+/**
+ * What the backend's zero-AI query parser understood from free text
+ * ("most recent from evolving skies under $50") — echoed back so the UI
+ * can show it Google's "showing results for" way. `chips` are the
+ * ready-to-render human labels; null when nothing was parsed.
+ */
+export interface SearchInterpretation {
+  text: string;
+  game: string | null;
+  sort: string | null;
+  price_min: number | null;
+  price_max: number | null;
+  rarity: string | null;
+  set: string | null;
+  set_id: string | null;
+  year: number | null;
+  chips: string[];
+}
+
 export interface PublicSearchResponse {
   results: CardSearchResult[];
   total: number;
@@ -186,6 +205,8 @@ export interface PublicSearchResponse {
   source: string;
   error?: string;
   partial?: boolean;
+  /** Parsed query intent (null / absent when the query was plain text). */
+  interpreted?: SearchInterpretation | null;
 }
 
 export interface TrendingResponseWire {
@@ -245,4 +266,22 @@ export interface ResolvedCarouselsWire {
   game: string;
   source: "ai" | "curated";
   rails: ResolvedRailWire[];
+}
+
+/**
+ * `GET /v1/public/carousels/rail?id&game&page&page_size` — one carousel
+ * expanded into its FULL paginated contents (the "view more" surface). The
+ * recipe lens runs over the deep pool server-side; `total` is the real match
+ * count (upstream catalog total for `kind:"catalog"` rails).
+ */
+export interface CarouselRailPageWire {
+  game: string;
+  id: string;
+  title: string;
+  subtitle: string;
+  kind: "cards" | "catalog";
+  page: number;
+  page_size: number;
+  total: number;
+  cards: CardSearchResult[];
 }

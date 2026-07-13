@@ -33,8 +33,6 @@ export const routes = {
   /** Deep link to the standalone price-alert list. */
   watchlist: () => "/watchlist" as const,
   card: (id: string) => `/card/${enc(id)}`,
-  /** The full web marketplace, bundled in-app (rails, search, browse). */
-  markets: () => "/market" as const,
   /** Sets explorer (browse the set catalog → a set's cards), bundled in-app. */
   sets: () => "/sets" as const,
   /** The Loupe blog, bundled in-app. */

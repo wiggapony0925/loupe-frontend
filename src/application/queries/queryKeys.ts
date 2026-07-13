@@ -54,6 +54,8 @@ export const queryKeys = {
     ) => ["cards", "trending", tcg, limit, sort, maxPrice] as const,
     carousels: (game: TcgOrAll) => ["cards", "carousels", game] as const,
     resolvedCarousels: (game: TcgOrAll) => ["cards", "carousels-resolved", game] as const,
+    railPage: (game: TcgOrAll, railId: string, pageSize: number) =>
+      ["cards", "carousel-rail", game, railId, pageSize] as const,
     market: (id: string) => ["cards", "market", id] as const,
     analytics: (id: string) => ["cards", "analytics", id] as const,
     ownership: (id: string) => ["cards", "ownership", id] as const,

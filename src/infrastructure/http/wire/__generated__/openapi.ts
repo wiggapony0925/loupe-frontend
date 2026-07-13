@@ -3078,6 +3078,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/carousels/rail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One carousel expanded — the full paginated contents ('view more')
+         * @description The search-surface backing of a rail's "view more": the SAME recipe lens
+         *     the carousel used, run over the deep pool and truly paginated (real
+         *     ``total``). ``game=all`` is valid only for the mixed ``trending`` anchor.
+         *     Unknown rails (e.g. an expired AI shelf) return 404 so clients degrade
+         *     cleanly.
+         */
+        get: operations["public_carousel_rail_v1_public_carousels_rail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/carousels/resolved": {
         parameters: {
             query?: never;
@@ -3134,6 +3158,13 @@ export interface paths {
         /**
          * Public storefront search (server-side filter / sort / paginate / facets)
          * @description Search (or, with no query, browse trending) with all derivation done here.
+         *
+         *     Free text is first run through the deterministic query-understanding layer
+         *     (``search_intel`` — regex + cached catalog lookups, zero AI): "most recent
+         *     charizard from evolving skies under $50" becomes text="charizard" +
+         *     sort=newest + a resolved real set + a price band. Explicit params always
+         *     WIN over parsed intent; whatever was understood is echoed back in
+         *     ``interpreted`` (with human-readable ``chips``) so clients can show it.
          *
          *     Returns the paginated slice plus ``total``, ``facets`` and
          *     ``available_languages`` so the client renders + drives its language picker
@@ -13420,6 +13451,43 @@ export interface operations {
         parameters: {
             query?: {
                 game?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_carousel_rail_v1_public_carousels_rail_get: {
+        parameters: {
+            query: {
+                /** @description Rail id, e.g. grails */
+                id: string;
+                game?: string;
+                page?: number;
+                page_size?: number;
             };
             header?: never;
             path?: never;

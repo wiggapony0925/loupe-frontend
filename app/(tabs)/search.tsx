@@ -21,8 +21,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
-import { Camera, ChevronRight, Clock, Search as SearchIcon, X } from "lucide-react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { Camera, ChevronRight, Clock, ListFilter, Search as SearchIcon, X } from "lucide-react-native";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
 import { fetchCardSparklines, fetchCollection } from "@/infrastructure/repositories/forensicRepository";
@@ -31,6 +31,7 @@ import { ErrorState } from "@/presentation/components/ErrorState";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { COPY } from "@/shared/copy";
 import { useRecentSearches } from "@/application/stores/recentSearchesStore";
+import { useRecentRails, type RecentRail } from "@/application/stores/recentRailsStore";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { useCardSearchPaged, useFilterMetadata } from "@/application/queries";
 import { useMixedTrending } from "@/application/queries/catalog/useMixedTrending";
@@ -41,11 +42,12 @@ import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
 import { ResolvedCarousels } from "@/presentation/features/search/CarouselRail";
+import { RailResultsSection } from "@/presentation/features/search/RailResultsSection";
 import { SealedRail } from "@/presentation/features/search/SealedRail";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { SkeletonSearchResults } from "@/presentation/components/Skeletons";
 import { CardHorizontalRail, CardSparkRow } from "@/presentation/cards";
-import type { CardSearchResult, TcgKey } from "@/infrastructure/http";
+import type { CardSearchResult, SearchInterpretation, TcgKey } from "@/infrastructure/http";
 import { BrowseCategoryCarousel } from "@/presentation/features/search/BrowseCategoryCarousel";
 import { gradeColor, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -167,6 +169,33 @@ export default function SearchScreen() {
   const pushRecent = useRecentSearches((s) => s.push);
   const clearRecent = useRecentSearches((s) => s.clear);
   const removeRecent = useRecentSearches((s) => s.remove);
+
+  // ── Rail filter mode — a carousel's "view more" as a search filter tag ──
+  // Driven by route params so the home screen can deep-open a shelf and the
+  // back gesture behaves. `openRail` plants the tag; the X clears it.
+  const railParams = useLocalSearchParams<{
+    railId?: string | string[];
+    railGame?: string | string[];
+    railTitle?: string | string[];
+  }>();
+  const oneParam = (v: string | string[] | undefined): string =>
+    (Array.isArray(v) ? v[0] : v) ?? "";
+  const railId = oneParam(railParams.railId);
+  const railGameRaw = oneParam(railParams.railGame) || "all";
+  const railGame = (
+    SUPPORTED_TCGS.has(railGameRaw as TcgChip) ? railGameRaw : "all"
+  ) as TcgKey | "all";
+  const railTitle = oneParam(railParams.railTitle);
+  const railActive = railId.length > 0;
+  const recentRails = useRecentRails((s) => s.items);
+  const pushRecentRail = useRecentRails((s) => s.push);
+  const removeRecentRail = useRecentRails((s) => s.remove);
+  const openRail = React.useCallback((rail: RecentRail) => {
+    router.setParams({ railId: rail.id, railGame: rail.game, railTitle: rail.title });
+  }, []);
+  const clearRail = React.useCallback(() => {
+    router.setParams({ railId: "", railGame: "", railTitle: "" });
+  }, []);
   const [inputFocused, setInputFocused] = useState(false);
   const debouncedQuery = useDebouncedValue(query.trim(), 200);
   const showLive = debouncedQuery.length >= 2;
@@ -343,13 +372,73 @@ export default function SearchScreen() {
         {inputFocused && debouncedQuery.length < 2 ? (
           <RecentSearchStrip
             recent={recent}
+            rails={recentRails}
             onPick={(value) => {
               setQuery(value);
               Keyboard.dismiss();
             }}
+            onPickRail={(rail) => {
+              openRail(rail);
+              Keyboard.dismiss();
+            }}
             onRemove={removeRecent}
+            onRemoveRail={removeRecentRail}
             onClear={clearRecent}
           />
+        ) : null}
+
+        {/* Active rail-filter tag — the shelf the user expanded via "view
+            more". Sticky beside the input so it's obvious what's filtering
+            the page; the X returns to normal browsing. */}
+        {railActive ? (
+          <View style={{ flexDirection: "row", paddingTop: 12 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                maxWidth: "100%",
+                paddingLeft: 10,
+                paddingRight: 4,
+                paddingVertical: 5,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: p.accent.mint,
+                backgroundColor: withAlpha(p.accent.mint, 0.12),
+              }}
+            >
+              <ListFilter size={12} color={p.accent.mint} />
+              <Text
+                numberOfLines={1}
+                style={{
+                  flexShrink: 1,
+                  color: p.accent.mint,
+                  fontSize: 12,
+                  fontWeight: "800",
+                }}
+              >
+                {railTitle || railId}
+                {railGame !== "all"
+                  ? ` · ${TCG_CHIPS.find((c) => c.key === railGame)?.label ?? railGame}`
+                  : ""}
+              </Text>
+              <Pressable
+                onPress={clearRail}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel="Clear shelf filter"
+                style={{
+                  width: 20,
+                  height: 20,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 999,
+                }}
+              >
+                <X size={11} color={p.accent.mint} />
+              </Pressable>
+            </View>
+          </View>
         ) : null}
 
         {/* TCG facet chips (drive the live backend search) */}
@@ -476,12 +565,20 @@ export default function SearchScreen() {
             sealed={sealed.data ?? []}
             upstreamError={liveError}
             partial={livePartial}
+            interpreted={live.data?.pages?.[0]?.interpreted ?? null}
             onResultTap={commitRecentSearch}
           />
-        ) : null}
-
-        {!showLocalResults ? (
-          showLive ? null : (
+        ) : railActive ? (
+          // The expanded shelf — full paginated contents behind the tag above.
+          // A typed query takes over (live search), and returns here on clear.
+          <RailResultsSection
+            game={railGame}
+            railId={railId}
+            fallbackTitle={railTitle}
+            onClear={clearRail}
+            onLoaded={pushRecentRail}
+          />
+        ) : !showLocalResults ? (
           <>
             {/* Idle layout — organized into three clear bands so the
                 discovery surfaces stop fighting each other:
@@ -544,16 +641,16 @@ export default function SearchScreen() {
                       eyebrow="All TCGs"
                       title="Trending now"
                       trailing={
-                        <Pressable
-                          onPress={() => router.push(routes.markets())}
-                          hitSlop={10}
-                          className="flex-row items-center gap-1"
-                        >
-                          <Text className="text-xs font-medium text-ink-muted">
-                            Browse all
-                          </Text>
-                          <ChevronRight size={14} color={p.ink.dim} />
-                        </Pressable>
+                        <ViewMoreLink
+                          label="View more"
+                          onPress={() =>
+                            openRail({
+                              id: "trending",
+                              game: "all",
+                              title: "Trending now",
+                            })
+                          }
+                        />
                       }
                     />
                     <TrendingSection />
@@ -565,15 +662,57 @@ export default function SearchScreen() {
                   </View>
 
                   <View style={{ gap: 8 }}>
-                    <SectionHeader eyebrow="Pokémon" title="Chase rares" />
+                    <SectionHeader
+                      eyebrow="Pokémon"
+                      title="Chase rares"
+                      trailing={
+                        <ViewMoreLink
+                          onPress={() =>
+                            openRail({
+                              id: "trending",
+                              game: "pokemon",
+                              title: "Trending in Pokémon",
+                            })
+                          }
+                        />
+                      }
+                    />
                     <HotRightNowRail tcg="pokemon" limit={12} />
                   </View>
                   <View style={{ gap: 8 }}>
-                    <SectionHeader eyebrow="Yu-Gi-Oh!" title="Newest releases" />
+                    <SectionHeader
+                      eyebrow="Yu-Gi-Oh!"
+                      title="Newest releases"
+                      trailing={
+                        <ViewMoreLink
+                          onPress={() =>
+                            openRail({
+                              id: "trending",
+                              game: "yugioh",
+                              title: "Trending in Yu-Gi-Oh!",
+                            })
+                          }
+                        />
+                      }
+                    />
                     <HotRightNowRail tcg="yugioh" limit={12} />
                   </View>
                   <View style={{ gap: 8 }}>
-                    <SectionHeader eyebrow="Magic" title="EDHREC favorites" />
+                    <SectionHeader
+                      eyebrow="Magic"
+                      title="EDHREC favorites"
+                      trailing={
+                        <ViewMoreLink
+                          onPress={() =>
+                            openRail({
+                              id: "trending",
+                              game: "magic",
+                              title: "Trending in Magic",
+                            })
+                          }
+                        />
+                      }
+                    />
                     <HotRightNowRail tcg="magic" limit={12} />
                   </View>
                 </>
@@ -583,7 +722,16 @@ export default function SearchScreen() {
                 // trending + value/rarity rails + explore, each already filled
                 // with cards and with empty rails dropped server-side.
                 <>
-                  <ResolvedCarousels tcg={selectedTcg} />
+                  <ResolvedCarousels
+                    tcg={selectedTcg}
+                    onViewMore={(rail) =>
+                      openRail({
+                        id: rail.id,
+                        game: selectedTcg,
+                        title: rail.title,
+                      })
+                    }
+                  />
                   <View style={{ gap: 8 }}>
                     <SectionHeader eyebrow="Sealed" title="Sealed products" />
                     <SealedRail products={sealed.data ?? []} />
@@ -620,7 +768,6 @@ export default function SearchScreen() {
               </View>
             ) : null}
           </>
-          )
         ) : (
           <View>
             {/* Active filter pill */}
@@ -675,19 +822,48 @@ export default function SearchScreen() {
   );
 }
 
+/** The standard "View more ›" rail affordance — opens a shelf filter tag. */
+function ViewMoreLink({
+  onPress,
+  label = "View more",
+}: {
+  onPress: () => void;
+  label?: string;
+}) {
+  const p = useThemedPalette();
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      className="flex-row items-center gap-1"
+    >
+      <Text className="text-xs font-medium text-ink-muted">{label}</Text>
+      <ChevronRight size={14} color={p.ink.dim} />
+    </Pressable>
+  );
+}
+
 function RecentSearchStrip({
   recent,
+  rails,
   onPick,
+  onPickRail,
   onRemove,
+  onRemoveRail,
   onClear,
 }: {
   recent: string[];
+  rails: RecentRail[];
   onPick: (value: string) => void;
+  onPickRail: (rail: RecentRail) => void;
   onRemove: (value: string) => void;
+  onRemoveRail: (rail: RecentRail) => void;
   onClear: () => void;
 }) {
   const p = useThemedPalette();
-  if (recent.length === 0) return null;
+  if (recent.length === 0 && rails.length === 0) return null;
   return (
     <View style={{ paddingTop: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -706,6 +882,53 @@ function RecentSearchStrip({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ gap: 8, paddingTop: 8, paddingRight: 8 }}
       >
+        {rails.map((rail) => (
+          <View
+            key={`rail:${rail.game}:${rail.id}`}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              maxWidth: 220,
+              paddingLeft: 10,
+              paddingRight: 4,
+              paddingVertical: 5,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: withAlpha(p.accent.mint, 0.45),
+              backgroundColor: withAlpha(p.accent.mint, 0.08),
+            }}
+          >
+            <ListFilter size={12} color={p.accent.mint} />
+            <Pressable
+              onPress={() => onPickRail(rail)}
+              hitSlop={6}
+              style={{ flexShrink: 1 }}
+            >
+              <Text
+                numberOfLines={1}
+                style={{ color: p.accent.mint, fontSize: 12, fontWeight: "700" }}
+              >
+                {rail.title}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => onRemoveRail(rail)}
+              hitSlop={6}
+              style={{
+                width: 20,
+                height: 20,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 999,
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove shelf filter ${rail.title}`}
+            >
+              <X size={11} color={p.ink.dim} />
+            </Pressable>
+          </View>
+        ))}
         {recent.map((item) => (
           <View
             key={item}
@@ -811,6 +1034,7 @@ function LiveResultsSection({
   sealed = [],
   upstreamError,
   partial,
+  interpreted,
   onResultTap,
 }: {
   query: string;
@@ -826,6 +1050,8 @@ function LiveResultsSection({
   sealed?: SealedProductWire[];
   upstreamError?: string;
   partial?: boolean;
+  /** What the backend's zero-AI parser understood ("Newest · Pokémon · Under $50"). */
+  interpreted?: SearchInterpretation | null;
   onResultTap?: (q: string) => void;
 }) {
   const p = useThemedPalette();
@@ -902,6 +1128,42 @@ function LiveResultsSection({
         <Text className="mt-0.5 text-[11px] text-ink-muted" numberOfLines={1}>
           {breakdown}
         </Text>
+      ) : null}
+
+      {/* What the backend's zero-AI parser understood from the query —
+          "newest pokemon under $50" → chips, Google's "showing results
+          for" pattern. Purely informative; the filters already applied. */}
+      {interpreted && interpreted.chips.length > 0 ? (
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 6,
+            marginTop: 8,
+          }}
+        >
+          <ListFilter size={12} color={p.accent.mint} />
+          {interpreted.chips.map((chip) => (
+            <View
+              key={chip}
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: withAlpha(p.accent.mint, 0.4),
+                backgroundColor: withAlpha(p.accent.mint, 0.08),
+              }}
+            >
+              <Text
+                style={{ color: p.accent.mint, fontSize: 10, fontWeight: "800" }}
+              >
+                {chip}
+              </Text>
+            </View>
+          ))}
+        </View>
       ) : null}
 
       {upstreamError ? (

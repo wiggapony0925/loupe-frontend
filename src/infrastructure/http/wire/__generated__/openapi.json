@@ -19721,6 +19721,88 @@
         ]
       }
     },
+    "/v1/public/carousels/rail": {
+      "get": {
+        "description": "The search-surface backing of a rail's \"view more\": the SAME recipe lens\nthe carousel used, run over the deep pool and truly paginated (real\n``total``). ``game=all`` is valid only for the mixed ``trending`` anchor.\nUnknown rails (e.g. an expired AI shelf) return 404 so clients degrade\ncleanly.",
+        "operationId": "public_carousel_rail_v1_public_carousels_rail_get",
+        "parameters": [
+          {
+            "description": "Rail id, e.g. grails",
+            "in": "query",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Rail id, e.g. grails",
+              "maxLength": 48,
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "game",
+            "required": false,
+            "schema": {
+              "default": "pokemon",
+              "pattern": "^(pokemon|magic|yugioh|onepiece|digimon|all)$",
+              "title": "Game",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Public Carousel Rail V1 Public Carousels Rail Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One carousel expanded \u2014 the full paginated contents ('view more')",
+        "tags": [
+          "public"
+        ]
+      }
+    },
     "/v1/public/carousels/resolved": {
       "get": {
         "description": "A game's discovery carousels **already resolved into cards** \u2014 the recipe\npool run against the shelf/catalog server-side, with empty rails dropped. Web\nand mobile render this identically (no client-side filtering), so the\nmarketplace shows the exact same carousels everywhere.",
@@ -19794,7 +19876,7 @@
     },
     "/v1/public/search": {
       "get": {
-        "description": "Search (or, with no query, browse trending) with all derivation done here.\n\nReturns the paginated slice plus ``total``, ``facets`` and\n``available_languages`` so the client renders + drives its language picker\ndirectly \u2014 no client-side filtering/sorting/pagination.",
+        "description": "Search (or, with no query, browse trending) with all derivation done here.\n\nFree text is first run through the deterministic query-understanding layer\n(``search_intel`` \u2014 regex + cached catalog lookups, zero AI): \"most recent\ncharizard from evolving skies under $50\" becomes text=\"charizard\" +\nsort=newest + a resolved real set + a price band. Explicit params always\nWIN over parsed intent; whatever was understood is echoed back in\n``interpreted`` (with human-readable ``chips``) so clients can show it.\n\nReturns the paginated slice plus ``total``, ``facets`` and\n``available_languages`` so the client renders + drives its language picker\ndirectly \u2014 no client-side filtering/sorting/pagination.",
         "operationId": "public_search_v1_public_search_get",
         "parameters": [
           {
@@ -19859,7 +19941,7 @@
             "required": false,
             "schema": {
               "default": "best",
-              "pattern": "^(best|price_asc|price_desc|name)$",
+              "pattern": "^(best|price_asc|price_desc|name|newest|oldest)$",
               "title": "Sort",
               "type": "string"
             }

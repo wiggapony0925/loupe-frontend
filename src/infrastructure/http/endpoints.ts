@@ -44,6 +44,10 @@ export const ENDPOINTS = {
      *  recipe pool run against the shelf/catalog, empty rails dropped. Both
      *  clients render this identically (no client-side filtering). */
     carouselsResolved: `${V1}/public/carousels/resolved`,
+    /** One carousel EXPANDED (`?id&game&page&page_size`) — the same recipe
+     *  lens run over the deep pool with true pagination. Backs the search
+     *  page's "view more" rail-filter tag. `game=all` only for `trending`. */
+    carouselRail: `${V1}/public/carousels/rail`,
   },
   me: {
     root: `${V1}/me`,
