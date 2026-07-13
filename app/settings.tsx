@@ -211,10 +211,10 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
             onPress={() => router.push("/admin")}
           />
         ) : null}
-        {user?.is_admin ? (
+        {user ? (
           <MenuRow
-            title="Replay login tutorial"
-            subtitle="Admin — re-arm the first-login home tour for this account"
+            title="Replay introduction"
+            subtitle="Watch the home tour again"
             onPress={() => {
               useOnboarding.getState().reset(String(user.id));
               router.replace("/(tabs)");
