@@ -137,7 +137,7 @@ export default function CommandCenterScreen() {
           </TourTarget>
         </View>
 
-        <TourTarget id="movers">
+        <View>
           <SectionHeader
             eyebrow="Markets"
             title="Top movers"
@@ -159,7 +159,7 @@ export default function CommandCenterScreen() {
               we render the strip with whatever we have — using "—" for
               missing values — so a 401/404/network blip can't pin the
               page on a forever-skeleton. */}
-          <TourTarget id="kpis" className="mb-3 flex-row gap-3">
+          <View className="mb-3 flex-row gap-3">
             {summary.isLoading && !summary.data ? (
               <>
                 <KpiPill />
@@ -216,7 +216,7 @@ export default function CommandCenterScreen() {
                 />
               </>
             )}
-          </TourTarget>
+          </View>
 
           {/* Hand the entire loading/error/empty/loaded decision to
               TopMoversSection — it already renders skeleton on
@@ -225,7 +225,7 @@ export default function CommandCenterScreen() {
               on the legacy `collection` query left this section stuck
               on skeleton whenever /v1/grades returned [] or errored. */}
           <TopMoversSection movers={movers} isAuthenticated={isAuthenticated} />
-        </TourTarget>
+        </View>
 
         <SetProgressCarousel />
 

@@ -1,19 +1,19 @@
 /**
- * HomeTour — the first-login guided tour of the Command Center.
+ * HomeTour — the first-login guided tour. Four beats, no filler:
  *
- * A REAL spotlight: four blur+dim strips frame the highlighted section,
- * so the thing being explained stays crystal clear while everything
- * around it softens. The hole (and its mint ring) spring-morphs from
- * section to section; each step auto-scrolls its section into view and
- * re-measures, so the spotlight is always on-screen and exact. Skippable
- * at any step; completing OR skipping marks the tour seen for THIS
- * account only (`onboardingStore`) — later sign-ins never replay it.
- * Admins re-arm it from Settings ("Replay login tutorial").
+ *   1. the portfolio chart (the product's thesis),
+ *   2. the marketplace tab (where cards come from),
+ *   3. the statements tab (the monthly PDF — the artifact collectors keep),
+ *   4. the scan button (how cards get in).
  *
- * Motion: overlay fade, spring-morphing spotlight with a soft breathing
- * pulse, per-step card on a FadeInDown spring, fluid step dots, bobbing
- * chevron on the scan step, haptic tick per step (respects the setting).
- * Flat and quiet throughout — no confetti.
+ * A REAL spotlight: four blur+dim strips + four radius-matched corner
+ * pieces frame the target, so the hole has properly ROUNDED corners
+ * (a full circle for tab-bar targets) and the target itself stays
+ * crystal clear. The hole and ring spring-morph between steps; the
+ * chart step auto-scrolls into view and re-measures. Skippable at any
+ * step; completing OR skipping marks the tour seen for THIS account
+ * only (`onboardingStore`). Everyone can rewatch it from Settings →
+ * "Replay introduction".
  */
 import { useEffect, useState } from "react";
 import {
@@ -38,7 +38,6 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { BlurView } from "expo-blur";
-import { ChevronDown } from "lucide-react-native";
 import { useOnboarding } from "@/application/stores/onboardingStore";
 import { useSettings } from "@/application/stores/settingsStore";
 import { useAuth } from "@/presentation/providers/AuthProvider";
@@ -46,7 +45,7 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useTourAnchors, type AnchorRect } from "./tourAnchors";
 
 interface Step {
-  /** TourTarget id, or "scan" for the fixed tab-bar pointer step. */
+  /** TourTarget id, or a key in TAB_ANCHORS for tab-bar targets. */
   anchor: string;
   title: string;
   body: string;
@@ -55,25 +54,34 @@ interface Step {
 const STEPS: Step[] = [
   {
     anchor: "portfolio",
-    title: "Your collection, charted",
-    body: "Every card you own, valued live and drawn like a stock. Scrub the line to see any day.",
+    title: "Your collection, live",
+    body: "Every card you own, charted like a portfolio. Scrub the line to see any day.",
   },
   {
-    anchor: "kpis",
-    title: "The numbers that matter",
-    body: "Total value and unrealized P/L — computed by Loupe, identical on web and mobile.",
+    anchor: "market",
+    title: "The marketplace",
+    body: "Search 130,000+ cards with live prices — Pokémon, Magic, Yu-Gi-Oh! and more.",
   },
   {
-    anchor: "movers",
-    title: "Top movers",
-    body: "The cards in your vault with the biggest 1-year swings, ranked for you daily.",
+    anchor: "reports",
+    title: "Monthly statements",
+    body: "A brokerage-style PDF of your collection, generated every month.",
   },
   {
     anchor: "scan",
     title: "Scan anything",
-    body: "The center button identifies any card with your camera and drops it straight into your vault.",
+    body: "Point the camera at any card — identified and in your vault in seconds.",
   },
 ];
+
+/** Tab-bar targets: center-x ratio of screen width + circle diameter.
+ *  The floating pill bar centers the scan FAB; search and reports sit to
+ *  its right at even spacing. */
+const TAB_ANCHORS: Record<string, { cx: number; d: number }> = {
+  scan: { cx: 0.5, d: 76 },
+  market: { cx: 0.628, d: 58 },
+  reports: { cx: 0.744, d: 58 },
+};
 
 const RING_PAD = 8;
 const CARD_MARGIN = 20;
@@ -110,25 +118,30 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
   const visible = ready && isAuthenticated && userId !== null && !seenBy[userId];
 
   const current = STEPS[Math.min(step, STEPS.length - 1)]!;
-  const scanStep = current.anchor === "scan";
-  const rect: AnchorRect | null = scanStep
-    ? { x: winW / 2 - 40, y: winH - 96, width: 80, height: 80 }
-    : (rects[current.anchor] ?? null);
+  const tab = TAB_ANCHORS[current.anchor];
+  const tabRect: AnchorRect | null = tab
+    ? {
+        x: winW * tab.cx - tab.d / 2,
+        y: winH - 64 - tab.d / 2,
+        width: tab.d,
+        height: tab.d,
+      }
+    : null;
+  const rect: AnchorRect | null = tabRect ?? rects[current.anchor] ?? null;
 
-  // ── Auto-scroll each step's section into view, then re-measure ──
+  // ── Auto-scroll the chart step into view; tab steps rest at the top ──
   useEffect(() => {
     if (!visible || !scrollTo) return;
     const first = initialRects[STEPS[0]!.anchor];
-    const target = scanStep ? null : initialRects[current.anchor];
-    const y =
-      scanStep || !first || !target ? 0 : Math.max(0, target.y - first.y - 8);
+    const target = tab ? null : initialRects[current.anchor];
+    const y = tab || !first || !target ? 0 : Math.max(0, target.y - first.y - 8);
     scrollTo(y);
     const t = setTimeout(bumpRemeasure, SCROLL_SETTLE_MS);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, visible]);
 
-  // ── Spotlight geometry: shared values drive the ring AND the 4 strips ──
+  // ── Spotlight geometry: shared values drive ring, strips, and corners ──
   const hx = useSharedValue(0);
   const hy = useSharedValue(0);
   const hw = useSharedValue(0);
@@ -143,13 +156,14 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
       ringShown.value = withTiming(0, { duration: 160 });
       return;
     }
-    const x = rect.x - RING_PAD;
-    const y = rect.y - RING_PAD;
-    const w = rect.width + RING_PAD * 2;
-    const h = rect.height + RING_PAD * 2;
-    const radius = scanStep ? (rect.width + RING_PAD * 2) / 2 : 20;
+    const pad = tab ? 6 : RING_PAD;
+    const x = rect.x - pad;
+    const y = rect.y - pad;
+    const w = rect.width + pad * 2;
+    const h = rect.height + pad * 2;
+    // Full circle for tab targets; soft rounded rect elsewhere.
+    const radius = tab ? w / 2 : 22;
     if (!spotInitialized) {
-      // First appearance: land in place, just fade in.
       hx.value = x;
       hy.value = y;
       hw.value = w;
@@ -157,7 +171,6 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
       holeRadius.value = radius;
       setSpotInitialized(true);
     } else {
-      // Subsequent steps: MORPH — the spotlight travels to the next section.
       hx.value = withSpring(x, SPOT_SPRING);
       hy.value = withSpring(y, SPOT_SPRING);
       hw.value = withSpring(w, SPOT_SPRING);
@@ -166,7 +179,7 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
     }
     ringShown.value = withTiming(1, { duration: 220 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rect?.x, rect?.y, rect?.width, rect?.height, scanStep]);
+  }, [rect?.x, rect?.y, rect?.width, rect?.height, current.anchor]);
 
   useEffect(() => {
     // A slow breath while parked — draws the eye without shouting.
@@ -206,6 +219,38 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
     height: hh.value,
   }));
 
+  // Corner pieces: dim squares with an inward-facing quarter-radius, so
+  // the square hole the strips leave reads as a ROUNDED rect (and, when
+  // radius = width/2 on tab targets, as a perfect circle).
+  const cornerBase = () => ({
+    width: holeRadius.value,
+    height: holeRadius.value,
+  });
+  const cornerTL = useAnimatedStyle(() => ({
+    ...cornerBase(),
+    left: hx.value,
+    top: hy.value,
+    borderBottomRightRadius: holeRadius.value,
+  }));
+  const cornerTR = useAnimatedStyle(() => ({
+    ...cornerBase(),
+    left: hx.value + hw.value - holeRadius.value,
+    top: hy.value,
+    borderBottomLeftRadius: holeRadius.value,
+  }));
+  const cornerBL = useAnimatedStyle(() => ({
+    ...cornerBase(),
+    left: hx.value,
+    top: hy.value + hh.value - holeRadius.value,
+    borderTopRightRadius: holeRadius.value,
+  }));
+  const cornerBR = useAnimatedStyle(() => ({
+    ...cornerBase(),
+    left: hx.value + hw.value - holeRadius.value,
+    top: hy.value + hh.value - holeRadius.value,
+    borderTopLeftRadius: holeRadius.value,
+  }));
+
   const ringStyle = useAnimatedStyle(() => ({
     left: hx.value,
     top: hy.value,
@@ -215,22 +260,6 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
     opacity: ringShown.value,
     transform: [{ scale: 1 + pulse.value * 0.012 }],
     shadowOpacity: 0.25 + pulse.value * 0.2,
-  }));
-
-  // Scan-step chevron: a gentle bob toward the FAB.
-  const bob = useSharedValue(0);
-  useEffect(() => {
-    bob.value = withRepeat(
-      withSequence(
-        withTiming(7, { duration: 520, easing: Easing.inOut(Easing.quad) }),
-        withTiming(0, { duration: 520, easing: Easing.inOut(Easing.quad) }),
-      ),
-      -1,
-      true,
-    );
-  }, [bob]);
-  const bobStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: bob.value }],
   }));
 
   if (!visible || userId === null) return null;
@@ -296,6 +325,14 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
             }}
           />
         </Animated.View>
+      ))}
+      {/* Rounded-corner pieces — square off the hole into the ring's shape. */}
+      {[cornerTL, cornerTR, cornerBL, cornerBR].map((corner, i) => (
+        <Animated.View
+          key={`c${i}`}
+          pointerEvents="none"
+          style={[{ position: "absolute", backgroundColor: dim }, corner]}
+        />
       ))}
 
       {/* The ring hugging the clear window. */}
@@ -424,17 +461,6 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
             </Pressable>
           </View>
         </Animated.View>
-
-        {/* Downward pointer for the scan-FAB step — the button itself stays
-            visible in the tab bar beneath the overlay. */}
-        {scanStep ? (
-          <Animated.View
-            entering={FadeIn.delay(150).duration(200)}
-            style={[{ alignItems: "center", marginTop: 10 }, bobStyle]}
-          >
-            <ChevronDown size={28} color={p.accent.mint} strokeWidth={3} />
-          </Animated.View>
-        ) : null}
       </View>
     </Animated.View>
   );
