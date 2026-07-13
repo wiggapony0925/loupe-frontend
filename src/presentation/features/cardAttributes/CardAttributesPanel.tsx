@@ -19,9 +19,9 @@
  */
 import type { ReactElement } from "react";
 import type { CanonicalCard } from "@/infrastructure/http/wire/canonicalCard";
-import { PokedexPanel } from "../pokedex/PokedexPanel";
 import { GenericAttributesPanel } from "./GenericAttributesPanel";
 import { MtgOraclePanel } from "./MtgOraclePanel";
+import { PokemonAttributesSection } from "./PokemonAttributesPanel";
 import { YugiohStatsPanel } from "./YugiohStatsPanel";
 
 type PanelProps = { canonical: CanonicalCard };
@@ -42,7 +42,9 @@ type PanelComponent = (props: PanelProps) => ReactElement | null;
  * panel build.
  */
 const PANEL_REGISTRY: Readonly<Record<string, PanelComponent>> = {
-  pokemon: ({ canonical }) => <PokedexPanel cardName={canonical.identity.name} />,
+  // Card stats (HP / attacks / weaknesses — the CARD's data) first, then
+  // the Pokédex species flavor. Same field coverage as the web card page.
+  pokemon: ({ canonical }) => <PokemonAttributesSection canonical={canonical} />,
   magic: ({ canonical }) => <MtgOraclePanel canonical={canonical} />,
   yugioh: ({ canonical }) => <YugiohStatsPanel canonical={canonical} />,
 };

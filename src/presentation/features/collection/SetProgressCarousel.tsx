@@ -19,7 +19,7 @@ import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { SetChecklistSheet } from "@/presentation/features/collection/SetChecklistSheet";
 import { palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-import { compactUsd } from "@/shared/format";
+import { useCompactUsd } from "@/shared/format";
 import type { SetProgressWire } from "@/infrastructure/http";
 
 const TILE_W = 188;
@@ -134,6 +134,7 @@ function SetProgressTile({
   ink: string;
   onOpen: () => void;
 }) {
+  const compactUsd = useCompactUsd();
   return (
     <Pressable
       accessibilityRole="button"

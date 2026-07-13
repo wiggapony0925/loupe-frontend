@@ -81,6 +81,7 @@ import {
 } from "@/presentation/features/cardDetail/CardInsights";
 import { CardOwnershipSection } from "@/presentation/features/cardDetail/CardOwnershipSection";
 import { CardAnalyticsSection } from "@/presentation/features/cardDetail/CardAnalyticsSection";
+import { PopulationSection } from "@/presentation/features/cardDetail/PopulationSection";
 import {
   CardActiveAlerts,
   RelatedCardsRail,
@@ -715,6 +716,13 @@ export default function CardDetailScreen() {
               {/* 5b. Derived market analytics — market cap, momentum, volatility,
                   grade premium, ATH/ATL (server-composed; hidden until priced). */}
               <CardAnalyticsSection cardId={cardId} />
+
+              {/* 5c. Population report — graded copies by house/grade from
+                  the canonical document; hidden when no pop source. */}
+              <PopulationSection
+                population={canonicalQ.data?.population}
+                certs={canonicalQ.data?.certs}
+              />
 
               {/* Active alerts the user has on this card. */}
               <CardActiveAlerts cardId={cardId} />

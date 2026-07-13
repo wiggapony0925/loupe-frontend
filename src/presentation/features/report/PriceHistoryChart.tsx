@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 import Svg, { Path, Circle, Defs, LinearGradient as SvgGradient, Stop } from "react-native-svg";
 import { TrendingDown, TrendingUp } from "lucide-react-native";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-import { compactUsd } from "@/shared/format";
+import { useCompactUsd } from "@/shared/format";
 import type { PricePoint } from "@/domain";
 
 interface PriceHistoryChartProps {
@@ -16,6 +16,8 @@ interface PriceHistoryChartProps {
  * area fill, end-point dot, and a delta chip vs the first observation.
  */
 export function PriceHistoryChart({ points, height = 120 }: PriceHistoryChartProps) {
+  // Subscribes to the display currency so figures repaint on switch.
+  const compactUsd = useCompactUsd();
   const p = useThemedPalette();
   const { pathLine, pathArea, last, first, latest, lo, hi } = useMemo(() => {
     if (points.length < 2) {

@@ -79,6 +79,7 @@ export const queryKeys = {
   sets: {
     all: ["sets"] as const,
     list: (tcg: TcgOrAll) => ["sets", tcg] as const,
+    newest: (limit: number) => ["sets", "newest", limit] as const,
     progress: () => ["sets", "progress"] as const,
     checklist: (setId: string) => ["sets", "checklist", setId] as const,
   },

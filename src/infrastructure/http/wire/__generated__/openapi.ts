@@ -14,6 +14,11 @@ export interface paths {
         /**
          * Liveness / readiness probe
          * @description Return basic process + dependency health information.
+         *
+         *     ``status`` stays "ok" as long as the PROCESS is healthy — dependency
+         *     states are reported per-key so dashboards/alerts can distinguish "app
+         *     is down" from "app is up but a dependency is degraded" without the
+         *     probe itself recycling instances during a broker blip.
          */
         get: operations["health_health_get"];
         put?: never;
@@ -225,6 +230,93 @@ export interface paths {
         put?: never;
         /** Record a manual price override (super-admin) */
         post: operations["add_price_override_v1_admin_cards__card_id__price_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/carousels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Carousel registry — file + live overrides + latest AI shelves */
+        get: operations["carousels_overview_v1_admin_carousels_get"];
+        put?: never;
+        /** Add an operator-authored carousel recipe */
+        post: operations["create_recipe_v1_admin_carousels_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/carousels/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** AI kill switch — off pins every game to the curated registry */
+        put: operations["set_ai_enabled_v1_admin_carousels_ai_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/carousels/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Force a fresh AI design pass for a game (synchronous) */
+        post: operations["regenerate_v1_admin_carousels_regenerate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/carousels/{recipe_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Toggle / edit one recipe (partial update) */
+        put: operations["update_recipe_v1_admin_carousels__recipe_id__put"];
+        post?: never;
+        /** Delete a recipe (file recipes are tombstoned, restorable via reset) */
+        delete: operations["delete_recipe_v1_admin_carousels__recipe_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/carousels/{recipe_id}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a file recipe to its checked-in state */
+        post: operations["reset_recipe_v1_admin_carousels__recipe_id__reset_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1347,7 +1439,7 @@ export interface paths {
         };
         /**
          * Remote app configuration
-         * @description Returns `{ minSupportedVersion, forceUpdate, flags, homeRails }`. `forceUpdate` is server-computed from the optional `clientVersion` query param. Clients should call this on cold start and again on resume after >1h, and persist the last response so launch is offline-tolerant.
+         * @description Returns `{ minSupportedVersion, forceUpdate, flags, homeRails, discoveryRails }`. `forceUpdate` is server-computed from the optional `clientVersion` query param. `discoveryRails` orders the home-tab discovery carousels (unknown ids are skipped client-side). Clients should call this on cold start and again on resume after >1h, and persist the last response so launch is offline-tolerant.
          */
         get: operations["get_app_config_v1_app_config_get"];
         put?: never;
@@ -2445,6 +2537,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/grades/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Filtered vault row count (fast — no card payload) */
+        get: operations["count_mine_v1_grades_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/grades/filters": {
         parameters: {
             query?: never;
@@ -2511,7 +2620,7 @@ export interface paths {
         };
         /**
          * Portfolio aggregates for the signed-in user
-         * @description Returns `{ totalValueUsd, cardCount, avgGrade, avgAccuracy, totalCostUsd, costBasisCardCount, unrealizedPnlUsd, unrealizedPnlPct }`. All values are computed from the user's real graded cards; `avgAccuracy` is null until the scan pipeline reports per-job accuracy. The cost-basis fields are null when no card has a recorded purchase price (so the UI can hide P/L rather than display a misleading `$0`).
+         * @description Returns `{ totalValueUsd, cardCount, avgGrade, avgAccuracy, totalCostUsd, costBasisCardCount, unrealizedPnlUsd, unrealizedPnlPct, sealedValueUsd, sealedCostUsd, sealedHoldingCount, combinedValueUsd }`. All values are computed from the user's real graded cards; `avgAccuracy` is null until the scan pipeline reports per-job accuracy. The cost-basis fields are null when no card has a recorded purchase price (so the UI can hide P/L rather than display a misleading `$0`); unrealized P/L compares value vs cost over only the cards with a recorded purchase price. Sealed fields roll up unopened sealed holdings (qty × value); `combinedValueUsd` = cards + sealed and is THE canonical headline collection value. Sealed is excluded (zeros) when `collection_id` scopes the summary — collections contain cards only.
          */
         get: operations["get_summary_v1_grades_summary_get"];
         put?: never;
@@ -3447,7 +3556,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List card sets (public) */
+        /**
+         * List card sets (public)
+         * @description `sort=newest` orders by release date descending (undated sets last); the default keeps the provider's natural order. `tcg=all` merges the date-backed games (Pokémon/Magic/Yu-Gi-Oh!) and is always newest-first — the feed behind the "Newest sets" discovery rail. `limit` truncates after sorting; `total` stays the full count.
+         */
         get: operations["list_sets_v1_sets_get"];
         put?: never;
         post?: never;
@@ -3693,6 +3805,24 @@ export interface components {
             year?: number | null;
         };
         /**
+         * AdminCarouselsView
+         * @description Everything the /admin/carousels page renders in one call.
+         */
+        AdminCarouselsView: {
+            /** Ai */
+            ai?: {
+                [key: string]: components["schemas"]["CarouselRecipe"][];
+            };
+            /** Aiconfigured */
+            aiConfigured: boolean;
+            /** Aienabled */
+            aiEnabled: boolean;
+            /** Games */
+            games: components["schemas"]["GameCarouselSummary"][];
+            /** Recipes */
+            recipes: components["schemas"]["AdminRecipe"][];
+        };
+        /**
          * AdminMetrics
          * @description At-a-glance portal metrics.
          */
@@ -3734,6 +3864,70 @@ export interface components {
              * @default free
              */
             plan: string;
+        };
+        /**
+         * AdminRecipe
+         * @description A merged registry entry annotated for the dev portal.
+         */
+        AdminRecipe: {
+            /**
+             * Edited
+             * @default false
+             */
+            edited: boolean;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Games */
+            games?: string[] | null;
+            /** Id */
+            id: string;
+            /**
+             * Limit
+             * @default 20
+             */
+            limit: number | null;
+            /**
+             * Minitems
+             * @default 4
+             */
+            minItems: number | null;
+            /**
+             * Origin
+             * @default file
+             * @enum {string}
+             */
+            origin: "file" | "custom";
+            /** Pricemax */
+            priceMax?: number | null;
+            /** Pricemin */
+            priceMin?: number | null;
+            /** Rarities */
+            rarities?: string[] | null;
+            /** Raritypattern */
+            rarityPattern?: string | null;
+            /**
+             * Removed
+             * @default false
+             */
+            removed: boolean;
+            /**
+             * Sort
+             * @default price_desc
+             */
+            sort: ("price_desc" | "price_asc" | "name") | null;
+            /**
+             * Source
+             * @default value
+             * @enum {string}
+             */
+            source: "value" | "trending" | "catalog";
+            /** Subtitle */
+            subtitle: string;
+            /** Title */
+            title: string;
         };
         /**
          * AdminRoleUpdate
@@ -3915,6 +4109,11 @@ export interface components {
              * @default false
              */
             pro_trialing: boolean;
+        };
+        /** AiToggle */
+        AiToggle: {
+            /** Enabled */
+            enabled: boolean;
         };
         /** AnnouncementPreviewRequest */
         AnnouncementPreviewRequest: {
@@ -4477,6 +4676,62 @@ export interface components {
             tcg: components["schemas"]["TcgEnum"];
             /** Year */
             year?: number | null;
+        };
+        /**
+         * CarouselRecipe
+         * @description One AI- or curator-authored carousel. Mirrors the web `CarouselRecipe`.
+         */
+        CarouselRecipe: {
+            /** Id */
+            id: string;
+            /**
+             * Limit
+             * @default 20
+             */
+            limit: number | null;
+            /**
+             * Minitems
+             * @default 4
+             */
+            minItems: number | null;
+            /** Pricemax */
+            priceMax?: number | null;
+            /** Pricemin */
+            priceMin?: number | null;
+            /** Rarities */
+            rarities?: string[] | null;
+            /** Raritypattern */
+            rarityPattern?: string | null;
+            /**
+             * Sort
+             * @default price_desc
+             */
+            sort: ("price_desc" | "price_asc" | "name") | null;
+            /**
+             * Source
+             * @default value
+             * @enum {string}
+             */
+            source: "value" | "trending" | "catalog";
+            /** Subtitle */
+            subtitle: string;
+            /** Title */
+            title: string;
+        };
+        /**
+         * CarouselResponse
+         * @description A game's generated shelves + where they came from (for the UI badge).
+         */
+        CarouselResponse: {
+            /** Carousels */
+            carousels: components["schemas"]["CarouselRecipe"][];
+            /** Game */
+            game: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "ai" | "curated";
         };
         /** CatalogCoverage */
         CatalogCoverage: {
@@ -5129,6 +5384,29 @@ export interface components {
             count: number;
             /** Label */
             label: string;
+        };
+        /**
+         * GameCarouselSummary
+         * @description Per-game serve preview for the dev portal.
+         */
+        GameCarouselSummary: {
+            /**
+             * Activesource
+             * @enum {string}
+             */
+            activeSource: "ai" | "curated";
+            /** Aicount */
+            aiCount?: number | null;
+            /** Catalogonly */
+            catalogOnly: boolean;
+            /** Curatedcount */
+            curatedCount: number;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Resolvedrails */
+            resolvedRails?: number | null;
         };
         /** GameCoverage */
         GameCoverage: {
@@ -6280,6 +6558,38 @@ export interface components {
             }[];
         };
         /**
+         * RecipeUpdate
+         * @description Partial edit for one recipe — only fields the operator actually sent
+         *     (``exclude_unset``) are patched, so ``games: null`` really means "all
+         *     priced games" rather than "unchanged".
+         */
+        RecipeUpdate: {
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Games */
+            games?: string[] | null;
+            /** Limit */
+            limit?: number | null;
+            /** Minitems */
+            minItems?: number | null;
+            /** Pricemax */
+            priceMax?: number | null;
+            /** Pricemin */
+            priceMin?: number | null;
+            /** Rarities */
+            rarities?: string[] | null;
+            /** Raritypattern */
+            rarityPattern?: string | null;
+            /** Sort */
+            sort?: ("price_desc" | "price_asc" | "name") | null;
+            /** Source */
+            source?: ("value" | "trending" | "catalog") | null;
+            /** Subtitle */
+            subtitle?: string | null;
+            /** Title */
+            title?: string | null;
+        };
+        /**
          * RefreshRequest
          * @description Body for ``POST /v1/auth/refresh``.
          */
@@ -6302,6 +6612,58 @@ export interface components {
             refund_id: string;
             /** Status */
             status: string;
+        };
+        /**
+         * RegistryRecipe
+         * @description A registry entry: a recipe plus the operator controls layered on it.
+         *
+         *     These are what the checked-in JSON registry holds and what operators edit
+         *     from the dev portal. ``games=None`` means "every priced game" (value shelves
+         *     are meaningless for catalog-only games); an explicit list scopes verbatim.
+         */
+        RegistryRecipe: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Games */
+            games?: string[] | null;
+            /** Id */
+            id: string;
+            /**
+             * Limit
+             * @default 20
+             */
+            limit: number | null;
+            /**
+             * Minitems
+             * @default 4
+             */
+            minItems: number | null;
+            /** Pricemax */
+            priceMax?: number | null;
+            /** Pricemin */
+            priceMin?: number | null;
+            /** Rarities */
+            rarities?: string[] | null;
+            /** Raritypattern */
+            rarityPattern?: string | null;
+            /**
+             * Sort
+             * @default price_desc
+             */
+            sort: ("price_desc" | "price_asc" | "name") | null;
+            /**
+             * Source
+             * @default value
+             * @enum {string}
+             */
+            source: "value" | "trending" | "catalog";
+            /** Subtitle */
+            subtitle: string;
+            /** Title */
+            title: string;
         };
         /**
          * ReportDownloadResponse
@@ -7992,6 +8354,219 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["app__schemas__card_admin__PriceSnapshotRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    carousels_overview_v1_admin_carousels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCarouselsView"];
+                };
+            };
+        };
+    };
+    create_recipe_v1_admin_carousels_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistryRecipe"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRecipe"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_ai_enabled_v1_admin_carousels_ai_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiToggle"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCarouselsView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    regenerate_v1_admin_carousels_regenerate_post: {
+        parameters: {
+            query: {
+                /** @description Game key, e.g. pokemon */
+                game: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CarouselResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_recipe_v1_admin_carousels__recipe_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRecipe"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_recipe_v1_admin_carousels__recipe_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_recipe_v1_admin_carousels__recipe_id__reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipe_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRecipe"];
                 };
             };
             /** @description Validation Error */
@@ -11911,6 +12486,50 @@ export interface operations {
             };
         };
     };
+    count_mine_v1_grades_count_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                set?: string[] | null;
+                house?: string[] | null;
+                min_grade?: number | null;
+                max_grade?: number | null;
+                min_value?: number | string | null;
+                max_value?: number | string | null;
+                tags?: string[] | null;
+                graded_only?: boolean;
+                raw_only?: boolean;
+                watchlist?: boolean;
+                collection_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_filter_metadata_v1_grades_filters_get: {
         parameters: {
             query?: never;
@@ -13836,6 +14455,8 @@ export interface operations {
         parameters: {
             query?: {
                 tcg?: string;
+                sort?: string;
+                limit?: number | null;
             };
             header?: never;
             path?: never;

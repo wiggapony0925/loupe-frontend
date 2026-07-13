@@ -34,6 +34,10 @@ jest.mock(
   "@/presentation/features/cardAttributes/GenericAttributesPanel",
   () => ({ GenericAttributesPanel: () => null }),
 );
+jest.mock(
+  "@/presentation/features/cardAttributes/PokemonAttributesPanel",
+  () => ({ PokemonAttributesSection: () => null }),
+);
 
 function makeCanonical(tcg: string): CanonicalCard {
   return {

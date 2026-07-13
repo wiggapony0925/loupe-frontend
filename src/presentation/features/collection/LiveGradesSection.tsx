@@ -17,7 +17,7 @@ import { useAuth } from "@/presentation/providers/AuthProvider";
 import { QueryState } from "@/presentation/components/QueryState";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { CardImage } from "@/presentation/components/CardImage";
-import { compactUsd } from "@/shared/format";
+import { useCompactUsd } from "@/shared/format";
 import { gradeColor, palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 interface LiveGradesSectionProps {
@@ -104,6 +104,7 @@ export function LiveGradesSection({
 }
 
 function GradeRow({ grade, bordered }: { grade: GradedCard; bordered: boolean }) {
+  const compactUsd = useCompactUsd();
   const p = useThemedPalette();
   // Backend serializes Decimal as string; coerce defensively.
   const rawGrade = (grade as unknown as { grade: number | string | null }).grade;

@@ -28,7 +28,7 @@ import {
   useMySealedHoldings,
 } from "@/application/queries/collection/useSealed";
 import type { SealedHoldingWire, SealedProductType } from "@/infrastructure/http";
-import { fullUsd } from "@/shared/format";
+import { useMoney } from "@/presentation/components/Price";
 import { CardImage } from "@/presentation/components/CardImage";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { Skeleton } from "@/presentation/components/Skeleton";
@@ -53,6 +53,9 @@ interface RowProps {
 }
 
 function HoldingRow({ holding, onDelete }: RowProps) {
+  // Converting formatter (live FX; subscribes to currency switches) —
+  // fullUsd rendered raw USD regardless of the selected display currency.
+  const { format: money } = useMoney();
   const p = useThemedPalette();
   const opened = holding.opened_at != null;
   const productType = holding.product_type
@@ -129,7 +132,7 @@ function HoldingRow({ holding, onDelete }: RowProps) {
       </View>
       <View style={{ alignItems: "flex-end", gap: 2 }}>
         <Text style={{ color: p.ink.default, fontSize: 13, fontWeight: "600" }}>
-          {totalCost != null ? fullUsd(totalCost) : "—"}
+          {totalCost != null ? money(totalCost, { compact: false }) : "—"}
         </Text>
         <Text style={{ color: p.ink.dim, fontSize: 10 }}>cost basis</Text>
       </View>
@@ -147,6 +150,7 @@ function HoldingRow({ holding, onDelete }: RowProps) {
 }
 
 export default function MySealedScreen() {
+  const { format: money } = useMoney();
   const p = useThemedPalette();
   const router = useRouter();
   const holdings = useMySealedHoldings({});
@@ -246,7 +250,7 @@ export default function MySealedScreen() {
         </Text>
         {rows.length > 0 ? (
           <Text style={{ color: p.ink.muted, fontSize: 13, marginTop: 4 }}>
-            Total cost basis · {fullUsd(totalCost)}
+            Total cost basis · {money(totalCost, { compact: false })}
           </Text>
         ) : null}
       </View>

@@ -602,6 +602,30 @@ function TierRow({
 }
 
 /** One expanded copy inside a tier — tap opens that holding's editor. */
+/** Compact "C 9.5 · CR 9 · E 9.5 · S 10" line from the subgrades blob.
+ *  Tolerates both flat numbers and the richer `{ score }` object shape. */
+function subgradeLine(sg: Record<string, unknown> | null | undefined): string | null {
+  if (!sg) return null;
+  const AXES: [string, string][] = [
+    ["centering", "C"],
+    ["corners", "CR"],
+    ["edges", "E"],
+    ["surface", "S"],
+  ];
+  const bits: string[] = [];
+  for (const [key, label] of AXES) {
+    const raw = sg[key];
+    const n =
+      typeof raw === "number"
+        ? raw
+        : typeof (raw as { score?: unknown } | null)?.score === "number"
+          ? ((raw as { score: number }).score)
+          : null;
+    if (n != null && Number.isFinite(n)) bits.push(`${label} ${n}`);
+  }
+  return bits.length ? bits.join(" · ") : null;
+}
+
 function CopyRow({ h }: { h: CardHoldingWire }) {
   const p = useThemedPalette();
   const { format } = useMoney();
@@ -614,6 +638,9 @@ function CopyRow({ h }: { h: CardHoldingWire }) {
     acq?.label ?? null,
     h.days_held != null ? `${h.days_held}d held` : null,
     cost != null ? `cost ${format(cost)}` : null,
+    // BGS-style sub-scores — the backend ships them per holding; show
+    // them wherever the copy is listed, not just on the scan report.
+    subgradeLine(h.subgrades),
   ].filter(Boolean);
 
   return (

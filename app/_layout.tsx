@@ -17,6 +17,7 @@ import { useRecentsSync } from "@/application/hooks/useRecentsSync";
 import { useCurrencyProfileSync } from "@/application/hooks/useDisplayCurrency";
 import { useActiveCollectionProfileSync } from "@/application/stores/activeCollectionStore";
 import { useFxRatesSync } from "@/application/queries/market/useFxRates";
+import { usePriceTicks } from "@/application/queries/market/usePriceTicks";
 import { usePushNotifications } from "@/application/hooks/usePushNotifications";
 import { initSentry } from "@/infrastructure/observability/sentry";
 
@@ -88,6 +89,9 @@ function RootStack() {
   useActiveCollectionProfileSync();
   // Live FX table from the backend — one conversion source for all clients.
   useFxRatesSync();
+  // Live price ticks for owned cards — holdings caches refresh the moment
+  // the backend records a real price change (Robinhood-style liveness).
+  usePriceTicks(isAuthenticated);
   usePushNotifications();
 
   useEffect(() => {

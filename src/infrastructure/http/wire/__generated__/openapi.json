@@ -247,6 +247,51 @@
         "title": "AdminCardRow",
         "type": "object"
       },
+      "AdminCarouselsView": {
+        "description": "Everything the /admin/carousels page renders in one call.",
+        "properties": {
+          "ai": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/CarouselRecipe"
+              },
+              "type": "array"
+            },
+            "title": "Ai",
+            "type": "object"
+          },
+          "aiConfigured": {
+            "title": "Aiconfigured",
+            "type": "boolean"
+          },
+          "aiEnabled": {
+            "title": "Aienabled",
+            "type": "boolean"
+          },
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/GameCarouselSummary"
+            },
+            "title": "Games",
+            "type": "array"
+          },
+          "recipes": {
+            "items": {
+              "$ref": "#/components/schemas/AdminRecipe"
+            },
+            "title": "Recipes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "aiConfigured",
+          "aiEnabled",
+          "recipes",
+          "games"
+        ],
+        "title": "AdminCarouselsView",
+        "type": "object"
+      },
       "AdminMetrics": {
         "description": "At-a-glance portal metrics.",
         "properties": {
@@ -332,6 +377,180 @@
           }
         },
         "title": "AdminPlanUpdate",
+        "type": "object"
+      },
+      "AdminRecipe": {
+        "description": "A merged registry entry annotated for the dev portal.",
+        "properties": {
+          "edited": {
+            "default": false,
+            "title": "Edited",
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "games": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Games"
+          },
+          "id": {
+            "maxLength": 48,
+            "title": "Id",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 40.0,
+                "minimum": 4.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 20,
+            "title": "Limit"
+          },
+          "minItems": {
+            "anyOf": [
+              {
+                "maximum": 12.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 4,
+            "title": "Minitems"
+          },
+          "origin": {
+            "default": "file",
+            "enum": [
+              "file",
+              "custom"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "priceMax": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricemax"
+          },
+          "priceMin": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricemin"
+          },
+          "rarities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarities"
+          },
+          "rarityPattern": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raritypattern"
+          },
+          "removed": {
+            "default": false,
+            "title": "Removed",
+            "type": "boolean"
+          },
+          "sort": {
+            "anyOf": [
+              {
+                "enum": [
+                  "price_desc",
+                  "price_asc",
+                  "name"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "price_desc",
+            "title": "Sort"
+          },
+          "source": {
+            "default": "value",
+            "enum": [
+              "value",
+              "trending",
+              "catalog"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "subtitle": {
+            "maxLength": 120,
+            "title": "Subtitle",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 60,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "subtitle"
+        ],
+        "title": "AdminRecipe",
         "type": "object"
       },
       "AdminRoleUpdate": {
@@ -653,6 +872,19 @@
           "created_at"
         ],
         "title": "AdminUserRead",
+        "type": "object"
+      },
+      "AiToggle": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "AiToggle",
         "type": "object"
       },
       "AnnouncementPreviewRequest": {
@@ -2164,6 +2396,172 @@
           "created_at"
         ],
         "title": "CardRead",
+        "type": "object"
+      },
+      "CarouselRecipe": {
+        "description": "One AI- or curator-authored carousel. Mirrors the web `CarouselRecipe`.",
+        "properties": {
+          "id": {
+            "maxLength": 48,
+            "title": "Id",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 40.0,
+                "minimum": 4.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 20,
+            "title": "Limit"
+          },
+          "minItems": {
+            "anyOf": [
+              {
+                "maximum": 12.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 4,
+            "title": "Minitems"
+          },
+          "priceMax": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricemax"
+          },
+          "priceMin": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricemin"
+          },
+          "rarities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarities"
+          },
+          "rarityPattern": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raritypattern"
+          },
+          "sort": {
+            "anyOf": [
+              {
+                "enum": [
+                  "price_desc",
+                  "price_asc",
+                  "name"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "price_desc",
+            "title": "Sort"
+          },
+          "source": {
+            "default": "value",
+            "enum": [
+              "value",
+              "trending",
+              "catalog"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "subtitle": {
+            "maxLength": 120,
+            "title": "Subtitle",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 60,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "subtitle"
+        ],
+        "title": "CarouselRecipe",
+        "type": "object"
+      },
+      "CarouselResponse": {
+        "description": "A game's generated shelves + where they came from (for the UI badge).",
+        "properties": {
+          "carousels": {
+            "items": {
+              "$ref": "#/components/schemas/CarouselRecipe"
+            },
+            "title": "Carousels",
+            "type": "array"
+          },
+          "game": {
+            "title": "Game",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "ai",
+              "curated"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game",
+          "source",
+          "carousels"
+        ],
+        "title": "CarouselResponse",
         "type": "object"
       },
       "CatalogCoverage": {
@@ -3800,6 +4198,66 @@
           "count"
         ],
         "title": "FunnelStep",
+        "type": "object"
+      },
+      "GameCarouselSummary": {
+        "description": "Per-game serve preview for the dev portal.",
+        "properties": {
+          "activeSource": {
+            "enum": [
+              "ai",
+              "curated"
+            ],
+            "title": "Activesource",
+            "type": "string"
+          },
+          "aiCount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aicount"
+          },
+          "catalogOnly": {
+            "title": "Catalogonly",
+            "type": "boolean"
+          },
+          "curatedCount": {
+            "title": "Curatedcount",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "resolvedRails": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolvedrails"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "catalogOnly",
+          "curatedCount",
+          "activeSource"
+        ],
+        "title": "GameCarouselSummary",
         "type": "object"
       },
       "GameCoverage": {
@@ -6631,6 +7089,174 @@
         "title": "RecentsPayload",
         "type": "object"
       },
+      "RecipeUpdate": {
+        "description": "Partial edit for one recipe \u2014 only fields the operator actually sent\n(``exclude_unset``) are patched, so ``games: null`` really means \"all\npriced games\" rather than \"unchanged\".",
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "games": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Games"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 40.0,
+                "minimum": 4.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "minItems": {
+            "anyOf": [
+              {
+                "maximum": 12.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minitems"
+          },
+          "priceMax": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricemax"
+          },
+          "priceMin": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricemin"
+          },
+          "rarities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarities"
+          },
+          "rarityPattern": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raritypattern"
+          },
+          "sort": {
+            "anyOf": [
+              {
+                "enum": [
+                  "price_desc",
+                  "price_asc",
+                  "name"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "value",
+                  "trending",
+                  "catalog"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "RecipeUpdate",
+        "type": "object"
+      },
       "RefreshRequest": {
         "description": "Body for ``POST /v1/auth/refresh``.",
         "properties": {
@@ -6678,6 +7304,161 @@
           "status"
         ],
         "title": "RefundResult",
+        "type": "object"
+      },
+      "RegistryRecipe": {
+        "description": "A registry entry: a recipe plus the operator controls layered on it.\n\nThese are what the checked-in JSON registry holds and what operators edit\nfrom the dev portal. ``games=None`` means \"every priced game\" (value shelves\nare meaningless for catalog-only games); an explicit list scopes verbatim.",
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "games": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Games"
+          },
+          "id": {
+            "maxLength": 48,
+            "title": "Id",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 40.0,
+                "minimum": 4.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 20,
+            "title": "Limit"
+          },
+          "minItems": {
+            "anyOf": [
+              {
+                "maximum": 12.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 4,
+            "title": "Minitems"
+          },
+          "priceMax": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricemax"
+          },
+          "priceMin": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricemin"
+          },
+          "rarities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarities"
+          },
+          "rarityPattern": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raritypattern"
+          },
+          "sort": {
+            "anyOf": [
+              {
+                "enum": [
+                  "price_desc",
+                  "price_asc",
+                  "name"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "price_desc",
+            "title": "Sort"
+          },
+          "source": {
+            "default": "value",
+            "enum": [
+              "value",
+              "trending",
+              "catalog"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "subtitle": {
+            "maxLength": 120,
+            "title": "Subtitle",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 60,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "subtitle"
+        ],
+        "title": "RegistryRecipe",
         "type": "object"
       },
       "ReportDownloadResponse": {
@@ -9758,7 +10539,7 @@
   "paths": {
     "/health": {
       "get": {
-        "description": "Return basic process + dependency health information.",
+        "description": "Return basic process + dependency health information.\n\n``status`` stays \"ok\" as long as the PROCESS is healthy \u2014 dependency\nstates are reported per-key so dashboards/alerts can distinguish \"app\nis down\" from \"app is up but a dependency is degraded\" without the\nprobe itself recycling instances during a broker blip.",
         "operationId": "health_health_get",
         "responses": {
           "200": {
@@ -10549,6 +11330,313 @@
         "summary": "Record a manual price override (super-admin)",
         "tags": [
           "admin-cards"
+        ]
+      }
+    },
+    "/v1/admin/carousels": {
+      "get": {
+        "operationId": "carousels_overview_v1_admin_carousels_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCarouselsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Carousel registry \u2014 file + live overrides + latest AI shelves",
+        "tags": [
+          "admin-carousels"
+        ]
+      },
+      "post": {
+        "operationId": "create_recipe_v1_admin_carousels_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistryRecipe"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRecipe"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add an operator-authored carousel recipe",
+        "tags": [
+          "admin-carousels"
+        ]
+      }
+    },
+    "/v1/admin/carousels/ai": {
+      "put": {
+        "operationId": "set_ai_enabled_v1_admin_carousels_ai_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiToggle"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCarouselsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "AI kill switch \u2014 off pins every game to the curated registry",
+        "tags": [
+          "admin-carousels"
+        ]
+      }
+    },
+    "/v1/admin/carousels/regenerate": {
+      "post": {
+        "operationId": "regenerate_v1_admin_carousels_regenerate_post",
+        "parameters": [
+          {
+            "description": "Game key, e.g. pokemon",
+            "in": "query",
+            "name": "game",
+            "required": true,
+            "schema": {
+              "description": "Game key, e.g. pokemon",
+              "title": "Game",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarouselResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Force a fresh AI design pass for a game (synchronous)",
+        "tags": [
+          "admin-carousels"
+        ]
+      }
+    },
+    "/v1/admin/carousels/{recipe_id}": {
+      "delete": {
+        "operationId": "delete_recipe_v1_admin_carousels__recipe_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete a recipe (file recipes are tombstoned, restorable via reset)",
+        "tags": [
+          "admin-carousels"
+        ]
+      },
+      "put": {
+        "operationId": "update_recipe_v1_admin_carousels__recipe_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRecipe"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Toggle / edit one recipe (partial update)",
+        "tags": [
+          "admin-carousels"
+        ]
+      }
+    },
+    "/v1/admin/carousels/{recipe_id}/reset": {
+      "post": {
+        "operationId": "reset_recipe_v1_admin_carousels__recipe_id__reset_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRecipe"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore a file recipe to its checked-in state",
+        "tags": [
+          "admin-carousels"
         ]
       }
     },
@@ -13804,7 +14892,7 @@
     },
     "/v1/app/config": {
       "get": {
-        "description": "Returns `{ minSupportedVersion, forceUpdate, flags, homeRails }`. `forceUpdate` is server-computed from the optional `clientVersion` query param. Clients should call this on cold start and again on resume after >1h, and persist the last response so launch is offline-tolerant.",
+        "description": "Returns `{ minSupportedVersion, forceUpdate, flags, homeRails, discoveryRails }`. `forceUpdate` is server-computed from the optional `clientVersion` query param. `discoveryRails` orders the home-tab discovery carousels (unknown ids are skipped client-side). Clients should call this on cold start and again on resume after >1h, and persist the last response so launch is offline-tolerant.",
         "operationId": "get_app_config_v1_app_config_get",
         "parameters": [
           {
@@ -16927,6 +18015,247 @@
         ]
       }
     },
+    "/v1/grades/count": {
+      "get": {
+        "operationId": "count_mine_v1_grades_count_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "set",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Set"
+            }
+          },
+          {
+            "in": "query",
+            "name": "house",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "House"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_grade",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 10,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Grade"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_grade",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 10,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Grade"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_value",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Value"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_value",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Value"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tags",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tags"
+            }
+          },
+          {
+            "in": "query",
+            "name": "graded_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Graded Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "raw_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Raw Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "watchlist",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Watchlist",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "collection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Count Mine V1 Grades Count Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Filtered vault row count (fast \u2014 no card payload)",
+        "tags": [
+          "grades"
+        ]
+      }
+    },
     "/v1/grades/filters": {
       "get": {
         "operationId": "get_filter_metadata_v1_grades_filters_get",
@@ -17095,7 +18424,7 @@
     },
     "/v1/grades/summary": {
       "get": {
-        "description": "Returns `{ totalValueUsd, cardCount, avgGrade, avgAccuracy, totalCostUsd, costBasisCardCount, unrealizedPnlUsd, unrealizedPnlPct }`. All values are computed from the user's real graded cards; `avgAccuracy` is null until the scan pipeline reports per-job accuracy. The cost-basis fields are null when no card has a recorded purchase price (so the UI can hide P/L rather than display a misleading `$0`).",
+        "description": "Returns `{ totalValueUsd, cardCount, avgGrade, avgAccuracy, totalCostUsd, costBasisCardCount, unrealizedPnlUsd, unrealizedPnlPct, sealedValueUsd, sealedCostUsd, sealedHoldingCount, combinedValueUsd }`. All values are computed from the user's real graded cards; `avgAccuracy` is null until the scan pipeline reports per-job accuracy. The cost-basis fields are null when no card has a recorded purchase price (so the UI can hide P/L rather than display a misleading `$0`); unrealized P/L compares value vs cost over only the cards with a recorded purchase price. Sealed fields roll up unopened sealed holdings (qty \u00d7 value); `combinedValueUsd` = cards + sealed and is THE canonical headline collection value. Sealed is excluded (zeros) when `collection_id` scopes the summary \u2014 collections contain cards only.",
         "operationId": "get_summary_v1_grades_summary_get",
         "parameters": [
           {
@@ -20079,6 +21408,7 @@
     },
     "/v1/sets": {
       "get": {
+        "description": "`sort=newest` orders by release date descending (undated sets last); the default keeps the provider's natural order. `tcg=all` merges the date-backed games (Pok\u00e9mon/Magic/Yu-Gi-Oh!) and is always newest-first \u2014 the feed behind the \"Newest sets\" discovery rail. `limit` truncates after sorting; `total` stays the full count.",
         "operationId": "list_sets_v1_sets_get",
         "parameters": [
           {
@@ -20090,6 +21420,35 @@
               "pattern": "^(pokemon|magic|yugioh|onepiece|digimon|all)$",
               "title": "Tcg",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "catalog",
+              "pattern": "^(catalog|newest)$",
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
             }
           }
         ],

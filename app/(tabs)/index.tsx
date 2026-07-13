@@ -12,7 +12,9 @@ import { PortfolioChart } from "@/presentation/features/analytics/PortfolioChart
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { MixedTrendingRail } from "@/presentation/features/search/MixedTrendingRail";
+import { NewestSetsRail } from "@/presentation/features/search/NewestSetsRail";
 import { SealedRail } from "@/presentation/features/search/SealedRail";
+import { useNewestSets } from "@/application/queries/catalog/useSets";
 import { useSealedSearch } from "@/application/queries/collection/useSealed";
 import { Skeleton } from "@/presentation/components/Skeleton";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
@@ -24,7 +26,7 @@ import { useAppConfig } from "@/application/queries/ops/useAppConfig";
 import { useCardSparklines } from "@/application/queries/catalog/useCardSparklines";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { MoverSparkRow } from "@/presentation/cards";
-import { compactUsd, greeting, relativeTime } from "@/shared/format";
+import { greeting, relativeTime, useCompactUsd } from "@/shared/format";
 import { gradeColor, useThemedPalette } from "@/presentation/theme/tokens";
 import type { RecentScanRow } from "@/infrastructure/repositories/homeRepository";
 
@@ -34,6 +36,7 @@ import type { RecentScanRow } from "@/infrastructure/repositories/homeRepository
 const DEFAULT_DISCOVERY_RAILS = [
   "trendingNow",
   "mostValuable",
+  "newestSets",
   "sealedProducts",
   "stealsUnder5",
 ];
@@ -51,6 +54,9 @@ export default function CommandCenterScreen() {
   // cache-shared with the vault; a specific collection gets its own key
   // + a `collection_id`-scoped fetch.
   const { collectionId } = useActiveCollection();
+  // Subscribing money formatter — repaints every KPI the moment the
+  // operator switches display currency (live FX from the backend).
+  const compactUsd = useCompactUsd();
   const summary = useQuery({
     queryKey: collectionId
       ? [...queryKeys.collection.summary(), collectionId]
@@ -74,6 +80,11 @@ export default function CommandCenterScreen() {
     appConfig.data?.discoveryRails ?? DEFAULT_DISCOVERY_RAILS;
   const sealed = useSealedSearch("");
   const hasSealed = (sealed.data?.length ?? 0) > 0;
+  // Newest set releases across the date-backed games — backend-sorted, so
+  // the rail renders the same feed the web marketplace shows. Gated on data
+  // like sealed (it renders nothing when empty, leaving a lone header).
+  const newestSets = useNewestSets(12);
+  const hasNewestSets = (newestSets.data?.length ?? 0) > 0;
 
   const [isScrubbing, setIsScrubbing] = useState(false);
 
@@ -290,12 +301,36 @@ export default function CommandCenterScreen() {
                   <MixedTrendingRail sort="value" limit={12} />
                 </View>
               );
+            case "newestSets":
+              return hasNewestSets ? (
+                <View key={railId}>
+                  <SectionHeader
+                    eyebrow="Releases"
+                    title="Newest sets"
+                    trailing={
+                      <Pressable
+                        onPress={() => router.push(routes.sets())}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel="Browse all sets"
+                        className="flex-row items-center gap-1"
+                      >
+                        <Text className="text-xs font-medium text-ink-muted">All</Text>
+                        <ArrowUpRight size={14} color={p.ink.muted} />
+                      </Pressable>
+                    }
+                  />
+                  <NewestSetsRail sets={newestSets.data ?? []} />
+                </View>
+              ) : null;
             case "sealedProducts":
               return hasSealed ? (
                 <View key={railId}>
                   <SectionHeader
                     eyebrow="Sealed"
-                    title="Sealed products"
+                    // Truthful label — the sealed catalog search is
+                    // newest-release-first, so these ARE the new products.
+                    title="New sealed products"
                     trailing={
                       <Pressable
                         onPress={() => router.push(routes.sealed())}
