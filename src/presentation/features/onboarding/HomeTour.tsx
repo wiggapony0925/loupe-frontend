@@ -222,30 +222,33 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
   // Corner pieces: dim squares with an inward-facing quarter-radius, so
   // the square hole the strips leave reads as a ROUNDED rect (and, when
   // radius = width/2 on tab targets, as a perfect circle).
-  const cornerBase = () => ({
+  // NOTE: every value is inlined — calling a helper function from inside
+  // a worklet runs a NON-worklet on the UI runtime, which throws and
+  // aborts the whole app (this exact mistake shipped once; never again).
+  const cornerTL = useAnimatedStyle(() => ({
     width: holeRadius.value,
     height: holeRadius.value,
-  });
-  const cornerTL = useAnimatedStyle(() => ({
-    ...cornerBase(),
     left: hx.value,
     top: hy.value,
     borderBottomRightRadius: holeRadius.value,
   }));
   const cornerTR = useAnimatedStyle(() => ({
-    ...cornerBase(),
+    width: holeRadius.value,
+    height: holeRadius.value,
     left: hx.value + hw.value - holeRadius.value,
     top: hy.value,
     borderBottomLeftRadius: holeRadius.value,
   }));
   const cornerBL = useAnimatedStyle(() => ({
-    ...cornerBase(),
+    width: holeRadius.value,
+    height: holeRadius.value,
     left: hx.value,
     top: hy.value + hh.value - holeRadius.value,
     borderTopRightRadius: holeRadius.value,
   }));
   const cornerBR = useAnimatedStyle(() => ({
-    ...cornerBase(),
+    width: holeRadius.value,
+    height: holeRadius.value,
     left: hx.value + hw.value - holeRadius.value,
     top: hy.value + hh.value - holeRadius.value,
     borderTopLeftRadius: holeRadius.value,
