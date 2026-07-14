@@ -9,9 +9,10 @@
  * A REAL spotlight: four blur+dim strips + four radius-matched corner
  * pieces frame the target, so the hole has properly ROUNDED corners
  * (a full circle for tab-bar targets) and the target itself stays
- * crystal clear. The hole and ring spring-morph between steps; the
- * chart step auto-scrolls into view and re-measures. Skippable at any
- * step; completing OR skipping marks the tour seen for THIS account
+ * crystal clear. The dim CLOSES IN from the whole screen onto the first
+ * target, spring-morphs between steps, and MELTS AWAY outward on
+ * finish. Tap anywhere to advance; Back rewinds; Skip is always one
+ * tap. Completing OR skipping marks the tour seen for THIS account
  * only (`onboardingStore`). Everyone can rewatch it from Settings →
  * "Replay introduction".
  */
@@ -31,6 +32,7 @@ import Animated, {
   LinearTransition,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withSpring,
@@ -38,6 +40,13 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { BlurView } from "expo-blur";
+import {
+  ChartLine,
+  FileText,
+  ScanLine,
+  Store,
+  type LucideIcon,
+} from "lucide-react-native";
 import { useOnboarding } from "@/application/stores/onboardingStore";
 import { useSettings } from "@/application/stores/settingsStore";
 import { useAuth } from "@/presentation/providers/AuthProvider";
@@ -47,6 +56,7 @@ import { useTourAnchors, type AnchorRect } from "./tourAnchors";
 interface Step {
   /** TourTarget id, or a key in TAB_ANCHORS for tab-bar targets. */
   anchor: string;
+  icon: LucideIcon;
   title: string;
   body: string;
 }
@@ -54,21 +64,25 @@ interface Step {
 const STEPS: Step[] = [
   {
     anchor: "portfolio",
+    icon: ChartLine,
     title: "Your collection, live",
     body: "Every card you own, charted like a portfolio. Scrub the line to see any day.",
   },
   {
     anchor: "market",
+    icon: Store,
     title: "The marketplace",
     body: "Search 130,000+ cards with live prices — Pokémon, Magic, Yu-Gi-Oh! and more.",
   },
   {
     anchor: "reports",
+    icon: FileText,
     title: "Monthly statements",
     body: "A brokerage-style PDF of your collection, generated every month.",
   },
   {
     anchor: "scan",
+    icon: ScanLine,
     title: "Scan anything",
     body: "Point the camera at any card — identified and in your vault in seconds.",
   },
@@ -86,6 +100,10 @@ const TAB_ANCHORS: Record<string, { cx: number; d: number }> = {
 const RING_PAD = 8;
 const CARD_MARGIN = 20;
 const SPOT_SPRING = { damping: 19, stiffness: 190, mass: 0.7 };
+/** Gentler spring for the opening close-in — reads as a camera focus. */
+const ENTRY_SPRING = { damping: 24, stiffness: 130, mass: 0.9 };
+const ENTRY_DELAY_MS = 120;
+const EXIT_MS = 340;
 /** Time for the scroll + settle before re-measuring anchors. */
 const SCROLL_SETTLE_MS = 420;
 
@@ -107,6 +125,8 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
     themeMode === "dark" || (themeMode !== "light" && systemScheme === "dark");
 
   const [step, setStep] = useState(0);
+  // The outward melt on finish plays before the overlay unmounts.
+  const [finishing, setFinishing] = useState(false);
   // Let the screen paint + anchors measure before the overlay fades in.
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -152,6 +172,7 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
   const [spotInitialized, setSpotInitialized] = useState(false);
 
   useEffect(() => {
+    if (finishing) return;
     if (!rect) {
       ringShown.value = withTiming(0, { duration: 160 });
       return;
@@ -164,11 +185,22 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
     // Full circle for tab targets; soft rounded rect elsewhere.
     const radius = tab ? w / 2 : 22;
     if (!spotInitialized) {
-      hx.value = x;
-      hy.value = y;
-      hw.value = w;
-      hh.value = h;
-      holeRadius.value = radius;
+      // Open on the WHOLE screen (nothing dimmed), then close in on the
+      // first target — the dim arrives like a camera pulling focus.
+      hx.value = -4;
+      hy.value = -4;
+      hw.value = winW + 8;
+      hh.value = winH + 8;
+      holeRadius.value = 28;
+      hx.value = withDelay(ENTRY_DELAY_MS, withSpring(x, ENTRY_SPRING));
+      hy.value = withDelay(ENTRY_DELAY_MS, withSpring(y, ENTRY_SPRING));
+      hw.value = withDelay(ENTRY_DELAY_MS, withSpring(w, ENTRY_SPRING));
+      hh.value = withDelay(ENTRY_DELAY_MS, withSpring(h, ENTRY_SPRING));
+      holeRadius.value = withDelay(
+        ENTRY_DELAY_MS,
+        withTiming(radius, { duration: 460 }),
+      );
+      ringShown.value = withDelay(420, withTiming(1, { duration: 260 }));
       setSpotInitialized(true);
     } else {
       hx.value = withSpring(x, SPOT_SPRING);
@@ -176,10 +208,10 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
       hw.value = withSpring(w, SPOT_SPRING);
       hh.value = withSpring(h, SPOT_SPRING);
       holeRadius.value = withTiming(radius, { duration: 260 });
+      ringShown.value = withTiming(1, { duration: 220 });
     }
-    ringShown.value = withTiming(1, { duration: 220 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rect?.x, rect?.y, rect?.width, rect?.height, current.anchor]);
+  }, [rect?.x, rect?.y, rect?.width, rect?.height, current.anchor, finishing]);
 
   useEffect(() => {
     // A slow breath while parked — draws the eye without shouting.
@@ -265,22 +297,52 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
     shadowOpacity: 0.25 + pulse.value * 0.2,
   }));
 
+  // A whisper of a halo just outside the ring — depth without noise.
+  const haloStyle = useAnimatedStyle(() => ({
+    left: hx.value - 7,
+    top: hy.value - 7,
+    width: hw.value + 14,
+    height: hh.value + 14,
+    borderRadius: holeRadius.value + 7,
+    opacity: ringShown.value * (0.18 + pulse.value * 0.14),
+  }));
+
   if (!visible || userId === null) return null;
 
   const tick = () => {
     if (hapticsEnabled) Haptics.selectionAsync().catch(() => {});
   };
   const finish = () => {
-    tick();
-    markSeen(userId);
+    if (finishing) return;
+    setFinishing(true);
+    if (hapticsEnabled) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        () => {},
+      );
+    }
+    // Melt the dim away outward, then hand the screen back.
+    const ease = { duration: EXIT_MS, easing: Easing.out(Easing.cubic) };
+    hx.value = withTiming(-4, ease);
+    hy.value = withTiming(-4, ease);
+    hw.value = withTiming(winW + 8, ease);
+    hh.value = withTiming(winH + 8, ease);
+    holeRadius.value = withTiming(28, ease);
+    ringShown.value = withTiming(0, { duration: 160 });
+    setTimeout(() => markSeen(userId), EXIT_MS);
   };
   const next = () => {
+    if (finishing) return;
     if (step >= STEPS.length - 1) {
       finish();
       return;
     }
     tick();
     setStep(step + 1);
+  };
+  const back = () => {
+    if (finishing || step === 0) return;
+    tick();
+    setStep(step - 1);
   };
 
   // Card placement: below the spotlight when the target sits in the top
@@ -301,6 +363,7 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
     position: "absolute" as const,
     overflow: "hidden" as const,
   };
+  const Icon = current.icon;
 
   return (
     <Animated.View
@@ -309,6 +372,14 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
       style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
       pointerEvents="auto"
     >
+      {/* Tap anywhere to advance — the whole screen is the Next button. */}
+      <Pressable
+        onPress={next}
+        disabled={finishing}
+        accessibilityRole="button"
+        accessibilityLabel="Next step"
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+      />
       {/* Spotlight frame — blur + dim everywhere EXCEPT the hole. */}
       {[topStrip, bottomStrip, leftStrip, rightStrip].map((strip, i) => (
         <Animated.View key={i} style={[stripBase, strip]} pointerEvents="none">
@@ -338,6 +409,18 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
         />
       ))}
 
+      {/* Halo — a soft second ring floating just outside the window. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: "absolute",
+            borderWidth: 1.5,
+            borderColor: withAlpha(p.accent.mint, 0.8),
+          },
+          haloStyle,
+        ]}
+      />
       {/* The ring hugging the clear window. */}
       <Animated.View
         pointerEvents="none"
@@ -355,116 +438,167 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
       />
 
       {/* Skip — always available, top-right, no confirmation. */}
-      <Animated.View
-        entering={FadeIn.delay(350).duration(240)}
-        style={{ position: "absolute", top: 58, right: 20 }}
-      >
-        <Pressable
-          onPress={finish}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Skip the tour"
-          style={{
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            borderRadius: 999,
-            backgroundColor: withAlpha("#000000", 0.35),
-          }}
+      {!finishing && (
+        <Animated.View
+          entering={FadeIn.delay(350).duration(240)}
+          exiting={FadeOut.duration(140)}
+          style={{ position: "absolute", top: 58, right: 20 }}
         >
-          <Text style={{ color: "#FFFFFFE6", fontSize: 13, fontWeight: "700" }}>
-            Skip
-          </Text>
-        </Pressable>
-      </Animated.View>
+          <Pressable
+            onPress={finish}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Skip the tour"
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 999,
+              backgroundColor: withAlpha("#000000", 0.35),
+            }}
+          >
+            <Text style={{ color: "#FFFFFFE6", fontSize: 13, fontWeight: "700" }}>
+              Skip
+            </Text>
+          </Pressable>
+        </Animated.View>
+      )}
 
       {/* The step card — springs up fresh for each step. */}
-      <View
-        style={{
-          position: "absolute",
-          left: 20,
-          right: 20,
-          top: cardTop,
-          bottom: cardBottom,
-        }}
-        pointerEvents="box-none"
-      >
-        <Animated.View
-          key={current.anchor}
-          entering={FadeInDown.springify().damping(18).stiffness(200)}
-          exiting={FadeOut.duration(120)}
+      {!finishing && (
+        <View
           style={{
-            padding: 18,
-            gap: 8,
-            borderRadius: 18,
-            borderWidth: 1,
-            borderColor: p.line.default,
-            backgroundColor: p.bg.elevated,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 8 },
-            shadowRadius: 24,
-            shadowOpacity: 0.18,
-            elevation: 8,
+            position: "absolute",
+            left: 20,
+            right: 20,
+            top: cardTop,
+            bottom: cardBottom,
           }}
+          pointerEvents="box-none"
         >
-          <Text
+          <Animated.View
+            key={current.anchor}
+            entering={FadeInDown.springify().damping(18).stiffness(200)}
+            exiting={FadeOut.duration(120)}
             style={{
-              color: p.accent.mint,
-              fontSize: 10,
-              fontWeight: "800",
-              letterSpacing: 2.5,
+              padding: 18,
+              gap: 8,
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: p.line.default,
+              backgroundColor: p.bg.elevated,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 8 },
+              shadowRadius: 24,
+              shadowOpacity: 0.18,
+              elevation: 8,
             }}
           >
-            {`${step + 1} OF ${STEPS.length}`}
-          </Text>
-          <Text style={{ color: p.ink.default, fontSize: 17, fontWeight: "800" }}>
-            {current.title}
-          </Text>
-          <Text style={{ color: p.ink.muted, fontSize: 13, lineHeight: 19 }}>
-            {current.body}
-          </Text>
-
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginTop: 6,
-            }}
-          >
-            <View style={{ flexDirection: "row", gap: 6 }}>
-              {STEPS.map((s, i) => (
-                <Animated.View
-                  key={s.anchor}
-                  layout={LinearTransition.springify().damping(18)}
-                  style={{
-                    width: i === step ? 16 : 6,
-                    height: 6,
-                    borderRadius: 999,
-                    backgroundColor:
-                      i === step ? p.accent.mint : withAlpha(p.ink.muted, 0.35),
-                  }}
-                />
-              ))}
-            </View>
-            <Pressable
-              onPress={next}
-              accessibilityRole="button"
-              accessibilityLabel={step >= STEPS.length - 1 ? "Finish tour" : "Next step"}
-              style={({ pressed }) => ({
-                paddingHorizontal: 18,
-                paddingVertical: 9,
-                borderRadius: 999,
-                backgroundColor: p.accent.mint,
-                transform: [{ scale: pressed ? 0.96 : 1 }],
-              })}
+            <Animated.View
+              entering={FadeInDown.delay(40).duration(220)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
             >
-              <Text style={{ color: "#04342C", fontSize: 13, fontWeight: "800" }}>
-                {step >= STEPS.length - 1 ? "Start collecting" : "Next"}
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 12,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: withAlpha(p.accent.mint, 0.14),
+                }}
+              >
+                <Icon size={19} color={p.accent.mint} strokeWidth={2.2} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text
+                  style={{
+                    color: p.accent.mint,
+                    fontSize: 10,
+                    fontWeight: "800",
+                    letterSpacing: 2.5,
+                  }}
+                >
+                  {`${step + 1} OF ${STEPS.length}`}
+                </Text>
+                <Text
+                  style={{ color: p.ink.default, fontSize: 17, fontWeight: "800" }}
+                >
+                  {current.title}
+                </Text>
+              </View>
+            </Animated.View>
+            <Animated.View entering={FadeInDown.delay(110).duration(220)}>
+              <Text style={{ color: p.ink.muted, fontSize: 13, lineHeight: 19 }}>
+                {current.body}
               </Text>
-            </Pressable>
-          </View>
-        </Animated.View>
-      </View>
+            </Animated.View>
+
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginTop: 6,
+              }}
+            >
+              <View style={{ flexDirection: "row", gap: 6 }}>
+                {STEPS.map((s, i) => (
+                  <Animated.View
+                    key={s.anchor}
+                    layout={LinearTransition.springify().damping(18)}
+                    style={{
+                      width: i === step ? 16 : 6,
+                      height: 6,
+                      borderRadius: 999,
+                      backgroundColor:
+                        i === step ? p.accent.mint : withAlpha(p.ink.muted, 0.35),
+                    }}
+                  />
+                ))}
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                {step > 0 && (
+                  <Pressable
+                    onPress={back}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Previous step"
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      opacity: pressed ? 0.6 : 1,
+                    })}
+                  >
+                    <Text
+                      style={{ color: p.ink.muted, fontSize: 13, fontWeight: "700" }}
+                    >
+                      Back
+                    </Text>
+                  </Pressable>
+                )}
+                <Pressable
+                  onPress={next}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    step >= STEPS.length - 1 ? "Finish tour" : "Next step"
+                  }
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 18,
+                    paddingVertical: 9,
+                    borderRadius: 999,
+                    backgroundColor: p.accent.mint,
+                    transform: [{ scale: pressed ? 0.96 : 1 }],
+                  })}
+                >
+                  <Text style={{ color: "#04342C", fontSize: 13, fontWeight: "800" }}>
+                    {step >= STEPS.length - 1 ? "Start collecting" : "Next"}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </Animated.View>
+        </View>
+      )}
     </Animated.View>
   );
 }
