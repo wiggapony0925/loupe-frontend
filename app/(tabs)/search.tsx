@@ -8,7 +8,7 @@
  *   • Live search rail — filtered card list with mini sparklines.
  *   • Recent searches (in-memory, last 6).
  */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -42,7 +42,6 @@ import { sealedToCardSearchResult } from "@/presentation/features/search/sealedA
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
 import { AiModePanel } from "@/presentation/features/search/AiModePanel";
-import { useProFeature } from "@/presentation/features/pro";
 import { useAiSearchLimits } from "@/application/queries/catalog/useAiSearch";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
 import { ResolvedCarousels } from "@/presentation/features/search/CarouselRail";
@@ -201,24 +200,18 @@ export default function SearchScreen() {
     router.setParams({ railId: "", railGame: "", railTitle: "" });
   }, []);
   const [inputFocused, setInputFocused] = useState(false);
-  // Backend-served description cap + the availability kill switch.
-  const { queryMaxChars, enabled: aiFeatureOn } = useAiSearchLimits();
+  // Backend-served description cap (offline fallback baked in).
+  const { queryMaxChars } = useAiSearchLimits();
 
   // ── AI MODE — the Notion-style "/" trigger ──────────────────────────
   // Typing "/" (or tapping the sparkle toggle) autocompletes into a
   // "Loupe AI" tag inside the search bar; the input becomes a description
   // box and the results area becomes the AI panel. Free accounts get the
   // paywall instead of the mode.
-  const aiAccess = useProFeature("ai_search");
   const [aiMode, setAiMode] = useState(false);
   const [aiAsked, setAiAsked] = useState(false);
   const aiPill = React.useRef(new Animated.Value(0)).current;
   const enterAiMode = React.useCallback(() => {
-    if (!aiFeatureOn) return;
-    if (aiAccess.locked) {
-      aiAccess.requirePro("ai_search");
-      return;
-    }
     setAiMode(true);
     setAiAsked(false);
     aiPill.setValue(0);
@@ -228,17 +221,12 @@ export default function SearchScreen() {
       tension: 140,
       useNativeDriver: true,
     }).start();
-  }, [aiAccess, aiFeatureOn, aiPill]);
+  }, [aiPill]);
   const exitAiMode = React.useCallback(() => {
     setAiMode(false);
     setAiAsked(false);
     aiPill.setValue(0);
   }, [aiPill]);
-  // Quota ran out / provider outage → the backend flips aiSearch.enabled and
-  // the whole feature disappears, including an in-progress mode.
-  useEffect(() => {
-    if (aiMode && !aiFeatureOn) exitAiMode();
-  }, [aiMode, aiFeatureOn, exitAiMode]);
   const handleQueryChange = (text: string) => {
     setQuery(text);
     if (aiMode) setAiAsked(false); // editing the description resets the ask
@@ -247,7 +235,6 @@ export default function SearchScreen() {
   // "ai") floats a command card under the search bar; tapping it — or
   // submitting — autocompletes into the Loupe AI tag.
   const slashPanel =
-    aiFeatureOn &&
     !aiMode &&
     query.startsWith("/") &&
     "ai".startsWith(query.slice(1).trim().toLowerCase()) &&
@@ -471,9 +458,7 @@ export default function SearchScreen() {
             placeholder={
               aiMode
                 ? "Describe the card — colours, creatures, attacks…"
-                : aiFeatureOn
-                  ? "Search cards, sets, years…  ( / for AI )"
-                  : "Search cards, sets, years…"
+                : "Search cards, sets, years…  ( / for AI )"
             }
             placeholderTextColor={p.ink.dim}
             style={{
@@ -497,25 +482,23 @@ export default function SearchScreen() {
               <X size={16} color={p.ink.muted} />
             </Pressable>
           ) : null}
-          {aiFeatureOn ? (
-            <Pressable
-              onPress={() => (aiMode ? exitAiMode() : enterAiMode())}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={aiMode ? "Exit Loupe AI mode" : "Ask Loupe AI"}
-              className="h-8 w-8 items-center justify-center rounded-full"
-              style={{
-                backgroundColor: aiMode
-                  ? p.accent.mint
-                  : withAlpha(p.accent.mint, 0.14),
-              }}
-            >
-              <SparklesIcon
-                size={15}
-                color={aiMode ? "#04150c" : p.accent.mint}
-              />
-            </Pressable>
-          ) : null}
+          <Pressable
+            onPress={() => (aiMode ? exitAiMode() : enterAiMode())}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={aiMode ? "Exit Loupe AI mode" : "Ask Loupe AI"}
+            className="h-8 w-8 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: aiMode
+                ? p.accent.mint
+                : withAlpha(p.accent.mint, 0.14),
+            }}
+          >
+            <SparklesIcon
+              size={15}
+              color={aiMode ? "#04150c" : p.accent.mint}
+            />
+          </Pressable>
           <Pressable
             onPress={() => router.push(routes.scanEntry())}
             hitSlop={8}
@@ -808,7 +791,7 @@ export default function SearchScreen() {
             partial={livePartial}
             interpreted={live.data?.pages?.[0]?.interpreted ?? null}
             onResultTap={commitRecentSearch}
-            onTryAi={aiFeatureOn ? enterAiMode : undefined}
+            onTryAi={enterAiMode}
           />
         ) : railActive ? (
           // The expanded shelf — full paginated contents behind the tag above.

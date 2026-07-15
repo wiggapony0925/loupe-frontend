@@ -18,7 +18,7 @@
  */
 import React, { useEffect } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { ArrowRight, RotateCcw, Sparkles } from "lucide-react-native";
+import { ArrowRight, Lock, MoonStar, RotateCcw, Sparkles } from "lucide-react-native";
 import {
   useAiSearch,
   useAiSearchLimits,
@@ -53,9 +53,9 @@ export function AiModePanel({
   onPickCandidate?: (name: string) => void;
 }) {
   const p = useThemedPalette();
-  const { allowed, requirePro } = useProFeature("ai_search");
-  const { queryMaxChars } = useAiSearchLimits();
-  const ai = useAiSearch(query, asked && allowed, game);
+  const { allowed, locked, requirePro } = useProFeature("ai_search");
+  const { queryMaxChars, enabled: serviceUp } = useAiSearchLimits();
+  const ai = useAiSearch(query, asked && allowed && serviceUp, game);
 
   // Server-side gate is the source of truth — a 402 opens the paywall even
   // if the local entitlement snapshot was stale.
@@ -77,6 +77,106 @@ export function AiModePanel({
       : null;
   const unreachable =
     ai.isError && !(ai.error instanceof ApiError && ai.error.status === 402);
+
+  // ── Loupe AI is resting (quota / provider outage — backend says so) ──
+  if (!serviceUp) {
+    return (
+      <View style={{ alignItems: "center", gap: 10, paddingVertical: 26 }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: withAlpha(p.accent.mint, 0.1),
+          }}
+        >
+          <MoonStar size={20} color={p.accent.mint} />
+        </View>
+        <Text style={{ color: p.ink.default, fontSize: 16, fontWeight: "700" }}>
+          Loupe AI is taking a quick break
+        </Text>
+        <Text
+          style={{
+            color: p.ink.muted,
+            fontSize: 12,
+            textAlign: "center",
+            maxWidth: 280,
+            lineHeight: 18,
+          }}
+        >
+          It'll be back shortly — name search works as always in the meantime.
+        </Text>
+      </View>
+    );
+  }
+
+  // ── Locked — the feature sells itself (free accounts) ──
+  if (locked) {
+    return (
+      <View style={{ gap: 14, paddingTop: 8 }}>
+        <View style={{ alignItems: "center", gap: 8, paddingVertical: 18 }}>
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 999,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: withAlpha(p.accent.mint, 0.14),
+            }}
+          >
+            <Sparkles size={20} color={p.accent.mint} />
+          </View>
+          <Text
+            style={{
+              color: p.ink.default,
+              fontSize: 18,
+              fontWeight: "700",
+              letterSpacing: -0.3,
+            }}
+          >
+            Describe the card. Loupe finds it.
+          </Text>
+          <Text
+            style={{
+              color: p.ink.muted,
+              fontSize: 12,
+              textAlign: "center",
+              lineHeight: 18,
+              maxWidth: 280,
+            }}
+          >
+            “red lizard with fire on its tail” → Charizard. AI search is part
+            of Loupe Pro.
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => requirePro("ai_search")}
+          accessibilityRole="button"
+          accessibilityLabel="Unlock AI search with Loupe Pro"
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            paddingVertical: 13,
+            borderRadius: 14,
+            backgroundColor: withAlpha(p.accent.mint, pressed ? 0.9 : 1),
+          })}
+        >
+          <Lock size={14} color="#04150c" />
+          <Text style={{ color: "#04150c", fontSize: 14, fontWeight: "800" }}>
+            Unlock with Loupe Pro
+          </Text>
+        </Pressable>
+        <Text style={{ color: p.ink.dim, fontSize: 10, textAlign: "center" }}>
+          Unlimited cards, alerts, statements — and Loupe AI.
+        </Text>
+      </View>
+    );
+  }
 
   // ── Idle — the hero ask state ──
   if (!asked || !allowed) {
