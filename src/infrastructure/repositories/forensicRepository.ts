@@ -309,9 +309,9 @@ export interface AppConfig {
   /** Home-tab discovery carousel order (backend-owned; unknown ids are
    *  skipped). Optional until every deployed backend ships it. */
   discoveryRails?: string[];
-  /** AI "describe it" search limits — backend-owned so a constant change
-   *  reaches installed clients without an app-store release. */
-  aiSearch?: { queryMaxChars: number; messageMaxChars: number };
+  /** AI "describe it" search — backend-owned limits AND the availability
+   *  kill switch (`enabled:false` = quota/outage → hide the feature). */
+  aiSearch?: { enabled?: boolean; queryMaxChars: number; messageMaxChars: number };
 }
 
 /**

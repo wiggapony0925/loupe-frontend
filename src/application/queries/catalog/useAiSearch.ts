@@ -19,10 +19,21 @@ import { queryKeys } from "../queryKeys";
  *  installed clients on the next config refresh, no release. */
 export const AI_QUERY_MAX_CHARS = 200;
 
-/** The backend-served AI search limits (baked-in fallbacks while offline). */
-export function useAiSearchLimits(): { queryMaxChars: number } {
+/** The backend-served AI search limits + availability.
+
+ *  `enabled` is STRICT opt-in: the feature only shows when the backend
+ *  explicitly says so — an old backend (no endpoint), a spent API key, or a
+ *  provider outage all read as "hide the sparkle button / slash command
+ *  entirely" instead of surfacing broken states. */
+export function useAiSearchLimits(): {
+  queryMaxChars: number;
+  enabled: boolean;
+} {
   const { data } = useAppConfig();
-  return { queryMaxChars: data?.aiSearch?.queryMaxChars ?? AI_QUERY_MAX_CHARS };
+  return {
+    queryMaxChars: data?.aiSearch?.queryMaxChars ?? AI_QUERY_MAX_CHARS,
+    enabled: data?.aiSearch?.enabled === true,
+  };
 }
 
 export function useAiSearch(q: string, asked: boolean, game?: string) {
