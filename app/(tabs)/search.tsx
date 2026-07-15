@@ -759,6 +759,11 @@ export default function SearchScreen() {
             game={aiGame}
             asked={aiAsked}
             onAsk={() => setAiAsked(true)}
+            onPickSuggestion={(text) => {
+              // One tap: the example fills the bar and asks immediately.
+              setQuery(text);
+              setAiAsked(true);
+            }}
             onPickCandidate={(name) => {
               // A candidate tap = "that's the one": pop back to normal
               // search with the exact name.

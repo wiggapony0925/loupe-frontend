@@ -1,24 +1,30 @@
 /**
- * AiModePanel — the search tab's AI MODE content (Notion-style).
+ * AiModePanel — the search tab's AI MODE content, styled as a conversation.
  *
- * The user enters AI mode from the search bar (typing "/" or tapping the
- * sparkle toggle plants a "Loupe AI" pill in the bar); this panel is then the
- * whole results area:
+ * The user enters AI mode from the search bar ("/" command or the sparkle
+ * toggle); this panel then owns the results area:
  *
- *   • idle    — a hero prompt with example descriptions + an Ask button,
- *   • asking  — a thinking card,
- *   • answer  — the chat bubble: avatar, the model's explanation, tappable
- *               "Could be:" name chips, the REAL catalog cards, and a footer
- *               with Try again + the honesty line.
+ *   • idle    — a hero + a SUGGESTION LIST of example descriptions (game-aware,
+ *               one tap fills and asks),
+ *   • asking  — the user's description as a sent chat bubble + Loupe AI's
+ *               typing-dots bubble while the model works,
+ *   • answer  — the reply TYPES OUT like a message; the candidate chips and
+ *               real catalog cards reveal once it finishes, with the
+ *               Try-again + honesty footer,
+ *   • locked / resting / unreachable / miss — honest dedicated states.
  *
- * The active game tag (Pokémon / Magic / …) rides to the backend as the
- * user's preference — "they're most likely describing a Pokémon card". The
- * parent owns `asked` (submitting the search bar asks), so the model is only
- * ever called on an explicit action. A 402 opens the paywall.
+ * The active game tag rides to the backend as the description's preference.
+ * The parent owns `asked` (explicit submit only — the model costs money).
  */
-import React, { useEffect } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { ArrowRight, Lock, MoonStar, RotateCcw, Sparkles } from "lucide-react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, Easing, Pressable, Text, View } from "react-native";
+import {
+  ArrowRight,
+  Lock,
+  MoonStar,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react-native";
 import {
   useAiSearch,
   useAiSearchLimits,
@@ -36,11 +42,120 @@ const GAME_LABELS: Record<string, string> = {
   digimon: "Digimon",
 };
 
+/** Tappable example descriptions, tuned to the active game tag. */
+const SUGGESTIONS: Record<string, string[]> = {
+  all: [
+    "red lizard with fire on its tail",
+    "white dragon with blue eyes",
+    "a wizard that copies spells",
+    "yellow mouse with red cheeks",
+  ],
+  pokemon: [
+    "blue turtle with water cannons",
+    "the crying ghost from the first set",
+    "yellow mouse with red cheeks",
+    "sleeping pink balloon that sings",
+  ],
+  magic: [
+    "a wizard that copies spells",
+    "angel with three pairs of wings",
+    "a black lotus flower artifact",
+    "goblin that throws dynamite",
+  ],
+  yugioh: [
+    "white dragon with blue eyes",
+    "dark wizard in purple armor",
+    "a golden egyptian bird god",
+    "a jar that destroys everything",
+  ],
+  onepiece: [
+    "rubber pirate with a straw hat",
+    "swordsman with three swords",
+    "a cook who only kicks",
+  ],
+  digimon: [
+    "orange dinosaur that breathes fire",
+    "angel digimon with eight wings",
+    "a small yellow reptile rookie",
+  ],
+};
+
+/** Reveal text a few characters per tick — the "typing out" effect. */
+function useTypewriter(text: string | null | undefined, cps = 3) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    setCount(0);
+    if (!text) return;
+    const id = setInterval(() => {
+      setCount((c) => (c >= text.length ? c : c + cps));
+    }, 24);
+    return () => clearInterval(id);
+  }, [text, cps]);
+  const shown = text ? text.slice(0, count) : "";
+  return { shown, done: !text || count >= text.length };
+}
+
+/** Three staggered bouncing dots — the classic "is typing" indicator. */
+function TypingDots({ color }: { color: string }) {
+  const a = useRef(new Animated.Value(0)).current;
+  const b = useRef(new Animated.Value(0)).current;
+  const c = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const bounce = (v: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(v, {
+            toValue: 1,
+            duration: 320,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(v, {
+            toValue: 0,
+            duration: 320,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.delay(280 - delay),
+        ]),
+      );
+    const loops = [bounce(a, 0), bounce(b, 140), bounce(c, 280)];
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [a, b, c]);
+  return (
+    <View style={{ flexDirection: "row", gap: 4, paddingVertical: 6 }}>
+      {[a, b, c].map((v, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: 999,
+            backgroundColor: color,
+            opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }),
+            transform: [
+              {
+                translateY: v.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -3],
+                }),
+              },
+            ],
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 export function AiModePanel({
   query,
   game,
   asked,
   onAsk,
+  onPickSuggestion,
   onPickCandidate,
 }: {
   query: string;
@@ -49,11 +164,13 @@ export function AiModePanel({
   /** Parent-owned: true once the user submitted the description. */
   asked: boolean;
   onAsk: () => void;
+  /** Tap a suggested description → fill the search bar and ask. */
+  onPickSuggestion?: (text: string) => void;
   /** Tap a candidate chip → run a normal search for that exact name. */
   onPickCandidate?: (name: string) => void;
 }) {
   const p = useThemedPalette();
-  const { allowed, locked, requirePro } = useProFeature("ai_search");
+  const { locked, allowed, requirePro } = useProFeature("ai_search");
   const { queryMaxChars, enabled: serviceUp } = useAiSearchLimits();
   const ai = useAiSearch(query, asked && allowed && serviceUp, game);
 
@@ -69,14 +186,14 @@ export function AiModePanel({
   const ready = query.trim().length >= 3;
   const answer = asked && allowed ? ai.data : undefined;
   const showBubble = Boolean(answer?.message && (answer?.results.length ?? 0) > 0);
-  // Model down/unconfigured → the backend answered with plain name matches
-  // (source:"fallback", no message): still show the cards, honestly labeled.
+  // Model resting mid-session → the backend answered with plain name matches.
   const fallbackResults =
     answer && !answer.message && answer.results.length > 0
       ? answer.results
       : null;
   const unreachable =
     ai.isError && !(ai.error instanceof ApiError && ai.error.status === 402);
+  const typed = useTypewriter(showBubble ? answer?.message : null);
 
   // ── Loupe AI is resting (quota / provider outage — backend says so) ──
   if (!serviceUp) {
@@ -156,15 +273,15 @@ export function AiModePanel({
           onPress={() => requirePro("ai_search")}
           accessibilityRole="button"
           accessibilityLabel="Unlock AI search with Loupe Pro"
-          style={({ pressed }) => ({
+          style={{
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
             paddingVertical: 13,
             borderRadius: 14,
-            backgroundColor: withAlpha(p.accent.mint, pressed ? 0.9 : 1),
-          })}
+            backgroundColor: p.accent.mint,
+          }}
         >
           <Lock size={14} color="#04150c" />
           <Text style={{ color: "#04150c", fontSize: 14, fontWeight: "800" }}>
@@ -178,11 +295,12 @@ export function AiModePanel({
     );
   }
 
-  // ── Idle — the hero ask state ──
-  if (!asked || !allowed) {
+  // ── Idle — hero + tappable suggestions ──
+  if (!asked) {
+    const suggestions = SUGGESTIONS[game && game !== "all" ? game : "all"] ?? [];
     return (
-      <View style={{ gap: 14, paddingTop: 8 }}>
-        <View style={{ alignItems: "center", gap: 8, paddingVertical: 18 }}>
+      <View style={{ gap: 12, paddingTop: 8 }}>
+        <View style={{ alignItems: "center", gap: 8, paddingVertical: 10 }}>
           <View
             style={{
               width: 44,
@@ -204,18 +322,6 @@ export function AiModePanel({
             }}
           >
             Describe the card. Loupe finds it.
-          </Text>
-          <Text
-            style={{
-              color: p.ink.muted,
-              fontSize: 12,
-              textAlign: "center",
-              lineHeight: 18,
-              maxWidth: 280,
-            }}
-          >
-            “red lizard with fire on its tail” · “blue turtle with water
-            cannons” · “the crying ghost from the first set”
           </Text>
           {gameLabel ? (
             <View
@@ -239,34 +345,83 @@ export function AiModePanel({
           ) : null}
         </View>
 
-        <Pressable
-          onPress={onAsk}
-          disabled={!ready}
-          accessibilityRole="button"
-          accessibilityLabel="Ask Loupe AI"
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            paddingVertical: 13,
-            borderRadius: 14,
-            backgroundColor: ready
-              ? withAlpha(p.accent.mint, pressed ? 0.9 : 1)
-              : withAlpha(p.accent.mint, 0.18),
-          })}
+        {/* Suggested descriptions — one tap fills the bar and asks. */}
+        <View
+          style={{
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: withAlpha(p.accent.mint, 0.25),
+            backgroundColor: withAlpha(p.accent.mint, 0.04),
+            overflow: "hidden",
+          }}
         >
           <Text
             style={{
-              color: ready ? "#04150c" : p.accent.mint,
-              fontSize: 14,
+              color: p.ink.dim,
+              fontSize: 10,
               fontWeight: "800",
+              letterSpacing: 0.8,
+              textTransform: "uppercase",
+              paddingHorizontal: 14,
+              paddingTop: 12,
+              paddingBottom: 4,
             }}
           >
-            {ready ? "Ask Loupe AI" : "Type a description above"}
+            Try asking
           </Text>
-          {ready ? <ArrowRight size={16} color="#04150c" /> : null}
-        </Pressable>
+          {suggestions.map((text, i) => (
+            <Pressable
+              key={text}
+              onPress={() => onPickSuggestion?.(text)}
+              accessibilityRole="button"
+              accessibilityLabel={`Ask Loupe AI: ${text}`}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                borderTopWidth: i > 0 ? 1 : 0,
+                borderTopColor: withAlpha(p.accent.mint, 0.12),
+              }}
+            >
+              <Sparkles size={12} color={p.accent.mint} />
+              <Text
+                style={{
+                  flex: 1,
+                  color: p.ink.default,
+                  fontSize: 13,
+                  fontWeight: "600",
+                }}
+              >
+                “{text}”
+              </Text>
+              <ArrowRight size={13} color={p.ink.dim} />
+            </Pressable>
+          ))}
+        </View>
+
+        {ready ? (
+          <Pressable
+            onPress={onAsk}
+            accessibilityRole="button"
+            accessibilityLabel="Ask Loupe AI"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              paddingVertical: 13,
+              borderRadius: 14,
+              backgroundColor: p.accent.mint,
+            }}
+          >
+            <Text style={{ color: "#04150c", fontSize: 14, fontWeight: "800" }}>
+              Ask Loupe AI
+            </Text>
+            <ArrowRight size={16} color="#04150c" />
+          </Pressable>
+        ) : null}
         <Text style={{ color: p.ink.dim, fontSize: 10, textAlign: "center" }}>
           {query.length}/{queryMaxChars} · Loupe Pro
         </Text>
@@ -274,111 +429,53 @@ export function AiModePanel({
     );
   }
 
-  // ── Thinking ──
-  if (ai.isLoading) {
-    return (
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 10,
-          padding: 16,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: withAlpha(p.accent.mint, 0.3),
-          backgroundColor: withAlpha(p.accent.mint, 0.06),
-        }}
-      >
-        <ActivityIndicator size="small" color={p.accent.mint} />
-        <Text style={{ flex: 1, color: p.ink.muted, fontSize: 12, fontWeight: "600" }}>
-          Loupe AI is thinking about “{query.trim()}”…
-        </Text>
-      </View>
-    );
-  }
-
-  // ── Loupe AI unreachable (network / an app newer than the backend) ──
-  if (unreachable) {
-    return (
-      <View style={{ alignItems: "center", gap: 8, paddingVertical: 20 }}>
-        <Text style={{ color: p.ink.default, fontSize: 14, fontWeight: "700" }}>
-          Loupe AI is unreachable right now
-        </Text>
-        <Text style={{ color: p.ink.muted, fontSize: 12, textAlign: "center" }}>
-          Check your connection and try again in a moment.
-        </Text>
-        <Pressable onPress={() => void ai.refetch()} hitSlop={8}>
-          <Text style={{ color: p.accent.mint, fontSize: 12, fontWeight: "800" }}>
-            Try again
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  // ── Model unavailable → honest plain matches (source: "fallback") ──
-  if (fallbackResults) {
-    return (
-      <View style={{ gap: 10 }}>
-        <Text style={{ color: p.ink.muted, fontSize: 12 }}>
-          Loupe AI is resting — here are the closest name matches instead.
-        </Text>
-        <View>
-          {fallbackResults.slice(0, 8).map((card, i) => (
-            <SearchResultRow key={card.id} card={card} bordered={i > 0} />
-          ))}
-        </View>
-      </View>
-    );
-  }
-
-  // ── No usable answer ──
-  if (!showBubble || !answer) {
-    return (
-      <View style={{ alignItems: "center", gap: 8, paddingVertical: 20 }}>
-        <Text style={{ color: p.ink.default, fontSize: 14, fontWeight: "700" }}>
-          Couldn't pin that one down
-        </Text>
-        <Text style={{ color: p.ink.muted, fontSize: 12, textAlign: "center" }}>
-          Add a couple more details — colours, creatures, attacks — and ask
-          again.
-        </Text>
-        <Pressable onPress={() => void ai.refetch()} hitSlop={8}>
-          <Text style={{ color: p.accent.mint, fontSize: 12, fontWeight: "800" }}>
-            Try again
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  // ── The answer ──
+  // ── The conversation ──
   return (
-    <View
-      style={{
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: withAlpha(p.accent.mint, 0.3),
-        backgroundColor: withAlpha(p.accent.mint, 0.05),
-        padding: 14,
-        gap: 10,
-      }}
-    >
-      {/* The chatbot bubble */}
-      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+    <View style={{ gap: 10 }}>
+      {/* Your message — sent bubble, right-aligned. */}
+      <View style={{ alignItems: "flex-end" }}>
         <View
           style={{
-            width: 30,
-            height: 30,
+            maxWidth: "85%",
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            borderRadius: 18,
+            borderBottomRightRadius: 6,
+            backgroundColor: p.accent.mint,
+          }}
+        >
+          <Text style={{ color: "#04150c", fontSize: 14, fontWeight: "600" }}>
+            {query.trim()}
+          </Text>
+        </View>
+      </View>
+
+      {/* Loupe AI's bubble — typing dots, then the reply types out. */}
+      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+        <View
+          style={{
+            width: 28,
+            height: 28,
             borderRadius: 999,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: withAlpha(p.accent.mint, 0.16),
           }}
         >
-          <Sparkles size={15} color={p.accent.mint} />
+          <Sparkles size={14} color={p.accent.mint} />
         </View>
-        <View style={{ flex: 1, gap: 4 }}>
+        <View
+          style={{
+            flexShrink: 1,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            borderRadius: 18,
+            borderBottomLeftRadius: 6,
+            borderWidth: 1,
+            borderColor: withAlpha(p.accent.mint, 0.25),
+            backgroundColor: withAlpha(p.accent.mint, 0.05),
+          }}
+        >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Text
               style={{
@@ -396,101 +493,174 @@ export function AiModePanel({
               </Text>
             ) : null}
           </View>
-          {/* Backend-clamped (MESSAGE_MAX_CHARS) — never an essay. */}
-          <Text
-            style={{
-              color: p.ink.default,
-              fontSize: 14,
-              lineHeight: 20,
-              fontWeight: "500",
-            }}
-          >
-            {answer.message}
-          </Text>
+          {ai.isLoading ? (
+            <TypingDots color={p.accent.mint} />
+          ) : unreachable ? (
+            <Text
+              style={{
+                color: p.ink.default,
+                fontSize: 14,
+                lineHeight: 20,
+                marginTop: 2,
+              }}
+            >
+              I can't reach the catalog right now — check your connection and{" "}
+              <Text
+                onPress={() => void ai.refetch()}
+                style={{ color: p.accent.mint, fontWeight: "800" }}
+              >
+                try again
+              </Text>
+              .
+            </Text>
+          ) : fallbackResults ? (
+            <Text
+              style={{
+                color: p.ink.default,
+                fontSize: 14,
+                lineHeight: 20,
+                marginTop: 2,
+              }}
+            >
+              I'm resting right now — here are the closest name matches instead.
+            </Text>
+          ) : showBubble && answer ? (
+            <Text
+              style={{
+                color: p.ink.default,
+                fontSize: 14,
+                lineHeight: 20,
+                marginTop: 2,
+                fontWeight: "500",
+              }}
+            >
+              {typed.shown}
+              {!typed.done ? (
+                <Text style={{ color: p.accent.mint }}>▍</Text>
+              ) : null}
+            </Text>
+          ) : (
+            <Text
+              style={{
+                color: p.ink.default,
+                fontSize: 14,
+                lineHeight: 20,
+                marginTop: 2,
+              }}
+            >
+              I couldn't pin that one down — add a couple more details (colours,
+              creatures, attacks) and{" "}
+              <Text
+                onPress={() => void ai.refetch()}
+                style={{ color: p.accent.mint, fontWeight: "800" }}
+              >
+                try again
+              </Text>
+              .
+            </Text>
+          )}
         </View>
       </View>
 
-      {/* Its guesses, as tappable name chips */}
-      {answer.candidates.length > 0 ? (
-        <View
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <Text style={{ color: p.ink.dim, fontSize: 11, fontWeight: "700" }}>
-            Could be:
-          </Text>
-          {answer.candidates.map((name) => (
-            <Pressable
-              key={name}
-              onPress={() => onPickCandidate?.(name)}
-              disabled={!onPickCandidate}
-              accessibilityRole="button"
-              accessibilityLabel={`Search for ${name}`}
-              style={({ pressed }) => ({
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: withAlpha(p.accent.mint, 0.4),
-                backgroundColor: withAlpha(p.accent.mint, pressed ? 0.16 : 0.08),
-              })}
+      {/* The reveal — chips + real cards once the reply finishes typing. */}
+      {showBubble && answer && typed.done ? (
+        <View style={{ gap: 10, marginTop: 2 }}>
+          {answer.candidates.length > 0 ? (
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 6,
+                paddingLeft: 36,
+              }}
             >
+              <Text style={{ color: p.ink.dim, fontSize: 11, fontWeight: "700" }}>
+                Could be:
+              </Text>
+              {answer.candidates.map((name) => (
+                <Pressable
+                  key={name}
+                  onPress={() => onPickCandidate?.(name)}
+                  disabled={!onPickCandidate}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Search for ${name}`}
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: withAlpha(p.accent.mint, 0.4),
+                    backgroundColor: withAlpha(p.accent.mint, 0.08),
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: p.accent.mint,
+                      fontSize: 11,
+                      fontWeight: "800",
+                    }}
+                  >
+                    {name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+
+          <View>
+            {answer.results.slice(0, 8).map((card, i) => (
+              <SearchResultRow key={card.id} card={card} bordered={i > 0} />
+            ))}
+          </View>
+          {answer.results.length > 8 ? (
+            <Text style={{ color: p.ink.dim, fontSize: 11 }}>
+              Showing 8 of {answer.results.length} — tap a name above to see
+              every printing.
+            </Text>
+          ) : null}
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+              paddingTop: 8,
+              borderTopWidth: 1,
+              borderTopColor: withAlpha(p.accent.mint, 0.15),
+            }}
+          >
+            <Text style={{ flex: 1, color: p.ink.dim, fontSize: 10 }}>
+              AI can misread a description — cards and prices always come from
+              the live catalog.
+            </Text>
+            <Pressable
+              onPress={() => void ai.refetch()}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Ask Loupe AI again"
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            >
+              <RotateCcw size={11} color={p.accent.mint} />
               <Text
                 style={{ color: p.accent.mint, fontSize: 11, fontWeight: "800" }}
               >
-                {name}
+                Try again
               </Text>
             </Pressable>
-          ))}
+          </View>
         </View>
       ) : null}
 
-      {/* The real cards it found */}
-      <View>
-        {answer.results.slice(0, 8).map((card, i) => (
-          <SearchResultRow key={card.id} card={card} bordered={i > 0} />
-        ))}
-      </View>
-      {answer.results.length > 8 ? (
-        <Text style={{ color: p.ink.dim, fontSize: 11 }}>
-          Showing 8 of {answer.results.length} — tap a name above to see every
-          printing.
-        </Text>
+      {/* Fallback name matches (model resting) render right away. */}
+      {fallbackResults ? (
+        <View>
+          {fallbackResults.slice(0, 8).map((card, i) => (
+            <SearchResultRow key={card.id} card={card} bordered={i > 0} />
+          ))}
+        </View>
       ) : null}
-
-      {/* Footer: honesty line + retry (the Notion AI pattern) */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 10,
-          paddingTop: 8,
-          borderTopWidth: 1,
-          borderTopColor: withAlpha(p.accent.mint, 0.15),
-        }}
-      >
-        <Text style={{ flex: 1, color: p.ink.dim, fontSize: 10 }}>
-          AI can misread a description — cards and prices always come from the
-          live catalog.
-        </Text>
-        <Pressable
-          onPress={() => void ai.refetch()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Ask Loupe AI again"
-          style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-        >
-          <RotateCcw size={11} color={p.accent.mint} />
-          <Text style={{ color: p.accent.mint, fontSize: 11, fontWeight: "800" }}>
-            Try again
-          </Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
