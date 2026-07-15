@@ -616,69 +616,24 @@ export function AiModePanel({
             </View>
           ) : null}
 
-          {/* The catch — a proper card, not rows floating on the page. */}
-          <View
-            style={{
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: p.line.default,
-              backgroundColor: p.bg.elevated,
-              overflow: "hidden",
-            }}
-          >
+          {/* Results — the EXACT same look as normal search results: a
+              count line, then plain rows. No box. */}
+          <View>
             <View
               style={{
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "space-between",
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-                borderBottomWidth: 1,
-                borderBottomColor: p.line.default,
+                marginBottom: 2,
               }}
             >
-              <Text
-                style={{
-                  color: p.ink.dim,
-                  fontSize: 10,
-                  fontWeight: "800",
-                  letterSpacing: 0.8,
-                  textTransform: "uppercase",
-                }}
-              >
-                From the live catalog
-              </Text>
               <Text style={{ color: p.ink.dim, fontSize: 11, fontWeight: "700" }}>
                 {answer.results.length > 8
-                  ? `8 of ${answer.results.length}`
+                  ? `Showing 8 of ${answer.results.length}`
                   : `${answer.results.length} ${
                       answer.results.length === 1 ? "match" : "matches"
                     }`}
                 {" · best first"}
-              </Text>
-            </View>
-            <View style={{ paddingHorizontal: 12 }}>
-              {answer.results.slice(0, 8).map((card, i) => (
-                <SearchResultRow key={card.id} card={card} bordered={i > 0} />
-              ))}
-            </View>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 10,
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-                borderTopWidth: 1,
-                borderTopColor: p.line.default,
-              }}
-            >
-              <Text style={{ flex: 1, color: p.ink.dim, fontSize: 10 }}>
-                {answer.results.length > 8
-                  ? "Tap a name above to see every printing. "
-                  : ""}
-                AI can misread — cards and prices come from the live catalog.
               </Text>
               <Pressable
                 onPress={() => void ai.refetch()}
@@ -699,6 +654,12 @@ export function AiModePanel({
                 </Text>
               </Pressable>
             </View>
+            {answer.results.slice(0, 8).map((card, i) => (
+              <SearchResultRow key={card.id} card={card} bordered={i > 0} />
+            ))}
+            <Text style={{ color: p.ink.dim, fontSize: 10, marginTop: 8 }}>
+              AI can misread — cards and prices come from the live catalog.
+            </Text>
           </View>
         </View>
       ) : null}
