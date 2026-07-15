@@ -95,7 +95,10 @@ export function MarketplaceCarousel({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ gap: TILE_GAP, paddingBottom: 4, paddingRight: 4 }}
+      // Bleed past the card screen's 20dp padding so tiles swipe out
+      // under the screen edge.
+      style={{ marginHorizontal: -20 }}
+      contentContainerStyle={{ gap: TILE_GAP, paddingBottom: 4, paddingHorizontal: 20 }}
       decelerationRate="fast"
     >
       {tiles.map((tile) => {

@@ -43,6 +43,7 @@ import { sealedToCardSearchResult } from "@/presentation/features/search/sealedA
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
 import { AiModePanel } from "@/presentation/features/search/AiModePanel";
+import { QuickAddBanner } from "@/presentation/components/QuickAddBanner";
 import { AiModePill } from "@/presentation/features/search/AiModePill";
 import { SlashGhost } from "@/presentation/features/search/SlashGhost";
 import { useAiSearchLimits } from "@/application/queries/catalog/useAiSearch";
@@ -216,6 +217,8 @@ export default function SearchScreen() {
   // paywall instead of the mode.
   const [aiMode, setAiMode] = useState(false);
   const [aiAsked, setAiAsked] = useState(false);
+  // "Thanks for the feedback" toast after a thumbs tap on an AI answer.
+  const [aiThanks, setAiThanks] = useState(false);
   // The pill animates itself (AiModePill types its label out on mount).
   const enterAiMode = React.useCallback(() => {
     setAiMode(true);
@@ -589,7 +592,10 @@ export default function SearchScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8, paddingTop: 12, paddingRight: 8 }}
+          // Bleed past the px-5 header so chips swipe out under the
+          // screen edge; first chip still rests at the 20dp gutter.
+          style={{ marginHorizontal: -20 }}
+          contentContainerStyle={{ gap: 8, paddingTop: 12, paddingHorizontal: 20 }}
         >
           {tcgChips.map((c) => {
             const active = selectedTcg === c.key;
@@ -646,7 +652,9 @@ export default function SearchScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8, paddingTop: 12, paddingRight: 8 }}
+          // Same edge bleed as the TCG chip rail above.
+          style={{ marginHorizontal: -20 }}
+          contentContainerStyle={{ gap: 8, paddingTop: 12, paddingHorizontal: 20 }}
         >
           {QUICK_FILTERS.map((f) => {
             const active = quickfilter === f.key;
@@ -701,6 +709,7 @@ export default function SearchScreen() {
             asked={aiAsked}
             onAsk={() => setAiAsked(true)}
             onAnswered={pushRecentAi}
+            onFeedbackSent={() => setAiThanks(true)}
             onPickSuggestion={(text) => {
               // One tap: the example fills the bar and asks immediately.
               setQuery(text);
@@ -985,6 +994,12 @@ export default function SearchScreen() {
           </View>
         )}
       </ScrollView>
+      <QuickAddBanner
+        visible={aiThanks}
+        title="Thanks for the feedback"
+        subtitle="It makes Loupe AI sharper."
+        onHide={() => setAiThanks(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -1055,7 +1070,10 @@ function RecentSearchStrip({
         horizontal
         showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ gap: 8, paddingTop: 8, paddingRight: 8 }}
+        // Bleed past the screen's 20dp padding so chips swipe out
+        // under the screen edge.
+        style={{ marginHorizontal: -20 }}
+        contentContainerStyle={{ gap: 8, paddingTop: 8, paddingHorizontal: 20 }}
       >
         {aiItems.map((q) => (
           <View

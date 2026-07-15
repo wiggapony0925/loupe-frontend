@@ -908,8 +908,15 @@ function VaultActiveChips() {
   }
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingRight: 8 }}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      // Bleed past the PAGE_GUTTER (20) so chips swipe out under the
+      // screen edge; first chip still rests at the gutter.
+      style={{ marginHorizontal: -20 }}
+      contentContainerStyle={{ paddingHorizontal: 20 }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         {chips.map((c) => {
           const tint = p.accent.mint;
           return (

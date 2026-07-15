@@ -24,8 +24,11 @@ import {
   MoonStar,
   RotateCcw,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
 } from "lucide-react-native";
 import {
+  useAiFeedback,
   useAiSearch,
   useAiSearchLimits,
 } from "@/application/queries/catalog/useAiSearch";
@@ -156,6 +159,7 @@ export function AiModePanel({
   asked,
   onAsk,
   onAnswered,
+  onFeedbackSent,
   onPickSuggestion,
   onPickCandidate,
 }: {
@@ -167,6 +171,8 @@ export function AiModePanel({
   onAsk: () => void;
   /** Fires once when Loupe AI successfully answers (recents recording). */
   onAnswered?: (q: string) => void;
+  /** Fires when the user taps a thumb — the host shows the thank-you banner. */
+  onFeedbackSent?: () => void;
   /** Tap a suggested description → fill the search bar and ask. */
   onPickSuggestion?: (text: string) => void;
   /** Tap a candidate chip → run a normal search for that exact name. */
@@ -176,6 +182,8 @@ export function AiModePanel({
   const { locked, allowed, requirePro } = useProFeature("ai_search");
   const { queryMaxChars, enabled: serviceUp } = useAiSearchLimits();
   const ai = useAiSearch(query, asked && allowed && serviceUp, game);
+  const feedback = useAiFeedback();
+  const [verdict, setVerdict] = useState<"up" | "down" | null>(null);
 
   // Server-side gate is the source of truth — a 402 opens the paywall even
   // if the local entitlement snapshot was stale.
@@ -202,6 +210,16 @@ export function AiModePanel({
   useEffect(() => {
     if (showBubble && answer?.source === "ai") onAnswered?.(query.trim());
   }, [showBubble, answer?.source, query, onAnswered]);
+
+  // A new exchange gets fresh thumbs.
+  useEffect(() => setVerdict(null), [answer?.askId]);
+
+  const rate = (v: "up" | "down") => {
+    if (!answer?.askId) return;
+    setVerdict(v);
+    feedback.mutate({ askId: answer.askId, verdict: v });
+    onFeedbackSent?.();
+  };
 
   // ── Loupe AI is resting (quota / provider outage — backend says so) ──
   if (!serviceUp) {
@@ -657,9 +675,76 @@ export function AiModePanel({
             {answer.results.slice(0, 8).map((card, i) => (
               <SearchResultRow key={card.id} card={card} bordered={i > 0} />
             ))}
-            <Text style={{ color: p.ink.dim, fontSize: 10, marginTop: 8 }}>
-              AI can misread — cards and prices come from the live catalog.
-            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginTop: 8,
+              }}
+            >
+              <Text style={{ color: p.ink.dim, fontSize: 10, flex: 1 }}>
+                AI can misread — cards and prices come from the live catalog.
+              </Text>
+              {answer.askId ? (
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  <Pressable
+                    onPress={() => rate("up")}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Loupe AI got it right"
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 999,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor:
+                        verdict === "up"
+                          ? withAlpha(p.accent.mint, 0.55)
+                          : p.line.default,
+                      backgroundColor:
+                        verdict === "up"
+                          ? withAlpha(p.accent.mint, 0.14)
+                          : "transparent",
+                    }}
+                  >
+                    <ThumbsUp
+                      size={13}
+                      color={verdict === "up" ? p.accent.mint : p.ink.dim}
+                    />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => rate("down")}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Loupe AI missed"
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 999,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor:
+                        verdict === "down"
+                          ? withAlpha(p.accent.rose, 0.55)
+                          : p.line.default,
+                      backgroundColor:
+                        verdict === "down"
+                          ? withAlpha(p.accent.rose, 0.14)
+                          : "transparent",
+                    }}
+                  >
+                    <ThumbsDown
+                      size={13}
+                      color={verdict === "down" ? p.accent.rose : p.ink.dim}
+                    />
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
       ) : null}

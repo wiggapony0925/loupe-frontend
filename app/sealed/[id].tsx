@@ -203,6 +203,9 @@ export default function SealedDetailScreen() {
                 defaultRange="ALL"
                 ranges={["3M", "6M", "1Y", "ALL"]}
                 format={usd}
+                // Screen pads 20 — bleed the plot to the device edges
+                // (matches the card-detail + Analytics charts).
+                bleedX={20}
               />
             </View>
           ) : (

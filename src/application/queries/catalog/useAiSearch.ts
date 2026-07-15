@@ -7,7 +7,7 @@
  * the same thing is instant. A 402 surfaces via `error` — the caller opens
  * the paywall with the `ai_search` story.
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type { AiSearchResponse } from "@/infrastructure/http";
@@ -56,5 +56,17 @@ export function useAiSearch(q: string, asked: boolean, game?: string) {
     enabled: asked && trimmed.length >= 3,
     staleTime: 30 * 60_000,
     retry: false, // a 402 must open the paywall, not retry
+  });
+}
+
+/** Thumbs up/down on an AI answer — fire-and-forget; the backend records it
+ *  for the /admin/ai accuracy view. Tapping the other thumb overwrites. */
+export function useAiFeedback() {
+  return useMutation({
+    mutationFn: ({ askId, verdict }: { askId: string; verdict: "up" | "down" }) =>
+      apiFetch<{ ok: boolean }>(ENDPOINTS.publicCatalog.searchAiFeedback, {
+        method: "POST",
+        json: { askId, verdict },
+      }),
   });
 }

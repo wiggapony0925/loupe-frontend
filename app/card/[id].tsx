@@ -599,7 +599,10 @@ export default function CardDetailScreen() {
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+                      // Bleed past the screen's 20dp padding so the chips
+                      // swipe out under the screen edge (matches the chart).
+                      style={{ marginHorizontal: -20 }}
+                      contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}
                     >
                       <Text
                         style={{

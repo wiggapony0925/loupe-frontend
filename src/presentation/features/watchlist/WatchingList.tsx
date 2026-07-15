@@ -166,7 +166,11 @@ function PinnedCardsRail({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 10, paddingHorizontal: 6 }}
+        // Bleed past the host FlatList's 14dp padding so cards swipe
+        // out under the screen edge; first card keeps the 20dp gutter
+        // (14 list + 6 rail) it had before.
+        style={{ marginHorizontal: -14 }}
+        contentContainerStyle={{ gap: 10, paddingHorizontal: 20 }}
       >
         {items.map((item) => (
           <Pressable

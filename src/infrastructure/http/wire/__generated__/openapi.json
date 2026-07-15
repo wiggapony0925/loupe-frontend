@@ -874,6 +874,30 @@
         "title": "AdminUserRead",
         "type": "object"
       },
+      "AiFeedbackIn": {
+        "description": "Thumbs verdict for one AI answer, from the buttons under the bubble.",
+        "properties": {
+          "askId": {
+            "format": "uuid",
+            "title": "Askid",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "askId",
+          "verdict"
+        ],
+        "title": "AiFeedbackIn",
+        "type": "object"
+      },
       "AiToggle": {
         "properties": {
           "enabled": {
@@ -10591,6 +10615,235 @@
         ]
       }
     },
+    "/v1/admin/ai/search/logs": {
+      "get": {
+        "description": "Every ask the chatbot has answered, newest first.",
+        "operationId": "logs_v1_admin_ai_search_logs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "feedback",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(up|down|rated)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Feedback"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(ai|fallback)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "game",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(pokemon|magic|yugioh|onepiece|digimon|all)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Game"
+            }
+          },
+          {
+            "in": "query",
+            "name": "userId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Userid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Pagesize",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Logs V1 Admin Ai Search Logs Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ask history (filterable)",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/v1/admin/ai/search/logs/{log_id}": {
+      "get": {
+        "description": "Drill into one exchange: the query, the model's answer, the verdict,\nand the asker's other recent asks.",
+        "operationId": "log_detail_v1_admin_ai_search_logs__log_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "log_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Log Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Log Detail V1 Admin Ai Search Logs  Log Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One ask in full + its conversation",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
+    "/v1/admin/ai/search/overview": {
+      "get": {
+        "description": "24h volume/cache/latency, 7d thumbs satisfaction, and the\nconversations active in the last 30 minutes grouped by user.",
+        "operationId": "overview_v1_admin_ai_search_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Overview V1 Admin Ai Search Overview Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Loupe AI headline stats + open conversations",
+        "tags": [
+          "admin-ai"
+        ]
+      }
+    },
     "/v1/admin/applications": {
       "get": {
         "operationId": "list_applications_v1_admin_applications_get",
@@ -16155,6 +16408,55 @@
           }
         ],
         "summary": "AI 'describe it' search (Loupe Pro)",
+        "tags": [
+          "cards"
+        ]
+      }
+    },
+    "/v1/cards/search/ai/feedback": {
+      "post": {
+        "description": "Attach the asker's verdict to their own ask. Idempotent \u2014 tapping the\nother thumb overwrites. The verdicts power the /admin/ai accuracy view.",
+        "operationId": "search_ai_feedback_v1_cards_search_ai_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiFeedbackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Search Ai Feedback V1 Cards Search Ai Feedback Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rate an AI search answer (thumbs up/down)",
         "tags": [
           "cards"
         ]

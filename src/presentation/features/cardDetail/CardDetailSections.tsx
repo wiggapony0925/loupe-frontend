@@ -60,7 +60,10 @@ export function MarketplaceChipsRow({ cardId }: { cardId: string }) {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+          // Bleed past the card screen's 20dp padding so tiles swipe
+          // out under the screen edge.
+          style={{ marginHorizontal: -20 }}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}
         >
           {rows.map((r) => {
             const href = r.url ?? r.search_url;
@@ -160,7 +163,10 @@ export function GradeSummaryPills({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+        // Bleed past the card screen's 20dp padding so the grade tiles
+        // swipe out under the screen edge.
+        style={{ marginHorizontal: -20 }}
+        contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}
       >
         {rows.map((r) => {
           const isActive = value === r.grade;

@@ -39,6 +39,7 @@ export const ENDPOINTS = {
     /** AI "describe it" search (`?q&limit`) — Loupe Pro; auth required.
      *  402 (code=ai_search_pro) → open the paywall. */
     searchAi: `${V1}/cards/search/ai`,
+    searchAiFeedback: `${V1}/cards/search/ai/feedback`,
     /** Backend-owned discovery carousels (`?game=<tcg>`) — the curated shelf
      *  pool (upgraded to AI when configured) that BOTH web and mobile render,
      *  so the marketplace carousels stay in sync. Public, no auth. */

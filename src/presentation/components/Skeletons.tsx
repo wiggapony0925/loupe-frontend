@@ -449,7 +449,10 @@ export function SkeletonListingsCarousel({ count = 4 }: { count?: number }) {
       horizontal
       showsHorizontalScrollIndicator={false}
       scrollEnabled={false}
-      contentContainerStyle={{ gap: 10, paddingBottom: 4 }}
+      // Match the loaded carousels' edge bleed (both consumers sit on
+      // 20dp-padded card-detail screens) so tiles don't jump on load.
+      style={{ marginHorizontal: -20 }}
+      contentContainerStyle={{ gap: 10, paddingBottom: 4, paddingHorizontal: 20 }}
     >
       {Array.from({ length: count }).map((_, i) => (
         <View

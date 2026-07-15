@@ -46,6 +46,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/ai/search/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ask history (filterable)
+         * @description Every ask the chatbot has answered, newest first.
+         */
+        get: operations["logs_v1_admin_ai_search_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/ai/search/logs/{log_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One ask in full + its conversation
+         * @description Drill into one exchange: the query, the model's answer, the verdict,
+         *     and the asker's other recent asks.
+         */
+        get: operations["log_detail_v1_admin_ai_search_logs__log_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/ai/search/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Loupe AI headline stats + open conversations
+         * @description 24h volume/cache/latency, 7d thumbs satisfaction, and the
+         *     conversations active in the last 30 minutes grouped by user.
+         */
+        get: operations["overview_v1_admin_ai_search_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/applications": {
         parameters: {
             query?: never;
@@ -1986,6 +2048,27 @@ export interface paths {
         get: operations["search_ai_v1_cards_search_ai_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/search/ai/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rate an AI search answer (thumbs up/down)
+         * @description Attach the asker's verdict to their own ask. Idempotent — tapping the
+         *     other thumb overwrites. The verdicts power the /admin/ai accuracy view.
+         */
+        post: operations["search_ai_feedback_v1_cards_search_ai_feedback_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4168,6 +4251,22 @@ export interface components {
              * @default false
              */
             pro_trialing: boolean;
+        };
+        /**
+         * AiFeedbackIn
+         * @description Thumbs verdict for one AI answer, from the buttons under the bubble.
+         */
+        AiFeedbackIn: {
+            /**
+             * Askid
+             * Format: uuid
+             */
+            askId: string;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "up" | "down";
         };
         /** AiToggle */
         AiToggle: {
@@ -8008,6 +8107,100 @@ export interface operations {
             };
         };
     };
+    logs_v1_admin_ai_search_logs_get: {
+        parameters: {
+            query?: {
+                feedback?: string | null;
+                source?: string | null;
+                game?: string | null;
+                userId?: string | null;
+                q?: string | null;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    log_detail_v1_admin_ai_search_logs__log_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                log_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_v1_admin_ai_search_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     list_applications_v1_admin_applications_get: {
         parameters: {
             query?: {
@@ -11507,6 +11700,41 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_ai_feedback_v1_cards_search_ai_feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiFeedbackIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

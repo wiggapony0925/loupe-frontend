@@ -224,7 +224,10 @@ function NearbyListingList({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: spacing.sm + 2, paddingBottom: 4, paddingRight: 4 }}
+        // Bleed past the card screen's 20dp padding so listing tiles
+        // swipe out under the screen edge.
+        style={{ marginHorizontal: -20 }}
+        contentContainerStyle={{ gap: spacing.sm + 2, paddingBottom: 4, paddingHorizontal: 20 }}
         decelerationRate="fast"
         snapToInterval={MARKETPLACE_PHOTO_TILE_WIDTH + spacing.sm + 2}
         snapToAlignment="start"

@@ -212,6 +212,8 @@ export interface AiSearchResponse {
   results: CardSearchResult[];
   total: number;
   source: "ai" | "fallback";
+  /** Flight-recorder id for this exchange — thumbs feedback attaches to it. */
+  askId?: string | null;
 }
 
 export interface PublicSearchResponse {

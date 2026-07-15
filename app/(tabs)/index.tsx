@@ -130,9 +130,12 @@ export default function CommandCenterScreen() {
           <Header />
           {/* Tour ring hugs the CHART, not the whole header block. */}
           <TourTarget id="portfolio">
-            <PortfolioChart 
-              showPsa10Overlay={true} 
-              onScrubStateChange={setIsScrubbing} 
+            <PortfolioChart
+              showPsa10Overlay={true}
+              onScrubStateChange={setIsScrubbing}
+              // Screen pads 20 — bleed the plot to the device edges
+              // (matches the Analytics chart).
+              bleedX={20}
             />
           </TourTarget>
         </View>
