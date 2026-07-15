@@ -11,7 +11,6 @@
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   Keyboard,
   Platform,
   Pressable,
@@ -42,6 +41,8 @@ import { sealedToCardSearchResult } from "@/presentation/features/search/sealedA
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
 import { AiModePanel } from "@/presentation/features/search/AiModePanel";
+import { AiModePill } from "@/presentation/features/search/AiModePill";
+import { SlashCommandCard } from "@/presentation/features/search/SlashCommandCard";
 import { useAiSearchLimits } from "@/application/queries/catalog/useAiSearch";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
 import { ResolvedCarousels } from "@/presentation/features/search/CarouselRail";
@@ -210,23 +211,15 @@ export default function SearchScreen() {
   // paywall instead of the mode.
   const [aiMode, setAiMode] = useState(false);
   const [aiAsked, setAiAsked] = useState(false);
-  const aiPill = React.useRef(new Animated.Value(0)).current;
+  // The pill animates itself (AiModePill types its label out on mount).
   const enterAiMode = React.useCallback(() => {
     setAiMode(true);
     setAiAsked(false);
-    aiPill.setValue(0);
-    Animated.spring(aiPill, {
-      toValue: 1,
-      friction: 6,
-      tension: 140,
-      useNativeDriver: true,
-    }).start();
-  }, [aiPill]);
+  }, []);
   const exitAiMode = React.useCallback(() => {
     setAiMode(false);
     setAiAsked(false);
-    aiPill.setValue(0);
-  }, [aiPill]);
+  }, []);
   const handleQueryChange = (text: string) => {
     setQuery(text);
     if (aiMode) setAiAsked(false); // editing the description resets the ask
@@ -393,44 +386,7 @@ export default function SearchScreen() {
           }}
         >
           {aiMode ? (
-            <Animated.View
-              style={{
-                opacity: aiPill,
-                transform: [
-                  {
-                    scale: aiPill.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.5, 1],
-                    }),
-                  },
-                ],
-              }}
-            >
-              <Pressable
-                onPress={exitAiMode}
-                hitSlop={6}
-                accessibilityRole="button"
-                accessibilityLabel="Exit Loupe AI mode"
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 4,
-                  paddingLeft: 8,
-                  paddingRight: 6,
-                  paddingVertical: 4,
-                  borderRadius: 999,
-                  backgroundColor: p.accent.mint,
-                }}
-              >
-                <SparklesIcon size={11} color="#04150c" />
-                <Text
-                  style={{ color: "#04150c", fontSize: 11, fontWeight: "800" }}
-                >
-                  Loupe AI
-                </Text>
-                <X size={10} color="#04150c" />
-              </Pressable>
-            </Animated.View>
+            <AiModePill onExit={exitAiMode} />
           ) : (
             <SearchIcon size={18} color={p.ink.muted} strokeWidth={2.4} />
           )}
@@ -516,56 +472,7 @@ export default function SearchScreen() {
         {/* Slash command palette (Slack-style): "/" lists the available
             command; tapping autocompletes into the Loupe AI tag. */}
         {slashPanel ? (
-          <Pressable
-            onPress={acceptSlashCommand}
-            accessibilityRole="button"
-            accessibilityLabel="Ask Loupe AI — describe the card in your own words"
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 12,
-              marginTop: 10,
-              paddingHorizontal: 12,
-              paddingVertical: 12,
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: withAlpha(p.accent.mint, 0.4),
-              backgroundColor: withAlpha(p.accent.mint, 0.06),
-            }}
-          >
-            <View
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: withAlpha(p.accent.mint, 0.16),
-              }}
-            >
-              <SparklesIcon size={16} color={p.accent.mint} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-              >
-                <Text
-                  style={{ color: p.accent.mint, fontSize: 13, fontWeight: "800" }}
-                >
-                  /ai
-                </Text>
-                <Text
-                  style={{ color: p.ink.default, fontSize: 13, fontWeight: "700" }}
-                >
-                  Ask Loupe AI
-                </Text>
-              </View>
-              <Text style={{ color: p.ink.dim, fontSize: 11, marginTop: 1 }}>
-                Command · describe the card in your own words
-              </Text>
-            </View>
-            <ChevronRight size={15} color={p.ink.dim} />
-          </Pressable>
+          <SlashCommandCard onAccept={acceptSlashCommand} />
         ) : null}
 
         {/* Recent searches — ONLY while the keyboard is up (input focused)

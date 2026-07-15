@@ -30,14 +30,14 @@ export function useAiSearchLimits(): {
   enabled: boolean;
 } {
   const { data } = useAppConfig();
-  // Tolerant semantics: if the backend serves an aiSearch block at all, the
-  // endpoint exists — treat it as up unless it EXPLICITLY says enabled:false
-  // (quota/outage cooldown). Only a backend with no block (no AI endpoint)
-  // reads as down. Avoids "taking a break" during deploy gaps.
-  const block = data?.aiSearch;
+  // OPTIMISTIC availability: the break state shows ONLY when the backend
+  // explicitly says enabled:false (quota/outage cooldown). While the config
+  // is loading, failed to fetch, or predates the field, the feature stays
+  // usable — a genuinely missing endpoint surfaces as the honest
+  // "unreachable" bubble on an actual ask, not a false "taking a break".
   return {
-    queryMaxChars: block?.queryMaxChars ?? AI_QUERY_MAX_CHARS,
-    enabled: block ? block.enabled !== false : false,
+    queryMaxChars: data?.aiSearch?.queryMaxChars ?? AI_QUERY_MAX_CHARS,
+    enabled: data?.aiSearch?.enabled !== false,
   };
 }
 
