@@ -6615,6 +6615,11 @@
       "PlanFeatures": {
         "description": "Boolean capability gates the UI reads to lock/unlock surfaces.",
         "properties": {
+          "ai_search": {
+            "default": false,
+            "title": "Ai Search",
+            "type": "boolean"
+          },
           "full_history": {
             "title": "Full History",
             "type": "boolean"
@@ -14892,7 +14897,7 @@
     },
     "/v1/app/config": {
       "get": {
-        "description": "Returns `{ minSupportedVersion, forceUpdate, flags, homeRails, discoveryRails }`. `forceUpdate` is server-computed from the optional `clientVersion` query param. `discoveryRails` orders the home-tab discovery carousels (unknown ids are skipped client-side). Clients should call this on cold start and again on resume after >1h, and persist the last response so launch is offline-tolerant.",
+        "description": "Returns `{ minSupportedVersion, forceUpdate, flags, homeRails, discoveryRails, aiSearch }`. `forceUpdate` is server-computed from the optional `clientVersion` query param. `discoveryRails` orders the home-tab discovery carousels (unknown ids are skipped client-side). Clients should call this on cold start and again on resume after >1h, and persist the last response so launch is offline-tolerant.",
         "operationId": "get_app_config_v1_app_config_get",
         "parameters": [
           {
@@ -16067,6 +16072,89 @@
           }
         },
         "summary": "Live card search (public)",
+        "tags": [
+          "cards"
+        ]
+      }
+    },
+    "/v1/cards/search/ai": {
+      "get": {
+        "description": "Describe a card in plain words \u2014 \"red lizard with fire\" \u2014 and get REAL\ncatalog cards back, plus the assistant's one-line ``message`` for the\nchat-bubble UI. The model only maps the description to candidate card\nnames; the results always come from our own catalog (never invented).\n\nLoupe Pro only (402 with ``code=ai_search_pro`` opens the paywall). When\nno model is configured or it errors, degrades to the normal search with\n``source=\"fallback\"`` and a null ``message`` \u2014 the client simply renders\nplain results without the bubble.",
+        "operationId": "search_ai_v1_cards_search_ai_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 3,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The game tag active in the search UI \u2014 biases the answer.",
+            "in": "query",
+            "name": "tcg",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(pokemon|magic|yugioh|onepiece|digimon|all)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The game tag active in the search UI \u2014 biases the answer.",
+              "title": "Tcg"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Search Ai V1 Cards Search Ai Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "AI 'describe it' search (Loupe Pro)",
         "tags": [
           "cards"
         ]
@@ -19885,7 +19973,7 @@
             "required": false,
             "schema": {
               "default": "",
-              "maxLength": 120,
+              "maxLength": 200,
               "title": "Q",
               "type": "string"
             }

@@ -56,6 +56,7 @@ export const queryKeys = {
     resolvedCarousels: (game: TcgOrAll) => ["cards", "carousels-resolved", game] as const,
     railPage: (game: TcgOrAll, railId: string, pageSize: number) =>
       ["cards", "carousel-rail", game, railId, pageSize] as const,
+    aiSearch: (q: string) => ["cards", "ai-search", q] as const,
     market: (id: string) => ["cards", "market", id] as const,
     analytics: (id: string) => ["cards", "analytics", id] as const,
     ownership: (id: string) => ["cards", "ownership", id] as const,

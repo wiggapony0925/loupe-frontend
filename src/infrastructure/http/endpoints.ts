@@ -36,6 +36,9 @@ export const ENDPOINTS = {
      *  provider's own pagination so every printing of a popular name is
      *  reachable — Pikachu 177, Charizard 400+ — with a real `total`. */
     search: `${V1}/public/search`,
+    /** AI "describe it" search (`?q&limit`) — Loupe Pro; auth required.
+     *  402 (code=ai_search_pro) → open the paywall. */
+    searchAi: `${V1}/cards/search/ai`,
     /** Backend-owned discovery carousels (`?game=<tcg>`) — the curated shelf
      *  pool (upgraded to AI when configured) that BOTH web and mobile render,
      *  so the marketplace carousels stay in sync. Public, no auth. */

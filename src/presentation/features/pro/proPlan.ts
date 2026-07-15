@@ -11,6 +11,7 @@ import {
   Infinity as InfinityIcon,
   LineChart,
   ScanLine,
+  Sparkles,
 } from "lucide-react-native";
 
 /** Why the paywall opened — lets the sheet tailor its headline. */
@@ -20,6 +21,7 @@ export type PaywallReason =
   | "statements"
   | "alerts"
   | "analytics"
+  | "ai_search"
   | "generic";
 
 /** Free accounts may track this many cards (mirrors FREE_CARD_LIMIT). */
@@ -36,7 +38,8 @@ export type ProFeatureKey =
   | "scanner_import"
   | "full_history"
   | "unlimited_alerts"
-  | "statements";
+  | "statements"
+  | "ai_search";
 
 export interface ProFeature {
   key: ProFeatureKey;
@@ -78,6 +81,12 @@ export const PRO_FEATURES: ProFeature[] = [
     title: "Tax & insurance statements",
     blurb: "One-tap PDF exports for underwriting and capital-gains reporting.",
   },
+  {
+    key: "ai_search",
+    icon: Sparkles,
+    title: "AI search",
+    blurb: "Describe any card in your own words — Loupe finds the real thing.",
+  },
 ];
 
 /** Look up a feature's icon/title/blurb by key — powers the reusable gate. */
@@ -101,6 +110,8 @@ export function reasonForFeature(key: ProFeatureKey): PaywallReason {
       return "alerts";
     case "statements":
       return "statements";
+    case "ai_search":
+      return "ai_search";
   }
 }
 
@@ -131,6 +142,11 @@ export function paywallHeadline(reason: PaywallReason): { title: string; sub: st
       return {
         title: "See the full picture",
         sub: "Deep history and analytics are part of Loupe Pro.",
+      };
+    case "ai_search":
+      return {
+        title: "Describe it. Loupe finds it.",
+        sub: "AI search turns \"red lizard with fire\" into the exact card — a Loupe Pro feature.",
       };
     default:
       return {

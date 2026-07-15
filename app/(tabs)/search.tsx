@@ -11,6 +11,7 @@
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Keyboard,
   Platform,
   Pressable,
@@ -22,7 +23,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import { Camera, ChevronRight, Clock, ListFilter, Search as SearchIcon, X } from "lucide-react-native";
+import { Camera, ChevronRight, Clock, ListFilter, Search as SearchIcon, Sparkles as SparklesIcon, X } from "lucide-react-native";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
 import { fetchCardSparklines, fetchCollection } from "@/infrastructure/repositories/forensicRepository";
@@ -40,6 +41,9 @@ import type { SealedProductWire } from "@/infrastructure/http";
 import { sealedToCardSearchResult } from "@/presentation/features/search/sealedAdapter";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
+import { AiModePanel } from "@/presentation/features/search/AiModePanel";
+import { useProFeature } from "@/presentation/features/pro";
+import { useAiSearchLimits } from "@/application/queries/catalog/useAiSearch";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
 import { ResolvedCarousels } from "@/presentation/features/search/CarouselRail";
 import { RailResultsSection } from "@/presentation/features/search/RailResultsSection";
@@ -197,8 +201,65 @@ export default function SearchScreen() {
     router.setParams({ railId: "", railGame: "", railTitle: "" });
   }, []);
   const [inputFocused, setInputFocused] = useState(false);
+  // Backend-served description cap (offline fallback baked in).
+  const { queryMaxChars } = useAiSearchLimits();
+
+  // ── AI MODE — the Notion-style "/" trigger ──────────────────────────
+  // Typing "/" (or tapping the sparkle toggle) autocompletes into a
+  // "Loupe AI" tag inside the search bar; the input becomes a description
+  // box and the results area becomes the AI panel. Free accounts get the
+  // paywall instead of the mode.
+  const aiAccess = useProFeature("ai_search");
+  const [aiMode, setAiMode] = useState(false);
+  const [aiAsked, setAiAsked] = useState(false);
+  const aiPill = React.useRef(new Animated.Value(0)).current;
+  const enterAiMode = React.useCallback(() => {
+    if (aiAccess.locked) {
+      aiAccess.requirePro("ai_search");
+      return;
+    }
+    setAiMode(true);
+    setAiAsked(false);
+    aiPill.setValue(0);
+    Animated.spring(aiPill, {
+      toValue: 1,
+      friction: 6,
+      tension: 140,
+      useNativeDriver: true,
+    }).start();
+  }, [aiAccess, aiPill]);
+  const exitAiMode = React.useCallback(() => {
+    setAiMode(false);
+    setAiAsked(false);
+    aiPill.setValue(0);
+  }, [aiPill]);
+  const handleQueryChange = (text: string) => {
+    setQuery(text);
+    if (aiMode) setAiAsked(false); // editing the description resets the ask
+  };
+  // Slack-style command palette: typing "/" (then optionally letters of
+  // "ai") floats a command card under the search bar; tapping it — or
+  // submitting — autocompletes into the Loupe AI tag.
+  const slashPanel =
+    !aiMode &&
+    query.startsWith("/") &&
+    "ai".startsWith(query.slice(1).trim().toLowerCase()) &&
+    query.length <= 3;
+  const acceptSlashCommand = React.useCallback(() => {
+    setQuery("");
+    enterAiMode();
+  }, [enterAiMode]);
+  // The active game tag rides to the backend as the user's preference —
+  // "they're most likely describing a Pokémon card".
+  const aiGame =
+    aiMode && selectedTcg !== "all" && SUPPORTED_TCGS.has(selectedTcg)
+      ? (selectedTcg as string)
+      : undefined;
+
   const debouncedQuery = useDebouncedValue(query.trim(), 200);
-  const showLive = debouncedQuery.length >= 2;
+  // A leading "/" is a command, never a keyword search.
+  const showLive =
+    !aiMode && !query.startsWith("/") && debouncedQuery.length >= 2;
 
   const metaQuery = useFilterMetadata();
   const meta = metaQuery.data;
@@ -322,15 +383,76 @@ export default function SearchScreen() {
           className="flex-row items-center gap-2.5 rounded-2xl border border-line bg-bg-elevated pl-4 pr-2"
           style={{ height: 48 }}
         >
-          <SearchIcon size={18} color={p.ink.muted} strokeWidth={2.4} />
+          {aiMode ? (
+            <Animated.View
+              style={{
+                opacity: aiPill,
+                transform: [
+                  {
+                    scale: aiPill.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.5, 1],
+                    }),
+                  },
+                ],
+              }}
+            >
+              <Pressable
+                onPress={exitAiMode}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel="Exit Loupe AI mode"
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  paddingLeft: 8,
+                  paddingRight: 6,
+                  paddingVertical: 4,
+                  borderRadius: 999,
+                  backgroundColor: p.accent.mint,
+                }}
+              >
+                <SparklesIcon size={11} color="#04150c" />
+                <Text
+                  style={{ color: "#04150c", fontSize: 11, fontWeight: "800" }}
+                >
+                  Loupe AI
+                </Text>
+                <X size={10} color="#04150c" />
+              </Pressable>
+            </Animated.View>
+          ) : (
+            <SearchIcon size={18} color={p.ink.muted} strokeWidth={2.4} />
+          )}
           <TextInput
             value={query}
-            onChangeText={setQuery}
-            onSubmitEditing={() => commitRecentSearch(query)}
+            onChangeText={handleQueryChange}
+            maxLength={queryMaxChars}
+            onSubmitEditing={() => {
+              if (slashPanel) {
+                acceptSlashCommand();
+              } else if (aiMode) {
+                if (query.trim().length >= 3) setAiAsked(true);
+              } else {
+                commitRecentSearch(query);
+              }
+            }}
+            onKeyPress={(e) => {
+              // Backspace on an empty description pops the Loupe AI tag —
+              // the same muscle memory as removing a Notion inline tag.
+              if (aiMode && query.length === 0 && e.nativeEvent.key === "Backspace") {
+                exitAiMode();
+              }
+            }}
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
             returnKeyType="search"
-            placeholder="Search cards, sets, years…"
+            placeholder={
+              aiMode
+                ? "Describe the card — colours, creatures, attacks…"
+                : "Search cards, sets, years…  ( / for AI )"
+            }
             placeholderTextColor={p.ink.dim}
             style={{
               flex: 1,
@@ -354,6 +476,23 @@ export default function SearchScreen() {
             </Pressable>
           ) : null}
           <Pressable
+            onPress={() => (aiMode ? exitAiMode() : enterAiMode())}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={aiMode ? "Exit Loupe AI mode" : "Ask Loupe AI"}
+            className="h-8 w-8 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: aiMode
+                ? p.accent.mint
+                : withAlpha(p.accent.mint, 0.14),
+            }}
+          >
+            <SparklesIcon
+              size={15}
+              color={aiMode ? "#04150c" : p.accent.mint}
+            />
+          </Pressable>
+          <Pressable
             onPress={() => router.push(routes.scanEntry())}
             hitSlop={8}
             accessibilityRole="button"
@@ -365,11 +504,73 @@ export default function SearchScreen() {
           </Pressable>
         </View>
 
+        {/* Slash command palette (Slack-style): "/" lists the available
+            command; tapping autocompletes into the Loupe AI tag. */}
+        {slashPanel ? (
+          <Pressable
+            onPress={acceptSlashCommand}
+            accessibilityRole="button"
+            accessibilityLabel="Ask Loupe AI — describe the card in your own words"
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              marginTop: 10,
+              padding: 12,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: withAlpha(p.accent.mint, 0.35),
+              backgroundColor: pressed
+                ? withAlpha(p.accent.mint, 0.12)
+                : p.bg.elevated,
+              shadowColor: "#000",
+              shadowOpacity: 0.08,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 4,
+            })}
+          >
+            <View
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: withAlpha(p.accent.mint, 0.14),
+              }}
+            >
+              <SparklesIcon size={16} color={p.accent.mint} />
+            </View>
+            <View style={{ flex: 1, gap: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text
+                  style={{
+                    color: p.ink.default,
+                    fontSize: 13,
+                    fontWeight: "800",
+                    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+                  }}
+                >
+                  /ai
+                </Text>
+                <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "700" }}>
+                  Ask Loupe AI
+                </Text>
+              </View>
+              <Text style={{ color: p.ink.dim, fontSize: 11 }}>
+                Command · describe the card in your own words
+              </Text>
+            </View>
+            <ChevronRight size={15} color={p.ink.dim} />
+          </Pressable>
+        ) : null}
+
         {/* Recent searches — ONLY while the keyboard is up (input focused)
             and before live results take over (<2 chars typed). Idle
             browsing never shows the strip, so the discovery bands below
             stay clean. */}
-        {inputFocused && debouncedQuery.length < 2 ? (
+        {!aiMode && !slashPanel && inputFocused && debouncedQuery.length < 2 ? (
           <RecentSearchStrip
             recent={recent}
             rails={recentRails}
@@ -496,7 +697,9 @@ export default function SearchScreen() {
           })}
         </ScrollView>
 
-        {/* Quickfilter chips */}
+        {/* Quickfilter chips — hidden in AI mode (only the game tags
+            matter to a description). */}
+        {aiMode ? null : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -533,6 +736,7 @@ export default function SearchScreen() {
             );
           })}
         </ScrollView>
+        )}
 
       </View>
 
@@ -547,7 +751,20 @@ export default function SearchScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {showLive ? (
+        {aiMode ? (
+          <AiModePanel
+            query={query}
+            game={aiGame}
+            asked={aiAsked}
+            onAsk={() => setAiAsked(true)}
+            onPickCandidate={(name) => {
+              // A candidate tap = "that's the one": pop back to normal
+              // search with the exact name.
+              exitAiMode();
+              setQuery(name);
+            }}
+          />
+        ) : showLive ? (
           <LiveResultsSection
             query={debouncedQuery}
             tcg={liveTcg}
@@ -567,6 +784,7 @@ export default function SearchScreen() {
             partial={livePartial}
             interpreted={live.data?.pages?.[0]?.interpreted ?? null}
             onResultTap={commitRecentSearch}
+            onTryAi={enterAiMode}
           />
         ) : railActive ? (
           // The expanded shelf — full paginated contents behind the tag above.
@@ -1036,6 +1254,7 @@ function LiveResultsSection({
   partial,
   interpreted,
   onResultTap,
+  onTryAi,
 }: {
   query: string;
   tcg: TcgKey | "all";
@@ -1053,6 +1272,8 @@ function LiveResultsSection({
   /** What the backend's zero-AI parser understood ("Newest · Pokémon · Under $50"). */
   interpreted?: SearchInterpretation | null;
   onResultTap?: (q: string) => void;
+  /** Enter Loupe AI mode ("describe it instead") from a dead-end search. */
+  onTryAi?: () => void;
 }) {
   const p = useThemedPalette();
   const tcgLabel = tcg === "all" ? "All TCGs" : tcg;
@@ -1203,6 +1424,33 @@ function LiveResultsSection({
               message={COPY.searchEmpty.message}
               compact
             />
+            {/* No name match — describing it is the natural next step. */}
+            {onTryAi ? (
+              <Pressable
+                onPress={onTryAi}
+                accessibilityRole="button"
+                accessibilityLabel="Switch to Loupe AI and describe the card"
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  marginTop: 12,
+                  paddingVertical: 12,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: withAlpha(p.accent.mint, 0.35),
+                  backgroundColor: withAlpha(p.accent.mint, pressed ? 0.14 : 0.07),
+                })}
+              >
+                <SparklesIcon size={15} color={p.accent.mint} />
+                <Text
+                  style={{ color: p.accent.mint, fontSize: 13, fontWeight: "800" }}
+                >
+                  Try Loupe AI — describe it instead
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : (
           // Rows fade slightly while a refresh is in-flight so the user
@@ -1267,6 +1515,7 @@ function LiveResultsSection({
                 )}
               </Pressable>
             ) : null}
+
           </>
         )}
       </View>

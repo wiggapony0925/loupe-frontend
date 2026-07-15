@@ -197,6 +197,23 @@ export interface SearchInterpretation {
   chips: string[];
 }
 
+/**
+ * `GET /v1/cards/search/ai` — the Pro "describe it" search. The model maps
+ * the description to candidate card NAMES; `results` are REAL catalog cards
+ * resolved from them. `message` is the assistant's one-liner for the chat
+ * bubble; null (`source:"fallback"`) means the model was unavailable and the
+ * results are a plain search — render them without the bubble.
+ */
+export interface AiSearchResponse {
+  query: string;
+  message: string | null;
+  candidates: string[];
+  game: string | null;
+  results: CardSearchResult[];
+  total: number;
+  source: "ai" | "fallback";
+}
+
 export interface PublicSearchResponse {
   results: CardSearchResult[];
   total: number;

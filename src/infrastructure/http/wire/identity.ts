@@ -65,6 +65,8 @@ export interface PlanFeatures {
   scanner_import: boolean;
   full_history: boolean;
   unlimited_alerts: boolean;
+  /** Semantic "describe it" AI search — a Pro capability. */
+  ai_search?: boolean;
   statements: boolean;
   pro_badge: boolean;
 }

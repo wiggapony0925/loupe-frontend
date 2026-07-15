@@ -1439,7 +1439,7 @@ export interface paths {
         };
         /**
          * Remote app configuration
-         * @description Returns `{ minSupportedVersion, forceUpdate, flags, homeRails, discoveryRails }`. `forceUpdate` is server-computed from the optional `clientVersion` query param. `discoveryRails` orders the home-tab discovery carousels (unknown ids are skipped client-side). Clients should call this on cold start and again on resume after >1h, and persist the last response so launch is offline-tolerant.
+         * @description Returns `{ minSupportedVersion, forceUpdate, flags, homeRails, discoveryRails, aiSearch }`. `forceUpdate` is server-computed from the optional `clientVersion` query param. `discoveryRails` orders the home-tab discovery carousels (unknown ids are skipped client-side). Clients should call this on cold start and again on resume after >1h, and persist the last response so launch is offline-tolerant.
          */
         get: operations["get_app_config_v1_app_config_get"];
         put?: never;
@@ -1956,6 +1956,34 @@ export interface paths {
          *     gracefully.
          */
         get: operations["search_live_v1_cards_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/search/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AI 'describe it' search (Loupe Pro)
+         * @description Describe a card in plain words — "red lizard with fire" — and get REAL
+         *     catalog cards back, plus the assistant's one-line ``message`` for the
+         *     chat-bubble UI. The model only maps the description to candidate card
+         *     names; the results always come from our own catalog (never invented).
+         *
+         *     Loupe Pro only (402 with ``code=ai_search_pro`` opens the paywall). When
+         *     no model is configured or it errors, degrades to the normal search with
+         *     ``source="fallback"`` and a null ``message`` — the client simply renders
+         *     plain results without the bubble.
+         */
+        get: operations["search_ai_v1_cards_search_ai_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6406,6 +6434,11 @@ export interface components {
          * @description Boolean capability gates the UI reads to lock/unlock surfaces.
          */
         PlanFeatures: {
+            /**
+             * Ai Search
+             * @default false
+             */
+            ai_search: boolean;
             /** Full History */
             full_history: boolean;
             /** Pro Badge */
@@ -11431,6 +11464,42 @@ export interface operations {
             query?: {
                 q?: string;
                 tcg?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_ai_v1_cards_search_ai_get: {
+        parameters: {
+            query: {
+                q: string;
+                /** @description The game tag active in the search UI — biases the answer. */
+                tcg?: string | null;
                 limit?: number;
             };
             header?: never;
