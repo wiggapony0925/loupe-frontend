@@ -12,6 +12,7 @@ import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -42,7 +43,7 @@ import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { SearchResultRow } from "@/presentation/features/search/SearchResultRow";
 import { AiModePanel } from "@/presentation/features/search/AiModePanel";
 import { AiModePill } from "@/presentation/features/search/AiModePill";
-import { SlashCommandCard } from "@/presentation/features/search/SlashCommandCard";
+import { SlashGhost } from "@/presentation/features/search/SlashGhost";
 import { useAiSearchLimits } from "@/application/queries/catalog/useAiSearch";
 import { HotRightNowRail } from "@/presentation/features/search/HotRightNowRail";
 import { ResolvedCarousels } from "@/presentation/features/search/CarouselRail";
@@ -232,10 +233,29 @@ export default function SearchScreen() {
     query.startsWith("/") &&
     "ai".startsWith(query.slice(1).trim().toLowerCase()) &&
     query.length <= 3;
+
   const acceptSlashCommand = React.useCallback(() => {
     setQuery("");
     enterAiMode();
   }, [enterAiMode]);
+  const slashLive = React.useRef({ active: false, accept: () => {} });
+  const slashPan = React.useRef(
+    PanResponder.create({
+      // Claim only clearly-horizontal leftward drags, and only while the
+      // ghost suggestion is showing — typing/taps pass straight through.
+      onMoveShouldSetPanResponder: (_e, g) =>
+        slashLive.current.active &&
+        g.dx < -10 &&
+        Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onPanResponderRelease: (_e, g) => {
+        if (slashLive.current.active && g.dx < -40) {
+          slashLive.current.accept();
+        }
+      },
+    }),
+  ).current;
+  // Keep the pan responder's view of the world current (it's created once).
+  slashLive.current = { active: slashPanel, accept: acceptSlashCommand };
   // The active game tag rides to the backend as the user's preference —
   // "they're most likely describing a Pokémon card".
   const aiGame =
@@ -369,6 +389,7 @@ export default function SearchScreen() {
       {/* Sticky search bar */}
       <View className="px-5 pb-3 pt-2">
         <View
+          {...slashPan.panHandlers}
           className="flex-row items-center gap-2.5 rounded-2xl border bg-bg-elevated pl-4 pr-2"
           style={{
             height: 50,
@@ -420,12 +441,20 @@ export default function SearchScreen() {
             }
             placeholderTextColor={p.ink.dim}
             style={{
-              flex: 1,
+              flexGrow: slashPanel ? 0 : 1,
+              flexShrink: slashPanel ? 0 : 1,
+              minWidth: slashPanel ? 12 : undefined,
               color: p.ink.default,
               fontSize: 15,
               fontWeight: "500",
             }}
           />
+          {slashPanel ? (
+            <SlashGhost
+              typed={query.slice(1).trim().toLowerCase()}
+              onAccept={acceptSlashCommand}
+            />
+          ) : null}
           {query.length > 0 ? (
             <Pressable
               onPress={() => {
@@ -468,12 +497,6 @@ export default function SearchScreen() {
             <Camera size={15} color={p.accent.mint} />
           </Pressable>
         </View>
-
-        {/* Slash command palette (Slack-style): "/" lists the available
-            command; tapping autocompletes into the Loupe AI tag. */}
-        {slashPanel ? (
-          <SlashCommandCard onAccept={acceptSlashCommand} />
-        ) : null}
 
         {/* Recent searches — ONLY while the keyboard is up (input focused)
             and before live results take over (<2 chars typed). Idle
