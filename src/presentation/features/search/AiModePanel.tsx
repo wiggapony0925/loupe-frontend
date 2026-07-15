@@ -155,6 +155,7 @@ export function AiModePanel({
   game,
   asked,
   onAsk,
+  onAnswered,
   onPickSuggestion,
   onPickCandidate,
 }: {
@@ -164,6 +165,8 @@ export function AiModePanel({
   /** Parent-owned: true once the user submitted the description. */
   asked: boolean;
   onAsk: () => void;
+  /** Fires once when Loupe AI successfully answers (recents recording). */
+  onAnswered?: (q: string) => void;
   /** Tap a suggested description → fill the search bar and ask. */
   onPickSuggestion?: (text: string) => void;
   /** Tap a candidate chip → run a normal search for that exact name. */
@@ -194,6 +197,11 @@ export function AiModePanel({
   const unreachable =
     ai.isError && !(ai.error instanceof ApiError && ai.error.status === 402);
   const typed = useTypewriter(showBubble ? answer?.message : null);
+
+  // A successful AI answer earns a sparkle tag in recent searches.
+  useEffect(() => {
+    if (showBubble && answer?.source === "ai") onAnswered?.(query.trim());
+  }, [showBubble, answer?.source, query, onAnswered]);
 
   // ── Loupe AI is resting (quota / provider outage — backend says so) ──
   if (!serviceUp) {
@@ -562,9 +570,9 @@ export function AiModePanel({
         </View>
       </View>
 
-      {/* The reveal — chips + real cards once the reply finishes typing. */}
+      {/* The reveal — chips + the results card once the reply finishes. */}
       {showBubble && answer && typed.done ? (
-        <View style={{ gap: 10, marginTop: 2 }}>
+        <View style={{ gap: 12, marginTop: 2 }}>
           {answer.candidates.length > 0 ? (
             <View
               style={{
@@ -608,47 +616,89 @@ export function AiModePanel({
             </View>
           ) : null}
 
-          <View>
-            {answer.results.slice(0, 8).map((card, i) => (
-              <SearchResultRow key={card.id} card={card} bordered={i > 0} />
-            ))}
-          </View>
-          {answer.results.length > 8 ? (
-            <Text style={{ color: p.ink.dim, fontSize: 11 }}>
-              Showing 8 of {answer.results.length} — tap a name above to see
-              every printing.
-            </Text>
-          ) : null}
-
+          {/* The catch — a proper card, not rows floating on the page. */}
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
-              paddingTop: 8,
-              borderTopWidth: 1,
-              borderTopColor: withAlpha(p.accent.mint, 0.15),
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: p.line.default,
+              backgroundColor: p.bg.elevated,
+              overflow: "hidden",
             }}
           >
-            <Text style={{ flex: 1, color: p.ink.dim, fontSize: 10 }}>
-              AI can misread a description — cards and prices always come from
-              the live catalog.
-            </Text>
-            <Pressable
-              onPress={() => void ai.refetch()}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Ask Loupe AI again"
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: p.line.default,
+              }}
             >
-              <RotateCcw size={11} color={p.accent.mint} />
               <Text
-                style={{ color: p.accent.mint, fontSize: 11, fontWeight: "800" }}
+                style={{
+                  color: p.ink.dim,
+                  fontSize: 10,
+                  fontWeight: "800",
+                  letterSpacing: 0.8,
+                  textTransform: "uppercase",
+                }}
               >
-                Try again
+                From the live catalog
               </Text>
-            </Pressable>
+              <Text style={{ color: p.ink.dim, fontSize: 11, fontWeight: "700" }}>
+                {answer.results.length > 8
+                  ? `8 of ${answer.results.length}`
+                  : `${answer.results.length} ${
+                      answer.results.length === 1 ? "match" : "matches"
+                    }`}
+                {" · best first"}
+              </Text>
+            </View>
+            <View style={{ paddingHorizontal: 12 }}>
+              {answer.results.slice(0, 8).map((card, i) => (
+                <SearchResultRow key={card.id} card={card} bordered={i > 0} />
+              ))}
+            </View>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderTopWidth: 1,
+                borderTopColor: p.line.default,
+              }}
+            >
+              <Text style={{ flex: 1, color: p.ink.dim, fontSize: 10 }}>
+                {answer.results.length > 8
+                  ? "Tap a name above to see every printing. "
+                  : ""}
+                AI can misread — cards and prices come from the live catalog.
+              </Text>
+              <Pressable
+                onPress={() => void ai.refetch()}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Ask Loupe AI again"
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <RotateCcw size={11} color={p.accent.mint} />
+                <Text
+                  style={{
+                    color: p.accent.mint,
+                    fontSize: 11,
+                    fontWeight: "800",
+                  }}
+                >
+                  Try again
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       ) : null}

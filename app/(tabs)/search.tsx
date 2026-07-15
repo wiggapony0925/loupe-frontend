@@ -32,6 +32,7 @@ import { ErrorState } from "@/presentation/components/ErrorState";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { COPY } from "@/shared/copy";
 import { useRecentSearches } from "@/application/stores/recentSearchesStore";
+import { useRecentAiSearches } from "@/application/stores/recentAiSearchesStore";
 import { useRecentRails, type RecentRail } from "@/application/stores/recentRailsStore";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { useCardSearchPaged, useFilterMetadata } from "@/application/queries";
@@ -172,6 +173,9 @@ export default function SearchScreen() {
   const [selectedTcg, setSelectedTcg] = useState<TcgChip>("all");
   const recent = useRecentSearches((s) => s.items);
   const pushRecent = useRecentSearches((s) => s.push);
+  const recentAi = useRecentAiSearches((s) => s.items);
+  const pushRecentAi = useRecentAiSearches((s) => s.push);
+  const removeRecentAi = useRecentAiSearches((s) => s.remove);
   const clearRecent = useRecentSearches((s) => s.clear);
   const removeRecent = useRecentSearches((s) => s.remove);
 
@@ -506,6 +510,13 @@ export default function SearchScreen() {
           <RecentSearchStrip
             recent={recent}
             rails={recentRails}
+            aiItems={recentAi}
+            onPickAi={(q) => {
+              enterAiMode();
+              setQuery(q);
+              setAiAsked(true);
+            }}
+            onRemoveAi={removeRecentAi}
             onPick={(value) => {
               setQuery(value);
               Keyboard.dismiss();
@@ -689,6 +700,7 @@ export default function SearchScreen() {
             game={aiGame}
             asked={aiAsked}
             onAsk={() => setAiAsked(true)}
+            onAnswered={pushRecentAi}
             onPickSuggestion={(text) => {
               // One tap: the example fills the bar and asks immediately.
               setQuery(text);
@@ -1003,22 +1015,30 @@ function ViewMoreLink({
 function RecentSearchStrip({
   recent,
   rails,
+  aiItems = [],
   onPick,
   onPickRail,
+  onPickAi,
   onRemove,
   onRemoveRail,
+  onRemoveAi,
   onClear,
 }: {
   recent: string[];
   rails: RecentRail[];
+  /** Descriptions Loupe AI answered — sparkle-tagged, truncated chips. */
+  aiItems?: string[];
   onPick: (value: string) => void;
   onPickRail: (rail: RecentRail) => void;
+  onPickAi?: (q: string) => void;
   onRemove: (value: string) => void;
   onRemoveRail: (rail: RecentRail) => void;
+  onRemoveAi?: (q: string) => void;
   onClear: () => void;
 }) {
   const p = useThemedPalette();
-  if (recent.length === 0 && rails.length === 0) return null;
+  if (recent.length === 0 && rails.length === 0 && aiItems.length === 0)
+    return null;
   return (
     <View style={{ paddingTop: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -1037,6 +1057,56 @@ function RecentSearchStrip({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ gap: 8, paddingTop: 8, paddingRight: 8 }}
       >
+        {aiItems.map((q) => (
+          <View
+            key={`ai:${q}`}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              maxWidth: 190,
+              paddingLeft: 10,
+              paddingRight: 4,
+              paddingVertical: 5,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: withAlpha(p.accent.mint, 0.5),
+              backgroundColor: withAlpha(p.accent.mint, 0.1),
+            }}
+          >
+            <SparklesIcon size={12} color={p.accent.mint} />
+            <Pressable
+              onPress={() => onPickAi?.(q)}
+              hitSlop={6}
+              style={{ flexShrink: 1 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Ask Loupe AI again: ${q}`}
+            >
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{ color: p.accent.mint, fontSize: 12, fontWeight: "700" }}
+              >
+                {q}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => onRemoveAi?.(q)}
+              hitSlop={6}
+              style={{
+                width: 20,
+                height: 20,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 999,
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove AI search ${q}`}
+            >
+              <X size={11} color={p.ink.dim} />
+            </Pressable>
+          </View>
+        ))}
         {rails.map((rail) => (
           <View
             key={`rail:${rail.game}:${rail.id}`}
