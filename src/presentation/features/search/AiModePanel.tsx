@@ -585,6 +585,78 @@ export function AiModePanel({
               .
             </Text>
           )}
+          {/* Thumbs live ON the message — every AI summary can be rated. */}
+          {showBubble && typed.done && answer?.askId ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 10,
+                paddingTop: 10,
+                borderTopWidth: 1,
+                borderColor: withAlpha(p.accent.mint, 0.18),
+              }}
+            >
+              <Text style={{ color: p.ink.dim, fontSize: 11, flex: 1 }}>
+                {verdict ? "Thanks for the feedback" : "Did Loupe AI get it right?"}
+              </Text>
+              <Pressable
+                onPress={() => rate("up")}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Loupe AI got it right"
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 999,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor:
+                    verdict === "up"
+                      ? withAlpha(p.accent.mint, 0.55)
+                      : p.line.default,
+                  backgroundColor:
+                    verdict === "up"
+                      ? withAlpha(p.accent.mint, 0.14)
+                      : "transparent",
+                }}
+              >
+                <ThumbsUp
+                  size={13}
+                  color={verdict === "up" ? p.accent.mint : p.ink.dim}
+                />
+              </Pressable>
+              <Pressable
+                onPress={() => rate("down")}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Loupe AI missed"
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 999,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor:
+                    verdict === "down"
+                      ? withAlpha(p.accent.rose, 0.55)
+                      : p.line.default,
+                  backgroundColor:
+                    verdict === "down"
+                      ? withAlpha(p.accent.rose, 0.14)
+                      : "transparent",
+                }}
+              >
+                <ThumbsDown
+                  size={13}
+                  color={verdict === "down" ? p.accent.rose : p.ink.dim}
+                />
+              </Pressable>
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -675,76 +747,9 @@ export function AiModePanel({
             {answer.results.slice(0, 8).map((card, i) => (
               <SearchResultRow key={card.id} card={card} bordered={i > 0} />
             ))}
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginTop: 8,
-              }}
-            >
-              <Text style={{ color: p.ink.dim, fontSize: 10, flex: 1 }}>
-                AI can misread — cards and prices come from the live catalog.
-              </Text>
-              {answer.askId ? (
-                <View style={{ flexDirection: "row", gap: 6 }}>
-                  <Pressable
-                    onPress={() => rate("up")}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel="Loupe AI got it right"
-                    style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: 999,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderWidth: 1,
-                      borderColor:
-                        verdict === "up"
-                          ? withAlpha(p.accent.mint, 0.55)
-                          : p.line.default,
-                      backgroundColor:
-                        verdict === "up"
-                          ? withAlpha(p.accent.mint, 0.14)
-                          : "transparent",
-                    }}
-                  >
-                    <ThumbsUp
-                      size={13}
-                      color={verdict === "up" ? p.accent.mint : p.ink.dim}
-                    />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => rate("down")}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel="Loupe AI missed"
-                    style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: 999,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderWidth: 1,
-                      borderColor:
-                        verdict === "down"
-                          ? withAlpha(p.accent.rose, 0.55)
-                          : p.line.default,
-                      backgroundColor:
-                        verdict === "down"
-                          ? withAlpha(p.accent.rose, 0.14)
-                          : "transparent",
-                    }}
-                  >
-                    <ThumbsDown
-                      size={13}
-                      color={verdict === "down" ? p.accent.rose : p.ink.dim}
-                    />
-                  </Pressable>
-                </View>
-              ) : null}
-            </View>
+            <Text style={{ color: p.ink.dim, fontSize: 10, marginTop: 8 }}>
+              AI can misread — cards and prices come from the live catalog.
+            </Text>
           </View>
         </View>
       ) : null}
