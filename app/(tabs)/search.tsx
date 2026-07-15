@@ -269,7 +269,9 @@ export default function SearchScreen() {
   });
 
   const showResults =
-    query.trim().length > 0 || activeCategory !== null || quickfilter !== "all";
+    (query.trim().length > 0 && !query.startsWith("/")) ||
+    activeCategory !== null ||
+    quickfilter !== "all";
   const showLocalResults = showResults && !showLive;
 
   const sparks = useQuery({
@@ -518,24 +520,18 @@ export default function SearchScreen() {
             onPress={acceptSlashCommand}
             accessibilityRole="button"
             accessibilityLabel="Ask Loupe AI — describe the card in your own words"
-            style={({ pressed }) => ({
+            style={{
               flexDirection: "row",
               alignItems: "center",
               gap: 12,
               marginTop: 10,
-              padding: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 12,
               borderRadius: 14,
               borderWidth: 1,
-              borderColor: withAlpha(p.accent.mint, 0.35),
-              backgroundColor: pressed
-                ? withAlpha(p.accent.mint, 0.12)
-                : p.bg.elevated,
-              shadowColor: "#000",
-              shadowOpacity: 0.08,
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 4,
-            })}
+              borderColor: withAlpha(p.accent.mint, 0.4),
+              backgroundColor: withAlpha(p.accent.mint, 0.06),
+            }}
           >
             <View
               style={{
@@ -544,28 +540,27 @@ export default function SearchScreen() {
                 borderRadius: 10,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: withAlpha(p.accent.mint, 0.14),
+                backgroundColor: withAlpha(p.accent.mint, 0.16),
               }}
             >
               <SparklesIcon size={16} color={p.accent.mint} />
             </View>
-            <View style={{ flex: 1, gap: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
                 <Text
-                  style={{
-                    color: p.ink.default,
-                    fontSize: 13,
-                    fontWeight: "800",
-                    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-                  }}
+                  style={{ color: p.accent.mint, fontSize: 13, fontWeight: "800" }}
                 >
                   /ai
                 </Text>
-                <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "700" }}>
+                <Text
+                  style={{ color: p.ink.default, fontSize: 13, fontWeight: "700" }}
+                >
                   Ask Loupe AI
                 </Text>
               </View>
-              <Text style={{ color: p.ink.dim, fontSize: 11 }}>
+              <Text style={{ color: p.ink.dim, fontSize: 11, marginTop: 1 }}>
                 Command · describe the card in your own words
               </Text>
             </View>
