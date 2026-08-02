@@ -1,0 +1,11 @@
+{
+  "name": "@loupe/marketing",
+  "version": "0.1.0",
+  "description": "Framework-agnostic pre-auth surface: the hero copy loupe-web's landing page and the Expo app's welcome screen both render, plus the trending-feed shaping that builds it. No DOM, React, or RN — each platform lays it out its own way.",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}

@@ -6,17 +6,18 @@
  * gated by `APP_ENV != production` on the backend, so the button is safe
  * to ship — it'll just 404 in prod and surface the standard error.
  */
-import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, type TextInput, View } from "react-native";
 import { router } from "expo-router";
-import { LogIn, Users } from "lucide-react-native";
+import { LogIn, Lock, Mail, Users } from "lucide-react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { AuthScreen } from "@/presentation/features/auth/AuthScreen";
+import { AuthHeader } from "@/presentation/features/auth/AuthHeader";
 import { FormInput } from "@/presentation/features/auth/FormInput";
 import { AuthFooter } from "@/presentation/features/auth/AuthFooter";
 import { DevPersonaSheet } from "@/presentation/features/auth/DevPersonaSheet";
 import { SocialSignIn } from "@/presentation/features/auth/SocialSignIn";
-import { LoupeMark } from "@/presentation/brand/LoupeMark";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { ApiError } from "@/infrastructure/http/client";
 import { useThemedPalette } from "@/presentation/theme/tokens";
@@ -29,12 +30,16 @@ export default function SignInScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const passwordRef = useRef<TextInput>(null);
+
+  const canSubmit = email.trim().length > 0 && password.length > 0;
 
   const onSubmit = async () => {
+    if (!canSubmit) return;
     setError(null);
     setSubmitting(true);
     try {
-      await signInWithEmail(email, password);
+      await signInWithEmail(email.trim(), password);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError("Invalid email or password.");
@@ -48,36 +53,42 @@ export default function SignInScreen() {
 
   return (
     <AuthScreen>
-      <View style={styles.header}>
-        {/* Brand mark anchors the page — matches the Command tab's
-            top-left identity so returning users see the same glyph
-            they associate with the app. */}
-        <LoupeMark size={44} color={p.ink.default} />
-        <Text style={[styles.title, { color: p.ink.default }]}>Welcome back</Text>
-        <Text style={[styles.subtitle, { color: p.ink.muted }]}>
-          Sign in to your Loupe account.
-        </Text>
-      </View>
+      <AuthHeader
+        title="Welcome back"
+        subtitle="Sign in to pick your vault up where you left it."
+      />
 
-      <View style={styles.form}>
+      <Animated.View
+        entering={FadeInDown.duration(380).delay(80)}
+        style={styles.form}
+      >
         <FormInput
           label="Email"
+          icon={Mail}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          autoCorrect={false}
           autoComplete="email"
           textContentType="emailAddress"
           keyboardType="email-address"
           placeholder="you@example.com"
+          returnKeyType="next"
+          submitBehavior="submit"
+          onSubmitEditing={() => passwordRef.current?.focus()}
         />
         <FormInput
+          ref={passwordRef}
           label="Password"
+          icon={Lock}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
           autoComplete="current-password"
           textContentType="password"
           placeholder="••••••••"
+          returnKeyType="go"
+          onSubmitEditing={onSubmit}
           error={error}
         />
         <Pressable
@@ -90,38 +101,46 @@ export default function SignInScreen() {
             Forgot password?
           </Text>
         </Pressable>
-      </View>
+      </Animated.View>
 
-      <View style={styles.actions}>
-        <PrimaryButton
-          label="Sign in"
-          icon={LogIn}
-          variant="mint"
-          loading={submitting}
-          onPress={onSubmit}
-        />
+      <Animated.View
+        entering={FadeInDown.duration(380).delay(160)}
+        style={styles.actions}
+      >
+        <View style={styles.fullWidth}>
+          <PrimaryButton
+            label="Sign in"
+            icon={LogIn}
+            variant="mint"
+            loading={submitting}
+            disabled={!canSubmit}
+            onPress={onSubmit}
+          />
+        </View>
 
         {/* Auth-state change → the root layout redirects out of the auth group,
             same as the email flow, so no explicit navigation needed here. */}
         <SocialSignIn />
 
         {__DEV__ ? (
-          <PrimaryButton
-            label="Dev personas (50)"
-            icon={Users}
-            variant="ghost"
-            onPress={() => setPickerOpen(true)}
-          />
+          <View style={styles.fullWidth}>
+            <PrimaryButton
+              label="Dev personas (50)"
+              icon={Users}
+              variant="ghost"
+              onPress={() => setPickerOpen(true)}
+            />
+          </View>
         ) : null}
-        <Pressable onPress={() => router.replace("/(auth)/sign-up")}>
+        <Pressable onPress={() => router.replace("/(auth)/sign-up")} hitSlop={8}>
           <Text style={[styles.switch, { color: p.ink.muted }]}>
             New to Loupe?{" "}
-            <Text style={{ color: p.accent.mint, fontWeight: "600" }}>
+            <Text style={{ color: p.accent.mint, fontWeight: "700" }}>
               Create an account
             </Text>
           </Text>
         </Pressable>
-      </View>
+      </Animated.View>
 
       <AuthFooter />
 
@@ -136,12 +155,10 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { gap: 12 },
-  title: { fontSize: 32, fontWeight: "800", letterSpacing: -0.5 },
-  subtitle: { fontSize: 15 },
-  form: { gap: 16 },
+  form: { gap: 14 },
   forgot: { alignSelf: "flex-end", marginTop: -4 },
   forgotText: { fontSize: 13, fontWeight: "600" },
   actions: { gap: 16, alignItems: "center" },
+  fullWidth: { alignSelf: "stretch" },
   switch: { fontSize: 14, textAlign: "center" },
 });

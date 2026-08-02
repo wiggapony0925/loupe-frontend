@@ -25,12 +25,31 @@ const tokensPkg = path.resolve(__dirname, "vendor/loupe-tokens");
 // with loupe-web's /grade playground. Re-sync with `npm run sync:grade`.
 const gradePkg = path.resolve(__dirname, "vendor/loupe-grade");
 const themePkg = path.resolve(__dirname, "vendor/loupe-theme");
+// ── Shared pre-auth copy + feed shaping (`@loupe/marketing`) ──
+// Vendored like the others (survives EAS staging). The hero strings the
+// welcome screen renders are the same ones loupe-web's landing page uses.
+// Re-sync with `npm run sync:marketing`.
+const marketingPkg = path.resolve(__dirname, "vendor/loupe-marketing");
+// ── Shared auth rules (`@loupe/auth`) ──
+// Vendored like the others (survives EAS staging). Password policy mirroring
+// the backend's constraints, so the app, the website, and the API agree on
+// what a valid password is. Re-sync with `npm run sync:auth`.
+const authPkg = path.resolve(__dirname, "vendor/loupe-auth");
+// Agent worktrees are checked out inside the repo at `.claude/worktrees/<name>`
+// and each carries its own copy of `vendor/loupe-*`. Metro indexes everything
+// under the project root, so leaving them in scope means several packages claim
+// the same `@loupe/*` name and resolution becomes ambiguous. (Jest needs the
+// same exclusion — see `modulePathIgnorePatterns` in jest.config.js.)
+config.resolver.blockList = [/\/\.claude\/worktrees\/.*/];
+
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules ?? {}),
   "@loupe/chart": chartPkg,
   "@loupe/tokens": tokensPkg,
   "@loupe/grade": gradePkg,
   "@loupe/theme": themePkg,
+  "@loupe/marketing": marketingPkg,
+  "@loupe/auth": authPkg,
 };
 
 module.exports = withNativeWind(config, { input: "./global.css" });

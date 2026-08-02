@@ -334,6 +334,14 @@ export default function VaultScreen() {
         // Always 1 — grid is simulated by chunking into row arrays.
         // Never remounts on viewMode change → header stays put.
         numColumns={1}
+        // The vault isn't paginated, so a large collection hands FlatList
+        // every row at once. Each row holds two or three pieces of card art,
+        // and the default window (~10 screens either side) keeps far more of
+        // them decoded in memory than a scroll ever needs.
+        windowSize={7}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        removeClippedSubviews
         contentContainerStyle={{
           // Constant padding — changing this with viewMode was part of
           // the "everything jumps down" bug on toggle.

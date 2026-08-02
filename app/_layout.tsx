@@ -8,6 +8,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppProviders } from "@/presentation/providers/AppProviders";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { BrandSplash } from "@/presentation/brand/BrandSplash";
+import { AppLoadingScreen } from "@/presentation/brand/AppLoadingScreen";
 import { NetworkBanner } from "@/presentation/components/NetworkBanner";
 import { AnnouncementBanner } from "@/presentation/components/AnnouncementBanner";
 import { ErrorBoundary } from "@/presentation/components/ErrorBoundary";
@@ -69,6 +70,16 @@ function ThemedChrome({ children }: { children: React.ReactNode }) {
 
 
 /**
+ * Route groups an unauthenticated visitor may reach.
+ *
+ * `legal` is public because the welcome and sign-up screens link to the Terms
+ * and Privacy Policy *before* an account exists — bouncing those taps back to
+ * the welcome screen left the fineprint unreadable, and app review expects a
+ * privacy policy that's reachable without signing in.
+ */
+const PUBLIC_SEGMENTS = new Set(["(auth)", "legal"]);
+
+/**
  * RootStack — auth-aware navigator.
  *
  * Lives *inside* `<AppProviders>` so it can read `useAuth()`. Until the
@@ -96,8 +107,9 @@ function RootStack() {
 
   useEffect(() => {
     if (isLoading) return;
-    const inAuthGroup = segments[0] === "(auth)";
-    if (!isAuthenticated && !inAuthGroup) {
+    const root = segments[0] ?? "";
+    const inAuthGroup = root === "(auth)";
+    if (!isAuthenticated && !PUBLIC_SEGMENTS.has(root)) {
       router.replace("/(auth)/welcome");
     } else if (isAuthenticated && inAuthGroup) {
       router.replace("/(tabs)");
@@ -108,9 +120,11 @@ function RootStack() {
   // attached to the HTTP client. Mounting the tabs first meant their queries
   // fired token-less on cold boot, cached an empty/401 result, and only a
   // pull-to-refresh recovered (the "$0.00 / No history yet until I swipe"
-  // bug). The BrandSplash overlays this gap, so the user just sees the splash.
+  // bug). The BrandSplash covers the first ~1.3s of this; hydration that runs
+  // longer than the splash's hold used to surface as a blank canvas, so the
+  // loading screen takes over from there.
   if (isLoading) {
-    return <View style={{ flex: 1, backgroundColor: palette.bg.base }} />;
+    return <AppLoadingScreen />;
   }
 
   return (

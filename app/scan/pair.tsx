@@ -48,6 +48,22 @@ import { queryKeys } from "@/application/queries/queryKeys";
 
 type Stage = "welcome" | "prepare" | "searching" | "success" | "error";
 
+/**
+ * A device id fit to print in a sentence.
+ *
+ * The bridge reports a placeholder id (`"default"`, or empty) until the
+ * firmware hands over its real one, and that string was being dropped straight
+ * into user-facing copy — the success screen read "default is connected and
+ * ready." Anything that isn't a real name falls back to the product name.
+ */
+const PLACEHOLDER_IDS = new Set(["default", "unknown", "none", "-"]);
+
+function displayDeviceName(id: string | null | undefined): string {
+  const trimmed = id?.trim();
+  if (!trimmed || PLACEHOLDER_IDS.has(trimmed.toLowerCase())) return "Your Loupe";
+  return trimmed;
+}
+
 export default function PairScannerScreen() {
   const p = useThemedPalette();
   const qc = useQueryClient();
@@ -114,7 +130,7 @@ export default function PairScannerScreen() {
         {stage === "searching" ? <SearchingStep /> : null}
         {stage === "success" ? (
           <SuccessStep
-            deviceName={scanner.info?.id ?? "Your Loupe"}
+            deviceName={displayDeviceName(scanner.info?.id)}
             firmware={scanner.info?.firmware ?? "—"}
             battery={scanner.info?.battery ?? null}
             onDone={handleDone}
@@ -137,8 +153,11 @@ export default function PairScannerScreen() {
 function WelcomeStep({ onContinue }: { onContinue: () => void }) {
   const p = useThemedPalette();
   return (
-    <View className="flex-1 justify-between py-6">
-      <View>
+    <View className="flex-1 py-6">
+      {/* Centered in the space above the pinned CTA. Top-aligning these short
+          steps left roughly half the screen empty between the last line and
+          the button, which read as an unfinished screen. */}
+      <View className="flex-1 justify-center">
         <HeroIcon Icon={Bluetooth} tint={p.accent.blue} />
         <Text className="mt-8 text-3xl font-semibold text-ink">
           Pair your Loupe
@@ -151,11 +170,13 @@ function WelcomeStep({ onContinue }: { onContinue: () => void }) {
         <View className="mt-8 gap-3">
           <Bullet
             Icon={Zap}
+            tint={p.accent.blue}
             title="Takes about 30 seconds"
             body="No accounts, no codes — just hold the device near your phone."
           />
           <Bullet
             Icon={Sparkles}
+            tint={p.accent.blue}
             title="Unlocks full-grade scans"
             body="Phone-only scans will still work, but pairing turns on the 4-light photometric pipeline."
           />
@@ -172,8 +193,11 @@ function WelcomeStep({ onContinue }: { onContinue: () => void }) {
 function PrepareStep({ onContinue }: { onContinue: () => void }) {
   const p = useThemedPalette();
   return (
-    <View className="flex-1 justify-between py-6">
-      <View>
+    <View className="flex-1 py-6">
+      {/* Centered in the space above the pinned CTA. Top-aligning these short
+          steps left roughly half the screen empty between the last line and
+          the button, which read as an unfinished screen. */}
+      <View className="flex-1 justify-center">
         <HeroIcon Icon={Power} tint={p.accent.mint} />
         <Text className="mt-8 text-3xl font-semibold text-ink">
           Turn on your Loupe
@@ -226,8 +250,11 @@ function SuccessStep({
 }) {
   const p = useThemedPalette();
   return (
-    <View className="flex-1 justify-between py-6">
-      <View>
+    <View className="flex-1 py-6">
+      {/* Centered in the space above the pinned CTA. Top-aligning these short
+          steps left roughly half the screen empty between the last line and
+          the button, which read as an unfinished screen. */}
+      <View className="flex-1 justify-center">
         <HeroIcon Icon={Check} tint={p.accent.mint} />
         <Text className="mt-8 text-3xl font-semibold text-ink">
           You&apos;re paired
@@ -274,8 +301,11 @@ function ErrorStep({
 }) {
   const p = useThemedPalette();
   return (
-    <View className="flex-1 justify-between py-6">
-      <View>
+    <View className="flex-1 py-6">
+      {/* Centered in the space above the pinned CTA. Top-aligning these short
+          steps left roughly half the screen empty between the last line and
+          the button, which read as an unfinished screen. */}
+      <View className="flex-1 justify-center">
         <HeroIcon Icon={AlertTriangle} tint={p.accent.rose} />
         <Text className="mt-8 text-3xl font-semibold text-ink">
           We couldn&apos;t connect
@@ -337,16 +367,26 @@ function Bullet({
   Icon,
   title,
   body,
+  tint,
 }: {
   Icon: typeof Zap;
   title: string;
   body: string;
+  /** Accent for the icon chip. Defaults to mint. */
+  tint?: string;
 }) {
   const p = useThemedPalette();
+  // Tinted to match the step's hero icon, the way `NumberStep` already is.
+  // A dim glyph on a sunken grey chip read as a disabled row sitting under a
+  // vivid hero — the two treatments looked like different design systems.
+  const chip = tint ?? p.accent.mint;
   return (
     <View className="flex-row items-start gap-3">
-      <View className="mt-0.5 h-8 w-8 items-center justify-center rounded-2xl border border-line bg-bg-sunken">
-        <Icon size={16} color={p.ink.dim} />
+      <View
+        className="mt-0.5 h-8 w-8 items-center justify-center rounded-2xl"
+        style={{ backgroundColor: withAlpha(chip, 0.15) }}
+      >
+        <Icon size={16} color={chip} />
       </View>
       <View className="flex-1">
         <Text className="text-sm font-semibold text-ink">{title}</Text>

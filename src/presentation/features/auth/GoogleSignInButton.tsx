@@ -50,6 +50,7 @@ export function GoogleSignInButton({
   const p = useThemedPalette();
   const auth = useAuth();
   const [busy, setBusy] = useState(false);
+  const [pressed, setPressed] = useState(false);
 
   const [, response, promptGoogle] = Google.useAuthRequest({
     iosClientId: config.googleIosClientId,
@@ -89,7 +90,9 @@ export function GoogleSignInButton({
       disabled={busy}
       accessibilityRole="button"
       accessibilityLabel="Continue with Google"
-      style={({ pressed }) => [
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      style={[
         styles.googleBtn,
         {
           // line.strong (not line.default) so the border is actually visible —
@@ -117,8 +120,14 @@ export function GoogleSignInButton({
 
 const styles = StyleSheet.create({
   googleBtn: {
+    // `alignSelf` as well as `width`. The auth screens center their action
+    // stack, and under `alignItems: "center"` the percentage width alone left
+    // this button shrink-wrapped to its content — which collapsed the row and
+    // rendered the Google glyph stacked above its label, unstyled-looking,
+    // next to a full-width Apple button.
+    alignSelf: "stretch",
     width: "100%",
-    height: 50,
+    height: 48,
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",

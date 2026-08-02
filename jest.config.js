@@ -24,6 +24,11 @@ const moduleNameMapper = {
   "^@loupe/theme$": path.join(__dirname, "vendor/loupe-theme/src/index.ts"),
   "^@loupe/chart$": path.join(__dirname, "vendor/loupe-chart/src/index.ts"),
   "^@loupe/tokens$": path.join(__dirname, "vendor/loupe-tokens/src/index.ts"),
+  "^@loupe/marketing$": path.join(
+    __dirname,
+    "vendor/loupe-marketing/src/index.ts",
+  ),
+  "^@loupe/auth$": path.join(__dirname, "vendor/loupe-auth/src/index.ts"),
 };
 
 // `babel-preset-expo` rewrites `process.env.EXPO_PUBLIC_*` reads into
@@ -34,6 +39,17 @@ const domainModuleNameMapper = {
   ...moduleNameMapper,
   "^expo/virtual/env$": path.join(__dirname, "src/shared/test/expoEnvStub.js"),
 };
+
+/**
+ * Agent worktrees are created *inside* the repo at `.claude/worktrees/<name>`,
+ * and each one carries its own full copy of `vendor/loupe-*`. Jest's Haste map
+ * indexes every `package.json` under rootDir, so with even one worktree present
+ * `@loupe/grade` and `@loupe/theme` resolve to several packages at once and
+ * those suites fail to run — on a tree whose own source is perfectly fine.
+ * Keeping the worktrees out of the map makes the suite independent of whatever
+ * branches happen to be checked out beside it.
+ */
+const ignoreWorktrees = ["<rootDir>/.claude/worktrees/"];
 
 /** @type {import('jest').Config} */
 module.exports = {
@@ -49,6 +65,7 @@ module.exports = {
       },
       moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
       moduleNameMapper: domainModuleNameMapper,
+      modulePathIgnorePatterns: ignoreWorktrees,
       testMatch: [
         "<rootDir>/src/domain/**/__tests__/**/*.test.ts",
         "<rootDir>/src/shared/**/__tests__/**/*.test.ts",
@@ -62,6 +79,7 @@ module.exports = {
       displayName: "app",
       preset: "jest-expo",
       moduleNameMapper,
+      modulePathIgnorePatterns: ignoreWorktrees,
       testMatch: [
         "<rootDir>/src/presentation/**/__tests__/**/*.test.tsx",
         "<rootDir>/app/**/__tests__/**/*.test.tsx",

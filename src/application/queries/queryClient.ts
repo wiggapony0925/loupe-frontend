@@ -1,4 +1,17 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, onlineManager } from "@tanstack/react-query";
+import { isOnlineNow, subscribeOnline } from "@/shared/network";
+
+// Teach TanStack what "online" means on a phone.
+//
+// Its default detection is a DOM `online`/`offline` listener, which never
+// fires in React Native — so every query assumed a live connection, burned its
+// retries into a dead socket, and reported plain failures instead of pausing.
+// Bridging NetInfo means queries park while offline and resume the moment the
+// connection is back, without a manual refresh.
+onlineManager.setEventListener((setOnline) => {
+  setOnline(isOnlineNow());
+  return subscribeOnline(setOnline);
+});
 
 // Scan reports are immutable once written — refetching is intentionally lazy.
 //

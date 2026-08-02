@@ -29,6 +29,10 @@
       "@loupe/grade/*": ["./vendor/loupe-grade/src/*"],
       "@loupe/theme": ["./vendor/loupe-theme/src"],
       "@loupe/theme/*": ["./vendor/loupe-theme/src/*"],
+      "@loupe/marketing": ["./vendor/loupe-marketing/src"],
+      "@loupe/marketing/*": ["./vendor/loupe-marketing/src/*"],
+      "@loupe/auth": ["./vendor/loupe-auth/src"],
+      "@loupe/auth/*": ["./vendor/loupe-auth/src/*"],
       "tailwind.config": ["./tailwind.config.js"]
     },
     "types": ["nativewind/types", "node", "jest"]

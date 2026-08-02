@@ -2,8 +2,11 @@
  * Pure validation for the change-password form (shared by the screen so the
  * rules are unit-testable without rendering React Native).
  */
+import { PASSWORD_POLICY } from "@loupe/auth";
 
-export const MIN_PASSWORD_LENGTH = 8;
+/** Re-exported from the shared policy so this form, sign-up, and the web
+ *  client can't drift apart from what the backend actually accepts. */
+export const MIN_PASSWORD_LENGTH = PASSWORD_POLICY.MIN;
 
 export interface PasswordChangeFields {
   current: string;
