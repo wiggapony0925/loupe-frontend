@@ -16,6 +16,15 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 const MAX_TAGS = 12;
 const MAX_TAG_LEN = 24;
 
+/**
+ * Offered on a first-ever add, when the vault has no tags to suggest yet.
+ *
+ * Without these the control rendered as a bare bordered box, which is what
+ * made tagging look like a free-text field nobody knew what to type into. A
+ * few concrete examples teach the feature in one glance.
+ */
+const STARTER_TAGS = ["PC", "For sale", "Graded", "Invest", "Traded"] as const;
+
 export interface TagInputProps {
   value: string[];
   onChange: (tags: string[]) => void;
@@ -46,7 +55,8 @@ export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
     onChange(value.filter((t) => t !== tag));
 
   // Suggestions not already applied — the quick-add row.
-  const unusedSuggestions = suggestions.filter(
+  const pool = suggestions.length > 0 ? suggestions : [...STARTER_TAGS];
+  const unusedSuggestions = pool.filter(
     (s) => s && !lowerSet.has(s.toLowerCase()),
   );
 
@@ -54,6 +64,33 @@ export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
 
   return (
     <View style={{ gap: 10 }}>
+      {/* An empty tag box is just a bordered rectangle with a caret in it —
+          indistinguishable from any other text field, which is why this
+          didn't read as "tags" at all. Name the control and say what it's
+          for, then let the chips below carry the meaning. */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Text
+          style={{
+            color: p.ink.muted,
+            fontSize: 12,
+            fontWeight: "600",
+            letterSpacing: 0.6,
+            textTransform: "uppercase",
+          }}
+        >
+          Tags
+        </Text>
+        <Text style={{ color: p.ink.dim, fontSize: 11 }}>
+          {value.length}/{MAX_TAGS}
+        </Text>
+      </View>
+
       {/* Selected tags + inline add field */}
       <View
         style={{
@@ -123,7 +160,8 @@ export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
         ) : null}
       </View>
 
-      {/* Quick-add from tags the user already has */}
+      {/* Quick-add chips. Rendering these at the empty state too is what
+          actually communicates "these are tags" on a first-ever add. */}
       {unusedSuggestions.length > 0 && !atMax ? (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
           {unusedSuggestions.slice(0, 12).map((s) => (
