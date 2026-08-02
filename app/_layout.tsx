@@ -1,13 +1,12 @@
 import "../global.css";
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppProviders } from "@/presentation/providers/AppProviders";
 import { useAuth } from "@/presentation/providers/AuthProvider";
-import { BrandSplash } from "@/presentation/brand/BrandSplash";
 import { AppLoadingScreen } from "@/presentation/brand/AppLoadingScreen";
 import { NetworkBanner } from "@/presentation/components/NetworkBanner";
 import { AnnouncementBanner } from "@/presentation/components/AnnouncementBanner";
@@ -27,7 +26,14 @@ import { initSentry } from "@/infrastructure/observability/sentry";
 initSentry();
 
 export default function RootLayout() {
+  // Minimum time the launch screen stays up, so a fast boot doesn't flash it.
+  // `AppLoadingScreen` also covers the token-hydration gap after this elapses
+  // (see RootStack), which is why this hold can be short.
   const [splashDone, setSplashDone] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSplashDone(true), 900);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     // GestureHandler + SafeArea must sit ABOVE ThemeProvider because
@@ -43,7 +49,16 @@ export default function RootLayout() {
                   <RootStack />
                 </MinVersionGate>
               </ErrorBoundary>
-              {!splashDone ? <BrandSplash onFinish={() => setSplashDone(true)} /> : null}
+              {/* One launch identity. This used to mount `BrandSplash` — a
+                  second, older splash design — so every cold start showed
+                  that for its fixed 1.3s hold and the current loading screen
+                  only appeared afterwards, if hydration outlasted it. Users
+                  saw the old artwork essentially always. */}
+              {!splashDone ? (
+                <View style={StyleSheet.absoluteFill}>
+                  <AppLoadingScreen />
+                </View>
+              ) : null}
               <NetworkBanner />
               <AnnouncementBanner />
             </ThemedChrome>
@@ -83,9 +98,8 @@ const PUBLIC_SEGMENTS = new Set(["(auth)", "legal"]);
  * RootStack — auth-aware navigator.
  *
  * Lives *inside* `<AppProviders>` so it can read `useAuth()`. Until the
- * stored token has hydrated we render an empty View (the BrandSplash is
- * already on top); afterwards we either render the tabbed app shell or
- * redirect to /(auth)/welcome.
+ * stored token has hydrated we render the launch screen; afterwards we either
+ * render the tabbed app shell or redirect to /(auth)/welcome.
  */
 function RootStack() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -120,9 +134,8 @@ function RootStack() {
   // attached to the HTTP client. Mounting the tabs first meant their queries
   // fired token-less on cold boot, cached an empty/401 result, and only a
   // pull-to-refresh recovered (the "$0.00 / No history yet until I swipe"
-  // bug). The BrandSplash covers the first ~1.3s of this; hydration that runs
-  // longer than the splash's hold used to surface as a blank canvas, so the
-  // loading screen takes over from there.
+  // bug). The launch screen covers the first ~0.9s; hydration that outlasts it
+  // used to surface as a blank canvas, so the same screen takes over here.
   if (isLoading) {
     return <AppLoadingScreen />;
   }

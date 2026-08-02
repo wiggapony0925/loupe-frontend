@@ -45,29 +45,30 @@ export function AuthScreen({
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.flex}
         >
+          {/* Outside the ScrollView: the back button belongs to the screen, not
+              to the centred form, and inside it would drift with the content. */}
+          {goBack ? (
+            <Pressable
+              onPress={goBack}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              style={[
+                styles.back,
+                {
+                  backgroundColor: p.bg.elevated,
+                  borderColor: p.line.default,
+                },
+              ]}
+            >
+              <ChevronLeft size={20} color={p.ink.default} />
+            </Pressable>
+          ) : null}
           <ScrollView
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            bounces={false}
           >
-            {goBack ? (
-              <Pressable
-                onPress={goBack}
-                hitSlop={12}
-                accessibilityRole="button"
-                accessibilityLabel="Go back"
-                style={[
-                  styles.back,
-                  {
-                    backgroundColor: p.bg.elevated,
-                    borderColor: p.line.default,
-                  },
-                ]}
-              >
-                <ChevronLeft size={20} color={p.ink.default} />
-              </Pressable>
-            ) : null}
             <View style={styles.inner}>{children}</View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -80,8 +81,22 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1 },
   flex: { flex: 1 },
-  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 14 },
+  // Centering lives on the content container, NOT on a `flex: 1` child.
+  // A flex-1 child is pinned to the scroll frame's height, so as soon as the
+  // form is taller than the frame — a big Dynamic Type setting, or just the
+  // signup form — `justifyContent: center` pushed the top of the content
+  // ABOVE the parent's bounds. iOS doesn't deliver touches outside a parent's
+  // frame, so the email and password fields rendered but could not be tapped
+  // at all: no focus, no keyboard. `flexGrow` centers short content and lets
+  // tall content grow and scroll instead of overflowing.
+  scroll: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+  },
   back: {
+    marginLeft: 24,
     width: 38,
     height: 38,
     borderRadius: 12,
@@ -90,5 +105,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 6,
   },
-  inner: { flex: 1, justifyContent: "center", gap: 18 },
+  inner: { gap: 18 },
 });

@@ -54,25 +54,16 @@ export const FormInput = forwardRef<TextInput, FormInputProps>(
     return (
       <View style={styles.wrap}>
         <Text style={[styles.label, { color: p.ink.muted }]}>{label}</Text>
-        <View
-          style={[
-            styles.field,
-            {
-              backgroundColor: p.bg.elevated,
-              borderColor: ring,
-              // A focus halo reads as "active" at a glance on a dark field,
-              // where a 1px border change alone is easy to miss.
-              shadowColor: focused && !error ? p.accent.mint : "transparent",
-            },
-          ]}
-        >
-          {Icon ? (
-            <Icon
-              size={17}
-              color={focused ? p.accent.mint : p.ink.dim}
-              strokeWidth={2}
-            />
-          ) : null}
+        {/* The TextInput carries the border and background ITSELF, and the
+            icon / reveal button are absolutely positioned over it.
+
+            Wrapping the input in a flex-row container instead — the obvious
+            way to lay out "icon, field, button" — silently made the field
+            impossible to focus on a device: tapping it did nothing, no
+            keyboard, no caret, so sign-in and sign-up were unusable. A bare
+            TextInput on the same screen focused fine, which is what pinned it
+            on the wrapper. Keep the input as the touch target. */}
+        <View style={styles.fieldStack}>
           <TextInput
             ref={ref}
             placeholderTextColor={p.ink.dim}
@@ -86,9 +77,28 @@ export const FormInput = forwardRef<TextInput, FormInputProps>(
               setFocused(false);
               onBlur?.(e);
             }}
-            style={[styles.input, { color: p.ink.default }, style]}
+            style={[
+              styles.input,
+              {
+                backgroundColor: p.bg.elevated,
+                borderColor: ring,
+                color: p.ink.default,
+                paddingLeft: Icon ? 41 : 14,
+                paddingRight: isPassword ? 50 : 14,
+              },
+              style,
+            ]}
             {...rest}
           />
+          {Icon ? (
+            <View style={styles.leadingIcon} pointerEvents="none">
+              <Icon
+                size={17}
+                color={focused ? p.accent.mint : p.ink.dim}
+                strokeWidth={2}
+              />
+            </View>
+          ) : null}
           {isPassword ? (
             <Pressable
               onPress={() => setRevealed((v) => !v)}
@@ -126,24 +136,23 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: "uppercase",
   },
-  field: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+  fieldStack: { justifyContent: "center" },
+  input: {
     borderWidth: 1,
     borderRadius: 14,
-    paddingHorizontal: 14,
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  input: {
-    flex: 1,
     paddingVertical: 14,
     fontSize: 16,
     fontWeight: "500",
   },
+  leadingIcon: {
+    position: "absolute",
+    left: 14,
+    // Never intercept — the input underneath must stay the touch target.
+    pointerEvents: "none",
+  },
   reveal: {
+    position: "absolute",
+    right: 10,
     width: 30,
     height: 30,
     borderRadius: 10,

@@ -7,14 +7,17 @@
  * real trending cards. Copy comes from `@loupe/marketing` so the app and the
  * website can't drift into two different pitches.
  *
- * Single screenful, no scrolling: three fixed blocks (pitch / card / actions)
- * with the card given the slack in between. It sizes off the live viewport
- * rather than fixed numbers so a small phone shrinks the card instead of
- * pushing the sign-up button off the bottom.
+ * One screenful at the default text size: three blocks (pitch / card / actions)
+ * with the card given the slack in between, sized off the live viewport so a
+ * small phone shrinks the card rather than pushing the sign-up button off the
+ * bottom. Large Dynamic Type settings scroll instead of overlapping — display
+ * type is capped via `maxFontSizeMultiplier` because a 2x headline cannot be
+ * made to fit any phone, while body copy is left free to scale.
  */
 import React from "react";
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -34,7 +37,7 @@ import { useThemedPalette } from "@/presentation/theme/tokens";
 
 export default function WelcomeScreen() {
   const p = useThemedPalette();
-  const { height } = useWindowDimensions();
+  const { height, fontScale } = useWindowDimensions();
   // Same feed the website's hero uses, replayed from the last launch so the
   // first screen paints real cards instead of a spinner.
   const { cards, isLoading, isError } = useHeroCards();
@@ -42,8 +45,17 @@ export default function WelcomeScreen() {
   // The card is the only elastic element — the pitch and the actions both have
   // to render in full, so the card takes whatever height is left over. Clamped
   // so it never gets so small it stops reading as card art.
+  //
+  // `fontScale` matters as much as height: at a large Dynamic Type setting the
+  // copy above the card grows by hundreds of points, and sizing off height
+  // alone left the card overlapping the sub-headline and the price colliding
+  // with the CTA.
+  // Explicit lineHeight does NOT scale with Dynamic Type the way fontSize
+  // does, so a scaled headline grew into its own leading and then into the
+  // card below it. Scale the leading by the same capped factor.
+  const capped = Math.min(fontScale, 1.1);
   const cardWidth = Math.round(
-    Math.max(112, Math.min(168, (height - 470) / 1.4)),
+    Math.max(96, Math.min(168, (height - 470 - (fontScale - 1) * 260) / 1.4)),
   );
 
   return (
@@ -51,19 +63,42 @@ export default function WelcomeScreen() {
       <AuroraField variant="hero" height={Math.round(height * 0.62)} />
 
       <SafeAreaView edges={["top", "bottom"]} style={styles.safe}>
-        <View style={styles.content}>
+        {/* Scrolls only when it has to. At the default text size `flexGrow`
+            makes this behave exactly like a fixed screen — nothing moves. Turn
+            Dynamic Type up and the copy no longer collides with the card and
+            the CTA no longer slides under the fold; it just scrolls. */}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           <Animated.View entering={FadeInDown.duration(420)}>
             <View style={styles.brandRow}>
               <LoupeMark size={22} color={p.ink.default} />
-              <Text style={[styles.wordmark, { color: p.ink.default }]}>
+              <Text
+                maxFontSizeMultiplier={1.2}
+                style={[styles.wordmark, { color: p.ink.default }]}
+              >
                 LOUPE
               </Text>
             </View>
 
-            <Text style={[styles.headline, { color: p.ink.default }]}>
+            <Text
+              maxFontSizeMultiplier={1.1}
+              style={[
+                styles.headline,
+                { color: p.ink.default, lineHeight: 40 * capped },
+              ]}
+            >
               {HERO.headlineNarrow.join("\n")}
             </Text>
-            <Text style={[styles.sub, { color: p.ink.muted }]}>
+            <Text
+              maxFontSizeMultiplier={1.3}
+              style={[
+                styles.sub,
+                { color: p.ink.muted, lineHeight: 21 * Math.min(fontScale, 1.3) },
+              ]}
+            >
               {HERO.subShort}
             </Text>
           </Animated.View>
@@ -84,7 +119,10 @@ export default function WelcomeScreen() {
             entering={FadeInDown.duration(460).delay(200)}
             style={styles.actions}
           >
-            <Text style={[styles.disclaimer, { color: p.ink.dim }]}>
+            <Text
+              maxFontSizeMultiplier={1.4}
+              style={[styles.disclaimer, { color: p.ink.dim }]}
+            >
               {HERO.disclaimer}
             </Text>
             <PrimaryButton
@@ -97,7 +135,10 @@ export default function WelcomeScreen() {
               hitSlop={8}
               accessibilityRole="button"
             >
-              <Text style={[styles.signIn, { color: p.ink.dim }]}>
+              <Text
+                maxFontSizeMultiplier={1.4}
+                style={[styles.signIn, { color: p.ink.dim }]}
+              >
                 Already have an account?{" "}
                 <Text style={{ color: p.ink.default, fontWeight: "600" }}>
                   Sign in
@@ -106,7 +147,7 @@ export default function WelcomeScreen() {
             </Pressable>
             <AuthFooter />
           </Animated.View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
@@ -116,7 +157,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1 },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 26,
     paddingTop: 14,
     paddingBottom: 8,
@@ -132,9 +173,7 @@ const styles = StyleSheet.create({
     marginTop: 26,
   },
   sub: { fontSize: 14.5, lineHeight: 21, marginTop: 12, maxWidth: 330 },
-  // `minHeight: 0` lets this actually shrink — without it the flex child keeps
-  // its content height and pushes the actions off-screen on a short phone.
-  stackWrap: { flex: 1, minHeight: 0, justifyContent: "center" },
+  stackWrap: { flexGrow: 1, justifyContent: "center", paddingVertical: 8 },
   actions: { gap: 10 },
   disclaimer: { fontSize: 11, textAlign: "center", marginBottom: 2 },
   signIn: { fontSize: 13.5, textAlign: "center" },
