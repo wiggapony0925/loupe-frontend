@@ -63,10 +63,10 @@ export function SocialSignIn({ onSuccess }: { onSuccess?: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 12, width: "100%" },
+  wrap: { gap: 10, width: "100%" },
   divider: { flexDirection: "row", alignItems: "center", gap: 12 },
   line: { flex: 1, height: StyleSheet.hairlineWidth },
   or: { fontSize: 12, fontWeight: "600" },
-  appleBtn: { width: "100%", height: 50 },
+  appleBtn: { width: "100%", height: 48 },
   error: { fontSize: 13, fontWeight: "500", textAlign: "center" },
 });

@@ -115,6 +115,21 @@ export function isOnlineNow(): boolean {
   return snapshot.isConnected;
 }
 
+/**
+ * Subscribe to connectivity outside React. Returns an unsubscribe fn.
+ *
+ * Exists for TanStack's `onlineManager`, which needs a plain listener rather
+ * than a hook — see `queryClient.ts`.
+ */
+export function subscribeOnline(cb: (online: boolean) => void): () => void {
+  ensureStarted();
+  const listener = () => cb(snapshot.isConnected);
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 /** Internal: register a listener for use in non-hook code. */
 export function useNetworkEffect(cb: (online: boolean) => void): void {
   useEffect(() => {

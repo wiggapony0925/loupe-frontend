@@ -9,12 +9,12 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft, MailCheck, Send } from "lucide-react-native";
+import { ArrowLeft, Mail, MailCheck, Send } from "lucide-react-native";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { AuthScreen } from "@/presentation/features/auth/AuthScreen";
+import { AuthHeader } from "@/presentation/features/auth/AuthHeader";
 import { AuthFooter } from "@/presentation/features/auth/AuthFooter";
 import { FormInput } from "@/presentation/features/auth/FormInput";
-import { LoupeMark } from "@/presentation/brand/LoupeMark";
 import { requestPasswordReset } from "@/infrastructure/repositories/authRepository";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -68,12 +68,14 @@ export default function ForgotPasswordScreen() {
         </View>
 
         <View style={styles.actions}>
-          <PrimaryButton
-            label="Back to sign in"
-            icon={ArrowLeft}
-            variant="mint"
-            onPress={() => router.replace("/(auth)/sign-in")}
-          />
+          <View style={styles.fullWidth}>
+            <PrimaryButton
+              label="Back to sign in"
+              icon={ArrowLeft}
+              variant="mint"
+              onPress={() => router.replace("/(auth)/sign-in")}
+            />
+          </View>
           <Pressable onPress={() => setSent(false)}>
             <Text style={[styles.switch, { color: p.ink.muted }]}>
               Didn't get it?{" "}
@@ -89,17 +91,15 @@ export default function ForgotPasswordScreen() {
 
   return (
     <AuthScreen>
-      <View style={styles.header}>
-        <LoupeMark size={44} color={p.ink.default} />
-        <Text style={[styles.title, { color: p.ink.default }]}>Reset your password</Text>
-        <Text style={[styles.subtitle, { color: p.ink.muted }]}>
-          Enter your email and we'll send you a link to set a new password.
-        </Text>
-      </View>
+      <AuthHeader
+        title="Reset your password"
+        subtitle="Enter your email and we'll send you a link to set a new password."
+      />
 
       <View style={styles.form}>
         <FormInput
           label="Email"
+          icon={Mail}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -114,13 +114,15 @@ export default function ForgotPasswordScreen() {
       </View>
 
       <View style={styles.actions}>
-        <PrimaryButton
-          label="Send reset link"
-          icon={Send}
-          variant="mint"
-          loading={submitting}
-          onPress={onSubmit}
-        />
+        <View style={styles.fullWidth}>
+          <PrimaryButton
+            label="Send reset link"
+            icon={Send}
+            variant="mint"
+            loading={submitting}
+            onPress={onSubmit}
+          />
+        </View>
         <Pressable onPress={() => router.replace("/(auth)/sign-in")}>
           <Text style={[styles.switch, { color: p.ink.muted }]}>
             Remembered it?{" "}
@@ -147,5 +149,6 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, lineHeight: 21 },
   form: { gap: 16 },
   actions: { gap: 16, alignItems: "center" },
+  fullWidth: { alignSelf: "stretch" },
   switch: { fontSize: 14, textAlign: "center" },
 });

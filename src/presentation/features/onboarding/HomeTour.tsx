@@ -30,6 +30,7 @@ import Animated, {
   FadeInDown,
   FadeOut,
   LinearTransition,
+  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -39,7 +40,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { BlurView } from "expo-blur";
+import Svg, { Path } from "react-native-svg";
 import {
   ChartLine,
   FileText,
@@ -104,6 +105,9 @@ const SPOT_SPRING = { damping: 19, stiffness: 190, mass: 0.7 };
 const ENTRY_SPRING = { damping: 24, stiffness: 130, mass: 0.9 };
 const ENTRY_DELAY_MS = 120;
 const EXIT_MS = 340;
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
 /** Time for the scroll + settle before re-measuring anchors. */
 const SCROLL_SETTLE_MS = 420;
 
@@ -225,66 +229,28 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
     );
   }, [pulse]);
 
-  // Four frames around the hole — the target itself stays UNBLURRED.
-  const topStrip = useAnimatedStyle(() => ({
-    left: 0,
-    top: 0,
-    width: winW,
-    height: Math.max(0, hy.value),
-  }));
-  const bottomStrip = useAnimatedStyle(() => ({
-    left: 0,
-    top: hy.value + hh.value,
-    width: winW,
-    height: Math.max(0, winH - (hy.value + hh.value)),
-  }));
-  const leftStrip = useAnimatedStyle(() => ({
-    left: 0,
-    top: hy.value,
-    width: Math.max(0, hx.value),
-    height: hh.value,
-  }));
-  const rightStrip = useAnimatedStyle(() => ({
-    left: hx.value + hw.value,
-    top: hy.value,
-    width: Math.max(0, winW - (hx.value + hw.value)),
-    height: hh.value,
-  }));
-
-  // Corner pieces: dim squares with an inward-facing quarter-radius, so
-  // the square hole the strips leave reads as a ROUNDED rect (and, when
-  // radius = width/2 on tab targets, as a perfect circle).
-  // NOTE: every value is inlined — calling a helper function from inside
-  // a worklet runs a NON-worklet on the UI runtime, which throws and
-  // aborts the whole app (this exact mistake shipped once; never again).
-  const cornerTL = useAnimatedStyle(() => ({
-    width: holeRadius.value,
-    height: holeRadius.value,
-    left: hx.value,
-    top: hy.value,
-    borderBottomRightRadius: holeRadius.value,
-  }));
-  const cornerTR = useAnimatedStyle(() => ({
-    width: holeRadius.value,
-    height: holeRadius.value,
-    left: hx.value + hw.value - holeRadius.value,
-    top: hy.value,
-    borderBottomLeftRadius: holeRadius.value,
-  }));
-  const cornerBL = useAnimatedStyle(() => ({
-    width: holeRadius.value,
-    height: holeRadius.value,
-    left: hx.value,
-    top: hy.value + hh.value - holeRadius.value,
-    borderTopRightRadius: holeRadius.value,
-  }));
-  const cornerBR = useAnimatedStyle(() => ({
-    width: holeRadius.value,
-    height: holeRadius.value,
-    left: hx.value + hw.value - holeRadius.value,
-    top: hy.value + hh.value - holeRadius.value,
-    borderTopLeftRadius: holeRadius.value,
-  }));
+  // The scrim path: the whole screen, with a rounded-rect hole punched out.
+  // `evenodd` makes the inner subpath a hole rather than a second fill.
+  //
+  // NOTE: every value is inlined — calling a helper function from inside a
+  // worklet runs a NON-worklet on the UI runtime, which throws and aborts the
+  // whole app (this exact mistake shipped once; never again).
+  const holePath = useAnimatedProps(() => {
+    const x = hx.value;
+    const y = hy.value;
+    const w = Math.max(0, hw.value);
+    const h = Math.max(0, hh.value);
+    // Radius can't exceed half the shorter side or the arcs self-intersect.
+    const r = Math.max(0, Math.min(holeRadius.value, w / 2, h / 2));
+    const outer = `M0 0H${winW}V${winH}H0Z`;
+    const hole =
+      `M${x + r} ${y}` +
+      `H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}` +
+      `V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}` +
+      `H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}` +
+      `V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+    return { d: `${outer}${hole}` };
+  });
 
   const ringStyle = useAnimatedStyle(() => ({
     left: hx.value,
@@ -358,11 +324,9 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
       ? Math.max(winH - rect.y + RING_PAD + CARD_MARGIN, 140)
       : undefined;
 
-  const dim = withAlpha(isDark ? "#000000" : "#0B0B0B", 0.38);
-  const stripBase = {
-    position: "absolute" as const,
-    overflow: "hidden" as const,
-  };
+  // Slightly heavier than it was with blur behind it — the scrim now has to
+  // separate the spotlight from the page on its own.
+  const dim = withAlpha(isDark ? "#000000" : "#0B0B0B", 0.5);
   const Icon = current.icon;
 
   return (
@@ -380,34 +344,20 @@ export function HomeTour({ scrollTo }: { scrollTo?: (y: number) => void }) {
         accessibilityLabel="Next step"
         style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
       />
-      {/* Spotlight frame — blur + dim everywhere EXCEPT the hole. */}
-      {[topStrip, bottomStrip, leftStrip, rightStrip].map((strip, i) => (
-        <Animated.View key={i} style={[stripBase, strip]} pointerEvents="none">
-          <BlurView
-            intensity={26}
-            tint={isDark ? "dark" : "light"}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-          <View
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: dim,
-            }}
-          />
-        </Animated.View>
-      ))}
-      {/* Rounded-corner pieces — square off the hole into the ring's shape. */}
-      {[cornerTL, cornerTR, cornerBL, cornerBR].map((corner, i) => (
-        <Animated.View
-          key={`c${i}`}
-          pointerEvents="none"
-          style={[{ position: "absolute", backgroundColor: dim }, corner]}
-        />
-      ))}
+      {/* The scrim, with the spotlight punched clean out of it.
+          One even-odd path rather than four strips plus four corner tiles:
+          a corner gap is a CONCAVE wedge (square minus quarter-disc), and
+          `borderBottomRightRadius` on a filled square draws the convex
+          quarter instead — so the old tiles covered the hole's corners and
+          read as four grey blobs sitting on top of the target. */}
+      <Svg
+        style={{ position: "absolute", top: 0, left: 0 }}
+        width={winW}
+        height={winH}
+        pointerEvents="none"
+      >
+        <AnimatedPath fill={dim} fillRule="evenodd" animatedProps={holePath} />
+      </Svg>
 
       {/* Halo — a soft second ring floating just outside the window. */}
       <Animated.View

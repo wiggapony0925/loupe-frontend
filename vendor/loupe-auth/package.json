@@ -1,0 +1,11 @@
+{
+  "name": "@loupe/auth",
+  "version": "0.1.0",
+  "description": "Framework-agnostic auth rules shared by loupe-web and loupe-frontend — the password policy the backend enforces, plus the strength scoring both signup forms display. No DOM, React, or RN.",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}

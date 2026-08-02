@@ -441,6 +441,17 @@ export default function SearchScreen() {
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
             returnKeyType="search"
+            // Only give the keyboard up when the submit actually produced
+            // something to look at. Accepting "/ai" clears the field and drops
+            // you into AI mode with an empty description — RN's default
+            // blur-on-submit dismissed the keyboard right at the moment you
+            // need to start typing, forcing a tap back into the field. Same
+            // for an AI description too short to ask with.
+            submitBehavior={
+              slashPanel || (aiMode && query.trim().length < 3)
+                ? "submit"
+                : "blurAndSubmit"
+            }
             placeholder={
               aiMode
                 ? "Describe the card — colours, creatures, attacks…"

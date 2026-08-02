@@ -5,7 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import type { LucideIcon } from "lucide-react-native";
 import { Pressable } from "@/components/ui/pressable";
 import { HStack } from "@/components/ui/hstack";
-import { useThemedPalette } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 interface PrimaryButtonProps {
   label: string;
@@ -55,11 +55,24 @@ export function PrimaryButton({
     : undefined;
 
   const isGhost = variant === "ghost";
-  const gradient: [string, string] =
-    variant === "mint"
+  const isDisabled = disabled && !loading;
+  // Disabled is a different SURFACE, not a faded one. Fading the mint gradient
+  // to 40% over a dark background lands on a perfectly plausible dark green —
+  // the button still looked tappable in dark mode, so an empty form read as
+  // "press this" and then did nothing. A flat muted fill reads as inert in
+  // both themes.
+  const gradient: [string, string] = isDisabled
+    ? [withAlpha(p.ink.default, 0.1), withAlpha(p.ink.default, 0.1)]
+    : variant === "mint"
       ? [p.accent.mint, "#00C97E"]
       : [p.accent.blue, "#0058D6"];
-  const fg = isGhost ? p.ink.default : variant === "mint" ? "#0B0B0D" : "#FFFFFF";
+  const fg = isDisabled
+    ? p.ink.dim
+    : isGhost
+      ? p.ink.default
+      : variant === "mint"
+        ? "#0B0B0D"
+        : "#FFFFFF";
 
   return (
     <Pressable
@@ -72,7 +85,7 @@ export function PrimaryButton({
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
       className="overflow-hidden rounded-2xl"
       style={({ pressed }) => ({
-        opacity: disabled ? 0.4 : pressed ? 0.85 : 1,
+        opacity: pressed && !isDisabled ? 0.85 : 1,
       })}
     >
       {isGhost ? (

@@ -1,6 +1,6 @@
 /**
- * useMixedTrending — a reliably *mixed* trending feed for the home rails,
- * mirroring the web client's `useMixedTrending`.
+ * useMixedTrending — a reliably *mixed* trending feed for the home rails and
+ * the pre-auth hero, mirroring the web client's `useMixedTrending`.
  *
  * Round-robins Pokémon · Magic · Yu-Gi-Oh! so a rail never collapses to a
  * single game. The `tcg=all` feed (and even per-game `sort=trending`)
@@ -10,8 +10,12 @@
  * fall back to value, then interleave. All six queries are cached + deduped
  * by TanStack (and collapse to three when `sort` is already `"value"`), so
  * sharing this across multiple rails costs nothing extra.
+ *
+ * The fallback + interleave math is `@loupe/marketing`'s, shared with the web
+ * client so both surfaces order the same feed the same way.
  */
 import { useMemo } from "react";
+import { interleaveById, pickPopulated } from "@loupe/marketing";
 import type { CardSearchResult } from "@/infrastructure/http";
 import { useTrendingCards } from "./useTrendingCards";
 
@@ -30,28 +34,18 @@ export function useMixedTrending(
   const mgV = useTrendingCards({ tcg: "magic", sort: "value", limit: perTcg, maxPrice });
   const ygV = useTrendingCards({ tcg: "yugioh", sort: "value", limit: perTcg, maxPrice });
 
-  const cards = useMemo<CardSearchResult[]>(() => {
-    const pick = (primary?: CardSearchResult[], fallback?: CardSearchResult[]) =>
-      primary && primary.length > 0 ? primary : (fallback ?? []);
-    const lists = [
-      pick(pkT.data?.cards, pkV.data?.cards),
-      pick(mgT.data?.cards, mgV.data?.cards),
-      pick(ygT.data?.cards, ygV.data?.cards),
-    ];
-    const out: CardSearchResult[] = [];
-    const seen = new Set<string>();
-    const max = Math.max(0, ...lists.map((l) => l.length));
-    for (let i = 0; i < max; i++) {
-      for (const list of lists) {
-        const card = list[i];
-        if (card && !seen.has(card.id)) {
-          seen.add(card.id);
-          out.push(card);
-        }
-      }
-    }
-    return out;
-  }, [pkT.data, mgT.data, ygT.data, pkV.data, mgV.data, ygV.data]);
+  const cards = useMemo<CardSearchResult[]>(
+    () =>
+      interleaveById(
+        [
+          pickPopulated(pkT.data?.cards, pkV.data?.cards),
+          pickPopulated(mgT.data?.cards, mgV.data?.cards),
+          pickPopulated(ygT.data?.cards, ygV.data?.cards),
+        ],
+        (c) => c.id,
+      ),
+    [pkT.data, mgT.data, ygT.data, pkV.data, mgV.data, ygV.data],
+  );
 
   return {
     cards,
