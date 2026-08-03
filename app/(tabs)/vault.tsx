@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   FlatList,
   LayoutAnimation,
   Platform,
@@ -16,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import {
   ArrowDownRight,
@@ -40,11 +39,6 @@ import { FilterSheet } from "@/presentation/features/collection/FilterSheet";
 import { PositionRow } from "@/presentation/features/collection/PositionRow";
 import { SetProgressCarousel } from "@/presentation/features/collection/SetProgressCarousel";
 import { useFilteredCollection } from "@/presentation/features/collection/useFilteredCollection";
-import { VaultCollectionActionSheet } from "@/presentation/features/collection/VaultCollectionActionSheet";
-import {
-  VaultRemoveSheet,
-  type VaultRemoveScope,
-} from "@/presentation/features/collection/VaultRemoveSheet";
 import {
   vaultGridColumns,
   vaultListRows,
@@ -52,12 +46,12 @@ import {
 import { ProUsageBanner } from "@/presentation/features/pro";
 import { useMySealedHoldings } from "@/application/queries/collection/useSealed";
 import { useCollectionsOverview } from "@/application/queries/collection/useCollectionsOverview";
-import { useBulkRemoveFromCollection } from "@/application/queries/collection/useCollectionMutations";
 import {
   useRegisterVaultSelectionChrome,
   useVaultSelectionChrome,
 } from "@/application/hooks/useVaultSelectionChrome";
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
+import { useHoldingActions } from "@/presentation/features/collection/useHoldingActions";
 import { useVaultFilters } from "@/application/stores";
 import {
   activeFilterCount,
@@ -66,7 +60,6 @@ import {
   type VaultType,
 } from "@/application/stores/vaultStore";
 import {
-  deleteGradedCard,
   fetchCardSparklines,
   type CardSparkline,
 } from "@/infrastructure/repositories/forensicRepository";
@@ -134,15 +127,12 @@ export default function VaultScreen() {
   const sealedHoldings = useMySealedHoldings({ includeOpened: false });
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [organizeOpen, setOrganizeOpen] = useState(false);
-  const [removeIds, setRemoveIds] = useState<string[] | null>(null);
 
   // Multi-select + island-navbar chrome — store + hook keep the tab bar
   // and this screen in sync without prop-drilling through TabsLayout.
   const {
     selecting: selectionMode,
     selected: selectedIds,
-    busy: selectionBusy,
     beginWith: beginSelectionWith,
     toggle: toggleSelection,
     selectMany,
@@ -150,14 +140,25 @@ export default function VaultScreen() {
     setBusy: setSelectionBusy,
   } = useVaultSelectionChrome();
 
-  const openOrganize = useCallback(() => setOrganizeOpen(true), []);
-  const openRemoveSheet = useCallback((ids: string[]) => {
-    if (ids.length === 0) return;
-    setRemoveIds(ids);
-  }, []);
-  const openRemoveFromIsland = useCallback(() => {
-    openRemoveSheet(Array.from(selectedIds));
-  }, [openRemoveSheet, selectedIds]);
+  // Organize / remove live in `useHoldingActions` so this screen and card
+  // detail share one implementation — same sheets, same collection-vs-delete
+  // scoping, same cache invalidation.
+  const holdingActions = useHoldingActions({
+    onRemoved: () => clearSelection(),
+    onBusyChange: setSelectionBusy,
+  });
+  const openOrganize = useCallback(
+    () => holdingActions.organize(Array.from(selectedIds)),
+    [holdingActions, selectedIds],
+  );
+  const openRemoveSheet = useCallback(
+    (ids: string[]) => holdingActions.remove(ids),
+    [holdingActions],
+  );
+  const openRemoveFromIsland = useCallback(
+    () => holdingActions.remove(Array.from(selectedIds)),
+    [holdingActions, selectedIds],
+  );
   // Toggle: everything visible selected → exit; otherwise select all
   // currently filtered holdings (respects search / set / grade filters).
   const toggleSelectAll = useCallback(() => {
@@ -179,7 +180,6 @@ export default function VaultScreen() {
 
   const { collectionId: activeCollectionId } = useActiveCollection();
   const { data: portfolios } = useCollectionsOverview();
-  const bulkRemove = useBulkRemoveFromCollection();
   const activeCollectionName = useMemo(() => {
     if (!activeCollectionId) return null;
     return portfolios?.find((c) => c.id === activeCollectionId)?.name ?? null;
@@ -198,59 +198,6 @@ export default function VaultScreen() {
       toggleSelection(id);
     },
     [toggleSelection],
-  );
-
-  // Bulk-delete fans out one DELETE per selected grade id. Backend has
-  // no batch endpoint yet — if/when it ships we can swap this in
-  // place. Promise.allSettled so a single 404 doesn't strand the rest.
-  const deleteMutation = useMutation({
-    mutationFn: async (ids: string[]) => {
-      const results = await Promise.allSettled(ids.map(deleteGradedCard));
-      const failed = results.filter((r) => r.status === "rejected").length;
-      if (failed > 0) throw new Error(`${failed} card(s) could not be removed.`);
-    },
-    onSettled: () => {
-      // Refresh every holding-derived cache (list, hero, pills, tiles,
-      // analytics, home feed) so they all reflect the smaller vault.
-      invalidateHoldingCaches(qc);
-    },
-  });
-
-  const confirmRemove = useCallback(
-    async (scope: VaultRemoveScope) => {
-      if (!removeIds || removeIds.length === 0) return;
-      setSelectionBusy(true);
-      try {
-        if (scope === "collection") {
-          if (!activeCollectionId) {
-            throw new Error("Switch into a collection to remove membership only.");
-          }
-          await bulkRemove.mutateAsync({
-            collectionId: activeCollectionId,
-            gradedCardIds: removeIds,
-          });
-        } else {
-          await deleteMutation.mutateAsync(removeIds);
-        }
-        setRemoveIds(null);
-        clearSelection();
-      } catch (err) {
-        Alert.alert(
-          "Couldn't remove cards",
-          String((err as Error).message ?? err),
-        );
-      } finally {
-        setSelectionBusy(false);
-      }
-    },
-    [
-      removeIds,
-      activeCollectionId,
-      bulkRemove,
-      deleteMutation,
-      clearSelection,
-      setSelectionBusy,
-    ],
   );
 
   // Pair each holding with its sparkline + delta. Same query Analytics uses,
@@ -582,22 +529,7 @@ export default function VaultScreen() {
         resultCount={filteredCount}
         isCountFetching={isCountFetching}
       />
-      <VaultCollectionActionSheet
-        visible={organizeOpen}
-        gradedCardIds={Array.from(selectedIds)}
-        onClose={() => setOrganizeOpen(false)}
-        onDone={() => clearSelection()}
-      />
-      <VaultRemoveSheet
-        visible={removeIds != null}
-        count={removeIds?.length ?? 0}
-        collectionName={activeCollectionName}
-        busy={selectionBusy}
-        onClose={() => {
-          if (!selectionBusy) setRemoveIds(null);
-        }}
-        onConfirm={(scope) => void confirmRemove(scope)}
-      />
+      {holdingActions.sheets}
     </SafeAreaView>
   );
 }

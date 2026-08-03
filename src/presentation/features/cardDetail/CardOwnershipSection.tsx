@@ -16,22 +16,26 @@
  * never splinter the list). Renders nothing for guests/non-owners.
  */
 import React, { useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import {
   ChevronDown,
   ChevronRight,
   ChevronUp,
+  FolderPlus,
   Layers,
   PencilLine,
   Plus,
   ScanLine,
+  StickyNote,
+  Trash2,
   Upload,
 } from "lucide-react-native";
 import { useThemedPalette, withAlpha, gradeColor } from "@/presentation/theme/tokens";
 import { Price, useMoney } from "@/presentation/components/Price";
 import { CardImage } from "@/presentation/components/CardImage";
 import { useCardOwnership } from "@/application/queries/collection/useCardOwnership";
+import { useHoldingActions } from "@/presentation/features/collection/useHoldingActions";
 import { routes } from "@/shared/routes";
 import type { AcquisitionSource, CardHoldingWire } from "@/infrastructure/http";
 
@@ -140,10 +144,18 @@ export function CardOwnershipSection({
 }: CardOwnershipSectionProps) {
   const p = useThemedPalette();
   const { data } = useCardOwnership(cardId);
+  const actions = useHoldingActions();
   const [openTiers, setOpenTiers] = useState<Set<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
 
   const holdings = data?.holdings;
+  // Every copy of THIS card. The actions are card-scoped on this screen —
+  // organizing or removing here means "all my copies of this card", which is
+  // what the page is about.
+  const holdingIds = useMemo(
+    () => (holdings ?? []).map((h) => h.holding_id),
+    [holdings],
+  );
   const tiers = useMemo(() => buildTiers(holdings ?? []), [holdings]);
 
   if (!data || !data.owned || !holdings || holdings.length === 0) return null;
@@ -410,10 +422,81 @@ export function CardOwnershipSection({
             Add another copy
           </Text>
         </Pressable>
+
+        {/* Organize / remove, on the card itself.
+            These actions previously existed ONLY behind a long-press in the
+            vault, so the natural place to act on a card you're looking at had
+            no way to file or remove it. Same `useHoldingActions` the vault
+            uses — same sheets, same collection-vs-delete scoping, same cache
+            invalidation — rather than a second implementation that could drift
+            into deleting cards differently. */}
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <OwnershipAction
+            Icon={FolderPlus}
+            label="Add to collection"
+            tint={p.ink.default}
+            disabled={actions.busy}
+            onPress={() => actions.organize(holdingIds)}
+          />
+          <OwnershipAction
+            Icon={Trash2}
+            label="Remove"
+            tint={p.accent.rose}
+            disabled={actions.busy}
+            onPress={() => actions.remove(holdingIds)}
+          />
+        </View>
       </View>
+      {actions.sheets}
     </View>
   );
 }
+
+/** One half of the organize/remove pair under the position panel. */
+function OwnershipAction({
+  Icon,
+  label,
+  tint,
+  disabled,
+  onPress,
+}: {
+  Icon: typeof FolderPlus;
+  label: string;
+  tint: string;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  const p = useThemedPalette();
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: Boolean(disabled) }}
+      style={[actionStyles.button, { borderColor: p.line.default, opacity: disabled ? 0.5 : 1 }]}
+    >
+      <Icon size={14} color={tint} strokeWidth={2.5} />
+      <Text style={{ color: tint, fontSize: 12.5, fontWeight: "700" }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+// Layout in a StyleSheet, not a `style={({pressed}) => ({...})}` callback —
+// a plain object from that callback loses its layout props under this
+// project's NativeWind transform and the row collapses into a column.
+const actionStyles = StyleSheet.create({
+  button: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+});
 
 /** One cell of the hero stat strip. */
 function HeroStat({
@@ -626,6 +709,18 @@ function subgradeLine(sg: Record<string, unknown> | null | undefined): string | 
   return bits.length ? bits.join(" · ") : null;
 }
 
+/** "Added 3 Aug" — short, and omitted entirely when the date is unusable. */
+function addedOn(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `Added ${d.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
+  })}`;
+}
+
 function CopyRow({ h }: { h: CardHoldingWire }) {
   const p = useThemedPalette();
   const { format } = useMoney();
@@ -636,6 +731,10 @@ function CopyRow({ h }: { h: CardHoldingWire }) {
 
   const metaBits = [
     acq?.label ?? null,
+    // "Added on" — `graded_at` is when this copy entered the vault. The wire
+    // has always carried it; the page just never rendered it, so a holding
+    // gave no sense of how long you'd owned it.
+    addedOn(h.graded_at),
     h.days_held != null ? `${h.days_held}d held` : null,
     cost != null ? `cost ${format(cost)}` : null,
     // BGS-style sub-scores — the backend ships them per holding; show
@@ -643,15 +742,14 @@ function CopyRow({ h }: { h: CardHoldingWire }) {
     subgradeLine(h.subgrades),
   ].filter(Boolean);
 
+  const note = h.notes?.trim();
+
   return (
     <Pressable
       onPress={() => router.push(routes.gradeEdit(h.holding_id))}
       accessibilityRole="button"
       accessibilityLabel="Open this copy"
       style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
         paddingVertical: 10,
         paddingRight: 4,
         paddingLeft: 27,
@@ -659,18 +757,43 @@ function CopyRow({ h }: { h: CardHoldingWire }) {
         borderRadius: pressed ? 10 : 0,
       })}
     >
-      {acq ? <acq.Icon size={12} color={p.ink.dim} strokeWidth={2.25} /> : null}
-      <Text
-        numberOfLines={1}
-        style={{ flex: 1, color: p.ink.muted, fontSize: 11.5, fontWeight: "600" }}
-      >
-        {metaBits.length > 0 ? metaBits.join(" · ") : "Copy"}
-      </Text>
-      {value != null ? (
-        <Price usd={value} className="text-[12.5px] font-bold text-ink" />
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        {acq ? <acq.Icon size={12} color={p.ink.dim} strokeWidth={2.25} /> : null}
+        <Text
+          numberOfLines={1}
+          style={{ flex: 1, color: p.ink.muted, fontSize: 11.5, fontWeight: "600" }}
+        >
+          {metaBits.length > 0 ? metaBits.join(" · ") : "Copy"}
+        </Text>
+        {value != null ? (
+          <Price usd={value} className="text-[12.5px] font-bold text-ink" />
+        ) : null}
+        {pl != null ? <SignedMoney usd={pl} pct={h.unrealized_pl_pct} size={11} /> : null}
+        <ChevronRight size={13} color={p.ink.dim} />
+      </View>
+
+      {/* The owner's own note about THIS copy. `notes` has always been on the
+          wire and was only ever visible inside the edit form, so the thing you
+          wrote to remember why you bought it was invisible on the card. */}
+      {note ? (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 6,
+            marginTop: 6,
+            paddingLeft: 20,
+          }}
+        >
+          <StickyNote size={11} color={p.ink.dim} strokeWidth={2} />
+          <Text
+            numberOfLines={2}
+            style={{ flex: 1, color: p.ink.dim, fontSize: 11.5, lineHeight: 16 }}
+          >
+            {note}
+          </Text>
+        </View>
       ) : null}
-      {pl != null ? <SignedMoney usd={pl} pct={h.unrealized_pl_pct} size={11} /> : null}
-      <ChevronRight size={13} color={p.ink.dim} />
     </Pressable>
   );
 }
