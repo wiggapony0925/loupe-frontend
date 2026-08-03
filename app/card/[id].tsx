@@ -19,7 +19,7 @@
  * Loading state: `<SkeletonCardDetailPage />`. Error: error card with retry.
  */
 import React, { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
@@ -487,25 +487,27 @@ export default function CardDetailScreen() {
                         accessibilityLabel="Add to collection. Press and hold to quick-add as a raw card."
                       />
                     </View>
+                    {/* Sits beside the mint CTA, so it has to match its
+                        height and be a row. Both were being lost: the layout
+                        came from a `style={({pressed}) => ({...})}` callback,
+                        and a plain object returned from that callback drops
+                        its layout props under this project's NativeWind
+                        transform — so the icon stacked over the label and the
+                        chip shrank away from the green button beside it. */}
                     <Pressable
                       onPress={() => router.push(routes.scanPhone("studio"))}
                       accessibilityRole="button"
                       accessibilityLabel="Grade this card"
-                      style={({ pressed }) => ({
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 6,
-                        paddingHorizontal: 18,
-                        borderRadius: 16,
-                        borderWidth: 1,
-                        borderColor: p.line.default,
-                        backgroundColor: p.bg.elevated,
-                        opacity: pressed ? 0.7 : 1,
-                      })}
+                      style={[
+                        cardStyles.gradeCta,
+                        {
+                          borderColor: p.line.default,
+                          backgroundColor: p.bg.elevated,
+                        },
+                      ]}
                     >
                       <Gauge size={16} color={p.ink.default} strokeWidth={2.25} />
-                      <Text style={{ color: p.ink.default, fontWeight: "700", fontSize: 14 }}>
+                      <Text style={[cardStyles.gradeCtaLabel, { color: p.ink.default }]}>
                         Grade
                       </Text>
                     </Pressable>
@@ -1006,3 +1008,24 @@ function HeroChip({
     </View>
   );
 }
+
+/**
+ * Layout for the card-detail action row.
+ *
+ * Deliberately a StyleSheet: see the comment at the Grade button. Height is
+ * pinned to the mint PrimaryButton beside it (16pt vertical padding + 16pt
+ * label) so the pair reads as one control, not a button and an afterthought.
+ */
+const cardStyles = StyleSheet.create({
+  gradeCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 18,
+    minHeight: 54,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  gradeCtaLabel: { fontWeight: "700", fontSize: 14 },
+});

@@ -352,9 +352,17 @@ export function CardOwnershipSection({
                       : toggleTier(tier.key)
                   }
                 />
-                {open && !single
-                  ? tier.holdings.map((h) => <CopyRow key={h.holding_id} h={h} />)
-                  : null}
+                {/* A single-copy tier never expanded, so its acquisition
+                    details and the owner's note had nowhere to render — the
+                    most common case (one copy of a card) showed none of what
+                    was entered when it was added. Show the detail line inline
+                    instead; `compact` drops the value/P-L that the tier row
+                    above already states. */}
+                {single ? (
+                  <CopyRow h={tier.holdings[0]!} compact />
+                ) : open ? (
+                  tier.holdings.map((h) => <CopyRow key={h.holding_id} h={h} />)
+                ) : null}
               </View>
             );
           })}
@@ -721,7 +729,14 @@ function addedOn(iso: string | null | undefined): string | null {
   })}`;
 }
 
-function CopyRow({ h }: { h: CardHoldingWire }) {
+function CopyRow({
+  h,
+  compact = false,
+}: {
+  h: CardHoldingWire;
+  /** The tier row above already shows value + P/L — don't repeat them. */
+  compact?: boolean;
+}) {
   const p = useThemedPalette();
   const { format } = useMoney();
   const cost = num(h.purchase_price_usd);
@@ -765,10 +780,12 @@ function CopyRow({ h }: { h: CardHoldingWire }) {
         >
           {metaBits.length > 0 ? metaBits.join(" · ") : "Copy"}
         </Text>
-        {value != null ? (
+        {!compact && value != null ? (
           <Price usd={value} className="text-[12.5px] font-bold text-ink" />
         ) : null}
-        {pl != null ? <SignedMoney usd={pl} pct={h.unrealized_pl_pct} size={11} /> : null}
+        {!compact && pl != null ? (
+          <SignedMoney usd={pl} pct={h.unrealized_pl_pct} size={11} />
+        ) : null}
         <ChevronRight size={13} color={p.ink.dim} />
       </View>
 
