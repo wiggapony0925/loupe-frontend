@@ -9,7 +9,7 @@
  * would silently drop.
  */
 import React, { useMemo, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Plus, X } from "lucide-react-native";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -113,19 +113,13 @@ export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
             onPress={() => removeTag(tag)}
             accessibilityRole="button"
             accessibilityLabel={`Remove tag ${tag}`}
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 5,
-              paddingLeft: 10,
-              paddingRight: 7,
-              paddingVertical: 5,
-              borderRadius: 999,
-              backgroundColor: withAlpha(p.accent.mint, 0.14),
-              borderWidth: 1,
-              borderColor: withAlpha(p.accent.mint, 0.4),
-              opacity: pressed ? 0.7 : 1,
-            })}
+            style={[
+              styles.tagChip,
+              {
+                backgroundColor: withAlpha(p.accent.mint, 0.14),
+                borderColor: withAlpha(p.accent.mint, 0.4),
+              },
+            ]}
           >
             <Text
               style={{ color: p.accent.mint, fontSize: 12.5, fontWeight: "700" }}
@@ -170,19 +164,10 @@ export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
               onPress={() => addTag(s)}
               accessibilityRole="button"
               accessibilityLabel={`Add tag ${s}`}
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-                paddingLeft: 8,
-                paddingRight: 10,
-                paddingVertical: 5,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: p.line.default,
-                backgroundColor: p.bg.base,
-                opacity: pressed ? 0.6 : 1,
-              })}
+              style={[
+                styles.suggestChip,
+                { borderColor: p.line.default, backgroundColor: p.bg.base },
+              ]}
             >
               <Plus size={11} color={p.ink.dim} strokeWidth={2.5} />
               <Text style={{ color: p.ink.muted, fontSize: 12, fontWeight: "600" }}>
@@ -195,3 +180,33 @@ export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
     </View>
   );
 }
+
+/**
+ * Chip layout lives in a StyleSheet, not in a `style={({pressed}) => ({...})}`
+ * callback. Returning a plain object from that callback loses its layout props
+ * under this project's NativeWind transform: `flexDirection: "row"` never
+ * applied, so every chip rendered its "+" stacked above the label instead of
+ * beside it. (The same failure produced the broken Google sign-in button.)
+ */
+const styles = StyleSheet.create({
+  tagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingLeft: 10,
+    paddingRight: 7,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  suggestChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingLeft: 8,
+    paddingRight: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+});
