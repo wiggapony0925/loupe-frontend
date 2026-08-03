@@ -81,6 +81,7 @@ import {
 } from "@/presentation/features/cardDetail/CardInsights";
 import { CardOwnershipSection } from "@/presentation/features/cardDetail/CardOwnershipSection";
 import { CardValuationPanel } from "@/presentation/features/cardDetail/CardValuationPanel";
+import { CardNoteCard } from "@/presentation/features/cardDetail/CardNoteCard";
 import { CardAnalyticsSection } from "@/presentation/features/cardDetail/CardAnalyticsSection";
 import { PopulationSection } from "@/presentation/features/cardDetail/PopulationSection";
 import {
@@ -526,6 +527,13 @@ export default function CardDetailScreen() {
                       ? ` · ${ownedCount} ${ownedCount === 1 ? "copy" : "copies"} in your vault`
                       : ""}
                   </Text>
+
+                  {/* Your own note about this card, right where you land. It
+                      used to surface only deep in the ownership section, so
+                      the thing you wrote to remember why you bought a card
+                      was the last thing you'd see. Renders nothing when
+                      there's no note. */}
+                  <CardNoteCard cardId={cardId} />
                 </View>
               ) : (
                 /* Guests previously saw no add/track affordance in the body
