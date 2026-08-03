@@ -59,6 +59,7 @@ export const queryKeys = {
     aiSearch: (q: string) => ["cards", "ai-search", q] as const,
     market: (id: string) => ["cards", "market", id] as const,
     analytics: (id: string) => ["cards", "analytics", id] as const,
+    valuation: (id: string) => ["cards", "valuation", id] as const,
     ownership: (id: string) => ["cards", "ownership", id] as const,
     listings: (id: string, limit: number) => ["cards", "listings", id, limit] as const,
     nearbyListings: (id: string, lat: number, lng: number, radiusKm: number, limit: number) =>

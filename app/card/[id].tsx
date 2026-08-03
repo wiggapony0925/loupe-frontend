@@ -80,6 +80,7 @@ import {
   CardQuickStats,
 } from "@/presentation/features/cardDetail/CardInsights";
 import { CardOwnershipSection } from "@/presentation/features/cardDetail/CardOwnershipSection";
+import { CardValuationPanel } from "@/presentation/features/cardDetail/CardValuationPanel";
 import { CardAnalyticsSection } from "@/presentation/features/cardDetail/CardAnalyticsSection";
 import { PopulationSection } from "@/presentation/features/cardDetail/PopulationSection";
 import {
@@ -865,6 +866,13 @@ export default function CardDetailScreen() {
                   guests/non-owners). Anchored at the bottom of the screen so
                   the market story reads first and the personal ledger closes
                   it out. */}
+              {/* Loupe Value sits just above the personal ledger: the market
+                  story ends with one reconciled number and the sources behind
+                  it, then the user's own position answers "what's mine worth".
+                  Renders nothing when the valuation service can't price the
+                  card, so it never leaves an empty frame. */}
+              <CardValuationPanel cardId={cardId} />
+
               <CardOwnershipSection
                 cardId={cardId}
                 cardName={card.name}

@@ -91,6 +91,11 @@ export const ENDPOINTS = {
     comps: (id: string) => `${V1}/cards/${id}/comps`,
     gradeSummary: (id: string) => `${V1}/cards/${id}/grade-summary`,
     marketplacePrices: (id: string) => `${V1}/cards/${id}/marketplace-prices`,
+    /** Loupe Value — one equilibrium fair value, the three independent
+     *  signals behind it (sold comps / live listings / catalog) and a
+     *  per-grade ladder. Public, no auth. Slow (~2s upstream), so callers
+     *  should give it a long staleTime and never block the page on it. */
+    valuation: (id: string) => `${V1}/cards/${id}/valuation`,
     canonical: (id: string) => `${V1}/cards/${id}/canonical`,
     resolve: `${V1}/cards/resolve`,
   },

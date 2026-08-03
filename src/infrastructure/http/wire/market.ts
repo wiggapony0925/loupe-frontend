@@ -191,3 +191,46 @@ export interface MarketplacePricesResponseWire {
   providers: MarketplacePriceRowWire[];
   actions?: MarketplaceActionWire[];
 }
+
+/** `{amount, currency}` as the valuation endpoint returns it. */
+export interface ValuationMoneyWire {
+  amount: number;
+  currency: string;
+}
+
+/**
+ * `GET /v1/cards/{id}/valuation` — Loupe Value.
+ *
+ * One equilibrium `fair_value` plus the signals that produced it, so the
+ * number can be shown with its working rather than as a black box.
+ * `confidence` is 1–5. Every signal is optional: a card with no sold comps
+ * still has a catalog price, and the panel must degrade to whatever exists.
+ */
+export interface CardValuationSignalsWire {
+  sold_comps: ValuationMoneyWire | null;
+  listings: ValuationMoneyWire | null;
+  catalog: ValuationMoneyWire | null;
+}
+
+export interface CardValuationGradeWire {
+  grade: string;
+  house: string | null;
+  currency: string;
+  last_sale: number | null;
+  median_recent: number | null;
+  sales_count: number | null;
+  delta_amount: number | null;
+  delta_pct: number | null;
+  source: string | null;
+  /** True when the row is a published guide price, not observed sales. */
+  is_guide: boolean | null;
+}
+
+export interface CardValuationWire {
+  card_id: string;
+  fair_value: ValuationMoneyWire | null;
+  confidence: number | null;
+  signals: CardValuationSignalsWire | null;
+  sales_volume: number | null;
+  grades: CardValuationGradeWire[] | null;
+}
