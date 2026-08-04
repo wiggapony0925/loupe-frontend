@@ -26,7 +26,7 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 export function CollectionSwitcher() {
   const p = useThemedPalette();
   const [open, setOpen] = useState(false);
-  const { collectionId, setCollectionId } = useActiveCollection();
+  const { collectionId } = useActiveCollection();
   const { data } = useCollectionsOverview();
   const rows: CollectionSummary[] = data ?? [];
 
@@ -67,28 +67,6 @@ export function CollectionSwitcher() {
         </Text>
         <ChevronDown size={11} color={tint} strokeWidth={2.6} />
       </Pressable>
-
-      {!isAll ? (
-        <Pressable
-          onPress={() => setCollectionId(null)}
-          accessibilityRole="button"
-          accessibilityLabel="Show all cards"
-          hitSlop={8}
-          style={({ pressed }) => ({
-            height: 28,
-            width: 28,
-            borderRadius: 14,
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 1,
-            borderColor: p.line.default,
-            backgroundColor: p.bg.elevated,
-            opacity: pressed ? 0.6 : 1,
-          })}
-        >
-          <X size={14} color={p.ink.muted} strokeWidth={2.4} />
-        </Pressable>
-      ) : null}
 
       <PortfolioPickerSheet visible={open} onClose={() => setOpen(false)} />
     </>

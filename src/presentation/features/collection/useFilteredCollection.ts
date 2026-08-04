@@ -92,11 +92,6 @@ export function useFilteredCollection() {
     staleTime: 45_000,
   });
 
-  // The header aggregates (hero total, pills, available sets/tags) reflect
-  // the WHOLE vault regardless of the house/grade/search filters — but they
-  // DO follow the active collection, so "viewing Umbreon" shows Umbreon's
-  // total. Scope by collection only (a distinct key per collection); "All"
-  // keeps the shared key so it stays in sync with the command center.
   const summaryQuery = useQuery({
     queryKey: collectionId
       ? [...queryKeys.collection.summary(), collectionId]

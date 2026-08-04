@@ -336,9 +336,6 @@ export default function VaultScreen() {
                 onSealed={() => router.push(routes.sealed())}
               />
             )}
-            {/* Active-collection scope for the whole vault — pick one to filter
-                the list + hero below; the ✕ clears back to All. */}
-            <CollectionSwitcher />
             {isLoading ? (
               <VaultHeaderSkeleton />
             ) : selectionMode ? (
@@ -367,7 +364,11 @@ export default function VaultScreen() {
                 <PortfolioPills stats={stats} />
                 <VaultSearchBar onOpenFilters={() => setFilterOpen(true)} />
                 <VaultActiveChips />
-                <VaultListChrome count={cards.length} viewMode={viewMode} onChange={setViewMode} />
+                <VaultListChrome
+                  count={cards.length}
+                  viewMode={viewMode}
+                  onChange={setViewMode}
+                />
               </>
             )}
           </View>

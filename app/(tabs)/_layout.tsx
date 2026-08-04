@@ -96,32 +96,6 @@ function TabIcon({
   );
 }
 
-/**
- * FloatingGlassBar — the iOS tab bar background: a native Liquid Glass pill
- * (expo-glass-effect GlassView, blur fallback on older iOS) with a hairline
- * ring, filling the floating tabBarStyle.
- */
-function FloatingGlassBar({
-  palette,
-}: {
-  palette: ReturnType<typeof useThemedPalette>;
-}) {
-  return (
-    <LiquidGlassView
-      glassStyle="regular"
-      intensity={40}
-      tint="default"
-      style={{
-        flex: 1,
-        borderRadius: 32,
-        overflow: "hidden",
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: withAlpha(palette.ink.default, 0.12),
-      }}
-    />
-  );
-}
-
 export default function TabsLayout() {
   // Subscribe to theme so the screenOptions object below is rebuilt with
   // the freshly-mutated palette values when the user toggles Light/Dark.

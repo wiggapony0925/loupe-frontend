@@ -1,5 +1,9 @@
 # Caches & builds
 node_modules/
+# Also the bare path: `node_modules/` does NOT match a SYMLINK named
+# node_modules, which is how a self-referential `node_modules -> node_modules`
+# link got committed on a feature branch and followed a merge back into main.
+node_modules
 build/
 dist/
 coverage/
