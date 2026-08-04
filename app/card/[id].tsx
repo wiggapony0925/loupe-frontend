@@ -469,32 +469,36 @@ export default function CardDetailScreen() {
                     ) : null}
                   </View>
 
-                  {/* Identity chips — TCG (tinted) · rarity · number/run · year */}
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      flexWrap: "wrap",
-                      gap: 5,
-                      marginTop: 2,
-                    }}
-                  >
-                    <HeroChip
-                      label={formatTcgName(card.tcg) ?? "TCG"}
-                      tint={heroTcgTint(card.tcg, p)}
-                      solid
-                    />
-                    {card.rarity ? <HeroChip label={card.rarity} /> : null}
-                    {card.number ? (
-                      <HeroChip
-                        label={
-                          card.set?.printed_total
-                            ? `#${card.number} / ${card.set.printed_total}`
+                  {/* One quiet metadata line, the way the webapp's hero does
+                      it. Four pills of mixed weight (tinted game, rarity,
+                      number, year) competed with the title and wrapped to two
+                      ragged rows on long rarities — but none of them is an
+                      action, so none of them earned a pill. The game keeps its
+                      tint as the leading word; the rest reads as one breath. */}
+                  <Text style={{ marginTop: 5, fontSize: 12.5, lineHeight: 17 }}>
+                    <Text
+                      style={{
+                        color: heroTcgTint(card.tcg, p),
+                        fontWeight: "700",
+                      }}
+                    >
+                      {formatTcgName(card.tcg) ?? "TCG"}
+                    </Text>
+                    <Text style={{ color: p.ink.muted }}>
+                      {[
+                        card.rarity,
+                        card.number
+                          ? card.set?.printed_total
+                            ? `#${card.number}/${card.set.printed_total}`
                             : `#${card.number}`
-                        }
-                      />
-                    ) : null}
-                    {card.year ? <HeroChip label={String(card.year)} /> : null}
-                  </View>
+                          : null,
+                        card.year ? String(card.year) : null,
+                      ]
+                        .filter(Boolean)
+                        .map((part) => ` · ${part}`)
+                        .join("")}
+                    </Text>
+                  </Text>
                 </View>
               </View>
 
@@ -908,11 +912,11 @@ export default function CardDetailScreen() {
                   }}
                 >
                   <Text style={{ color: p.ink.default, fontSize: 14, fontWeight: "800" }}>
-                    No verified graded comps yet
+                    No graded sales yet
                   </Text>
                   <Text style={{ color: p.ink.muted, fontSize: 12, lineHeight: 18 }}>
-                    Loupe is hiding estimated grade rows until a sold-comp provider returns real
-                    data.
+                    Grade-by-grade prices appear here as soon as real sales
+                    exist — Loupe never shows estimates as if they were sales.
                   </Text>
                 </View>
               )}
@@ -1027,49 +1031,6 @@ function heroTcgTint(tcg: string, p: ReturnType<typeof useThemedPalette>): strin
   }
 }
 
-/** Small identity chip under the hero title. `solid` = tinted TCG pill. */
-function HeroChip({
-  label,
-  tint,
-  solid = false,
-}: {
-  label: string;
-  tint?: string;
-  solid?: boolean;
-}) {
-  const p = useThemedPalette();
-  const color = tint ?? p.ink.muted;
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 999,
-        backgroundColor: solid ? withAlpha(color, 0.13) : "transparent",
-        borderWidth: solid ? 0 : 1,
-        borderColor: solid ? "transparent" : p.line.default,
-      }}
-    >
-      {solid ? (
-        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: color }} />
-      ) : null}
-      <Text
-        numberOfLines={1}
-        style={{
-          color: solid ? color : p.ink.muted,
-          fontSize: 10.5,
-          fontWeight: "700",
-          letterSpacing: 0.3,
-        }}
-      >
-        {label}
-      </Text>
-    </View>
-  );
-}
 
 /**
  * Layout for the card-detail action row.

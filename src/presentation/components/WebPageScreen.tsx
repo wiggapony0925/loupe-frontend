@@ -115,7 +115,11 @@ export function WebPageScreen({
           if (url.origin !== location.origin) return;
           for (var i = 0; i < prefixes.length; i++) {
             var p = prefixes[i];
-            if (url.pathname.indexOf(p + '/') === 0 && url.pathname.length > p.length + 1) {
+            // Match "/prefix/:id" AND the bare "/prefix" — an exact match
+            // lets a web CTA (e.g. "Scan a card" → /scan) open a native
+            // surface that needs no id.
+            var withId = url.pathname.indexOf(p + '/') === 0 && url.pathname.length > p.length + 1;
+            if (withId || url.pathname === p) {
               e.preventDefault();
               e.stopPropagation();
               window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -159,9 +163,14 @@ export function WebPageScreen({
       if (msg.type !== "loupe:native-detour" || !msg.prefix || !msg.pathname) return;
       const detour = nativeDetours.find((d) => d.webPrefix === msg.prefix);
       if (!detour) return;
-      const rawId = msg.pathname.slice(msg.prefix.length + 1).split("/")[0] ?? "";
+      // Bare "/prefix" taps carry no id — the detour's toNative decides
+      // whether it needs one (id-less targets like the scanner ignore it).
+      const rawId =
+        msg.pathname === msg.prefix
+          ? ""
+          : (msg.pathname.slice(msg.prefix.length + 1).split("/")[0] ?? "");
       const id = decodeURIComponent(rawId);
-      if (id) router.push(detour.toNative(id));
+      if (id || msg.pathname === msg.prefix) router.push(detour.toNative(id));
     } catch {
       // Malformed message — ignore; the embed keeps working.
     }
