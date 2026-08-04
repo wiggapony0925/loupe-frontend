@@ -2,6 +2,11 @@
  * CardAnalyticsSection — derived market analytics for a card, from the
  * server-composed `GET /v1/cards/{id}/analytics` (public). Mirrors the web
  * "Market analytics" panel: a momentum strip (7D/30D/90D/1Y) plus a metric
+ *
+ * Deliberately does NOT repeat Volatility, Liquidity or the grade premium —
+ * the quick-stats row above the fold already shows all three (grade premium
+ * is the same number as Spread wearing a second name), and duplicating them
+ * here was half of what made this page feel like "too much to look at".
  * grid (market cap, grade premium, volatility, liquidity, all-time high/low).
  *
  * Renders nothing until the endpoint returns priced data, so it's safe to
@@ -152,23 +157,6 @@ export function CardAnalyticsSection({ cardId }: { cardId: string }) {
           label="Market cap"
           value={marketCap != null ? money.format(marketCap, { compact: true }) : "—"}
           sub={data.population ? `${data.population.toLocaleString()} graded` : undefined}
-        />
-        <Tile
-          label="Grade premium"
-          value={data.grade_premium != null ? `${data.grade_premium.toFixed(1)}×` : "—"}
-          sub="top grade vs raw"
-        />
-        <Tile
-          label="Volatility"
-          value={data.volatility_pct != null ? `${data.volatility_pct.toFixed(1)}%` : "—"}
-          sub="90d"
-          tone={data.volatility_pct != null && data.volatility_pct > 25 ? "amber" : "neutral"}
-        />
-        <Tile
-          label="Liquidity"
-          value={`${data.liquidity_30d}`}
-          sub="sales · 30d"
-          tone={data.liquidity_30d >= 10 ? "mint" : data.liquidity_30d === 0 ? "rose" : "neutral"}
         />
         <Tile
           label="All-time high"

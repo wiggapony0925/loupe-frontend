@@ -149,6 +149,8 @@ export default function CardDetailScreen() {
   // held until BOTH settle — releasing on the first would snap the control
   // away while half the page was still stale.
   const [refreshing, setRefreshing] = useState(false);
+  // "More stats · pro view" — market cap, momentum, ATH/ATL, population.
+  const [proStatsOpen, setProStatsOpen] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -454,14 +456,17 @@ export default function CardDetailScreen() {
                         alt=""
                       />
                     ) : null}
-                    <Text
+                    {/* No placeholder when the catalog has no set: printing "Unknown set" under the title reads as data, when it's actually the absence of it. */}
+                    {card.set_name ? (
+                      <Text
                       className="text-[12.5px] leading-4 text-ink-muted"
                       numberOfLines={2}
                       ellipsizeMode="tail"
                       style={{ flexShrink: 1 }}
                     >
-                      {card.set_name ?? "Unknown set"}
+                      {card.set_name}
                     </Text>
+                    ) : null}
                   </View>
 
                   {/* Identity chips — TCG (tinted) · rarity · number/run · year */}
@@ -723,7 +728,35 @@ export default function CardDetailScreen() {
                   last-sale freshness). */}
               {hasRealHistory ? <CardQuickStats snapshot={snapshot} cardId={cardId} /> : null}
 
-              {/* 5b. Derived market analytics — market cap, momentum, volatility,
+              {/* The professional layer, closed by default. Market cap, momentum,
+                  all-time range and the population report are for someone
+                  doing homework, and stacked open they buried the page — the
+                  casual read is the quick-stats row above, and everything
+                  else is one tap away. */}
+              <Pressable
+                onPress={() => setProStatsOpen((v) => !v)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: proStatsOpen }}
+                accessibilityLabel="Toggle advanced market stats"
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingVertical: 4,
+                }}
+              >
+                <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+                  More stats · pro view
+                </Text>
+                {proStatsOpen ? (
+                  <ChevronUp size={16} color={p.ink.muted} />
+                ) : (
+                  <ChevronDown size={16} color={p.ink.muted} />
+                )}
+              </Pressable>
+              {proStatsOpen ? (
+                <>
+                  {/* 5b. Derived market analytics — market cap, momentum, volatility,
                   grade premium, ATH/ATL (server-composed; hidden until priced). */}
               <CardAnalyticsSection cardId={cardId} />
 
@@ -733,12 +766,18 @@ export default function CardDetailScreen() {
                 population={canonicalQ.data?.population}
                 certs={canonicalQ.data?.certs}
               />
+                </>
+              ) : null}
 
               {/* Active alerts the user has on this card. */}
               <CardActiveAlerts cardId={cardId} />
 
               {/* 6. Three-up flat strip (Robinhood Open·High·Low style) */}
-              <View style={{ flexDirection: "row", marginHorizontal: -12 }}>
+              {/* Only when it adds something: with no graded avg and no population
+                  this was one real number and two em-dashes — a whole row of
+                  chrome repeating the price already shown twice above. */}
+              {verifiedGradedAvg != null || verifiedPopTotal ? (
+<View style={{ flexDirection: "row", marginHorizontal: -12 }}>
                 <StatTile label="Raw" amount={snapshot?.summary.raw?.amount ?? null} />
                 <StatTile label="Graded Avg" amount={verifiedGradedAvg} showDivider />
                 <StatTile
@@ -748,6 +787,7 @@ export default function CardDetailScreen() {
                   showDivider
                 />
               </View>
+              ) : null}
 
               {/* ── YOUR POSITION ──────────────────────────────────────
                   Sits after the market read and before the marketplaces, which
