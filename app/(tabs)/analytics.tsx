@@ -15,6 +15,7 @@ import { FileText, LineChart } from "lucide-react-native";
 import { routes } from "@/shared/routes";
 import { useAnalyticsOverview } from "@/application/queries";
 import { GradeBars, PortfolioChart } from "@/presentation/features/analytics";
+import { CollectionSwitcher } from "@/presentation/features/collection/CollectionSwitcher";
 import { LiveAnalyticsCard } from "@/presentation/features/analytics/LiveAnalyticsCard";
 import { StatementsAnalyticsCard } from "@/presentation/features/reports/StatementsAnalyticsCard";
 import { useStatementSummary } from "@/presentation/features/reports/useStatementSummary";
