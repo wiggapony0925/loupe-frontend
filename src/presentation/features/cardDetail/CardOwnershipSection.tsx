@@ -320,12 +320,18 @@ export function CardOwnershipSection({
         </View>
       </View>
 
-      {/* ── Breakdown by grade tier — a compact, dense list (grade · count ·
-           value), capped to VISIBLE_TIERS with a show-all toggle. ── */}
-      <View style={{ gap: 8 }}>
-        <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-          {tiers.length === 1 ? "Holding" : "By grade"}
-        </Text>
+      {/* ── The copies themselves, attached directly to the panel above. ──
+           These carried their own "HOLDING" / "By grade" eyebrow, which read
+           as a second section about the same thing — the value panel and the
+           list that explains it were visually divorced. One heading owns the
+           whole block now; a quiet inline label only appears when there are
+           several grades to tell apart. ── */}
+      <View style={{ gap: 8, marginTop: -6 }}>
+        {tiers.length > 1 ? (
+          <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
+            By grade
+          </Text>
+        ) : null}
         <View
           style={{
             borderRadius: 14,
@@ -819,7 +825,10 @@ function CopyRow({
         {!compact && pl != null ? (
           <SignedMoney usd={pl} pct={h.unrealized_pl_pct} size={11} />
         ) : null}
-        <ChevronRight size={13} color={p.ink.dim} />
+        {/* No chevron in compact mode: this row hangs under a tier row that
+            already has one, and two arrows pointing at the same destination
+            read as two different destinations. */}
+        {!compact ? <ChevronRight size={13} color={p.ink.dim} /> : null}
       </View>
 
       {/* The owner's own note about THIS copy. `notes` has always been on the

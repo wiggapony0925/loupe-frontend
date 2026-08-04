@@ -690,28 +690,6 @@ export default function CardDetailScreen() {
                 />
               )}
 
-              {/* ── YOUR POSITION ──────────────────────────────────────
-                  Directly under the chart, the way a brokerage does it: after
-                  "what is this worth", the very next question is "what is
-                  MINE worth". This used to sit at the very bottom, below the
-                  chart, six stat strips, the marketplace rails, the graded
-                  ladder and the population report — so the one section that is
-                  actually about the user was the last thing they'd reach.
-
-                  Order within the block is deliberate: their P/L, then the
-                  reconciled fair value it's measured against, then the copies
-                  themselves. Each renders nothing when it has no data, so a
-                  card you don't own collapses this whole region away. */}
-              <CardCostBasisStrip cardId={cardId} />
-              <CardValuationPanel cardId={cardId} />
-              <CardOwnershipSection
-                cardId={cardId}
-                cardName={card.name}
-                cardImage={imageUrl ?? undefined}
-                cardSet={card.set_name ?? undefined}
-                cardYear={card.year ?? undefined}
-              />
-
               {/* 4b. Market signals row (52w hi/lo, trend, arbitrage,
                   auctions) — renders nothing when no signals fire. */}
               {hasRealHistory ? <CardMarketSignals snapshot={snapshot} cardId={cardId} /> : null}
@@ -746,6 +724,30 @@ export default function CardDetailScreen() {
                   showDivider
                 />
               </View>
+
+              {/* ── YOUR POSITION ──────────────────────────────────────
+                  Sits after the market read and before the marketplaces, which
+                  is the order the questions actually get asked: what is this
+                  card doing → what do I hold → where can I act on it.
+
+                  Position value and the copies behind it are ONE section. They
+                  were two, each with its own eyebrow, so the panel stating a
+                  number and the list explaining that number read as unrelated
+                  parts of the page.
+
+                  Everything here renders nothing without data, so for someone
+                  who doesn't own the card this whole region collapses and the
+                  page reads market → marketplaces exactly as before. */}
+              <CardCostBasisStrip cardId={cardId} />
+              <CardValuationPanel cardId={cardId} />
+              <CardOwnershipSection
+                cardId={cardId}
+                cardName={card.name}
+                cardImage={imageUrl ?? undefined}
+                cardSet={card.set_name ?? undefined}
+                cardYear={card.year ?? undefined}
+              />
+
 
               {/* Real marketplace data + sold comps. */}
               <LiveListingsSection cardId={cardId} card={card} />

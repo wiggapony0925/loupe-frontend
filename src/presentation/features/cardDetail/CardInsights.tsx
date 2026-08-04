@@ -100,11 +100,17 @@ function MicroTile({ label, value, tone = "neutral", sub }: MicroTileProps) {
         gap: 2,
       }}
     >
+      {/* One line, shrink-to-fit. "VOLATILITY" is wider than a quarter of the
+          screen at this tracking, so it wrapped mid-word to "VOLATILIT / Y" —
+          which also pushed the tile taller than its three neighbours. */}
       <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
         style={{
           color: p.ink.dim,
           fontSize: 9,
-          letterSpacing: 1.2,
+          letterSpacing: 1.0,
           fontWeight: "700",
         }}
       >
