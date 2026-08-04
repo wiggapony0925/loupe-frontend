@@ -32,6 +32,22 @@ import type { CardSearchResult, NearbyListingWire } from "@/infrastructure/http"
 import { SectionHeader } from "./CardDetailParts";
 import { formatNativeMoney } from "./marketplaceTiles";
 
+/**
+ * Facebook listing titles are seller-written free text — frequently a whole
+ * paragraph with hard line breaks, run-on spacing and a wall of emoji. Dropped
+ * in raw, the newlines survive into the tile and the two-line clamp lands on
+ * whitespace, so a tile can look half-empty or blow past its neighbours.
+ *
+ * Collapse it to a single line and cap it well past what two lines can show,
+ * so `numberOfLines` does the visual truncation with an ellipsis rather than
+ * the string being cut mid-render.
+ */
+function listingTitle(raw: string | null | undefined, fallback: string | null): string {
+  const flat = (raw ?? "").replace(/\s+/g, " ").trim();
+  if (!flat) return fallback || "Marketplace listing";
+  return flat.length > 120 ? `${flat.slice(0, 120).trimEnd()}…` : flat;
+}
+
 export function NearbyListingsSection({
   cardId,
   card,
@@ -245,7 +261,7 @@ function NearbyListingList({
               fallbackIcon={ShoppingBag}
               accent={p.accent.blue}
               sourceLabel="Facebook"
-              title={(l.title ?? "").trim() || cardName || "Marketplace listing"}
+              title={listingTitle(l.title, cardName)}
               caption="Nearby"
               priceText={formatNativeMoney(l.price.amount, l.price.currency)}
               condition={l.condition}

@@ -412,18 +412,13 @@ export function CardOwnershipSection({
           }
           accessibilityRole="button"
           accessibilityLabel="Add another copy of this card"
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 7,
-            paddingVertical: 12,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: withAlpha(p.accent.mint, 0.3),
-            backgroundColor: withAlpha(p.accent.mint, 0.06),
-            opacity: pressed ? 0.7 : 1,
-          })}
+          style={[
+            ownStyles.addCopy,
+            {
+              borderColor: withAlpha(p.accent.mint, 0.3),
+              backgroundColor: withAlpha(p.accent.mint, 0.06),
+            },
+          ]}
         >
           <Plus size={14} color={p.accent.mint} strokeWidth={2.75} />
           <Text style={{ color: p.accent.mint, fontSize: 13, fontWeight: "800" }}>
@@ -493,6 +488,35 @@ function OwnershipAction({
 // Layout in a StyleSheet, not a `style={({pressed}) => ({...})}` callback —
 // a plain object from that callback loses its layout props under this
 // project's NativeWind transform and the row collapses into a column.
+/**
+ * Row layouts for this section, in a StyleSheet on purpose.
+ *
+ * These were `style={({pressed}) => ({ flexDirection: "row", ... })}`, and a
+ * plain object returned from that callback loses its layout props under this
+ * project's NativeWind transform — so "Add another copy" and "Show all
+ * grades" both rendered their icon stacked above their label instead of
+ * beside it. Same failure as the tag chips, the Grade button and the
+ * marketplace tiles.
+ */
+const ownStyles = StyleSheet.create({
+  showAll: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+  },
+  addCopy: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+});
+
 const actionStyles = StyleSheet.create({
   button: {
     flex: 1,

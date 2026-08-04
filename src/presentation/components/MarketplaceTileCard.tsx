@@ -18,7 +18,7 @@
  * renders an eBay auction, a Cardmarket price, or a nearby FB listing.
  */
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ArrowUpRight, type LucideIcon } from "lucide-react-native";
 import { CardImage } from "@/presentation/components/CardImage";
 import { radius, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
@@ -81,21 +81,66 @@ function TileShell({
       disabled={disabled || !onPress}
       accessibilityRole={disabled ? undefined : "button"}
       accessibilityLabel={accessibilityLabel}
-      style={({ pressed }) => ({
-        width,
-        borderRadius: radius.lg,
-        borderWidth: 1,
-        borderColor: pressed ? withAlpha(p.ink.muted, 0.35) : p.line.default,
-        backgroundColor: pressed ? p.bg.sunken : p.bg.elevated,
-        overflow: "hidden",
-      })}
+      // Layout in a StyleSheet, colours inline. A plain object returned from
+      // `style={({pressed}) => ({...})}` loses its layout props under this
+      // project's NativeWind transform — so `width` and `overflow: "hidden"`
+      // never applied and every tile grew to fit its text. That's why one
+      // long Facebook Marketplace description stretched a tile far past its
+      // neighbours and made the whole rail ragged.
+      style={[
+        shellStyles.tile,
+        {
+          width,
+          borderColor: p.line.default,
+          backgroundColor: p.bg.elevated,
+        },
+      ]}
     >
       {children}
     </Pressable>
   );
 }
 
-/** Brand row: tone dot + source name + trailing external-link affordance. */
+/**
+ * A marketplace's initial on its own brand colour — eBay's "e", Facebook's
+ * "f", TCGplayer's "T".
+ *
+ * Deliberately NOT their real logos. Scraping marketplace artwork and shipping
+ * it inside an App Store binary is a trademark decision, not a styling one,
+ * and it rots the moment they rebrand. A monogram in the brand's own colour
+ * reads as that marketplace instantly, ships nothing that isn't ours, and
+ * degrades gracefully for a source we've never seen.
+ */
+const BRAND_COLORS: Record<string, string> = {
+  ebay: "#E53238",
+  facebook: "#1877F2",
+  "facebook marketplace": "#1877F2",
+  tcgplayer: "#F0A93B",
+  cardmarket: "#012169",
+  mercari: "#EE3B3B",
+  whatnot: "#FFC629",
+  pricecharting: "#2E7D32",
+  catalog: "#6B7280",
+};
+
+function MarketplaceBadge({
+  sourceLabel,
+  accent,
+}: {
+  sourceLabel: string;
+  accent: string;
+}) {
+  const key = sourceLabel.trim().toLowerCase();
+  const brand = BRAND_COLORS[key] ?? accent;
+  const initial = (sourceLabel.trim()[0] ?? "?").toUpperCase();
+  return (
+    <View style={[shellStyles.badge, { backgroundColor: brand }]}>
+      <Text style={shellStyles.badgeText}>{initial}</Text>
+    </View>
+  );
+}
+
+/** Brand row: brand badge + source name + trailing external-link affordance. */
 function BrandRow({
   accent,
   sourceLabel,
@@ -110,7 +155,7 @@ function BrandRow({
   const p = useThemedPalette();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: accent }} />
+      <MarketplaceBadge sourceLabel={sourceLabel} accent={accent} />
       <Text
         numberOfLines={1}
         style={{
@@ -364,3 +409,31 @@ function PhotoTile({
     </TileShell>
   );
 }
+
+
+/**
+ * Tile chrome. `minHeight` is what keeps a rail of mixed content aligned:
+ * without it a one-line title and a two-line one produce tiles of different
+ * heights sitting side by side.
+ */
+const shellStyles = StyleSheet.create({
+  tile: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    overflow: "hidden",
+    minHeight: 112,
+  },
+  badge: {
+    width: 14,
+    height: 14,
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "900",
+    lineHeight: 12,
+  },
+});
