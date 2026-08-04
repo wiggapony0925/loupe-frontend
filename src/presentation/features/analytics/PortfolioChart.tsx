@@ -32,7 +32,7 @@ import Svg, {
   Text as SvgText,
 } from "react-native-svg";
 import * as Haptics from "expo-haptics";
-import { ChevronDown } from "lucide-react-native";
+import { ChevronDown, Layers } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSettings } from "@/application/stores/settingsStore";
 import { usePortfolioHistory, useMarketIndex, useTopMovers } from "@/application/queries";
@@ -394,6 +394,27 @@ export function PortfolioChart({
           {money(displayVal)}
         </Text>
 
+        {/* Portfolio switcher — the active collection scopes the whole
+            dashboard (backend does the scoping; we just pass the id). */}
+        <Pressable
+          onPress={() => setPortfolioOpen(true)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Portfolio ${portfolioName}. Tap to change.`}
+          className="mt-1.5 flex-row items-center gap-1.5 self-start rounded-full border px-2.5 py-1.5"
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.75 : 1,
+            borderColor: withAlpha(ccyTint, 0.35),
+            backgroundColor: withAlpha(ccyTint, 0.1),
+          })}
+        >
+          <Layers size={12} color={ccyTint} strokeWidth={2.4} />
+          <Text style={{ color: ccyTint, fontSize: 12, fontWeight: "800" }}>
+            {portfolioName}
+          </Text>
+          <ChevronDown size={11} color={ccyTint} strokeWidth={2.6} />
+        </Pressable>
+
         {/* flex-wrap: the delta + date + basis toggle + benchmark chip can
             exceed one line on small phones — wrap instead of clipping. */}
         <View className="mt-1 flex-row flex-wrap items-center gap-2">
@@ -751,6 +772,11 @@ export function PortfolioChart({
         selected={currency}
         onSelect={setCurrency}
         onClose={() => setPickerOpen(false)}
+      />
+
+      <PortfolioPickerSheet
+        visible={portfolioOpen}
+        onClose={() => setPortfolioOpen(false)}
       />
     </View>
   );
