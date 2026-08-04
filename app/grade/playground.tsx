@@ -150,7 +150,7 @@ export default function GradePlaygroundScreen() {
           onPress={() => router.push(routes.gradeMeasure())}
           accessibilityRole="button"
           accessibilityLabel="Measure centering from a photo"
-          style={({ pressed }) => ({
+          style={({ pressed }) => [{
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
@@ -159,7 +159,7 @@ export default function GradePlaygroundScreen() {
             borderRadius: 14,
             backgroundColor: p.accent.mint,
             opacity: pressed ? 0.85 : 1,
-          })}
+          }]}
         >
           <Crosshair size={18} color="#06140d" />
           <Text style={{ color: "#06140d", fontWeight: "800", fontSize: 14 }}>
@@ -172,7 +172,7 @@ export default function GradePlaygroundScreen() {
           onPress={() => router.push(routes.scanPhone("studio"))}
           accessibilityRole="button"
           accessibilityLabel="Open the Studio photometric capture"
-          style={({ pressed }) => ({
+          style={({ pressed }) => [{
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
@@ -183,7 +183,7 @@ export default function GradePlaygroundScreen() {
             borderColor: withAlpha(p.accent.mint, 0.4),
             backgroundColor: withAlpha(p.accent.mint, 0.1),
             opacity: pressed ? 0.7 : 1,
-          })}
+          }]}
         >
           <Camera size={18} color={p.accent.mint} />
           <Text style={{ color: p.accent.mint, fontWeight: "800", fontSize: 14 }}>

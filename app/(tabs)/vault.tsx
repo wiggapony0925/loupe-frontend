@@ -765,7 +765,7 @@ function VaultSearchBar({ onOpenFilters }: { onOpenFilters: () => void }) {
         onPress={onOpenFilters}
         accessibilityRole="button"
         accessibilityLabel={`Filters${hasFilters ? `, ${activeCount} active` : ""}`}
-        style={({ pressed }) => ({
+        style={({ pressed }) => [{
           width: 46,
           height: 44,
           alignItems: "center",
@@ -775,7 +775,7 @@ function VaultSearchBar({ onOpenFilters }: { onOpenFilters: () => void }) {
           borderColor: hasFilters ? withAlpha(p.accent.mint, 0.5) : p.line.default,
           backgroundColor: hasFilters ? withAlpha(p.accent.mint, 0.14) : p.bg.elevated,
           opacity: pressed ? 0.75 : 1,
-        })}
+        }]}
       >
         <SlidersHorizontal
           size={18}
@@ -1144,10 +1144,10 @@ function SealedVaultCard({
         onPress={primaryAction}
         accessibilityRole="button"
         accessibilityLabel={hasHoldings ? "Open sealed vault" : "Add sealed product"}
-        style={({ pressed }) => ({
+        style={({ pressed }) => [{
           flex: 1,
           opacity: pressed ? 0.76 : 1,
-        })}
+        }]}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View

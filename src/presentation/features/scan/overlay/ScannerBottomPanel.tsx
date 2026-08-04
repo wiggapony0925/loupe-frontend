@@ -169,7 +169,7 @@ export function ScannerBottomPanel({
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Capture frame now"
-            style={({ pressed }) => ({
+            style={({ pressed }) => [{
               width: 68,
               height: 68,
               borderRadius: 34,
@@ -183,7 +183,7 @@ export function ScannerBottomPanel({
               shadowRadius: shutterLocked ? 14 : 8,
               shadowOffset: { width: 0, height: 0 },
               elevation: shutterLocked ? 10 : 4,
-            })}
+            }]}
           >
             <View
               style={{
@@ -204,7 +204,7 @@ export function ScannerBottomPanel({
             accessibilityRole="button"
             accessibilityLabel="Search the catalog manually"
             disabled={!onManualSearch}
-            style={({ pressed }) => ({
+            style={({ pressed }) => [{
               width: 52,
               height: 52,
               borderRadius: 26,
@@ -216,7 +216,7 @@ export function ScannerBottomPanel({
               borderColor: HAIRLINE,
               opacity: pressed ? 0.82 : onManualSearch ? 1 : 0.4,
               transform: [{ scale: pressed ? 0.94 : 1 }],
-            })}
+            }]}
           >
             <BlurView
               intensity={BLUR_INTENSITY}

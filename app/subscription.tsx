@@ -245,7 +245,7 @@ export default function SubscriptionScreen() {
               onPress={() => openPaywall("generic")}
               accessibilityRole="button"
               accessibilityLabel="Subscribe to Loupe Pro"
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "center",
@@ -254,7 +254,7 @@ export default function SubscriptionScreen() {
                 borderRadius: 14,
                 backgroundColor: p.accent.mint,
                 opacity: pressed ? 0.85 : 1,
-              })}
+              }]}
             >
               <Sparkles size={15} color="#0B0B0D" strokeWidth={2.5} />
               <Text style={{ color: "#0B0B0D", fontSize: 14, fontWeight: "800" }}>
@@ -290,7 +290,7 @@ export default function SubscriptionScreen() {
                   disabled={reactivateMut.isPending}
                   accessibilityRole="button"
                   accessibilityLabel="Keep Loupe Pro"
-                  style={({ pressed }) => ({
+                  style={({ pressed }) => [{
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "center",
@@ -299,7 +299,7 @@ export default function SubscriptionScreen() {
                     borderRadius: 14,
                     backgroundColor: p.accent.mint,
                     opacity: pressed || reactivateMut.isPending ? 0.8 : 1,
-                  })}
+                  }]}
                 >
                   {reactivateMut.isPending ? (
                     <ActivityIndicator size="small" color="#0B0B0D" />
@@ -395,11 +395,11 @@ export default function SubscriptionScreen() {
               accessibilityRole="button"
               accessibilityLabel="Cancel subscription"
               hitSlop={8}
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 alignItems: "center",
                 paddingTop: 4,
                 opacity: pressed || cancelMut.isPending ? 0.5 : 1,
-              })}
+              }]}
             >
               {cancelMut.isPending ? (
                 <ActivityIndicator size="small" color={p.ink.dim} />

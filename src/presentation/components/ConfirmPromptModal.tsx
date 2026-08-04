@@ -193,7 +193,7 @@ export function ConfirmPromptModal({
               <Pressable
                 disabled={busy}
                 onPress={onClose}
-                style={({ pressed }) => ({
+                style={({ pressed }) => [{
                   flex: 1,
                   paddingVertical: 13,
                   borderRadius: 12,
@@ -202,7 +202,7 @@ export function ConfirmPromptModal({
                   borderColor: p.line.default,
                   alignItems: "center",
                   opacity: pressed || busy ? 0.7 : 1,
-                })}
+                }]}
               >
                 <Text style={{ color: p.ink.default, fontWeight: "700", fontSize: 15 }}>
                   Cancel
@@ -211,7 +211,7 @@ export function ConfirmPromptModal({
               <Pressable
                 disabled={!isValid || busy}
                 onPress={() => void onSubmit(value.trim())}
-                style={({ pressed }) => ({
+                style={({ pressed }) => [{
                   flex: 1,
                   paddingVertical: 13,
                   borderRadius: 12,
@@ -220,7 +220,7 @@ export function ConfirmPromptModal({
                   justifyContent: "center",
                   minHeight: 46,
                   opacity: !isValid || busy ? 0.45 : pressed ? 0.85 : 1,
-                })}
+                }]}
               >
                 {busy ? (
                   <ActivityIndicator color={submitFg} />

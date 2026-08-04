@@ -31,14 +31,14 @@ export function SealedRail({ products }: { products: SealedProductWire[] }) {
         <Pressable
           key={s.id}
           onPress={() => router.push(routes.sealedDetail(s.id))}
-          style={({ pressed }) => ({
+          style={({ pressed }) => [{
             width: TILE_W,
             // Hard-clip so a long product name can't bleed past the tile
             // into its neighbour (the overflow bug for names like
             // "Scarlet & Violet — Prismatic Evolutions Super-Premium…").
             overflow: "hidden",
             opacity: pressed ? 0.85 : 1,
-          })}
+          }]}
           accessibilityRole="button"
           accessibilityLabel={`${s.name}. Sealed product. View details.`}
         >

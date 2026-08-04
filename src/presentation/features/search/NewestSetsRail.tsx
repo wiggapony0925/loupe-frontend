@@ -51,11 +51,11 @@ export function NewestSetsRail({ sets }: { sets: CardSetSummary[] }) {
           <Pressable
             key={s.id}
             onPress={() => router.push(routes.sets())}
-            style={({ pressed }) => ({
+            style={({ pressed }) => [{
               width: TILE_W,
               overflow: "hidden",
               opacity: pressed ? 0.85 : 1,
-            })}
+            }]}
             accessibilityRole="button"
             accessibilityLabel={`${s.name ?? "Set"}. New release. Browse sets.`}
           >

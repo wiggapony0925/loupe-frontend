@@ -42,12 +42,12 @@ export function ChartInsights({ series }: { series: PortfolioSeries | undefined 
           accessibilityLabel={`${series.timeframe} move led by ${lead.name}, ${
             lead.deltaUsd >= 0 ? "up" : "down"
           } ${format(Math.abs(lead.deltaUsd))}. Open card.`}
-          style={({ pressed }) => ({
+          style={({ pressed }) => [{
             flexDirection: "row",
             alignItems: "center",
             gap: 8,
             opacity: pressed ? 0.7 : 1,
-          })}
+          }]}
         >
           {lead.deltaUsd >= 0 ? (
             <ArrowUpRight size={14} color={p.accent.mint} strokeWidth={2.6} />

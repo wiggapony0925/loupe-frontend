@@ -132,7 +132,7 @@ export function NoteCard({
                     key={a.label}
                     onPress={a.onPress}
                     hitSlop={6}
-                    style={({ pressed }) => ({
+                    style={({ pressed }) => [{
                       flexDirection: "row",
                       alignItems: "center",
                       gap: 5,
@@ -143,7 +143,7 @@ export function NoteCard({
                       borderWidth: 1,
                       borderColor: withAlpha(accent, 0.4),
                       opacity: pressed ? 0.85 : 1,
-                    })}
+                    }]}
                   >
                     {ActionIcon ? <ActionIcon size={12} color={accent} strokeWidth={2.5} /> : null}
                     <Text style={{ color: accent, fontSize: 11, fontWeight: "700", letterSpacing: 0.3 }}>

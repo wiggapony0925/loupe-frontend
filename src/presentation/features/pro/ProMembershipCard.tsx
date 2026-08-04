@@ -280,7 +280,7 @@ export function ProMembershipCard() {
               disabled={billingBusy}
               accessibilityRole="button"
               accessibilityLabel="Manage billing"
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "center",
@@ -291,7 +291,7 @@ export function ProMembershipCard() {
                 borderColor: p.line.default,
                 backgroundColor: p.bg.elevated,
                 opacity: pressed || billingBusy ? 0.7 : 1,
-              })}
+              }]}
             >
               {billingBusy ? (
                 <ActivityIndicator size="small" color={p.ink.muted} />
@@ -310,7 +310,7 @@ export function ProMembershipCard() {
                 onPress={() => openPaywall(atCap ? "card_limit" : "generic")}
                 accessibilityRole="button"
                 accessibilityLabel="Upgrade to Loupe Pro"
-                style={({ pressed }) => ({
+                style={({ pressed }) => [{
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "center",
@@ -319,7 +319,7 @@ export function ProMembershipCard() {
                   borderRadius: 13,
                   backgroundColor: p.accent.mint,
                   opacity: pressed ? 0.85 : 1,
-                })}
+                }]}
               >
                 <Sparkles size={15} color="#0B0B0D" strokeWidth={2.5} />
                 <Text style={{ color: "#0B0B0D", fontSize: 14, fontWeight: "800" }}>

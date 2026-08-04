@@ -53,13 +53,13 @@ export function SetIndexes({ indexes }: SetIndexesProps) {
           accessibilityLabel={
             showAll ? "Show fewer sets" : `Show ${hiddenCount} more sets`
           }
-          style={({ pressed }) => ({
+          style={({ pressed }) => [{
             alignItems: "center",
             paddingVertical: 10,
             borderTopWidth: 1,
             borderTopColor: withAlpha(p.ink.dim, 0.14),
             opacity: pressed ? 0.75 : 1,
-          })}
+          }]}
         >
           {/* Inner row keeps label + chevron on ONE line regardless of
               outer layout — pill wash so the control reads as a button. */}

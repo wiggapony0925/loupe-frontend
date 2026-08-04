@@ -214,7 +214,7 @@ export default function ScanDetailScreen() {
           <View className="mt-1 gap-2">
             <Pressable
               onPress={() => router.push(routes.card(data.card_id))}
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "center",
@@ -223,7 +223,7 @@ export default function ScanDetailScreen() {
                 borderRadius: 16,
                 backgroundColor: p.accent.mint,
                 opacity: pressed ? 0.85 : 1,
-              })}
+              }]}
             >
               <TrendingUp size={18} color={p.bg.base} />
               <Text style={{ color: p.bg.base, fontSize: 15, fontWeight: "800" }}>
@@ -232,7 +232,7 @@ export default function ScanDetailScreen() {
             </Pressable>
             <Pressable
               onPress={() => router.push(routes.gradeEdit(data.id))}
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "center",
@@ -243,7 +243,7 @@ export default function ScanDetailScreen() {
                 borderColor: p.line.default,
                 backgroundColor: p.bg.elevated,
                 opacity: pressed ? 0.85 : 1,
-              })}
+              }]}
             >
               <Pencil size={16} color={p.ink.default} />
               <Text style={{ color: p.ink.default, fontSize: 13, fontWeight: "700" }}>

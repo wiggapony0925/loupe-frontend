@@ -140,7 +140,7 @@ function SetProgressTile({
       accessibilityRole="button"
       accessibilityLabel={`${item.setName}, ${item.owned} of ${item.total} cards, ${item.percent.toFixed(0)} percent complete`}
       onPress={onOpen}
-      style={({ pressed }) => ({
+      style={({ pressed }) => [{
         width: TILE_W,
         borderRadius: 14,
         borderWidth: StyleSheet.hairlineWidth,
@@ -148,7 +148,7 @@ function SetProgressTile({
         backgroundColor: bgElev,
         overflow: "hidden",
         opacity: pressed ? 0.85 : 1,
-      })}
+      }]}
     >
       {/* Set artwork hero — Robinhood-style: large logo breathing on a
           near-neutral surface, no chunky tinted fill. Keeps the tile

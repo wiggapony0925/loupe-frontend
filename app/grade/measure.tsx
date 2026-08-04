@@ -158,7 +158,7 @@ export default function GradeMeasureScreen() {
               disabled={busy}
               accessibilityRole="button"
               accessibilityLabel="Take photo"
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 width: 76,
                 height: 76,
                 borderRadius: 38,
@@ -166,7 +166,7 @@ export default function GradeMeasureScreen() {
                 borderColor: "#fff",
                 backgroundColor: withAlpha("#fff", pressed ? 0.5 : 0.25),
                 opacity: busy ? 0.5 : 1,
-              })}
+              }]}
             />
           </View>
         </SafeAreaView>
@@ -346,7 +346,7 @@ function GlassButton({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => ({
+      style={({ pressed }) => [{
         width: 44,
         height: 44,
         borderRadius: 22,
@@ -355,7 +355,7 @@ function GlassButton({
         backgroundColor: withAlpha("#000", pressed ? 0.5 : 0.35),
         borderWidth: 1,
         borderColor: withAlpha("#fff", 0.2),
-      })}
+      }]}
     >
       {children}
     </Pressable>

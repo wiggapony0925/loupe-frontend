@@ -47,7 +47,7 @@ export function ProBadge() {
       onPress={() => openPaywall("generic")}
       accessibilityRole="button"
       accessibilityLabel="Upgrade to Loupe Pro"
-      style={({ pressed }) => ({
+      style={({ pressed }) => [{
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
@@ -58,7 +58,7 @@ export function ProBadge() {
         borderWidth: 1,
         borderColor: withAlpha(p.accent.mint, 0.3),
         opacity: pressed ? 0.8 : 1,
-      })}
+      }]}
     >
       <Sparkles size={12} color={p.accent.mint} strokeWidth={2.5} />
       <Text style={{ color: p.accent.mint, fontSize: 11, fontWeight: "800" }}>

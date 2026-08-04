@@ -137,7 +137,7 @@ export function ScanSessionTray({
               hitSlop={6}
               accessibilityRole="button"
               accessibilityLabel={`Add all ${addAllCount} matched cards to your vault`}
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 5,
@@ -146,7 +146,7 @@ export function ScanSessionTray({
                 borderRadius: 999,
                 backgroundColor: themed.accent.mint,
                 opacity: pressed ? 0.8 : 1,
-              })}
+              }]}
             >
               <Plus size={13} color="#08110D" strokeWidth={3} />
               <Text style={{ color: "#08110D", fontWeight: "900", fontSize: 12 }}>
@@ -245,7 +245,7 @@ function ScanSessionCard({
             ? "No match found. Search the catalog manually."
             : `Captured scan ${index + 1}`
       }
-      style={({ pressed }) => ({
+      style={({ pressed }) => [{
         width: 190,
         minHeight: 76,
         flexDirection: "row",
@@ -261,7 +261,7 @@ function ScanSessionCard({
             ? withAlpha(themed.accent.amber, 0.3)
             : withAlpha("#fff", 0.08),
         opacity: pressed && (matched || (missed && onSearchManually)) ? 0.76 : 1,
-      })}
+      }]}
     >
       <View
         style={{

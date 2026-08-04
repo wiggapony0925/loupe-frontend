@@ -73,7 +73,7 @@ export function ProUsageBanner() {
         onPress={() => openPaywall("card_limit")}
         accessibilityRole="button"
         accessibilityLabel="Upgrade to Loupe Pro"
-        style={({ pressed }) => ({
+        style={({ pressed }) => [{
           flexDirection: "row",
           alignItems: "center",
           gap: 5,
@@ -82,7 +82,7 @@ export function ProUsageBanner() {
           borderRadius: 999,
           backgroundColor: atLimit ? p.accent.mint : withAlpha(p.accent.mint, 0.14),
           opacity: pressed ? 0.85 : 1,
-        })}
+        }]}
       >
         <Sparkles size={13} color={atLimit ? "#0B0B0D" : p.accent.mint} strokeWidth={2.5} />
         <Text

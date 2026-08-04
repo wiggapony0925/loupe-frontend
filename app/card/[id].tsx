@@ -358,7 +358,7 @@ export default function CardDetailScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Open 3D preview of ${card.name}`}
                   hitSlop={6}
-                  style={({ pressed }) => ({
+                  style={({ pressed }) => [{
                     transform: [{ scale: pressed ? 0.97 : 1 }],
                     position: "relative",
                     // Soft lift so the art reads as the hero object.
@@ -366,7 +366,7 @@ export default function CardDetailScreen() {
                     shadowOpacity: 0.18,
                     shadowRadius: 14,
                     shadowOffset: { width: 0, height: 7 },
-                  })}
+                  }]}
                 >
                   <CardImage
                     uri={imageUrl}

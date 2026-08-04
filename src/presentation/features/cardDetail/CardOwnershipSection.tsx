@@ -374,7 +374,7 @@ export function CardOwnershipSection({
               accessibilityLabel={
                 showAll ? "Show fewer grades" : `Show all ${tiers.length} grades`
               }
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "center",
@@ -383,7 +383,7 @@ export function CardOwnershipSection({
                 borderTopWidth: 1,
                 borderTopColor: withAlpha(p.line.default, 0.6),
                 backgroundColor: pressed ? p.bg.sunken : "transparent",
-              })}
+              }]}
             >
               <Text style={{ color: p.accent.mint, fontSize: 11.5, fontWeight: "800" }}>
                 {showAll ? "Show less" : `Show all ${tiers.length} grades`}
@@ -491,7 +491,7 @@ function OwnershipAction({
 /**
  * Row layouts for this section, in a StyleSheet on purpose.
  *
- * These were `style={({pressed}) => ({ flexDirection: "row", ... })}`, and a
+ * These were `style={({ pressed }) => [{ flexDirection: "row", ... }]}`, and a
  * plain object returned from that callback loses its layout props under this
  * project's NativeWind transform — so "Add another copy" and "Show all
  * grades" both rendered their icon stacked above their label instead of

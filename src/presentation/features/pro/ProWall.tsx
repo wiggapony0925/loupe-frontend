@@ -159,7 +159,7 @@ function UpgradePill({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => ({
+      style={({ pressed }) => [{
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
@@ -168,7 +168,7 @@ function UpgradePill({
         borderRadius: 999,
         backgroundColor: p.accent.mint,
         opacity: pressed ? 0.85 : 1,
-      })}
+      }]}
     >
       <Sparkles size={large ? 15 : 13} color="#0B0B0D" strokeWidth={2.5} />
       <Text

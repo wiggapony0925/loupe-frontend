@@ -77,7 +77,7 @@ export function TodaysDeltaHero() {
           ? "Portfolio unchanged today. Open analytics."
           : `Portfolio ${isUp ? "up" : "down"} ${format(Math.abs(delta))} today, ${pct.toFixed(1)} percent.${leaderName ? ` Led by ${leaderName}.` : ""} Open analytics.`
       }
-      style={({ pressed }) => ({
+      style={({ pressed }) => [{
         borderRadius: 16,
         borderWidth: 1,
         borderColor: isFlat ? p.line.default : withAlpha(tint, 0.35),
@@ -86,7 +86,7 @@ export function TodaysDeltaHero() {
         paddingVertical: 14,
         gap: 6,
         opacity: pressed ? 0.85 : 1,
-      })}
+      }]}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <View

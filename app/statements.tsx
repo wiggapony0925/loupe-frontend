@@ -41,7 +41,7 @@ export default function StatementsScreen() {
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel="Back"
-            style={({ pressed }) => ({
+            style={({ pressed }) => [{
               width: 36,
               height: 36,
               borderRadius: 18,
@@ -51,7 +51,7 @@ export default function StatementsScreen() {
               borderColor: p.line.default,
               backgroundColor: p.bg.elevated,
               opacity: pressed ? 0.7 : 1,
-            })}
+            }]}
           >
             <ChevronLeft size={18} color={p.ink.default} strokeWidth={2.4} />
           </Pressable>

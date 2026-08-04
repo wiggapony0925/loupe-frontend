@@ -1466,7 +1466,7 @@ function LiveResultsSection({
                 onPress={onTryAi}
                 accessibilityRole="button"
                 accessibilityLabel="Switch to Loupe AI and describe the card"
-                style={({ pressed }) => ({
+                style={({ pressed }) => [{
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "center",
@@ -1477,7 +1477,7 @@ function LiveResultsSection({
                   borderWidth: 1,
                   borderColor: withAlpha(p.accent.mint, 0.35),
                   backgroundColor: withAlpha(p.accent.mint, pressed ? 0.14 : 0.07),
-                })}
+                }]}
               >
                 <SparklesIcon size={15} color={p.accent.mint} />
                 <Text
@@ -1517,7 +1517,7 @@ function LiveResultsSection({
                     ? `Load more results. ${total - data.length} more available.`
                     : "Load more results"
                 }
-                style={({ pressed }) => ({
+                style={({ pressed }) => [{
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "center",
@@ -1532,7 +1532,7 @@ function LiveResultsSection({
                     pressed ? 0.12 : 0.06,
                   ),
                   opacity: isFetchingMore ? 0.7 : 1,
-                })}
+                }]}
               >
                 {isFetchingMore ? (
                   <ActivityIndicator size="small" color={p.accent.mint} />

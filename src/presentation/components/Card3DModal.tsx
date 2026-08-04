@@ -223,7 +223,7 @@ export function Card3DModal({
             accessibilityRole="button"
             accessibilityLabel="Close card preview"
             hitSlop={12}
-            style={({ pressed }) => ({
+            style={({ pressed }) => [{
               position: "absolute",
               top: 56,
               right: 20,
@@ -234,7 +234,7 @@ export function Card3DModal({
               justifyContent: "center",
               backgroundColor: "rgba(255,255,255,0.14)",
               opacity: pressed ? 0.75 : 1,
-            })}
+            }]}
           >
             <X size={20} color="#fff" strokeWidth={2.5} />
           </Pressable>

@@ -153,14 +153,14 @@ function CloseButton({ onCancel }: { onCancel: () => void }) {
           hitSlop={20}
           accessibilityLabel="Close camera"
           accessibilityRole="button"
-          style={({ pressed }) => ({
+          style={({ pressed }) => [{
             width: 44,
             height: 44,
             borderRadius: 22,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: pressed ? "rgba(0,0,0,0.75)" : "rgba(0,0,0,0.55)",
-          })}
+          }]}
         >
           <X size={22} color="#fff" />
         </Pressable>

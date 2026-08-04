@@ -685,7 +685,7 @@ function ScanActionSheet({
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel="Close scan actions"
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 width: 36,
                 height: 36,
                 borderRadius: 18,
@@ -693,7 +693,7 @@ function ScanActionSheet({
                 justifyContent: "center",
                 backgroundColor: withAlpha(p.ink.default, 0.08),
                 opacity: pressed ? 0.65 : 1,
-              })}
+              }]}
             >
               <X size={18} color={p.ink.dim} />
             </Pressable>

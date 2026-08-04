@@ -30,7 +30,7 @@ export function GlassCircle({
       hitSlop={12}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={({ pressed }) => ({
+      style={({ pressed }) => [{
         width: size,
         height: size,
         borderRadius: size / 2,
@@ -39,7 +39,7 @@ export function GlassCircle({
         borderColor,
         opacity: pressed ? 0.82 : 1,
         transform: [{ scale: pressed ? 0.94 : 1 }],
-      })}
+      }]}
     >
       <BlurView
         intensity={BLUR_INTENSITY}

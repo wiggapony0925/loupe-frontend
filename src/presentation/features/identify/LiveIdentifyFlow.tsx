@@ -1389,7 +1389,7 @@ function ReticleArea({
               accessibilityRole="button"
               accessibilityLabel={`Zoom ${preset.label}`}
               accessibilityState={{ selected: active }}
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 minWidth: active ? 44 : 34,
                 height: active ? 34 : 34,
                 paddingHorizontal: active ? 12 : 0,
@@ -1401,7 +1401,7 @@ function ReticleArea({
                 borderWidth: active ? 0 : 1,
                 borderColor: HAIRLINE,
                 opacity: pressed ? 0.8 : 1,
-              })}
+              }]}
             >
               {!active ? (
                 <BlurView

@@ -140,7 +140,7 @@ export function BottomSheet({
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel="Close"
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 width: 36,
                 height: 36,
                 borderRadius: 18,
@@ -150,7 +150,7 @@ export function BottomSheet({
                 borderColor: p.line.default,
                 backgroundColor: p.bg.elevated,
                 opacity: closeDisabled ? 0.4 : pressed ? 0.72 : 1,
-              })}
+              }]}
             >
               <X size={16} color={p.ink.muted} strokeWidth={2.4} />
             </Pressable>

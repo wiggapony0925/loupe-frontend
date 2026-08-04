@@ -98,7 +98,7 @@ export function TcgPickerSheet({
                     onPress={() => onSelect(o.key)}
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
-                    style={({ pressed }) => ({
+                    style={({ pressed }) => [{
                       flexDirection: "row",
                       alignItems: "center",
                       gap: 12,
@@ -115,7 +115,7 @@ export function TcgPickerSheet({
                       borderColor: active
                         ? withAlpha(optionColor, 0.4)
                         : themed.line.default,
-                    })}
+                    }]}
                   >
                     <View
                       style={{

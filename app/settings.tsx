@@ -282,7 +282,7 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           }}
           accessibilityRole="button"
           accessibilityLabel="Log out"
-          style={({ pressed }) => ({
+          style={({ pressed }) => [{
             opacity: pressed ? 0.7 : 1,
             borderWidth: 1.5,
             borderColor: p.accent.rose,
@@ -292,7 +292,7 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
             flexDirection: "row",
             justifyContent: "center",
             gap: 8,
-          })}
+          }]}
         >
           <LogOut size={16} color={p.accent.rose} />
           <Text className="text-base font-bold" style={{ color: p.accent.rose }}>
@@ -314,11 +314,11 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Sign out everywhere"
-          style={({ pressed }) => ({
+          style={({ pressed }) => [{
             opacity: pressed || signingOutAll ? 0.6 : 1,
             marginTop: 16,
             alignItems: "center",
-          })}
+          }]}
         >
           <Text
             className="text-[13px] font-semibold text-ink-muted"

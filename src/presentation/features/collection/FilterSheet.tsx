@@ -292,7 +292,7 @@ export function FilterSheet({
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel="Close"
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 width: 32,
                 height: 32,
                 borderRadius: 16,
@@ -300,7 +300,7 @@ export function FilterSheet({
                 justifyContent: "center",
                 backgroundColor: withAlpha(p.ink.muted, 0.12),
                 opacity: pressed ? 0.65 : 1,
-              })}
+              }]}
             >
               <X size={14} color={p.ink.muted} strokeWidth={2.5} />
             </Pressable>
@@ -538,14 +538,14 @@ export function FilterSheet({
               onPress={s.clearAll}
               disabled={count === 0}
               accessibilityLabel="Clear all filters"
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 paddingHorizontal: spacing.xl,
                 height: 48,
                 justifyContent: "center",
                 borderRadius: 999,
                 backgroundColor: withAlpha(p.ink.muted, 0.1),
                 opacity: count === 0 ? 0.3 : pressed ? 0.65 : 1,
-              })}
+              }]}
             >
               <Text style={{ color: p.ink.default, fontSize: 14, fontWeight: "700" }}>
                 Clear
@@ -554,7 +554,7 @@ export function FilterSheet({
             <Pressable
               onPress={handleClose}
               accessibilityLabel={`Show ${resultCount} results`}
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 flex: 1,
                 height: 48,
                 alignItems: "center",
@@ -562,7 +562,7 @@ export function FilterSheet({
                 borderRadius: 999,
                 backgroundColor: p.accent.mint,
                 opacity: pressed ? 0.85 : 1,
-              })}
+              }]}
             >
               {isCountFetching ? (
                 <ActivityIndicator color="#06140d" />

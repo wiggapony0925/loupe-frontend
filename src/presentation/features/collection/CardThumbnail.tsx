@@ -94,7 +94,7 @@ export function CardThumbnail({
           : `${card.title}, grade ${card.grade.toFixed(1)}, ${delta.label}`
       }
       className="flex-1 overflow-hidden rounded-2xl"
-      style={({ pressed }) => ({
+      style={({ pressed }) => [{
         opacity: pressed ? 0.85 : selected === false ? 0.8 : 1,
         // Constant geometry in a select session — a conditional border
         // width / scale makes tiles visibly shrink on every toggle.
@@ -105,7 +105,7 @@ export function CardThumbnail({
             ? withAlpha(p.line.default, 0.7)
             : p.line.default,
         backgroundColor: p.bg.elevated,
-      })}
+      }]}
     >
       {/* Art — 5:7 card aspect with floating chips */}
       <View className="aspect-[5/7] w-full bg-bg-sunken">

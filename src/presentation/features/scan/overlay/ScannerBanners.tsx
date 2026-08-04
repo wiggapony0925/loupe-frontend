@@ -22,7 +22,7 @@ export function ErrorBanner({
       onPress={onDismiss}
       accessibilityRole="alert"
       accessibilityLabel={`${message}. Tap to dismiss.`}
-      style={({ pressed }) => ({
+      style={({ pressed }) => [{
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
@@ -36,7 +36,7 @@ export function ErrorBanner({
         borderWidth: 1,
         borderColor: withAlpha(palette.accent.rose, 0.45),
         opacity: pressed ? 0.85 : 1,
-      })}
+      }]}
     >
       <BlurView
         intensity={BLUR_INTENSITY}

@@ -160,7 +160,7 @@ export function RailResultsSection({
                   ? `Load more cards. ${first.total - cards.length} more available.`
                   : "Load more cards"
               }
-              style={({ pressed }) => ({
+              style={({ pressed }) => [{
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "center",
@@ -172,7 +172,7 @@ export function RailResultsSection({
                 borderColor: withAlpha(p.accent.mint, 0.3),
                 backgroundColor: withAlpha(p.accent.mint, pressed ? 0.12 : 0.06),
                 opacity: q.isFetchingNextPage ? 0.7 : 1,
-              })}
+              }]}
             >
               {q.isFetchingNextPage ? (
                 <ActivityIndicator size="small" color={p.accent.mint} />

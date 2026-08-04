@@ -63,7 +63,7 @@ export function BrowseCategoryCarousel({
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             accessibilityLabel={`Filter by ${cat.label}${active ? ", selected" : ""}`}
-            style={({ pressed }) => ({
+            style={({ pressed }) => [{
               width: TILE_W,
               paddingTop: 20,
               paddingBottom: 16,
@@ -76,7 +76,7 @@ export function BrowseCategoryCarousel({
               borderWidth: 1,
               borderColor: active ? withAlpha(tint, 0.55) : p.line.default,
               backgroundColor: active ? withAlpha(tint, 0.1) : p.bg.elevated,
-            })}
+            }]}
           >
             <View style={{ height: LOGO_H, justifyContent: "center" }}>
               <BrandLogo brand={cat.key} width={LOGO_W} height={LOGO_H} tint={tint} />
