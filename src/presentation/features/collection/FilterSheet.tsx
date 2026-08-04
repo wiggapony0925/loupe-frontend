@@ -34,6 +34,10 @@ import {
   withAlpha,
 } from "@/presentation/theme/tokens";
 
+// The vault can span dozens of sets — show a handful, then reveal the rest
+// behind a "+N more" chip so the SET section doesn't bury the footer.
+const SET_LIMIT = 10;
+
 const HOUSES: { key: VaultType; label: string }[] = [
   { key: "loupe", label: "Loupe" },
   { key: "raw", label: "Raw" },
@@ -556,7 +560,7 @@ export function FilterSheet({
               accessibilityLabel={`Show ${resultCount} results`}
               style={({ pressed }) => [{
                 flex: 1,
-                height: 48,
+                height: 52,
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 999,
