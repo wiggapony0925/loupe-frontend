@@ -1,11 +1,12 @@
 import React, { useCallback, useRef, useState } from "react";
-import { Platform, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { ArrowUpRight, Bell, Camera, Settings2 } from "lucide-react-native";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
+import { usePriceAlerts } from "@/application/queries/alerts/usePriceAlerts";
 import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { HardwareStatusWidget, useScannerConnection } from "@/presentation/features/scanner";
 import { PortfolioChart } from "@/presentation/features/analytics/PortfolioChart";
@@ -419,6 +420,8 @@ export default function CommandCenterScreen() {
 
 function StaticNavbar() {
   const p = useThemedPalette();
+  const { data: alerts } = usePriceAlerts();
+  const alertCount = alerts?.length ?? 0;
   return (
     <View className="flex-row items-center justify-between px-5 py-2">
       <View className="flex-row items-center gap-2">
@@ -435,6 +438,21 @@ function StaticNavbar() {
           style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
         >
           <Bell size={16} color={p.ink.muted} />
+          {/* Active price alerts. Without a count the bell gave no reason to
+              tap it, so an alert you set could sit armed and unnoticed —
+              which is the entire point of having set it. */}
+          {alertCount > 0 ? (
+            <View
+              style={[
+                homeStyles.badge,
+                { backgroundColor: p.accent.mint, borderColor: p.bg.base },
+              ]}
+            >
+              <Text style={homeStyles.badgeText}>
+                {alertCount > 9 ? "9+" : alertCount}
+              </Text>
+            </View>
+          ) : null}
         </Pressable>
         <Pressable
           onPress={() => router.push(routes.settings())}
@@ -651,3 +669,31 @@ function TopMoversSection({
     </View>
   );
 }
+
+/**
+ * Count badge on the notifications bell.
+ *
+ * Sits slightly outside the circular button and carries a ring in the page
+ * background colour, so it reads as attached to the bell rather than clipped
+ * by it — the standard iOS treatment.
+ */
+const homeStyles = StyleSheet.create({
+  badge: {
+    position: "absolute",
+    top: -3,
+    right: -3,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    paddingHorizontal: 3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: {
+    color: "#04342C",
+    fontSize: 9.5,
+    fontWeight: "900",
+    lineHeight: 12,
+  },
+});

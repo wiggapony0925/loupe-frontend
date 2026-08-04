@@ -37,6 +37,7 @@ import { CardImage } from "@/presentation/components/CardImage";
 import { useCardOwnership } from "@/application/queries/collection/useCardOwnership";
 import { useHoldingActions } from "@/presentation/features/collection/useHoldingActions";
 import { routes } from "@/shared/routes";
+import { holdingRef } from "@/presentation/features/collection/holdingRef";
 import type { AcquisitionSource, CardHoldingWire } from "@/infrastructure/http";
 
 function num(v: string | null): number | null {
@@ -769,6 +770,9 @@ function CopyRow({
   const acq = h.acquired_via ? ACQUIRED[h.acquired_via] : null;
 
   const metaBits = [
+    // Leads the line on purpose: it's the answer to "which of my three copies
+    // is this", and it has to be findable before the reader parses dates.
+    holdingRef(h.holding_id) || null,
     acq?.label ?? null,
     // "Added on" — `graded_at` is when this copy entered the vault. The wire
     // has always carried it; the page just never rendered it, so a holding
@@ -790,8 +794,13 @@ function CopyRow({
       accessibilityLabel="Open this copy"
       style={({ pressed }) => ({
         paddingVertical: 10,
-        paddingRight: 4,
-        paddingLeft: 27,
+        // The meta line ("Added 3 Aug · 1d held · cost $12") ran right up to
+        // the container's inner edge with 4pt to spare, so a long line read as
+        // if it were falling out of the card. Match the container's own 14pt
+        // inset on the right and keep the left indent that hangs these rows
+        // under their tier.
+        paddingRight: 14,
+        paddingLeft: 24,
         backgroundColor: pressed ? p.bg.sunken : "transparent",
         borderRadius: pressed ? 10 : 0,
       })}

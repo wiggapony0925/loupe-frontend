@@ -15,10 +15,10 @@
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
-import { ChevronRight, StickyNote } from "lucide-react-native";
+import { StickyNote } from "lucide-react-native";
 import { useCardOwnership } from "@/application/queries/collection/useCardOwnership";
 import { routes } from "@/shared/routes";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 
 export function CardNoteCard({ cardId }: { cardId: string | null }) {
   const p = useThemedPalette();
@@ -41,44 +41,41 @@ export function CardNoteCard({ cardId }: { cardId: string | null }) {
       onPress={() => router.push(routes.gradeEdit(noted.first!.holding_id))}
       accessibilityRole="button"
       accessibilityLabel="Your note on this card. Opens the holding."
-      style={[
-        styles.card,
-        {
-          borderColor: withAlpha(p.accent.amber, 0.35),
-          backgroundColor: withAlpha(p.accent.amber, 0.07),
-        },
-      ]}
+      style={[styles.card, { borderLeftColor: p.line.default }]}
     >
-      <StickyNote
-        size={14}
-        color={p.accent.amber}
-        strokeWidth={2.25}
-        style={styles.icon}
-      />
+      <StickyNote size={12} color={p.ink.dim} strokeWidth={2} style={styles.icon} />
       <View style={styles.copy}>
-        <Text style={[styles.label, { color: p.accent.amber }]}>
-          YOUR NOTE
-          {noted.total > 1 ? ` · 1 of ${noted.total}` : ""}
-        </Text>
-        <Text style={[styles.body, { color: p.ink.default }]}>{note}</Text>
+        <Text style={[styles.body, { color: p.ink.muted }]}>{note}</Text>
+        {noted.total > 1 ? (
+          <Text style={[styles.meta, { color: p.ink.dim }]}>
+            1 of {noted.total} notes
+          </Text>
+        ) : null}
       </View>
-      <ChevronRight size={14} color={p.ink.dim} />
     </Pressable>
   );
 }
 
+/**
+ * A margin note, not a banner.
+ *
+ * The first pass framed this as an amber alert card, which read as a warning —
+ * the loudest thing on a screen full of live market data, for what is really
+ * just something you jotted down. A hairline rule and quiet text sit it beside
+ * the content the way a margin annotation does: present, findable, and not
+ * competing with the price.
+ */
 const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 9,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    gap: 7,
+    borderLeftWidth: 2,
+    paddingLeft: 10,
+    paddingVertical: 2,
   },
-  icon: { marginTop: 1 },
-  copy: { flex: 1, gap: 3 },
-  label: { fontSize: 9.5, fontWeight: "800", letterSpacing: 1.4 },
-  body: { fontSize: 13, lineHeight: 18 },
+  icon: { marginTop: 2 },
+  copy: { flex: 1, gap: 2 },
+  body: { fontSize: 13, lineHeight: 18, fontStyle: "italic" },
+  meta: { fontSize: 10.5 },
 });

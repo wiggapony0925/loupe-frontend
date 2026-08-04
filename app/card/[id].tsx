@@ -223,8 +223,10 @@ export default function CardDetailScreen() {
   // Tapping the hero art opens a full-screen 3D-tilt preview (Card3DModal).
   // Lives on the detail screen so re-renders elsewhere don't reset it.
   const [previewOpen, setPreviewOpen] = useState(false);
-  // Robinhood's "Advanced" toggle — reveals the compare-grades overlay row.
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Compare-grades chips are ALWAYS visible — they used to hide behind an
+  // "Advanced" pill, which meant the single most useful thing on the chart
+  // (PSA vs BGS vs CGC vs raw, overlaid) was invisible unless you went looking
+  // for it. The website shows them outright; the app now matches.
 
   const card = cardQ.data;
   const snapshot = marketQ.data?.snapshot;
@@ -611,8 +613,7 @@ export default function CardDetailScreen() {
                 <View style={{ gap: 12 }}>
                   {/* Compare grades — overlay other grading houses' price lines
                       so PSA vs BGS vs CGC vs raw read at a glance (web parity). */}
-                  {advancedOpen ? (
-                    <ScrollView
+                  <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
                       // Bleed past the screen's 20dp padding so the chips
@@ -670,7 +671,6 @@ export default function CardDetailScreen() {
                         );
                       })}
                     </ScrollView>
-                  ) : null}
                   <CardPriceChart
                     history={snapshot?.history}
                     cardId={cardId}
@@ -680,35 +680,6 @@ export default function CardDetailScreen() {
                     defaultRange="1Y"
                     height={280}
                     bleedX={20}
-                    rangeTrailing={
-                      <Pressable
-                        onPress={() => setAdvancedOpen((v) => !v)}
-                        hitSlop={8}
-                        accessibilityRole="button"
-                        accessibilityState={{ expanded: advancedOpen }}
-                        accessibilityLabel="Toggle advanced chart overlays"
-                        style={{
-                          paddingHorizontal: 12,
-                          paddingVertical: 6,
-                          borderRadius: 999,
-                          borderWidth: 1,
-                          borderColor: advancedOpen ? p.accent.mint : p.line.default,
-                          backgroundColor: advancedOpen
-                            ? withAlpha(p.accent.mint, 0.14)
-                            : "transparent",
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: advancedOpen ? p.accent.mint : p.ink.muted,
-                            fontSize: 12,
-                            fontWeight: "700",
-                          }}
-                        >
-                          Advanced
-                        </Text>
-                      </Pressable>
-                    }
                     onScrubbingChange={handleChartScrubbing}
                   />
                 </View>

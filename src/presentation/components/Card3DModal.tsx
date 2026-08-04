@@ -308,7 +308,13 @@ export function Card3DModal({
                       width="100%"
                       height="100%"
                       rounded={18}
-                      contentFit="cover"
+                      // `contain`, not `cover`. This is a full-card preview —
+                      // the whole point is seeing the card, and `cover` crops
+                      // its edges to fill a container that isn't the card's
+                      // 5:7 aspect. The art already arrives at the highest
+                      // resolution the catalog publishes; cropping it was what
+                      // made the expanded view look worse than the thumbnail.
+                      contentFit="contain"
                       priority="high"
                       recyclingKey={recyclingKey ?? imageUri ?? "card-3d"}
                       alt={title ?? "Card preview"}
