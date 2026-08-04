@@ -213,7 +213,12 @@ export default function CardDetailScreen() {
   const compareTiers = comparePresets.filter((c) => compareKeys.includes(c.key));
   const toggleCompare = (key: string) =>
     setCompareKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  // Open by default. The description, artist, set and rarity are the card's
+  // identity — collapsing them put the most human content on the page behind
+  // a tap most people never made, at the very bottom, under six stat strips.
+  // A brokerage shows "About" expanded; the toggle stays for anyone who wants
+  // the page shorter.
+  const [detailsOpen, setDetailsOpen] = useState(true);
   const [alertOpen, setAlertOpen] = useState(false);
   // Tapping the hero art opens a full-screen 3D-tilt preview (Card3DModal).
   // Lives on the detail screen so re-renders elsewhere don't reset it.
@@ -714,14 +719,32 @@ export default function CardDetailScreen() {
                 />
               )}
 
+              {/* ── YOUR POSITION ──────────────────────────────────────
+                  Directly under the chart, the way a brokerage does it: after
+                  "what is this worth", the very next question is "what is
+                  MINE worth". This used to sit at the very bottom, below the
+                  chart, six stat strips, the marketplace rails, the graded
+                  ladder and the population report — so the one section that is
+                  actually about the user was the last thing they'd reach.
+
+                  Order within the block is deliberate: their P/L, then the
+                  reconciled fair value it's measured against, then the copies
+                  themselves. Each renders nothing when it has no data, so a
+                  card you don't own collapses this whole region away. */}
+              <CardCostBasisStrip cardId={cardId} />
+              <CardValuationPanel cardId={cardId} />
+              <CardOwnershipSection
+                cardId={cardId}
+                cardName={card.name}
+                cardImage={imageUrl ?? undefined}
+                cardSet={card.set_name ?? undefined}
+                cardYear={card.year ?? undefined}
+              />
+
               {/* 4b. Market signals row (52w hi/lo, trend, arbitrage,
                   auctions) — renders nothing when no signals fire. */}
               {hasRealHistory ? <CardMarketSignals snapshot={snapshot} cardId={cardId} /> : null}
 
-              {/* 4c. Owned-card unrealized P/L — the backend /ownership
-                  rollup, so this strip and CardOwnershipSection below can
-                  never disagree. */}
-              <CardCostBasisStrip cardId={cardId} />
 
               {/* 5. Quick-stats row (spread, volatility, liquidity,
                   last-sale freshness). */}
@@ -874,22 +897,8 @@ export default function CardDetailScreen() {
                   guests/non-owners). Anchored at the bottom of the screen so
                   the market story reads first and the personal ledger closes
                   it out. */}
-              {/* Loupe Value sits just above the personal ledger: the market
-                  story ends with one reconciled number and the sources behind
-                  it, then the user's own position answers "what's mine worth".
-                  Renders nothing when the valuation service can't price the
-                  card, so it never leaves an empty frame. */}
-              <CardValuationPanel cardId={cardId} />
 
-              <CardOwnershipSection
-                cardId={cardId}
-                cardName={card.name}
-                cardImage={imageUrl ?? undefined}
-                cardSet={card.set_name ?? undefined}
-                cardYear={card.year ?? undefined}
-              />
-
-              {/* 10. Collapsible card details — flat header */}
+              {/* 10. About this card — open by default (see `detailsOpen`). */}
               <Pressable
                 onPress={() => setDetailsOpen((v) => !v)}
                 style={{
@@ -902,7 +911,7 @@ export default function CardDetailScreen() {
                 }}
               >
                 <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-                  Card Details
+                  About this card
                 </Text>
                 {detailsOpen ? (
                   <ChevronUp size={16} color={p.ink.muted} />
