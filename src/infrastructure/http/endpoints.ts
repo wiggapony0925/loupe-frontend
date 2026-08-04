@@ -15,6 +15,12 @@ export const ENDPOINTS = {
   },
   /** Public global announcement banner (no auth) — set in the dev dashboard. */
   announcement: `${V1}/announcement`,
+  /** Public blog. Feeds the notification inbox so a new article reaches the
+   *  app, not just the website. */
+  blog: {
+    posts: `${V1}/blog/posts`,
+    post: (slug: string) => `${V1}/blog/posts/${slug}`,
+  },
   auth: {
     register: `${V1}/auth/register`,
     login: `${V1}/auth/login`,

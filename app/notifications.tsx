@@ -7,7 +7,7 @@
  * (no mocks, no fabricated values).
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -25,79 +25,29 @@ import { routes } from "@/shared/routes";
 import { useMoney } from "@/presentation/components/Price";
 import { type Palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { WatchingList } from "@/presentation/features/watchlist/WatchingList";
-import { usePriceAlerts } from "@/application/queries/alerts/usePriceAlerts";
-import type { PriceAlertWire } from "@/infrastructure/http";
+import { useNotificationFeed } from "@/application/notifications/useNotificationFeed";
+import type { FeedItem } from "@/application/notifications/notificationFeed";
 
-type Category = "all" | "scan" | "market" | "system";
+type Category = "all" | "market" | "news" | "system";
 type Tab = "inbox" | "watching";
 
-type Notification = {
-  id: string;
-  category: Exclude<Category, "all">;
-  title: string;
-  body: string;
-  /** ISO timestamp — formatted for display via `relative()`. */
-  at: string;
-  unread: boolean;
-  /** Optional deep-link target (e.g. the card behind a price alert). */
-  cardId?: string;
-};
-
-/** A triggered alert counts as "new" for 48h — there's no server-side
- *  read state yet, so recency is the honest proxy for unread. */
-const UNREAD_WINDOW_MS = 48 * 60 * 60 * 1000;
 
 
-/** Map the backend's triggered price alerts into inbox notifications.
- *  Only alerts the server has actually flagged (`triggered_at != null`)
- *  appear — we never fabricate a price move. */
-function buildFeed(
-  alerts: PriceAlertWire[],
-  money: (usd: number, opts?: { compact?: boolean }) => string,
-): Notification[] {
-  const fmtMoney = (v: string | number | null): string | null => {
-    if (v == null) return null;
-    const n = typeof v === "number" ? v : Number(v);
-    return Number.isFinite(n) ? money(n, { compact: false }) : null;
-  };
-  return alerts
-    .filter((a) => a.triggered_at !== null)
-    .map((a) => {
-      const name = a.card_name ?? "A watched card";
-      const direction = a.condition === "above" ? "rose above" : "dropped below";
-      const threshold = fmtMoney(a.threshold_usd);
-      const hit = fmtMoney(a.triggered_price_usd);
-      const triggeredAt = a.triggered_at as string;
-      const isUnread =
-        Date.now() - new Date(triggeredAt).getTime() < UNREAD_WINDOW_MS;
-      return {
-        id: a.id,
-        category: "market" as const,
-        title: `${name} hit your target`,
-        body: hit
-          ? `${direction} ${threshold} — last seen ${hit}`
-          : `${direction} ${threshold}`,
-        at: triggeredAt,
-        unread: isUnread,
-        cardId: a.card_id,
-      };
-    })
-    .sort((x, y) => new Date(y.at).getTime() - new Date(x.at).getTime());
-}
+
 
 const CATEGORY_META: Record<
   Exclude<Category, "all">,
   { Icon: LucideIcon; tint: keyof Palette["accent"]; label: string }
 > = {
-  scan: { Icon: Sparkles, tint: "mint", label: "Scan" },
   market: { Icon: TrendingUp, tint: "blue", label: "Market" },
+  news: { Icon: Sparkles, tint: "mint", label: "News" },
   system: { Icon: Bell, tint: "amber", label: "System" },
 };
 
 const FILTERS: { key: Category; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "scan", label: "Scans" },
   { key: "market", label: "Market" },
+  { key: "news", label: "News" },
   { key: "system", label: "System" },
 ];
 
@@ -111,22 +61,25 @@ export default function NotificationsScreen() {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [filter, setFilter] = useState<Category>("all");
 
-  // Real inbox: triggered price alerts become "market" notifications.
-  const alertsQ = usePriceAlerts({ pending: false });
+  // One shared feed — the same one the navbar bell counts, so the badge and
+  // this list can never disagree about what's waiting.
   const { format: money } = useMoney();
-  const feed = useMemo(
-    () => buildFeed(alertsQ.data ?? [], money),
-    [alertsQ.data, money],
-  );
+  const { feed, unread: unreadCount, markAllRead } = useNotificationFeed(money);
+
+  // Opening the inbox IS reading it. Anything else leaves a badge the user has
+  // to dismiss by hand, which is a chore nobody asked for.
+  useEffect(() => {
+    if (feed.length > 0) markAllRead();
+    // Run once per mount: re-running as `feed` settles would mark items read
+    // the moment they arrive, even ones scrolled past the fold.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const visible = useMemo(
     () => (filter === "all" ? feed : feed.filter((n) => n.category === filter)),
     [feed, filter],
   );
-  const unreadCount = useMemo(
-    () => feed.filter((n) => n.unread).length,
-    [feed],
-  );
+
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
@@ -399,7 +352,7 @@ function EmptyState({
 
 /* ─── Feed ────────────────────────────────────────────────────────────── */
 
-function Feed({ items }: { items: Notification[] }) {
+function Feed({ items }: { items: FeedItem[] }) {
   return (
     <View className="mt-3 border-t border-line">
       {items.map((n, idx) => (
@@ -413,15 +366,15 @@ function NotificationRow({
   item,
   isLast,
 }: {
-  item: Notification;
+  item: FeedItem;
   isLast: boolean;
 }) {
   const p = useThemedPalette();
   const meta = CATEGORY_META[item.category];
   const tint = p.accent[meta.tint];
   // A price-alert notification deep-links to the card it fired on.
-  const onPress = item.cardId
-    ? () => router.push(routes.card(item.cardId as string))
+  const onPress = item.href
+    ? () => router.push(item.href as never)
     : undefined;
   return (
     <Pressable
@@ -442,10 +395,12 @@ function NotificationRow({
           <Text numberOfLines={1} className="flex-1 pr-2 text-[15px] font-semibold text-ink">
             {item.title}
           </Text>
-          <Text className="text-[11px] text-ink-dim">{relative(item.at)}</Text>
+          {item.at ? (
+            <Text className="text-[11px] text-ink-dim">{relative(item.at)}</Text>
+          ) : null}
         </View>
         <Text className="mt-1 text-[13px] leading-[18px] text-ink-muted">
-          {item.body}
+          {item.body ?? ""}
         </Text>
       </View>
       {item.unread ? (

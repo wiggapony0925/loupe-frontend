@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import { ArrowUpRight, Bell, Camera, Settings2 } from "lucide-react-native";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
-import { usePriceAlerts } from "@/application/queries/alerts/usePriceAlerts";
+import { useNotificationFeed } from "@/application/notifications/useNotificationFeed";
 import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { HardwareStatusWidget, useScannerConnection } from "@/presentation/features/scanner";
 import { PortfolioChart } from "@/presentation/features/analytics/PortfolioChart";
@@ -420,8 +420,10 @@ export default function CommandCenterScreen() {
 
 function StaticNavbar() {
   const p = useThemedPalette();
-  const { data: alerts } = usePriceAlerts();
-  const alertCount = alerts?.length ?? 0;
+  // Every notification type, not just price alerts: an announcement posted
+  // from the admin dashboard and a newly published article now reach the same
+  // bell. Counting only alerts meant those shipped to nobody.
+  const { unread: alertCount } = useNotificationFeed();
   return (
     <View className="flex-row items-center justify-between px-5 py-2">
       <View className="flex-row items-center gap-2">
