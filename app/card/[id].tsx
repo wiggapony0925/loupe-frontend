@@ -5,12 +5,11 @@
  * chart + attributes" stack with the scan/[id] aesthetic merged on top
  * of live `/v1/cards/{id}/market` data:
  *
- *   1. Header bar (back · name · heart/bell)
- *   2. Hero — Robinhood security-detail: overline (set · # · year),
- *      huge name, small art thumb (→ 3D preview)
- *   3. Chart hero (big $ + Δ) + full-bleed line + range pills +
- *      "Advanced" (compare-grades overlay toggle)
- *   4. Trade position (Add to collection · Grade)
+ *   1. Header bar (back · MARKET label · heart/bell)
+ *   2. Hero strip (small art left · name/set/year right)
+ *   3. Big price block (pop_top + change_pct_1y)
+ *   4. Sparkline chart (range-driven)
+ *   5. Range chips (1D · 1W · 1M · 3M · YTD · 1Y · ALL)
  *   6. Three-up RAW / GRADED / POP tiles
  *   7. GRADED PRICES section header
  *   8. House filter chips (ALL · PSA · CGC · BGS · SGC · TAG)
@@ -24,7 +23,16 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "r
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
-import { Bell, ChevronDown, ChevronLeft, ChevronUp, Gauge, Heart, Plus } from "lucide-react-native";
+import {
+  Bell,
+  ChevronDown,
+  ChevronLeft,
+  ChevronUp,
+  Expand,
+  Gauge,
+  Heart,
+  Plus,
+} from "lucide-react-native";
 import { useCard } from "@/application/queries/catalog/useCard";
 import { useCanonicalCard } from "@/application/queries/catalog/useCanonicalCard";
 import { useCardMarket } from "@/application/queries/catalog/useCardMarket";
@@ -440,8 +448,8 @@ export default function CardDetailScreen() {
                     {card.set?.symbol?.url ? (
                       <CardImage
                         uri={card.set.symbol.url}
-                        width={13}
-                        height={13}
+                        width={15}
+                        height={15}
                         rounded={0}
                         contentFit="contain"
                         priority="low"
@@ -546,17 +554,98 @@ export default function CardDetailScreen() {
                       </Text>
                     </Pressable>
                   </View>
-                  <Text
-                    numberOfLines={2}
+
+                  {/* Identity chips — TCG (tinted) · rarity · number/run · year */}
+                  <View
                     style={{
-                      color: p.ink.default,
-                      fontSize: 34,
-                      lineHeight: 38,
-                      fontWeight: "800",
-                      letterSpacing: -0.8,
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: 5,
+                      marginTop: 2,
                     }}
                   >
-                    {card.name}
+                    <HeroChip
+                      label={formatTcgName(card.tcg) ?? "TCG"}
+                      tint={heroTcgTint(card.tcg, p)}
+                      solid
+                    />
+                    {card.rarity ? <HeroChip label={card.rarity} /> : null}
+                    {card.number ? (
+                      <HeroChip
+                        label={
+                          card.set?.printed_total
+                            ? `#${card.number} / ${card.set.printed_total}`
+                            : `#${card.number}`
+                        }
+                      />
+                    ) : null}
+                    {card.year ? <HeroChip label={String(card.year)} /> : null}
+                  </View>
+                </View>
+              </View>
+
+              {/* Action row — Robinhood-style side-by-side pair: the primary
+                  "Add" CTA plus a compact "Grade" companion (pre-screen the
+                  grade before slabbing). Replaces the old stacked purple
+                  banner that dominated the fold. */}
+              {isAuthenticated ? (
+                <View style={{ gap: 8 }}>
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <PrimaryButton
+                        label="Add to collection"
+                        icon={Plus}
+                        variant="mint"
+                        onPress={() => {
+                          router.push(
+                            routes.gradeNew({
+                              cardId,
+                              cardName: card.name,
+                              cardImage: imageUrl ?? undefined,
+                              cardSet: card.set_name ?? undefined,
+                              cardYear: card.year ?? undefined,
+                            }),
+                          );
+                        }}
+                        onLongPress={handleQuickAdd}
+                        accessibilityLabel="Add to collection. Press and hold to quick-add as a raw card."
+                      />
+                    </View>
+                    <Pressable
+                      onPress={() => router.push(routes.scanPhone("studio"))}
+                      accessibilityRole="button"
+                      accessibilityLabel="Grade this card"
+                      style={({ pressed }) => ({
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        paddingHorizontal: 18,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: p.line.default,
+                        backgroundColor: p.bg.elevated,
+                        opacity: pressed ? 0.7 : 1,
+                      })}
+                    >
+                      <Gauge size={16} color={p.ink.default} strokeWidth={2.25} />
+                      <Text style={{ color: p.ink.default, fontWeight: "700", fontSize: 14 }}>
+                        Grade
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <Text
+                    style={{
+                      color: p.ink.dim,
+                      fontSize: 11,
+                      fontWeight: "600",
+                      textAlign: "center",
+                    }}
+                  >
+                    Hold to quick-add as Raw · NM
+                    {ownedCount > 0
+                      ? ` · ${ownedCount} ${ownedCount === 1 ? "copy" : "copies"} in your vault`
+                      : ""}
                   </Text>
 
                   {/* Your own note about this card, right where you land. It
@@ -566,32 +655,30 @@ export default function CardDetailScreen() {
                       there's no note. */}
                   <CardNoteCard cardId={cardId} />
                 </View>
-                <Pressable
-                  onPress={() => setPreviewOpen(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open 3D preview of ${card.name}`}
-                  hitSlop={8}
-                  style={({ pressed }) => ({
-                    transform: [{ scale: pressed ? 0.95 : 1 }],
-                    shadowColor: "#000",
-                    shadowOpacity: 0.16,
-                    shadowRadius: 8,
-                    shadowOffset: { width: 0, height: 4 },
-                  })}
-                >
-                  <CardImage
-                    uri={imageUrl}
-                    blurhash={blurhash}
-                    width={52}
-                    height={73}
-                    rounded={8}
-                    contentFit="contain"
-                    priority="high"
-                    recyclingKey={card.id}
-                    alt={card.name}
+              ) : (
+                /* Guests previously saw no add/track affordance in the body
+                   (the whole action block was auth-gated), leaving the card
+                   a dead end. Surface a clear sign-in CTA instead. */
+                <View style={{ gap: 8 }}>
+                  <PrimaryButton
+                    label="Sign in to add & track"
+                    icon={Plus}
+                    variant="mint"
+                    onPress={() => router.push("/(auth)/sign-in")}
+                    accessibilityLabel="Sign in to add this card to your collection"
                   />
-                </Pressable>
-              </View>
+                  <Text
+                    style={{
+                      color: p.ink.dim,
+                      fontSize: 11,
+                      fontWeight: "600",
+                      textAlign: "center",
+                    }}
+                  >
+                    Track its price, set alerts, and build your vault.
+                  </Text>
+                </View>
+              )}
 
               {/* 3. (BigPrice removed — chart hero already shows live
                   $/Δ, Robinhood-style.) */}
@@ -714,93 +801,6 @@ export default function CardDetailScreen() {
                   title="Price history unavailable"
                   subtitle="Loupe will chart this card once a provider returns real historical points."
                 />
-              )}
-
-              {/* Trade position — Robinhood puts the CTA under the
-                  ranges; Add-to-collection + Grade live here now. */}
-              {isAuthenticated ? (
-                <View style={{ gap: 8 }}>
-                  <View style={{ flexDirection: "row", gap: 10 }}>
-                    <View style={{ flex: 1 }}>
-                      <PrimaryButton
-                        label="Add to collection"
-                        icon={Plus}
-                        variant="mint"
-                        onPress={() => {
-                          router.push(
-                            routes.gradeNew({
-                              cardId,
-                              cardName: card.name,
-                              cardImage: imageUrl ?? undefined,
-                              cardSet: card.set_name ?? undefined,
-                              cardYear: card.year ?? undefined,
-                            }),
-                          );
-                        }}
-                        onLongPress={handleQuickAdd}
-                        accessibilityLabel="Add to collection. Press and hold to quick-add as a raw card."
-                      />
-                    </View>
-                    <Pressable
-                      onPress={() => router.push(routes.scanPhone("studio"))}
-                      accessibilityRole="button"
-                      accessibilityLabel="Grade this card"
-                      style={({ pressed }) => ({
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 6,
-                        paddingHorizontal: 18,
-                        borderRadius: 16,
-                        borderWidth: 1,
-                        borderColor: p.line.default,
-                        backgroundColor: p.bg.elevated,
-                        opacity: pressed ? 0.7 : 1,
-                      })}
-                    >
-                      <Gauge size={16} color={p.ink.default} strokeWidth={2.25} />
-                      <Text style={{ color: p.ink.default, fontWeight: "700", fontSize: 14 }}>
-                        Grade
-                      </Text>
-                    </Pressable>
-                  </View>
-                  <Text
-                    style={{
-                      color: p.ink.dim,
-                      fontSize: 11,
-                      fontWeight: "600",
-                      textAlign: "center",
-                    }}
-                  >
-                    Hold to quick-add as Raw · NM
-                    {ownedCount > 0
-                      ? ` · ${ownedCount} ${ownedCount === 1 ? "copy" : "copies"} in your vault`
-                      : ""}
-                  </Text>
-                </View>
-              ) : (
-                /* Guests previously saw no add/track affordance in the body
-                   (the whole action block was auth-gated), leaving the card
-                   a dead end. Surface a clear sign-in CTA instead. */
-                <View style={{ gap: 8 }}>
-                  <PrimaryButton
-                    label="Sign in to add & track"
-                    icon={Plus}
-                    variant="mint"
-                    onPress={() => router.push("/(auth)/sign-in")}
-                    accessibilityLabel="Sign in to add this card to your collection"
-                  />
-                  <Text
-                    style={{
-                      color: p.ink.dim,
-                      fontSize: 11,
-                      fontWeight: "600",
-                      textAlign: "center",
-                    }}
-                  >
-                    Track its price, set alerts, and build your vault.
-                  </Text>
-                </View>
               )}
 
               {/* 4b. Market signals row (52w hi/lo, trend, arbitrage,
