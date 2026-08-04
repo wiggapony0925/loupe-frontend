@@ -3,7 +3,7 @@ import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { ArrowUpRight, Bell, Camera, Settings2 } from "lucide-react-native";
+import { ArrowUpRight, Bell, Camera, Settings2, Users } from "lucide-react-native";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
 import { useNotificationFeed } from "@/application/notifications/useNotificationFeed";
@@ -431,6 +431,16 @@ function StaticNavbar() {
         <Text className="text-base font-semibold tracking-tight text-ink">Loupe</Text>
       </View>
       <View className="flex-row items-center gap-2">
+        <Pressable
+          onPress={() => router.push(routes.community())}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Open community"
+          className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
+          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        >
+          <Users size={16} color={p.ink.muted} />
+        </Pressable>
         <Pressable
           onPress={() => router.push(routes.notifications())}
           hitSlop={8}

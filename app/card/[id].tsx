@@ -19,7 +19,7 @@
  * Loading state: `<SkeletonCardDetailPage />`. Error: error card with retry.
  */
 import React, { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
@@ -145,6 +145,19 @@ export default function CardDetailScreen() {
   // the vault as a raw NM copy with no form round-trip, then confirms
   // via an auto-dismissing banner. Tapping (not holding) still opens
   // the full form for grade / house / cost-basis entry.
+  // Pull-to-refresh. Both queries are refetched together and the spinner is
+  // held until BOTH settle — releasing on the first would snap the control
+  // away while half the page was still stale.
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.allSettled([cardQ.refetch(), marketQ.refetch()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [cardQ, marketQ]);
+
   const createGrade = useCreateGrade();
   const [banner, setBanner] = useState<{
     title: string;
@@ -337,6 +350,17 @@ export default function CardDetailScreen() {
           gap: 20,
         }}
         showsVerticalScrollIndicator={false}
+        // A page whose whole purpose is a live price had no way to ask for a
+        // fresh one — the only route was backing out and re-entering. Pull
+        // refetches the card and the market snapshot together, so the header
+        // price and the chart can't end up from different moments.
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={p.ink.dim}
+          />
+        }
       >
         <QueryState
           isLoading={isLoading}

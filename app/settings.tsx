@@ -170,6 +170,11 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
       {/* Menu rows — hairline separators, no card containers */}
       <View className="mt-2 border-t border-line">
         <MenuRow
+          title="Community"
+          subtitle="Follow collectors, share your collection"
+          onPress={() => router.push("/community")}
+        />
+        <MenuRow
           title="Loupe Support"
           subtitle="Help center, contact us 24/7, your support chats"
           onPress={() => router.push("/support")}

@@ -56,19 +56,35 @@ export function CardValuationPanel({ cardId }: { cardId: string | null }) {
         One fair value, reconciled from the sources below.
       </Text>
 
+      {/* Three numbers across, not three stacked rows. As a list this cost
+          about 150pt of scroll on the most contested page in the app, and
+          — worse — reading three prices meant three separate eye movements
+          when the entire point is comparing them at a glance. Side by side,
+          a spread between asks and actual sales is visible instantly. */}
       {rows.length > 0 ? (
         <View style={[styles.signals, { borderTopColor: p.line.default }]}>
-          {rows.map((r) => (
-            <View key={r.key} style={styles.signalRow}>
-              <View style={styles.signalCopy}>
-                <Text style={[styles.signalLabel, { color: p.ink.default }]}>
-                  {r.label}
-                </Text>
-                <Text style={[styles.signalHint, { color: p.ink.dim }]}>
-                  {r.hint}
-                </Text>
-              </View>
-              <Price usd={r.amount} className="text-[14px] font-bold text-ink" />
+          {rows.map((r, i) => (
+            <View
+              key={r.key}
+              // The explanatory line no longer fits on screen, so it becomes
+              // the accessible name — a screen reader still hears "what
+              // copies actually sold for" rather than a bare "Sold comps".
+              accessible
+              accessibilityLabel={`${r.label}: ${r.hint}`}
+              style={[
+                styles.signalCell,
+                i > 0 ? { borderLeftWidth: 1, borderLeftColor: p.line.default } : null,
+              ]}
+            >
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+                style={[styles.signalLabel, { color: p.ink.dim }]}
+              >
+                {r.label.toUpperCase()}
+              </Text>
+              <Price usd={r.amount} className="text-[15px] font-bold text-ink" />
             </View>
           ))}
         </View>
@@ -95,14 +111,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 13, fontWeight: "800", letterSpacing: 0.2 },
   confidence: { fontSize: 11, marginLeft: "auto" },
   caption: { fontSize: 12, lineHeight: 17, marginTop: 2 },
-  signals: { borderTopWidth: 1, marginTop: 12, paddingTop: 6 },
-  signalRow: {
+  signals: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 8,
+    borderTopWidth: 1,
+    marginTop: 12,
+    paddingTop: 12,
   },
-  signalCopy: { flex: 1, gap: 1 },
-  signalLabel: { fontSize: 13, fontWeight: "600" },
-  signalHint: { fontSize: 11 },
+  signalCell: { flex: 1, alignItems: "center", gap: 3, paddingHorizontal: 4 },
+  signalLabel: { fontSize: 9, fontWeight: "700", letterSpacing: 0.9 },
 });

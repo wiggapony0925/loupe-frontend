@@ -21,7 +21,7 @@
  * and the screen stays clean for cards with thin data.
  */
 import React from "react";
-import { Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -181,7 +181,10 @@ export function CardQuickStats({
         label="Liquidity"
         value={`${last30}`}
         sub="sales · 30d"
-        tone={last30 >= 10 ? "mint" : last30 === 0 ? "rose" : "neutral"}
+        // Zero sales is thin data, not a fault. Red reads as "something is
+        // wrong with this card" when it only means nobody happened to trade
+        // it this month — which is normal for most of the catalog.
+        tone={last30 >= 10 ? "mint" : "neutral"}
       />
       <MicroTile
         label="Last sale"
@@ -317,7 +320,22 @@ export function CardMarketSignals({
   if (!hasAny) return null;
 
   return (
-    <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+    // A rail, not a wrapped block. These chips are all different widths, so
+    // `flexWrap` stacked them into three ragged lines of dead space — and the
+    // number of lines changed per card, so the page jumped around depending on
+    // which signals existed. One scrollable line is uniform, and bleeds past
+    // the screen padding like every other swipe surface in the app.
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={{ marginHorizontal: -20 }}
+      contentContainerStyle={{
+        flexDirection: "row",
+        gap: 6,
+        paddingHorizontal: 20,
+        alignItems: "center",
+      }}
+    >
       {hi !== null ? (
         <SignalChip
           icon={<TrendingUp size={11} color={p.accent.mint} />}
@@ -371,7 +389,7 @@ export function CardMarketSignals({
           label={`${snapshot.tiers_total} priced tiers`}
         />
       ) : null}
-    </View>
+    </ScrollView>
   );
 }
 

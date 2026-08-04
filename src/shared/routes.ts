@@ -32,6 +32,8 @@ export const routes = {
   sealedDetail: (productId: string) => `/sealed/${productId}` as const,
   /** Deep link to the standalone price-alert list. */
   watchlist: () => "/watchlist" as const,
+  /** Community — follows, collector profiles, shared collections (web embed). */
+  community: () => "/community" as const,
   card: (id: string) => `/card/${enc(id)}`,
   /** Sets explorer (browse the set catalog → a set's cards), bundled in-app. */
   sets: () => "/sets" as const,
