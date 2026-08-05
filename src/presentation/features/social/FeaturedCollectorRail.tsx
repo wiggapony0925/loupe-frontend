@@ -130,7 +130,8 @@ const styles = StyleSheet.create({
   pill: {
     marginTop: 6,
     borderRadius: 999,
-    paddingHorizontal: 16,
+    width: 96,
+    alignItems: "center",
     paddingVertical: 6,
   },
   pillText: { fontSize: 12.5, fontWeight: "800" },

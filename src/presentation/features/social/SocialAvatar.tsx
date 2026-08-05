@@ -11,7 +11,19 @@ import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { UserRound } from "lucide-react-native";
+import { config } from "@/shared/config";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+
+/**
+ * The backend hands avatar URLs RELATIVE (`/v1/social/avatar/…`) because the
+ * web tier proxies /v1 — but React Native's Image needs an absolute URL and
+ * fails silently on a bare path, which made every uploaded picture invisible
+ * on mobile while "working" everywhere else. Resolve against the API origin.
+ */
+function absolutize(url: string | null | undefined): string | null {
+  if (!url) return null;
+  return url.startsWith("/") ? `${config.apiUrl}${url}` : url;
+}
 
 /** Stable per-handle hue. Same handle → same colour, on every device. */
 function hueFor(handle: string): number {
@@ -40,11 +52,12 @@ export function SocialAvatar({
   const [failed, setFailed] = useState(false);
   const tint = `hsl(${hueFor(handle)}, 62%, 58%)`;
   const ring = isPro ? { borderWidth: 2, borderColor: p.accent.mint } : null;
+  const resolved = absolutize(url);
 
-  if (url && !failed) {
+  if (resolved && !failed) {
     return (
       <Image
-        source={{ uri: url }}
+        source={{ uri: resolved }}
         style={[
           { width: size, height: size, borderRadius: size / 2 },
           ring,

@@ -83,6 +83,9 @@ export function CollectorRow({
       {trailing ? (
         trailing
       ) : showFollow ? (
+        // Fixed-width pill: rows must line up down a list no matter whether
+        // the label is Follow / Following / Requested or how long the name
+        // beside it runs — ragged trailing buttons read as broken.
         <Pressable
           onPress={handleFollow}
           disabled={pending}
@@ -129,10 +132,12 @@ const styles = StyleSheet.create({
   name: { fontSize: 14.5, fontWeight: "600", flexShrink: 1 },
   meta: { fontSize: 12 },
   follow: {
-    paddingHorizontal: 14,
+    width: 96,
+    alignItems: "center",
     paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1,
+    flexShrink: 0,
   },
   followText: { fontSize: 12.5, fontWeight: "700" },
 });
