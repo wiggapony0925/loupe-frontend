@@ -8,8 +8,9 @@
  * same person in a list without reading.
  */
 import React, { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
+import { UserRound } from "lucide-react-native";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /** Stable per-handle hue. Same handle → same colour, on every device. */
@@ -37,7 +38,6 @@ export function SocialAvatar({
 }: SocialAvatarProps) {
   const p = useThemedPalette();
   const [failed, setFailed] = useState(false);
-  const initial = (handle || "?").trim().charAt(0).toUpperCase();
   const tint = `hsl(${hueFor(handle)}, 62%, 58%)`;
   const ring = isPro ? { borderWidth: 2, borderColor: p.accent.mint } : null;
 
@@ -70,14 +70,19 @@ export function SocialAvatar({
         ring,
       ]}
     >
-      <Text style={[styles.initial, { color: tint, fontSize: size * 0.4 }]}>
-        {initial}
-      </Text>
+      {/* Person glyph, the convention every social app trained users on —
+          an initial reads as "logo", a silhouette reads as "no photo yet".
+          The per-handle hue stays so rows remain tellable-apart at a glance. */}
+      <UserRound
+        size={size * 0.52}
+        color={tint}
+        strokeWidth={2.2}
+        accessibilityElementsHidden
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   fallback: { alignItems: "center", justifyContent: "center" },
-  initial: { fontWeight: "700" },
 });

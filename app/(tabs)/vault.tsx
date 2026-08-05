@@ -50,6 +50,7 @@ import {
   useRegisterVaultSelectionChrome,
   useVaultSelectionChrome,
 } from "@/application/hooks/useVaultSelectionChrome";
+import { useVaultSelectionIslandPresence } from "@/presentation/navigation/VaultSelectionIsland";
 import { useActiveCollection } from "@/application/stores/activeCollectionStore";
 import { useHoldingActions } from "@/presentation/features/collection/useHoldingActions";
 import { useVaultFilters } from "@/application/stores";
@@ -130,6 +131,9 @@ export default function VaultScreen() {
 
   // Multi-select + island-navbar chrome — store + hook keep the tab bar
   // and this screen in sync without prop-drilling through TabsLayout.
+  // Presence: while selecting (and focused), the island shows the
+  // selection toolbar; leaving the tab clears a lingering selection.
+  useVaultSelectionIslandPresence();
   const {
     selecting: selectionMode,
     selected: selectedIds,

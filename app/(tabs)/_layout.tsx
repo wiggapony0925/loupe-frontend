@@ -39,7 +39,6 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useSettings } from "@/application/stores/settingsStore";
-import { useVaultSelection } from "@/application/stores/vaultSelectionStore";
 import { routes } from "@/shared/routes";
 import { IslandNavPill } from "@/presentation/navigation/IslandNavPill";
 import {
@@ -48,9 +47,9 @@ import {
   islandShellLayout,
 } from "@/presentation/navigation/islandNavMotion";
 import {
-  VaultSelectionIslandBadge,
-  VaultSelectionIslandContent,
-} from "@/presentation/navigation/VaultSelectionIsland";
+  useActiveIsland,
+  type IslandPresentation,
+} from "@/presentation/navigation/islandNavStore";
 
 const isIOS = Platform.OS === "ios";
 
@@ -183,6 +182,11 @@ export default function TabsLayout() {
           the people icon on Command, and a sixth item would crowd a bar
           deliberately built as a compact pill. */}
       <Tabs.Screen name="community" options={{ href: null, title: "Community" }} />
+      {/* Collector profiles live in the tab group for the same reason as
+          Community: the island navbar stays on screen while browsing a
+          profile or collection, and switching pages inherits the tabs'
+          shift animation instead of a stack push. */}
+      <Tabs.Screen name="u/[handle]" options={{ href: null, title: "Collector" }} />
     </Tabs>
   );
 }
@@ -207,16 +211,10 @@ function LoupeTabBar(
   const insets = useSafeAreaInsets();
 
   const activeName = state.routes[state.index]?.name ?? "index";
-  const selectionMode = useVaultSelection((s) => s.mode === "select");
-  const clearSelection = useVaultSelection((s) => s.clear);
-  const vaultSelecting = selectionMode && activeName === "vault";
-
-  // Leaving Vault while selecting would leave a ghost mode — clear it.
-  useEffect(() => {
-    if (selectionMode && activeName !== "vault") {
-      clearSelection();
-    }
-  }, [activeName, selectionMode, clearSelection]);
+  // Whatever face a feature has presented (vault multi-select, community
+  // rail, …) — null means the default tab dial. Screens drive this through
+  // useIslandPresence; the bar itself knows no feature specifics.
+  const island = useActiveIsland();
 
   // Item layout (x + width) in the pill's coordinate space, keyed by route.
   const layouts = useRef<Record<string, { x: number; width: number }>>({});
@@ -311,13 +309,13 @@ function LoupeTabBar(
   }));
 
   if (!isIOS) {
-    // Android: overlay the selection island above the stock bar when active.
-    if (vaultSelecting) {
+    // Android: overlay the contextual island above the stock bar when active.
+    if (island) {
       return (
         <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
           <LoupeFloatingIsland
             bottomInset={Math.max(insets.bottom, 10)}
-            selecting
+            island={island}
           />
         </View>
       );
@@ -337,7 +335,7 @@ function LoupeTabBar(
   return (
     <LoupeFloatingIsland
       bottomInset={Math.max(insets.bottom, 10)}
-      selecting={vaultSelecting}
+      island={island}
       tabDial={
         <GestureDetector gesture={pan}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -395,17 +393,20 @@ function LoupeTabBar(
 
 /**
  * Persistent glass pill — shell never fades; only inner content crossfades
- * when vault multi-select replaces the tab dial.
+ * when a contextual face (vault multi-select, community rail, …) replaces
+ * the tab dial. Keying the inner view by the face's `key` re-runs the same
+ * morph for EVERY state change, so new modes inherit the animation for free.
  */
 function LoupeFloatingIsland({
   bottomInset,
-  selecting,
+  island,
   tabDial,
 }: {
   bottomInset: number;
-  selecting: boolean;
+  island: IslandPresentation | null;
   tabDial?: React.ReactNode;
 }) {
+  const Badge = island?.Badge;
   return (
     <View
       pointerEvents="box-none"
@@ -419,27 +420,16 @@ function LoupeFloatingIsland({
     >
       <Animated.View layout={islandShellLayout} style={{ position: "relative" }}>
         <IslandNavPill>
-          {selecting ? (
-            <Animated.View
-              key="selection-content"
-              entering={islandContentIn}
-              exiting={islandContentOut}
-              style={{ flexDirection: "row", alignItems: "center" }}
-            >
-              <VaultSelectionIslandContent />
-            </Animated.View>
-          ) : (
-            <Animated.View
-              key="tab-content"
-              entering={islandContentIn}
-              exiting={islandContentOut}
-              style={{ flexDirection: "row", alignItems: "center" }}
-            >
-              {tabDial}
-            </Animated.View>
-          )}
+          <Animated.View
+            key={island?.key ?? "tab-dial"}
+            entering={islandContentIn}
+            exiting={islandContentOut}
+            style={{ flexDirection: "row", alignItems: "center" }}
+          >
+            {island ? <island.Content /> : tabDial}
+          </Animated.View>
         </IslandNavPill>
-        {selecting ? <VaultSelectionIslandBadge /> : null}
+        {Badge ? <Badge /> : null}
       </Animated.View>
     </View>
   );

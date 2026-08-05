@@ -80,6 +80,7 @@ import {
   CardQuickStats,
 } from "@/presentation/features/cardDetail/CardInsights";
 import { CardOwnershipSection } from "@/presentation/features/cardDetail/CardOwnershipSection";
+import { FriendOwnersSection } from "@/presentation/features/social/FriendOwnersSection";
 import { CardValuationPanel } from "@/presentation/features/cardDetail/CardValuationPanel";
 import { CardNoteCard } from "@/presentation/features/cardDetail/CardNoteCard";
 import { CardAnalyticsSection } from "@/presentation/features/cardDetail/CardAnalyticsSection";
@@ -815,6 +816,10 @@ export default function CardDetailScreen() {
                 cardSet={card.set_name ?? undefined}
                 cardYear={card.year ?? undefined}
               />
+
+              {/* "N of your friends own this card" — renders nothing when
+                  none of the people you follow own it. */}
+              <FriendOwnersSection cardRef={cardId} />
 
 
               {/* Real marketplace data + sold comps. */}

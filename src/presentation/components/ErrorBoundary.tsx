@@ -76,10 +76,29 @@ export class ErrorBoundary extends React.Component<Props, State> {
             color: palette.ink.muted,
             fontSize: 13,
             textAlign: "center",
-            marginBottom: 20,
+            marginBottom: 12,
           }}
         >
           The app hit an unexpected error. Tap below to try again.
+        </Text>
+        {/* The actual error, on screen. With no crash telemetry wired, a
+            screenshot of this block is the ONLY way a field report can
+            carry the message + top frames back to us. */}
+        <Text
+          selectable
+          numberOfLines={6}
+          style={{
+            color: palette.ink.muted,
+            fontSize: 10,
+            fontFamily: "Menlo",
+            textAlign: "center",
+            marginBottom: 20,
+            opacity: 0.8,
+          }}
+        >
+          {error.message}
+          {"\n"}
+          {(error.stack ?? "").split("\n").slice(1, 3).join("\n")}
         </Text>
         <Pressable
           onPress={this.reset}

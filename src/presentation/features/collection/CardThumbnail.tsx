@@ -1,7 +1,9 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { Check, Circle, Pencil, Trash2 } from "lucide-react-native";
+import { GestureDetector } from "react-native-gesture-handler";
 import { router } from "expo-router";
+import { useHoldGesture } from "@/presentation/hooks/useHoldGesture";
 import { routes } from "@/shared/routes";
 import type { CollectionCard } from "@/domain";
 import { CardImage } from "@/presentation/components/CardImage";
@@ -80,12 +82,15 @@ export function CardThumbnail({
   const delta = formatDelta(spark?.deltaPct ?? 0);
   const deltaTint = !delta.valid ? p.ink.dim : delta.up ? p.accent.mint : p.accent.rose;
 
+  // RNGH hold instead of Pressable.onLongPress — survives finger drift
+  // inside the FlatList (see useHoldGesture).
+  const hold = useHoldGesture(onLongPress);
+
   return (
     <View style={{ flex: 1, position: "relative" }}>
+    <GestureDetector gesture={hold}>
     <Pressable
       onPress={onPress ?? (() => router.push(routes.card(card.cardId)))}
-      onLongPress={onLongPress}
-      delayLongPress={280}
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
       accessibilityLabel={
@@ -234,6 +239,7 @@ export function CardThumbnail({
         )}
       </View>
     </Pressable>
+    </GestureDetector>
       {inSelectSession ? (
         <View
           pointerEvents="box-none"

@@ -366,6 +366,108 @@
         "title": "AdminMetrics",
         "type": "object"
       },
+      "AdminNotificationCreate": {
+        "description": "Admin composer payload \u2014 one user or a broadcast.",
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "category": {
+            "default": "news",
+            "description": "One of: billing, market, news, social, system",
+            "title": "Category",
+            "type": "string"
+          },
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "href": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "In-app path, e.g. /app/vault.",
+            "title": "Href"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "push": {
+            "default": true,
+            "title": "Push",
+            "type": "boolean"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "AdminNotificationCreate",
+        "type": "object"
+      },
+      "AdminNotificationResult": {
+        "properties": {
+          "audience": {
+            "default": 0,
+            "title": "Audience",
+            "type": "integer"
+          },
+          "created": {
+            "default": 0,
+            "title": "Created",
+            "type": "integer"
+          },
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          }
+        },
+        "title": "AdminNotificationResult",
+        "type": "object"
+      },
       "AdminPlanUpdate": {
         "description": "Comp a user to Loupe Pro (or back to free) from the portal.",
         "properties": {
@@ -4266,6 +4368,85 @@
         "title": "ForgotPasswordRequest",
         "type": "object"
       },
+      "FriendOwnerRead": {
+        "description": "A collector the viewer follows who owns the card in question \u2014\npowers the \"N of your friends own this card\" strip on card detail.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "copies": {
+            "default": 1,
+            "title": "Copies",
+            "type": "integer"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "is_private": {
+            "default": false,
+            "title": "Is Private",
+            "type": "boolean"
+          },
+          "is_pro": {
+            "default": false,
+            "title": "Is Pro",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "relationship": {
+            "default": "none",
+            "enum": [
+              "self",
+              "following",
+              "requested",
+              "none"
+            ],
+            "title": "Relationship",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username"
+        ],
+        "title": "FriendOwnerRead",
+        "type": "object"
+      },
       "FunnelStep": {
         "properties": {
           "count": {
@@ -6379,6 +6560,28 @@
         "title": "LoginResult",
         "type": "object"
       },
+      "MarkReadRequest": {
+        "description": "Mark specific notifications read, or all of them.",
+        "properties": {
+          "all": {
+            "default": false,
+            "description": "Clear the entire badge.",
+            "title": "All",
+            "type": "boolean"
+          },
+          "ids": {
+            "description": "Ignored when `all` is true.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "title": "MarkReadRequest",
+        "type": "object"
+      },
       "MfaCodeRequest": {
         "description": "Body for enable/disable \u2014 a single TOTP or backup code.",
         "properties": {
@@ -6473,6 +6676,136 @@
           "code"
         ],
         "title": "MfaVerifyRequest",
+        "type": "object"
+      },
+      "NotificationPage": {
+        "description": "A page of the inbox plus the badge count.\n\n``unread`` is the total across the whole inbox, not this page \u2014 the badge\nmust not change just because the user scrolled.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "default": 1,
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "default": 25,
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "unread": {
+            "default": 0,
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "title": "NotificationPage",
+        "type": "object"
+      },
+      "NotificationRead": {
+        "description": "One inbox row.",
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "category": {
+            "description": "market | news | social | billing | system",
+            "title": "Category",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "In-app path to open on tap. Not a URL \u2014 clients resolve it.",
+            "title": "Href"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "kind": {
+            "description": "Specific event, e.g. price_alert, blog_post.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "kind",
+          "title",
+          "created_at"
+        ],
+        "title": "NotificationRead",
         "type": "object"
       },
       "Pagination_CardRead_": {
@@ -9758,6 +10091,14 @@
             "title": "Items",
             "type": "array"
           },
+          "sets": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SocialCollectionSet"
+            },
+            "title": "Sets",
+            "type": "array"
+          },
           "total_cards": {
             "default": 0,
             "title": "Total Cards",
@@ -9765,6 +10106,48 @@
           }
         },
         "title": "SocialCollectionRead",
+        "type": "object"
+      },
+      "SocialCollectionSet": {
+        "description": "One set within a shared collection \u2014 \"they have 5 Evolving Skies\".",
+        "properties": {
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "estimated_value_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Value Usd"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SocialCollectionSet",
         "type": "object"
       },
       "SocialMeRead": {
@@ -10361,6 +10744,17 @@
           "user"
         ],
         "title": "TokenPair",
+        "type": "object"
+      },
+      "UnreadCountRead": {
+        "properties": {
+          "unread": {
+            "default": 0,
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "title": "UnreadCountRead",
         "type": "object"
       },
       "UpcomingReportRead": {
@@ -14206,6 +14600,209 @@
         "summary": "Portal overview metrics",
         "tags": [
           "admin-metrics"
+        ]
+      }
+    },
+    "/v1/admin/notifications": {
+      "post": {
+        "operationId": "send_notification_v1_admin_notifications_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminNotificationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminNotificationResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send a notification (one user or broadcast)",
+        "tags": [
+          "admin-notifications"
+        ]
+      }
+    },
+    "/v1/admin/notifications/audience": {
+      "get": {
+        "description": "Real counts, so the composer can say '312 users \u00b7 87 devices' rather\nthan sending blind. `devices` is registered push tokens \u2014 the gap between\nit and `push_enabled` is users who simply never installed the app.",
+        "operationId": "get_audience_v1_admin_notifications_audience_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Get Audience V1 Admin Notifications Audience Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Who a broadcast would reach",
+        "tags": [
+          "admin-notifications"
+        ]
+      }
+    },
+    "/v1/admin/notifications/log": {
+      "get": {
+        "description": "What actually went out, newest first. Scoped to one user when asked \u2014\nthe \"why didn't they get it?\" view.",
+        "operationId": "list_log_v1_admin_notifications_log_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Recently sent notifications",
+        "tags": [
+          "admin-notifications"
+        ]
+      }
+    },
+    "/v1/admin/notifications/test": {
+      "post": {
+        "description": "The safety rail before a broadcast: see it on your own phone first.",
+        "operationId": "send_test_v1_admin_notifications_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminNotificationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminNotificationResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send the composed notification to yourself only",
+        "tags": [
+          "admin-notifications"
         ]
       }
     },
@@ -20085,6 +20682,169 @@
         ]
       }
     },
+    "/v1/me/notifications": {
+      "get": {
+        "operationId": "list_notifications_v1_me_notifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter to one category.",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to one category.",
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unread_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unread Only",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List my notifications",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/v1/me/notifications/read": {
+      "post": {
+        "description": "Returns the resulting badge count so the client doesn't need a re-fetch.",
+        "operationId": "mark_read_v1_me_notifications_read_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkReadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadCountRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark notifications read",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/v1/me/notifications/unread-count": {
+      "get": {
+        "description": "Cheap enough to poll \u2014 answered from the (user_id, read_at) index.",
+        "operationId": "get_unread_count_v1_me_notifications_unread_count_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadCountRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unread badge count",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/v1/me/push-tokens": {
       "post": {
         "description": "Idempotent upsert by token \u2014 a device that re-registers (or switches\naccounts) moves to the caller, never duplicates.",
@@ -22636,7 +23396,89 @@
         ]
       }
     },
+    "/v1/social/cards/{card_ref}/owners": {
+      "get": {
+        "description": "Card refs accept a local UUID or a composite upstream id\n(`pokemontcg:base1-4`). Only people the viewer follows appear.",
+        "operationId": "card_friend_owners_v1_social_cards__card_ref__owners_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_ref",
+            "required": true,
+            "schema": {
+              "title": "Card Ref",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FriendOwnerRead"
+                  },
+                  "title": "Response Card Friend Owners V1 Social Cards  Card Ref  Owners Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Collectors I follow who own this card",
+        "tags": [
+          "social"
+        ]
+      }
+    },
     "/v1/social/me": {
+      "delete": {
+        "description": "Removes the profile and severs every follow/request/like/visit edge.\nThe Loupe account itself is untouched \u2014 rejoining is claiming a handle.",
+        "operationId": "deactivate_me_v1_social_me_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Deactivate my community profile",
+        "tags": [
+          "social"
+        ]
+      },
       "get": {
         "description": "Null ``profile`` until the user claims a username (drives onboarding).",
         "operationId": "get_me_v1_social_me_get",
@@ -22748,6 +23590,47 @@
           }
         ],
         "summary": "Upload my profile picture",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/me/followers/{username}": {
+      "delete": {
+        "description": "Instagram's \"Remove\": they stop following me but aren't blocked \u2014\nfollowing again is open (or a request, if my profile is private).",
+        "operationId": "remove_my_follower_v1_social_me_followers__username__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove one of my followers",
         "tags": [
           "social"
         ]

@@ -996,6 +996,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a notification (one user or broadcast) */
+        post: operations["send_notification_v1_admin_notifications_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/notifications/audience": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who a broadcast would reach
+         * @description Real counts, so the composer can say '312 users · 87 devices' rather
+         *     than sending blind. `devices` is registered push tokens — the gap between
+         *     it and `push_enabled` is users who simply never installed the app.
+         */
+        get: operations["get_audience_v1_admin_notifications_audience_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/notifications/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recently sent notifications
+         * @description What actually went out, newest first. Scoped to one user when asked —
+         *     the "why didn't they get it?" view.
+         */
+        get: operations["list_log_v1_admin_notifications_log_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/notifications/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send the composed notification to yourself only
+         * @description The safety rail before a broadcast: see it on your own phone first.
+         */
+        post: operations["send_test_v1_admin_notifications_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/pricecharting": {
         parameters: {
             query?: never;
@@ -2991,6 +3071,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List my notifications */
+        get: operations["list_notifications_v1_me_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark notifications read
+         * @description Returns the resulting badge count so the client doesn't need a re-fetch.
+         */
+        post: operations["mark_read_v1_me_notifications_read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unread badge count
+         * @description Cheap enough to poll — answered from the (user_id, read_at) index.
+         */
+        get: operations["get_unread_count_v1_me_notifications_unread_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/push-tokens": {
         parameters: {
             query?: never;
@@ -3768,6 +3905,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/social/cards/{card_ref}/owners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Collectors I follow who own this card
+         * @description Card refs accept a local UUID or a composite upstream id
+         *     (`pokemontcg:base1-4`). Only people the viewer follows appear.
+         */
+        get: operations["card_friend_owners_v1_social_cards__card_ref__owners_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/social/me": {
         parameters: {
             query?: never;
@@ -3783,7 +3941,12 @@ export interface paths {
         /** Claim or update my social profile */
         put: operations["put_me_v1_social_me_put"];
         post?: never;
-        delete?: never;
+        /**
+         * Deactivate my community profile
+         * @description Removes the profile and severs every follow/request/like/visit edge.
+         *     The Loupe account itself is untouched — rejoining is claiming a handle.
+         */
+        delete: operations["deactivate_me_v1_social_me_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3801,6 +3964,27 @@ export interface paths {
         /** Upload my profile picture */
         post: operations["upload_avatar_v1_social_me_avatar_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/me/followers/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove one of my followers
+         * @description Instagram's "Remove": they stop following me but aren't blocked —
+         *     following again is open (or a request, if my profile is private).
+         */
+        delete: operations["remove_my_follower_v1_social_me_followers__username__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -4239,6 +4423,59 @@ export interface components {
             waitlist_total: number;
             /** Waitlist Waiting */
             waitlist_waiting: number;
+        };
+        /**
+         * AdminNotificationCreate
+         * @description Admin composer payload — one user or a broadcast.
+         */
+        AdminNotificationCreate: {
+            /** Body */
+            body?: string | null;
+            /**
+             * Category
+             * @description One of: billing, market, news, social, system
+             * @default news
+             */
+            category: string;
+            /**
+             * Dry Run
+             * @default false
+             */
+            dry_run: boolean;
+            /**
+             * Href
+             * @description In-app path, e.g. /app/vault.
+             */
+            href?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /**
+             * Push
+             * @default true
+             */
+            push: boolean;
+            /** Title */
+            title: string;
+            /** User Id */
+            user_id?: string | null;
+        };
+        /** AdminNotificationResult */
+        AdminNotificationResult: {
+            /**
+             * Audience
+             * @default 0
+             */
+            audience: number;
+            /**
+             * Created
+             * @default 0
+             */
+            created: number;
+            /**
+             * Dry Run
+             * @default false
+             */
+            dry_run: boolean;
         };
         /**
          * AdminPlanUpdate
@@ -5816,6 +6053,47 @@ export interface components {
              */
             email: string;
         };
+        /**
+         * FriendOwnerRead
+         * @description A collector the viewer follows who owns the card in question —
+         *     powers the "N of your friends own this card" strip on card detail.
+         */
+        FriendOwnerRead: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /**
+             * Copies
+             * @default 1
+             */
+            copies: number;
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Is Private
+             * @default false
+             */
+            is_private: boolean;
+            /**
+             * Is Pro
+             * @default false
+             */
+            is_pro: boolean;
+            /** Location */
+            location?: string | null;
+            /**
+             * Relationship
+             * @default none
+             * @enum {string}
+             */
+            relationship: "self" | "following" | "requested" | "none";
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Username */
+            username: string;
+        };
         /** FunnelStep */
         FunnelStep: {
             /** Count */
@@ -6640,6 +6918,23 @@ export interface components {
             user?: components["schemas"]["UserRead"] | null;
         };
         /**
+         * MarkReadRequest
+         * @description Mark specific notifications read, or all of them.
+         */
+        MarkReadRequest: {
+            /**
+             * All
+             * @description Clear the entire badge.
+             * @default false
+             */
+            all: boolean;
+            /**
+             * Ids
+             * @description Ignored when `all` is true.
+             */
+            ids?: string[];
+        };
+        /**
          * MfaCodeRequest
          * @description Body for enable/disable — a single TOTP or backup code.
          */
@@ -6693,6 +6988,80 @@ export interface components {
             code: string;
             /** Mfa Token */
             mfa_token: string;
+        };
+        /**
+         * NotificationPage
+         * @description A page of the inbox plus the badge count.
+         *
+         *     ``unread`` is the total across the whole inbox, not this page — the badge
+         *     must not change just because the user scrolled.
+         */
+        NotificationPage: {
+            /** Items */
+            items?: components["schemas"]["NotificationRead"][];
+            /**
+             * Page
+             * @default 1
+             */
+            page: number;
+            /**
+             * Page Size
+             * @default 25
+             */
+            page_size: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+            /**
+             * Unread
+             * @default 0
+             */
+            unread: number;
+        };
+        /**
+         * NotificationRead
+         * @description One inbox row.
+         */
+        NotificationRead: {
+            /** Body */
+            body?: string | null;
+            /**
+             * Category
+             * @description market | news | social | billing | system
+             */
+            category: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Data */
+            data?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Href
+             * @description In-app path to open on tap. Not a URL — clients resolve it.
+             */
+            href?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Image Url */
+            image_url?: string | null;
+            /**
+             * Kind
+             * @description Specific event, e.g. price_alert, blog_post.
+             */
+            kind: string;
+            /** Read At */
+            read_at?: string | null;
+            /** Title */
+            title: string;
         };
         /** Pagination[CardRead] */
         Pagination_CardRead_: {
@@ -7921,10 +8290,32 @@ export interface components {
              */
             items: components["schemas"]["SocialCollectionItem"][];
             /**
+             * Sets
+             * @default []
+             */
+            sets: components["schemas"]["SocialCollectionSet"][];
+            /**
              * Total Cards
              * @default 0
              */
             total_cards: number;
+        };
+        /**
+         * SocialCollectionSet
+         * @description One set within a shared collection — "they have 5 Evolving Skies".
+         */
+        SocialCollectionSet: {
+            /**
+             * Count
+             * @default 0
+             */
+            count: number;
+            /** Cover Image Url */
+            cover_image_url?: string | null;
+            /** Estimated Value Usd */
+            estimated_value_usd?: string | null;
+            /** Name */
+            name: string;
         };
         /**
          * SocialMeRead
@@ -8228,6 +8619,14 @@ export interface components {
              */
             token_type: string;
             user: components["schemas"]["UserRead"];
+        };
+        /** UnreadCountRead */
+        UnreadCountRead: {
+            /**
+             * Unread
+             * @default 0
+             */
+            unread: number;
         };
         /**
          * UpcomingReportRead
@@ -10499,6 +10898,127 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminMetrics"];
+                };
+            };
+        };
+    };
+    send_notification_v1_admin_notifications_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminNotificationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNotificationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_audience_v1_admin_notifications_audience_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+        };
+    };
+    list_log_v1_admin_notifications_log_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                user_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_test_v1_admin_notifications_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminNotificationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNotificationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -13959,6 +14479,94 @@ export interface operations {
             };
         };
     };
+    list_notifications_v1_me_notifications_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                /** @description Filter to one category. */
+                category?: string | null;
+                unread_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_read_v1_me_notifications_read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkReadRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCountRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_unread_count_v1_me_notifications_unread_count_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCountRead"];
+                };
+            };
+        };
+    };
     register_push_token_v1_me_push_tokens_post: {
         parameters: {
             query?: never;
@@ -15466,6 +16074,39 @@ export interface operations {
             };
         };
     };
+    card_friend_owners_v1_social_cards__card_ref__owners_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                card_ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendOwnerRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_me_v1_social_me_get: {
         parameters: {
             query?: never;
@@ -15519,6 +16160,24 @@ export interface operations {
             };
         };
     };
+    deactivate_me_v1_social_me_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     upload_avatar_v1_social_me_avatar_post: {
         parameters: {
             query?: never;
@@ -15540,6 +16199,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SocialProfileRead"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_my_follower_v1_social_me_followers__username__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

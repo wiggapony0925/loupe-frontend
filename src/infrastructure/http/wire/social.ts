@@ -38,6 +38,11 @@ export interface SocialUserCardWire {
   relationship: SocialRelationship;
 }
 
+/** A collector I follow who owns a given card (card-detail friends strip). */
+export interface FriendOwnerWire extends SocialUserCardWire {
+  copies: number;
+}
+
 /** The full profile header. */
 export interface SocialProfileViewWire {
   user_id: string;
@@ -92,9 +97,20 @@ export interface SocialCollectionItemWire {
   graded_at: string;
 }
 
+/** One set inside a shared collection — "5 Evolving Skies". */
+export interface SocialCollectionSetWire {
+  name: string;
+  count: number;
+  estimated_value_usd: string | null;
+  cover_image_url: string | null;
+}
+
 export interface SocialCollectionWire {
   total_cards: number;
   estimated_value_usd: string | null;
+  /** Whole-collection breakdown, largest value first (may be absent on
+   *  older backends — treat missing as empty). */
+  sets?: SocialCollectionSetWire[];
   items: SocialCollectionItemWire[];
 }
 

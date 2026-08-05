@@ -21,6 +21,7 @@ import {
 } from "@tanstack/react-query";
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
+import { useAuth } from "@/presentation/providers/AuthProvider";
 import type { FeedItem, NotificationCategory } from "./notificationFeed";
 
 /** One page of the server inbox. */
@@ -85,6 +86,7 @@ export function useNotificationFeed(): {
   refetch: () => void;
 } {
   const qc = useQueryClient();
+  const { isAuthenticated } = useAuth();
 
   const listQ = useInfiniteQuery({
     queryKey: ["notifications", "list"],
@@ -94,9 +96,11 @@ export function useNotificationFeed(): {
         query: { page: pageParam, page_size: PAGE_SIZE },
       }),
     getNextPageParam: (last) =>
-      last.page * last.page_size < last.total ? last.page + 1 : undefined,
+      last && last.page * last.page_size < last.total ? last.page + 1 : undefined,
     // The inbox is the kind of thing people pull-to-refresh; don't re-fetch
-    // aggressively behind their back.
+    // aggressively behind their back. Gated on auth like every other query —
+    // a cold boot must never fire it and cache a 401.
+    enabled: isAuthenticated,
     staleTime: 60 * 1000,
   });
 
@@ -106,6 +110,7 @@ export function useNotificationFeed(): {
     queryKey: ["notifications", "unread"],
     queryFn: () =>
       apiFetch<{ unread: number }>(ENDPOINTS.notifications.unreadCount),
+    enabled: isAuthenticated,
     staleTime: 60 * 1000,
   });
 
@@ -122,8 +127,12 @@ export function useNotificationFeed(): {
     },
   });
 
+  // This runs during RENDER — a single page missing `items` (a proxy blip,
+  // a half-shaped envelope) must degrade to an empty inbox, never throw
+  // into the root error boundary and blank the whole app at startup.
   const feed = useMemo(
-    () => (listQ.data?.pages ?? []).flatMap((p) => p.items.map(toFeedItem)),
+    () =>
+      (listQ.data?.pages ?? []).flatMap((p) => (p?.items ?? []).map(toFeedItem)),
     [listQ.data],
   );
 

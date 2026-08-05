@@ -8,68 +8,25 @@
  * top-right corner (like an app-icon notification). Pressing X (or
  * clearing the last card) restores the regular island.
  */
-import React from "react";
+import React, { useEffect } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import * as Haptics from "expo-haptics";
+import { useIsFocused } from "@react-navigation/native";
 import { CheckCheck, FolderKanban, Trash2, X } from "lucide-react-native";
 import Animated from "react-native-reanimated";
 import { useVaultSelectionChrome } from "@/application/hooks/useVaultSelectionChrome";
+import { useVaultSelection } from "@/application/stores/vaultSelectionStore";
+import { IslandAction } from "@/presentation/navigation/IslandAction";
+import {
+  useIslandPresence,
+  type IslandPresentation,
+} from "@/presentation/navigation/islandNavStore";
 import {
   IslandNavPill,
   ISLAND_PILL_HEIGHT,
 } from "@/presentation/navigation/IslandNavPill";
 import { islandBadgeIn } from "@/presentation/navigation/islandNavMotion";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-
-const SIDE_W = 56;
-
-/** Circular icon action inside the selection island. */
-function IslandAction({
-  label,
-  onPress,
-  disabled,
-  accent,
-  children,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled: boolean;
-  accent: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Pressable
-      onPress={disabled ? undefined : onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      style={{
-        width: SIDE_W,
-        height: ISLAND_PILL_HEIGHT,
-        alignItems: "center",
-        justifyContent: "center",
-        opacity: disabled ? 0.35 : 1,
-      }}
-    >
-      {({ pressed }) => (
-        <View
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: withAlpha(accent, pressed ? 0.28 : 0.16),
-            transform: [{ scale: pressed ? 0.92 : 1 }],
-          }}
-        >
-          {children}
-        </View>
-      )}
-    </Pressable>
-  );
-}
+import { useThemedPalette } from "@/presentation/theme/tokens";
 
 /** Selection actions row — meant to live inside a persistent IslandNavPill. */
 export function VaultSelectionIslandContent() {
@@ -238,4 +195,28 @@ export function VaultSelectionIsland() {
       <VaultSelectionIslandBadge />
     </View>
   );
+}
+
+/** The vault-select face of the island navbar (stable identity — see store). */
+const VAULT_SELECTION_ISLAND: IslandPresentation = {
+  key: "vault-selection",
+  Content: VaultSelectionIslandContent,
+  Badge: VaultSelectionIslandBadge,
+};
+
+/**
+ * Called ONCE by the Vault screen: shows the selection face while cards are
+ * staged and the screen is focused, and clears a lingering selection when
+ * the user leaves the tab (a ghost mode otherwise survives navigation).
+ */
+export function useVaultSelectionIslandPresence(): void {
+  const selecting = useVaultSelection((s) => s.mode === "select");
+  const clear = useVaultSelection((s) => s.clear);
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    if (!isFocused && selecting) clear();
+  }, [isFocused, selecting, clear]);
+
+  useIslandPresence(selecting && isFocused, VAULT_SELECTION_ISLAND);
 }

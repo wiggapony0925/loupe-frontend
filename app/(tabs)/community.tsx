@@ -27,9 +27,10 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, UserPlus, X } from "lucide-react-native";
+import { Search, X } from "lucide-react-native";
 import { CollectorRow } from "@/presentation/features/social/CollectorRow";
 import { ClaimUsernameCard } from "@/presentation/features/social/ClaimUsernameCard";
+import { FeaturedCollectorRail } from "@/presentation/features/social/FeaturedCollectorRail";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import {
   useCollectorSearch,
@@ -39,12 +40,17 @@ import {
   useSocialMe,
   useSuggestedCollectors,
 } from "@/application/queries/social/useSocial";
+import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { routes } from "@/shared/routes";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 export default function CommunityScreen() {
   const p = useThemedPalette();
   const [q, setQ] = useState("");
+
+  // While this screen is focused the island navbar morphs into the
+  // community rail (People · Home · My profile) — see CommunityIsland.
+  useCommunityIslandPresence();
 
   const me = useSocialMe();
   const claimed = !!me.data?.profile;
@@ -78,11 +84,35 @@ export default function CommunityScreen() {
             />
           }
         >
+          {/* Hero — big title left, MY round face right (the way into my
+              profile), the same anatomy as the Settings hero. */}
           <View style={styles.head}>
-            <Text style={[styles.title, { color: p.ink.default }]}>Community</Text>
-            <Text style={[styles.sub, { color: p.ink.muted }]}>
-              Follow collectors and see what they own.
-            </Text>
+            <View style={styles.headText}>
+              <Text style={[styles.title, { color: p.ink.default }]}>Community</Text>
+              <Text style={[styles.sub, { color: p.ink.muted }]}>
+                Follow collectors and see what they own.
+              </Text>
+            </View>
+            {claimed ? (
+              <Pressable
+                onPress={() => router.push(routes.myProfile())}
+                accessibilityRole="button"
+                accessibilityLabel="Open my profile"
+                style={({ pressed }) => [
+                  styles.headAvatar,
+                  {
+                    borderColor: p.accent.mint,
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                  },
+                ]}
+              >
+                <SocialAvatar
+                  handle={me.data!.profile!.username}
+                  url={me.data!.profile!.avatar_url}
+                  size={38}
+                />
+              </Pressable>
+            ) : null}
           </View>
 
           {/* Nothing below works until a handle exists, so it goes first and
@@ -95,12 +125,6 @@ export default function CommunityScreen() {
             <ClaimUsernameCard />
           ) : (
             <>
-              <MyProfileCard
-                username={me.data!.profile!.username}
-                avatarUrl={me.data!.profile!.avatar_url}
-                onPress={() => router.push(routes.myProfile())}
-              />
-
               {requests.data && requests.data.length > 0 ? (
                 <Section title="Follow requests" count={requests.data.length}>
                   {requests.data.map((r) => (
@@ -205,68 +229,47 @@ export default function CommunityScreen() {
                   )}
                 </Section>
               ) : (
-                <Section title="Find other collectors">
-                  {suggested.isLoading ? (
-                    <View style={styles.loading}>
-                      <ActivityIndicator color={p.ink.dim} />
-                    </View>
-                  ) : (suggested.data?.length ?? 0) === 0 ? (
-                    <Text style={[styles.empty, { color: p.ink.dim }]}>
-                      No suggestions yet — search for someone by handle.
-                    </Text>
-                  ) : (
-                    suggested.data!.map((u) => (
-                      <CollectorRow
-                        key={u.user_id}
-                        user={u}
-                        onPress={() => openProfile(u.username)}
+                <>
+                  {/* Faces first: suggested collectors as an App-Store-style
+                      rail of cards, spillover as rows beneath. */}
+                  <Section title="Featured collectors">
+                    {suggested.isLoading ? (
+                      <View style={styles.loading}>
+                        <ActivityIndicator color={p.ink.dim} />
+                      </View>
+                    ) : (suggested.data?.length ?? 0) === 0 ? (
+                      <Text style={[styles.empty, { color: p.ink.dim }]}>
+                        No suggestions yet — search for someone by handle.
+                      </Text>
+                    ) : (
+                      <FeaturedCollectorRail
+                        users={suggested.data!.slice(0, 8)}
+                        onOpen={openProfile}
                         onToggleFollow={follow.mutate}
                         pending={follow.isPending}
                       />
-                    ))
-                  )}
-                </Section>
+                    )}
+                  </Section>
+                  {(suggested.data?.length ?? 0) > 8 ? (
+                    <Section title="More collectors">
+                      {suggested.data!.slice(8).map((u) => (
+                        <CollectorRow
+                          key={u.user_id}
+                          user={u}
+                          onPress={() => openProfile(u.username)}
+                          onToggleFollow={follow.mutate}
+                          pending={follow.isPending}
+                        />
+                      ))}
+                    </Section>
+                  ) : null}
+                </>
               )}
             </>
           )}
         </ScrollView>
       </SafeAreaView>
     </View>
-  );
-}
-
-/** Your own row, pinned above the lists — the way into your profile. */
-function MyProfileCard({
-  username,
-  avatarUrl,
-  onPress,
-}: {
-  username: string;
-  avatarUrl: string | null;
-  onPress: () => void;
-}) {
-  const p = useThemedPalette();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Open my profile"
-      style={[
-        styles.mine,
-        { borderColor: p.line.default, backgroundColor: p.bg.elevated },
-      ]}
-    >
-      <SocialAvatar handle={username} url={avatarUrl} size={40} />
-      <View style={styles.mineIdent}>
-        <Text style={[styles.mineName, { color: p.ink.default }]}>
-          @{username}
-        </Text>
-        <Text style={[styles.mineSub, { color: p.ink.dim }]}>
-          View your profile
-        </Text>
-      </View>
-      <UserPlus size={15} color={p.ink.dim} />
-    </Pressable>
   );
 }
 
@@ -307,20 +310,16 @@ const styles = StyleSheet.create({
   // Bottom padding clears the floating tab pill — content that scrolls
   // under it looks like it was cut off rather than deliberately layered.
   content: { padding: 20, paddingBottom: 130, gap: 4 },
-  head: { gap: 3, marginBottom: 14 },
-  title: { fontSize: 28, fontWeight: "800", letterSpacing: -0.9 },
-  sub: { fontSize: 13.5 },
-  mine: {
+  head: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 12,
+    marginBottom: 14,
   },
-  mineIdent: { flex: 1, gap: 1 },
-  mineName: { fontSize: 15, fontWeight: "700" },
-  mineSub: { fontSize: 12 },
+  headText: { flex: 1, gap: 3 },
+  headAvatar: { borderWidth: 2, borderRadius: 999, padding: 2 },
+  title: { fontSize: 28, fontWeight: "800", letterSpacing: -0.9 },
+  sub: { fontSize: 13.5 },
   section: { marginTop: 20, gap: 2 },
   sectionHead: {
     flexDirection: "row",

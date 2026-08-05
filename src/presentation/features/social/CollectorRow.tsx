@@ -21,6 +21,9 @@ export interface CollectorRowProps {
   /** Omitted for your own row, and for lists where following is not the point. */
   onToggleFollow?: (next: { handle: string; following: boolean }) => void;
   pending?: boolean;
+  /** Replaces the follow button entirely (e.g. "Remove" on my followers list,
+   *  the "×2 copies" chip on card-owner lists). */
+  trailing?: React.ReactNode;
 }
 
 export function CollectorRow({
@@ -28,6 +31,7 @@ export function CollectorRow({
   onPress,
   onToggleFollow,
   pending = false,
+  trailing,
 }: CollectorRowProps) {
   const p = useThemedPalette();
   const rel: SocialRelationship = user.relationship;
@@ -76,7 +80,9 @@ export function CollectorRow({
         </Text>
       </View>
 
-      {showFollow ? (
+      {trailing ? (
+        trailing
+      ) : showFollow ? (
         <Pressable
           onPress={handleFollow}
           disabled={pending}

@@ -13,7 +13,9 @@
 import React from "react";
 import { Animated, Pressable, Text, View } from "react-native";
 import { Check, Circle, Pencil, Trash2, TrendingDown, TrendingUp } from "lucide-react-native";
+import { GestureDetector } from "react-native-gesture-handler";
 import { router } from "expo-router";
+import { useHoldGesture } from "@/presentation/hooks/useHoldGesture";
 import { routes } from "@/shared/routes";
 import { CardImage } from "@/presentation/components/CardImage";
 import { Sparkline, seededWalk } from "@/presentation/components/Sparkline";
@@ -86,6 +88,9 @@ export function PositionRow({
   // Robinhood-style press feedback — row gently scales to 0.97 on
   // touch. Native-driver spring so the list keeps scrolling smoothly.
   const { scale, onPressIn, onPressOut } = usePressScale();
+  // RNGH hold instead of Pressable.onLongPress — survives finger drift
+  // inside the FlatList (see useHoldGesture).
+  const hold = useHoldGesture(onLongPress);
 
   const points =
     spark && spark.points.length >= 2
@@ -151,10 +156,9 @@ export function PositionRow({
             : "transparent",
       }}
     >
+    <GestureDetector gesture={hold}>
     <Pressable
       onPress={onPress ?? (() => router.push(routes.card(card.cardId)))}
-      onLongPress={onLongPress}
-      delayLongPress={280}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       accessibilityRole="button"
@@ -415,6 +419,7 @@ export function PositionRow({
         </Animated.View>
       )}
     </Pressable>
+    </GestureDetector>
       {inSelectSession ? (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 4 }}>
           <Pressable

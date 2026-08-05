@@ -33,15 +33,21 @@ import {
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
+import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { ProfileStats } from "@/presentation/features/social/ProfileStats";
 import { CollectionGrid } from "@/presentation/features/social/CollectionGrid";
+import { CollectionSetsRail } from "@/presentation/features/social/CollectionSetsRail";
 import {
   useCollectorCollection,
   useCollectorProfile,
   useFollowCollector,
+  useFollowers,
+  useFollowing,
   useLikeCollector,
+  useRemoveFollower,
   useSocialMe,
 } from "@/application/queries/social/useSocial";
+import { CollectorListSheet } from "@/presentation/features/social/CollectorListSheet";
 import {
   collectionGateReason,
   followLabel,
@@ -67,6 +73,19 @@ export default function CollectorProfileScreen() {
   const data = profile.data;
   const isSelf = data?.relationship === "self";
   const collection = useCollectorCollection(handle, !!data?.can_view_collection);
+
+  // Viewing a profile IS the community state — keep the community island
+  // (People · Home · My profile) on screen here, same as the Community tab.
+  useCommunityIslandPresence();
+
+  // Followers / Following popup (the reusable collector-list sheet).
+  const [listKind, setListKind] = React.useState<"followers" | "following" | null>(
+    null,
+  );
+  const followers = useFollowers(handle, listKind === "followers");
+  const following = useFollowing(handle, listKind === "following");
+  const removeFollower = useRemoveFollower(me.data?.profile?.username ?? null);
+  const activeList = listKind === "followers" ? followers : following;
 
   const gate = data
     ? collectionGateReason({
@@ -94,10 +113,10 @@ export default function CollectorProfileScreen() {
           </Text>
           {isSelf ? (
             <Pressable
-              onPress={() => router.push("/settings")}
+              onPress={() => router.push(routes.communitySettings())}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Edit profile"
+              accessibilityLabel="Community settings"
               style={[styles.barBtn, { borderColor: p.line.default }]}
             >
               <Settings2 size={16} color={p.ink.muted} />
@@ -181,6 +200,14 @@ export default function CollectorProfileScreen() {
               viewCount={data.view_count}
               viewerHasLiked={data.viewer_has_liked}
               isSelf={!!isSelf}
+              // Lists are server-gated by privacy — only offer the tap when
+              // the viewer could actually see them (own/public/followed).
+              onPressFollowers={
+                data.can_view_collection ? () => setListKind("followers") : undefined
+              }
+              onPressFollowing={
+                data.can_view_collection ? () => setListKind("following") : undefined
+              }
               onToggleLike={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 like.mutate({
@@ -264,9 +291,22 @@ export default function CollectorProfileScreen() {
             ) : null}
 
             <View style={styles.collection}>
-              <Text style={[styles.sectionTitle, { color: p.ink.muted }]}>
-                {isSelf ? "YOUR COLLECTION" : "COLLECTION"}
-              </Text>
+              <View style={styles.collectionHead}>
+                <Text style={[styles.sectionTitle, { color: p.ink.muted }]}>
+                  {isSelf ? "YOUR COLLECTION" : "COLLECTION"}
+                </Text>
+                {/* The number that makes a collection a portfolio — same
+                    grade-aware basis as the vault headline. */}
+                {collection.data?.estimated_value_usd != null ? (
+                  <Text style={[styles.collectionValue, { color: p.accent.mint }]}>
+                    $
+                    {Number(collection.data.estimated_value_usd).toLocaleString(
+                      "en-US",
+                      { maximumFractionDigits: 0 },
+                    )}
+                  </Text>
+                ) : null}
+              </View>
               {gate ? (
                 <View
                   style={[
@@ -286,12 +326,39 @@ export default function CollectorProfileScreen() {
                   <ActivityIndicator color={p.ink.dim} />
                 </View>
               ) : (
-                <CollectionGrid items={collection.data?.items ?? []} />
+                <>
+                  {/* "They have 5 Evolving Skies" — the set shelf. */}
+                  <CollectionSetsRail sets={collection.data?.sets ?? []} />
+                  <CollectionGrid items={collection.data?.items ?? []} />
+                </>
               )}
             </View>
           </ScrollView>
         )}
       </SafeAreaView>
+
+      {/* Followers / Following — Instagram-style list popup. Remove is only
+          offered on MY OWN followers list. */}
+      <CollectorListSheet
+        visible={listKind !== null}
+        onClose={() => setListKind(null)}
+        title={listKind === "following" ? "Following" : "Followers"}
+        rows={activeList.data}
+        loading={activeList.isLoading}
+        emptyText={
+          listKind === "following"
+            ? "Not following anyone yet."
+            : "No followers yet."
+        }
+        onRemove={
+          isSelf && listKind === "followers"
+            ? (h) => removeFollower.mutate({ handle: h })
+            : undefined
+        }
+        removePendingHandle={
+          removeFollower.isPending ? removeFollower.variables?.handle : null
+        }
+      />
     </View>
   );
 }
@@ -349,6 +416,17 @@ const styles = StyleSheet.create({
   discoverTitle: { fontSize: 14.5, fontWeight: "700" },
   discoverSub: { fontSize: 12 },
   collection: { gap: 10, marginTop: 4 },
+  collectionHead: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+  },
+  collectionValue: {
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+    fontVariant: ["tabular-nums"],
+  },
   sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   gate: {
     borderWidth: 1,

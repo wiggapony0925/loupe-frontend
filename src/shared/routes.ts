@@ -44,6 +44,8 @@ export const routes = {
   collector: (handle: string) => `/u/${enc(handle)}`,
   /** My own profile — the same screen, resolved from my claimed handle. */
   myProfile: () => "/u/@me" as const,
+  /** Community settings — username, bio, photo, privacy, deactivate. */
+  communitySettings: () => "/community-settings" as const,
   card: (id: string) => `/card/${enc(id)}`,
   /** Sets explorer (browse the set catalog → a set's cards), bundled in-app. */
   sets: () => "/sets" as const,

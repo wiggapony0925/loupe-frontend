@@ -19,6 +19,7 @@ import {
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type {
+  FriendOwnerWire,
   SocialCollectionWire,
   SocialFollowRequestWire,
   SocialFollowStateWire,
@@ -151,9 +152,33 @@ export function useFollowCollector() {
       apiFetch<SocialFollowStateWire>(ENDPOINTS.social.follow(handle), {
         method: following ? "DELETE" : "POST",
       }),
-    onSuccess: (_data, { handle }) => {
+    onSuccess: (data, { handle }) => {
+      // PATCH the row in every visible list instead of refetching: the
+      // suggested endpoint excludes people you follow, so an invalidate
+      // made freshly-followed rows VANISH mid-scroll. Instagram keeps the
+      // row and flips the button — so do we; the exclusion still applies
+      // on the next cold load.
+      const flip = (rows: SocialUserCardWire[] | undefined) =>
+        rows?.map((r) =>
+          r.username === handle ? { ...r, relationship: data.relationship } : r,
+        );
+      qc.setQueriesData<SocialUserCardWire[]>(
+        { queryKey: queryKeys.social.suggested() },
+        flip,
+      );
+      qc.setQueriesData<SocialUserCardWire[]>(
+        { queryKey: ["social", "search"] },
+        flip,
+      );
+      qc.setQueriesData<SocialUserCardWire[]>(
+        { queryKey: ["social", "followers"] },
+        flip,
+      );
+      qc.setQueriesData<SocialUserCardWire[]>(
+        { queryKey: ["social", "following"] },
+        flip,
+      );
       void qc.invalidateQueries({ queryKey: queryKeys.social.profile(handle) });
-      void qc.invalidateQueries({ queryKey: queryKeys.social.suggested() });
       // Follower counts moved on both sides of the edge.
       void qc.invalidateQueries({ queryKey: queryKeys.social.me() });
     },
@@ -195,5 +220,122 @@ export function useRespondToRequest() {
       void qc.invalidateQueries({ queryKey: queryKeys.social.requests() });
       void qc.invalidateQueries({ queryKey: queryKeys.social.me() });
     },
+  });
+}
+
+/**
+ * Change my profile picture. React Native's fetch turns a `{ uri, name,
+ * type }` FormData part into a real multipart file upload.
+ */
+export function useUploadAvatar() {
+  const qc = useQueryClient();
+  return useMutation<SocialProfileWire, Error, { uri: string; mimeType?: string }>({
+    mutationFn: ({ uri, mimeType }) => {
+      const form = new FormData();
+      const type = mimeType ?? "image/jpeg";
+      form.append("image", {
+        uri,
+        name: type.includes("png") ? "avatar.png" : "avatar.jpg",
+        type,
+      } as unknown as Blob);
+      return apiFetch<SocialProfileWire>(ENDPOINTS.social.avatar, {
+        method: "POST",
+        body: form,
+      });
+    },
+    onSuccess: () => {
+      // The avatar rides ?v=N URLs on every surface — refresh the namespace.
+      void qc.invalidateQueries({ queryKey: queryKeys.social.all });
+    },
+  });
+}
+
+/**
+ * Leave the community: deletes the profile and severs every follow/request/
+ * like edge server-side. The Loupe account (vault, billing) is untouched —
+ * rejoining is simply claiming a handle again.
+ */
+export function useDeactivateCommunity() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, void>({
+    mutationFn: () =>
+      apiFetch<void>(ENDPOINTS.social.me, { method: "DELETE" }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.social.all });
+    },
+  });
+}
+
+/** Who follows a collector. Server-gated by privacy (403 when not allowed). */
+export function useFollowers(
+  handle: string | null,
+  enabled = true,
+): UseQueryResult<SocialUserCardWire[]> {
+  const { isAuthenticated } = useAuth();
+  return useQuery<SocialUserCardWire[]>({
+    queryKey: queryKeys.social.followers(handle ?? ""),
+    queryFn: () =>
+      apiFetch<SocialUserCardWire[]>(ENDPOINTS.social.followers(handle as string)),
+    enabled: isAuthenticated && enabled && !!handle,
+    staleTime: 30_000,
+  });
+}
+
+/** Who a collector follows. Same privacy gate as followers. */
+export function useFollowing(
+  handle: string | null,
+  enabled = true,
+): UseQueryResult<SocialUserCardWire[]> {
+  const { isAuthenticated } = useAuth();
+  return useQuery<SocialUserCardWire[]>({
+    queryKey: queryKeys.social.following(handle ?? ""),
+    queryFn: () =>
+      apiFetch<SocialUserCardWire[]>(ENDPOINTS.social.following(handle as string)),
+    enabled: isAuthenticated && enabled && !!handle,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Instagram's "Remove follower": they stop following ME but aren't blocked.
+ * The row is removed from my followers cache immediately (no vanish-later).
+ */
+export function useRemoveFollower(myHandle: string | null) {
+  const qc = useQueryClient();
+  return useMutation<void, Error, { handle: string }>({
+    mutationFn: ({ handle }) =>
+      apiFetch<void>(ENDPOINTS.social.removeFollower(handle), {
+        method: "DELETE",
+      }),
+    onSuccess: (_data, { handle }) => {
+      if (myHandle) {
+        qc.setQueryData<SocialUserCardWire[]>(
+          queryKeys.social.followers(myHandle),
+          (rows) => rows?.filter((r) => r.username !== handle),
+        );
+        void qc.invalidateQueries({
+          queryKey: queryKeys.social.profile(myHandle),
+        });
+      }
+      void qc.invalidateQueries({ queryKey: queryKeys.social.me() });
+    },
+  });
+}
+
+/**
+ * Collectors I follow who own this card — the "N of your friends own this
+ * card" strip on card detail. `cardRef` is a local UUID or composite
+ * upstream id; the server resolves either.
+ */
+export function useFriendOwners(
+  cardRef: string | null,
+): UseQueryResult<FriendOwnerWire[]> {
+  const { isAuthenticated } = useAuth();
+  return useQuery<FriendOwnerWire[]>({
+    queryKey: queryKeys.social.cardOwners(cardRef ?? ""),
+    queryFn: () =>
+      apiFetch<FriendOwnerWire[]>(ENDPOINTS.social.cardOwners(cardRef as string)),
+    enabled: isAuthenticated && !!cardRef,
+    staleTime: 60_000,
   });
 }
