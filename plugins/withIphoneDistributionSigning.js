@@ -46,13 +46,25 @@ module.exports = function withIphoneDistributionSigning(config) {
           `"${EAS_DIST_CERT_SHA1}"`;
       } else {
         entry.buildSettings.CODE_SIGN_STYLE = "Automatic";
-        entry.buildSettings.CODE_SIGN_IDENTITY = '"Apple Distribution"';
-        entry.buildSettings['"CODE_SIGN_IDENTITY[sdk=iphoneos*]"'] =
-          '"Apple Distribution"';
         entry.buildSettings.DEVELOPMENT_TEAM = APPLE_TEAM_ID;
-        // Let Xcode resolve the profile; a stale pinned specifier would
-        // re-select the unusable EAS profile sitting in ~/Library.
+        // Automatic signing means Xcode picks BOTH the identity and the
+        // profile. Naming an identity here as well is not a hint, it's a
+        // contradiction, and the archive dies before it compiles anything:
+        //
+        //   error: Loupe has conflicting provisioning settings. Loupe is
+        //   automatically signed for development, but a conflicting code
+        //   signing identity Apple Distribution has been manually specified.
+        //
+        // So these are cleared rather than set. Xcode resolves the App Store
+        // distribution identity itself from the archive's Release config and
+        // the exportOptions method, with -allowProvisioningUpdates free to
+        // mint or refresh the profile.
+        delete entry.buildSettings.CODE_SIGN_IDENTITY;
+        delete entry.buildSettings['"CODE_SIGN_IDENTITY[sdk=iphoneos*]"'];
+        // A stale pinned specifier would re-select the unusable EAS profile
+        // sitting in ~/Library.
         delete entry.buildSettings.PROVISIONING_PROFILE_SPECIFIER;
+        delete entry.buildSettings.PROVISIONING_PROFILE;
       }
     }
     return cfg;

@@ -22,6 +22,15 @@
 
 set -euo pipefail
 
+# CocoaPods calls String#unicode_normalize on the install path, which raises
+# on an ASCII-8BIT locale. `pod install` then exits 1 — and CocoaPods' own
+# error reporter crashes on the SAME encoding while trying to explain why,
+# so the build dies with a Ruby backtrace that never names the real cause.
+# A non-interactive shell doesn't inherit Terminal's locale, so this has to
+# be set here rather than assumed from the user's profile.
+export LANG="${LANG:-en_US.UTF-8}"
+export LC_ALL="${LC_ALL:-en_US.UTF-8}"
+
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
 
