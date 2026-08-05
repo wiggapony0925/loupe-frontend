@@ -24,6 +24,44 @@ Then in the Expo dev menu:
 
 If you hit a stale-cache issue, run `npx expo start -c` to clear the Metro cache.
 
+## Shipping to TestFlight (local builds)
+
+Release builds happen **on this Mac**, not on EAS. The EAS workflows in
+`.eas/workflows/` used to fire on every push to `main`, which billed a full
+native build per commit; they are now `workflow_dispatch` only.
+
+```bash
+npm run build:ios
+```
+
+That runs [`scripts/build-ios-local.sh`](scripts/build-ios-local.sh): preflight →
+increment `ios.buildNumber` → prebuild → archive → export to `build/ipa/Loupe.ipa`.
+Upload the `.ipa` with **Transporter.app** (Apple ID `ninjeff06@gmail.com`).
+
+Flags: `--clean` regenerates `ios/` from scratch, `--no-bump` reuses the current
+build number after a failed attempt.
+
+Things worth knowing:
+
+- **Signing is Xcode's job now.** The EAS distribution certificate's private key
+  isn't in this keychain, so `plugins/withIphoneDistributionSigning.js` only
+  applies its SHA-1 pin when `EAS_BUILD` is set; locally it switches Release to
+  automatic signing against `Apple Distribution: Jeffrey Fernandez`. The two
+  `[expo] app.loupe.client AppStore` profiles in `~/Library/MobileDevice/` embed
+  the EAS cert and are unusable locally — Xcode mints a fresh one on first
+  archive (`-allowProvisioningUpdates`).
+- **Build numbers are local now.** `eas.json` moved from
+  `appVersionSource: "remote"` to `"local"`, so `app.json` is the counter.
+  EAS's last build was 226; local numbering resumes at 227. Commit `app.json`
+  after a build or the counter drifts and App Store Connect rejects a repeat.
+- **Disk.** `buildReactNativeFromSource: true` means React Native compiles from
+  source every archive, which needs tens of GB. The script refuses to start
+  below 25GB free rather than dying mid-archive with a misleading compile error.
+- **OTA still points at EAS.** `updates.url` is unchanged, so existing installs
+  keep checking `u.expo.dev`; EAS Update bills on active users, not per job. If
+  it stops being served, `expo-updates` falls back to the bundle embedded in the
+  last build — no breakage.
+
 ## Layout
 
 ```

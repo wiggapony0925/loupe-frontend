@@ -1,30 +1,37 @@
 /**
- * Pin Release code signing to the EAS distribution certificate by SHA-1.
+ * Release code signing, resolved per build environment.
  *
- * Why: EAS remote credentials for this app hold the "iPhone Distribution:
- * Jeffrey Fernandez (DCU7GHRVUQ)" certificate, and the stored provisioning
- * profile only embeds that cert. This Mac's login keychain ALSO contains a
- * newer "Apple Distribution: Jeffrey Fernandez" identity (created by Xcode),
- * and on LOCAL eas builds Xcode preferred it — failing the archive with
- * "provisioning profile doesn't include signing certificate".
+ * ON EAS (process.env.EAS_BUILD is set)
+ *   Pin Release signing to the EAS distribution certificate by SHA-1.
+ *   EAS remote credentials for this app hold the "iPhone Distribution:
+ *   Jeffrey Fernandez (DCU7GHRVUQ)" certificate, and the stored provisioning
+ *   profile only embeds that cert. Name-class pinning ("iPhone Distribution")
+ *   does NOT work: Xcode treats "iPhone Distribution" and "Apple Distribution"
+ *   as the same identity class. Pinning the SHA-1 selects exactly one cert.
  *
- * Name-class pinning ("iPhone Distribution") does NOT fix this: Xcode
- * treats "iPhone Distribution" and "Apple Distribution" as the same
- * distribution identity class. Pinning the certificate's SHA-1 fingerprint
- * selects exactly one cert, everywhere. Cloud builders only have this cert
- * in their keychain, so the pin is a no-op there.
+ *   NOTE: if the EAS distribution certificate is rotated, refresh this hash
+ *   (serial 3D6EEC92D7D32737B6514DBFE50B454, expires 2027-05-26).
  *
- * NOTE: if the EAS distribution certificate is rotated, refresh this hash
- * (serial 3D6EEC92D7D32737B6514DBFE50B454, expires 2027-05-26) or delete
- * the plugin.
+ * LOCALLY (the default now — see scripts/build-ios-local.sh)
+ *   Hand signing to Xcode. The EAS certificate's private key does NOT exist
+ *   in this Mac's login keychain — only "Apple Development" and "Apple
+ *   Distribution: Jeffrey Fernandez" do — so the SHA-1 pin above would fail
+ *   every local archive with "no signing certificate matching ... found".
+ *   Automatic signing lets Xcode select the local Apple Distribution identity
+ *   and mint/refresh a matching App Store provisioning profile on demand
+ *   (xcodebuild is invoked with -allowProvisioningUpdates).
  */
 const { withXcodeProject } = require("expo/config-plugins");
 
 // SHA-1 fingerprint of the EAS "iPhone Distribution: Jeffrey Fernandez
-// (DCU7GHRVUQ)" certificate.
+// (DCU7GHRVUQ)" certificate. Only present in EAS's build keychain.
 const EAS_DIST_CERT_SHA1 = "B3E8D07B46BF295656BFEDA8C235CD1840485960";
 
+const APPLE_TEAM_ID = "DCU7GHRVUQ";
+
 module.exports = function withIphoneDistributionSigning(config) {
+  const onEas = !!process.env.EAS_BUILD;
+
   return withXcodeProject(config, (cfg) => {
     const project = cfg.modResults;
     const section = project.pbxXCBuildConfigurationSection();
@@ -32,9 +39,21 @@ module.exports = function withIphoneDistributionSigning(config) {
       const entry = section[key];
       if (!entry || typeof entry !== "object" || !entry.buildSettings) continue;
       if (entry.name !== "Release") continue;
-      entry.buildSettings.CODE_SIGN_IDENTITY = `"${EAS_DIST_CERT_SHA1}"`;
-      entry.buildSettings['"CODE_SIGN_IDENTITY[sdk=iphoneos*]"'] =
-        `"${EAS_DIST_CERT_SHA1}"`;
+
+      if (onEas) {
+        entry.buildSettings.CODE_SIGN_IDENTITY = `"${EAS_DIST_CERT_SHA1}"`;
+        entry.buildSettings['"CODE_SIGN_IDENTITY[sdk=iphoneos*]"'] =
+          `"${EAS_DIST_CERT_SHA1}"`;
+      } else {
+        entry.buildSettings.CODE_SIGN_STYLE = "Automatic";
+        entry.buildSettings.CODE_SIGN_IDENTITY = '"Apple Distribution"';
+        entry.buildSettings['"CODE_SIGN_IDENTITY[sdk=iphoneos*]"'] =
+          '"Apple Distribution"';
+        entry.buildSettings.DEVELOPMENT_TEAM = APPLE_TEAM_ID;
+        // Let Xcode resolve the profile; a stale pinned specifier would
+        // re-select the unusable EAS profile sitting in ~/Library.
+        delete entry.buildSettings.PROVISIONING_PROFILE_SPECIFIER;
+      }
     }
     return cfg;
   });

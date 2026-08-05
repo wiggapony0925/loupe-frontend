@@ -1,14 +1,20 @@
 name: OTA update (JS-only changes)
 
-# Companion to publish-ios.yml. On every push to main, ship an OTA bundle
-# to the production channel so existing TestFlight installs receive the
-# JS/TS changes within minutes (no rebuild needed). The full native build
-# workflow still runs in parallel; if the fingerprint is unchanged the
-# build is a no-op and the OTA is what users actually receive.
+# MANUAL ONLY. Previously ran on every push to main alongside publish-ios.yml.
+#
+# The comment that used to live here claimed the companion native build was
+# "a no-op if the fingerprint is unchanged". That was never true of a plain
+# `type: build` job — it rebuilt unconditionally, and that is what ran up the
+# build bill. Skipping on an unchanged fingerprint requires an explicit
+# fingerprint -> get_build -> conditional build chain.
+#
+# EAS Update is a separate meter from EAS Build (billed by monthly active
+# users, not per job) and the app still points at u.expo.dev, so dispatching
+# this by hand is cheap. Existing installs degrade gracefully if it never
+# runs: expo-updates falls back to the bundle embedded in the last build.
 
 on:
-  push:
-    branches: ["main"]
+  workflow_dispatch: {}
 
 jobs:
   update:

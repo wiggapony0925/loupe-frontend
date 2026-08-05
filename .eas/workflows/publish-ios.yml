@@ -1,13 +1,15 @@
 name: Publish iOS (TestFlight)
 
-# Runs on every push to main. Builds the iOS app on EAS, then auto-submits
-# the artifact to App Store Connect / TestFlight. Apple credentials, ASC
-# app metadata, and the buildNumber counter are managed by EAS — nothing
-# else needs to run locally.
+# MANUAL ONLY. This used to run on every push to main, which turned each
+# commit into a paid EAS build — 83 builds in one cycle, of which only 3
+# had a distinct native fingerprint. Builds are now done locally instead:
+#   npm run build:ios     (see scripts/build-ios-local.sh)
+#
+# Kept, un-triggered, so EAS remains a one-click fallback if a local build
+# is ever blocked. Running it requires an active EAS plan and bills per build.
 
 on:
-  push:
-    branches: ["main"]
+  workflow_dispatch: {}
 
 jobs:
   build_ios:
