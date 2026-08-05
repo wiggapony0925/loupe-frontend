@@ -15,6 +15,17 @@ export const ENDPOINTS = {
   },
   /** Public global announcement banner (no auth) — set in the dev dashboard. */
   announcement: `${V1}/announcement`,
+  /**
+   * The signed-in user's inbox. Server-owned as of the notifications table:
+   * read state lives on the backend, so it survives a reinstall and agrees
+   * with the web. Replaced a feed this app used to merge on-device from the
+   * announcement banner, the blog list and price alerts.
+   */
+  notifications: {
+    list: `${V1}/me/notifications`,
+    unreadCount: `${V1}/me/notifications/unread-count`,
+    read: `${V1}/me/notifications/read`,
+  },
   /** Public blog. Feeds the notification inbox so a new article reaches the
    *  app, not just the website. */
   blog: {
@@ -44,6 +55,10 @@ export const ENDPOINTS = {
       `${V1}/social/users/${encodeURIComponent(handle)}/following`,
     collection: (handle: string) =>
       `${V1}/social/users/${encodeURIComponent(handle)}/collection`,
+    removeFollower: (handle: string) =>
+      `${V1}/social/me/followers/${encodeURIComponent(handle)}`,
+    cardOwners: (cardRef: string) =>
+      `${V1}/social/cards/${encodeURIComponent(cardRef)}/owners`,
   },
   auth: {
     register: `${V1}/auth/register`,

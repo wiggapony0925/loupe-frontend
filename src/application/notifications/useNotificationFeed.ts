@@ -1,73 +1,156 @@
 /**
- * The app's one notification feed — price alerts, announcements and articles.
+ * The app's one notification feed — now read straight from the server.
  *
- * Every surface that shows a count or a list reads from here, so the bell, the
- * inbox and any future badge can never disagree about what's waiting.
+ * This used to merge three endpoints on-device (the announcement banner, the
+ * public blog list, and the user's price alerts) and keep read state in device
+ * storage. That had three costs: what you'd read was forgotten on reinstall and
+ * never agreed with the web, the list couldn't paginate because there was no
+ * list — only a merge — and anything the backend wanted to tell one specific
+ * user had nowhere to go.
  *
- * All three queries are independent and none is required: a feed still builds
- * if the blog is unreachable or the user has no alerts, because a failed
- * fetch must not blank an inbox that has other things in it.
+ * The backend now owns the inbox, so this hook is a thin reader over
+ * `/v1/me/notifications`. The exported shape is unchanged on purpose: the
+ * screen and the home-tab badge keep working without edits.
  */
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
-import { usePriceAlerts } from "@/application/queries/alerts/usePriceAlerts";
-import { useNotificationsRead } from "@/application/stores/notificationsReadStore";
-import {
-  buildNotificationFeed,
-  unreadCount,
-  type AnnouncementInput,
-  type BlogPostInput,
-  type FeedItem,
-} from "./notificationFeed";
+import type { FeedItem, NotificationCategory } from "./notificationFeed";
 
-function useAnnouncement() {
-  return useQuery<AnnouncementInput>({
-    queryKey: ["announcement"],
-    queryFn: () => apiFetch<AnnouncementInput>(ENDPOINTS.announcement),
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  });
+/** One page of the server inbox. */
+interface NotificationPage {
+  items: ServerNotification[];
+  total: number;
+  page: number;
+  page_size: number;
+  /** Whole-inbox unread count — not this page's. Drives the badge. */
+  unread: number;
 }
 
-function useBlogPosts() {
-  return useQuery<BlogPostInput[]>({
-    queryKey: ["blog", "posts", "feed"],
-    queryFn: () =>
-      apiFetch<BlogPostInput[]>(ENDPOINTS.blog.posts, { query: { limit: 10 } }),
-    // Articles are published rarely; polling them hard would be pure waste.
-    staleTime: 15 * 60 * 1000,
-    retry: 1,
-  });
+interface ServerNotification {
+  id: string;
+  category: string;
+  kind: string;
+  title: string;
+  body: string | null;
+  href: string | null;
+  image_url: string | null;
+  read_at: string | null;
+  created_at: string;
 }
 
-export function useNotificationFeed(formatMoney?: (n: number) => string): {
+const PAGE_SIZE = 25;
+
+/** Categories the server may send. Anything unrecognised renders as system
+ *  rather than being dropped — a notification we can't classify is still one
+ *  the user was meant to see. */
+const KNOWN: readonly NotificationCategory[] = [
+  "market",
+  "news",
+  "social",
+  "billing",
+  "system",
+];
+
+function toFeedItem(n: ServerNotification): FeedItem {
+  const category = (KNOWN as readonly string[]).includes(n.category)
+    ? (n.category as NotificationCategory)
+    : "system";
+  return {
+    id: n.id,
+    category,
+    title: n.title,
+    body: n.body,
+    at: n.created_at,
+    href: n.href,
+    unread: n.read_at === null,
+  };
+}
+
+export function useNotificationFeed(): {
   feed: FeedItem[];
   unread: number;
   markAllRead: () => void;
+  /** True while more pages exist — the screen shows a "load more" affordance. */
+  hasMore: boolean;
+  loadMore: () => void;
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  refetch: () => void;
 } {
-  const alertsQ = usePriceAlerts({ pending: false });
-  const announcementQ = useAnnouncement();
-  const postsQ = useBlogPosts();
-  const readIds = useNotificationsRead((s) => s.readIds);
-  const markAll = useNotificationsRead((s) => s.markAllRead);
+  const qc = useQueryClient();
+
+  const listQ = useInfiniteQuery({
+    queryKey: ["notifications", "list"],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      apiFetch<NotificationPage>(ENDPOINTS.notifications.list, {
+        query: { page: pageParam, page_size: PAGE_SIZE },
+      }),
+    getNextPageParam: (last) =>
+      last.page * last.page_size < last.total ? last.page + 1 : undefined,
+    // The inbox is the kind of thing people pull-to-refresh; don't re-fetch
+    // aggressively behind their back.
+    staleTime: 60 * 1000,
+  });
+
+  // The badge is its own tiny query so the home tab can show a count without
+  // paying for a page of rows it never renders.
+  const countQ = useQuery({
+    queryKey: ["notifications", "unread"],
+    queryFn: () =>
+      apiFetch<{ unread: number }>(ENDPOINTS.notifications.unreadCount),
+    staleTime: 60 * 1000,
+  });
+
+  const markAll = useMutation({
+    mutationFn: () =>
+      apiFetch<{ unread: number }>(ENDPOINTS.notifications.read, {
+        method: "POST",
+        json: { all: true },
+      }),
+    onSuccess: () => {
+      // Both views of "unread" have to move together, or the badge and the
+      // list disagree until something else happens to refetch.
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
 
   const feed = useMemo(
-    () =>
-      buildNotificationFeed({
-        announcement: announcementQ.data ?? null,
-        posts: postsQ.data ?? null,
-        alerts: alertsQ.data ?? null,
-        readIds,
-        formatMoney,
-      }),
-    [announcementQ.data, postsQ.data, alertsQ.data, readIds, formatMoney],
+    () => (listQ.data?.pages ?? []).flatMap((p) => p.items.map(toFeedItem)),
+    [listQ.data],
   );
+
+  // Prefer the list's count when we have it (it's computed in the same
+  // transaction as the page); fall back to the standalone badge query.
+  const unread =
+    listQ.data?.pages?.[0]?.unread ?? countQ.data?.unread ?? 0;
+
+  const markAllRead = useCallback(() => {
+    if (unread > 0) markAll.mutate();
+  }, [unread, markAll]);
+
+  const loadMore = useCallback(() => {
+    if (listQ.hasNextPage && !listQ.isFetchingNextPage) listQ.fetchNextPage();
+  }, [listQ]);
 
   return {
     feed,
-    unread: unreadCount(feed),
-    markAllRead: () => markAll(feed.map((i) => i.id)),
+    unread,
+    markAllRead,
+    hasMore: Boolean(listQ.hasNextPage),
+    loadMore,
+    isLoading: listQ.isLoading,
+    isLoadingMore: listQ.isFetchingNextPage,
+    refetch: () => {
+      listQ.refetch();
+      countQ.refetch();
+    },
   };
 }

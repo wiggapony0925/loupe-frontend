@@ -7,7 +7,7 @@
  * (no mocks, no fabricated values).
  */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -16,19 +16,20 @@ import {
   BellOff,
   CheckCheck,
   ChevronLeft,
+  CreditCard,
   Settings2,
   Sparkles,
   TrendingUp,
+  Users,
   type LucideIcon,
 } from "lucide-react-native";
 import { routes } from "@/shared/routes";
-import { useMoney } from "@/presentation/components/Price";
 import { type Palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { WatchingList } from "@/presentation/features/watchlist/WatchingList";
 import { useNotificationFeed } from "@/application/notifications/useNotificationFeed";
 import type { FeedItem } from "@/application/notifications/notificationFeed";
 
-type Category = "all" | "market" | "news" | "system";
+type Category = "all" | "market" | "news" | "social" | "billing" | "system";
 type Tab = "inbox" | "watching";
 
 
@@ -41,6 +42,8 @@ const CATEGORY_META: Record<
 > = {
   market: { Icon: TrendingUp, tint: "blue", label: "Market" },
   news: { Icon: Sparkles, tint: "mint", label: "News" },
+  social: { Icon: Users, tint: "purple", label: "Community" },
+  billing: { Icon: CreditCard, tint: "amber", label: "Billing" },
   system: { Icon: Bell, tint: "amber", label: "System" },
 };
 
@@ -48,6 +51,7 @@ const FILTERS: { key: Category; label: string }[] = [
   { key: "all", label: "All" },
   { key: "market", label: "Market" },
   { key: "news", label: "News" },
+  { key: "social", label: "Community" },
   { key: "system", label: "System" },
 ];
 
@@ -63,17 +67,30 @@ export default function NotificationsScreen() {
 
   // One shared feed — the same one the navbar bell counts, so the badge and
   // this list can never disagree about what's waiting.
-  const { format: money } = useMoney();
-  const { feed, unread: unreadCount, markAllRead } = useNotificationFeed(money);
+  const {
+    feed,
+    unread: unreadCount,
+    markAllRead,
+    hasMore,
+    loadMore,
+    isLoading,
+    isLoadingMore,
+  } = useNotificationFeed();
 
   // Opening the inbox IS reading it. Anything else leaves a badge the user has
   // to dismiss by hand, which is a chore nobody asked for.
+  //
+  // This can't fire on mount alone any more: the feed now arrives over the
+  // network, so on the first render there is nothing to mark. It waits for the
+  // first non-empty load and then runs exactly once — `didMark` is what stops
+  // it re-firing as later pages append.
+  const didMark = useRef(false);
   useEffect(() => {
-    if (feed.length > 0) markAllRead();
-    // Run once per mount: re-running as `feed` settles would mark items read
-    // the moment they arrive, even ones scrolled past the fold.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!didMark.current && feed.length > 0) {
+      didMark.current = true;
+      markAllRead();
+    }
+  }, [feed.length, markAllRead]);
 
   const visible = useMemo(
     () => (filter === "all" ? feed : feed.filter((n) => n.category === filter)),
@@ -139,9 +156,21 @@ export default function NotificationsScreen() {
           <FilterStrip value={filter} onChange={setFilter} />
 
           {visible.length === 0 ? (
-            <EmptyState filter={filter} hasUnread={unreadCount > 0} />
+            <EmptyState
+              filter={filter}
+              hasUnread={unreadCount > 0}
+              isLoading={isLoading}
+            />
           ) : (
-            <Feed items={visible} />
+            <>
+              <Feed items={visible} />
+              {/* Only offer more when the SERVER has more. Filtering is
+                  client-side over what's loaded, so a filtered view can look
+                  short while the inbox behind it is long. */}
+              {hasMore ? (
+                <LoadMore onPress={loadMore} busy={isLoadingMore} />
+              ) : null}
+            </>
           )}
         </ScrollView>
       )}
@@ -309,13 +338,19 @@ function FilterStrip({
 function EmptyState({
   filter,
   hasUnread,
+  isLoading = false,
 }: {
   filter: Category;
   hasUnread: boolean;
+  isLoading?: boolean;
 }) {
   const p = useThemedPalette();
-  const title =
-    filter === "all"
+  // The inbox arrives over the network now, so the first render is genuinely
+  // empty. Saying "you're all caught up" before the answer is back would be a
+  // confident lie that flickers into a list a moment later.
+  const title = isLoading
+    ? "Loading your inbox…"
+    : filter === "all"
       ? hasUnread
         ? "Nothing else right now"
         : "You're all caught up"
@@ -347,6 +382,29 @@ function EmptyState({
         </Text>
       </View>
     </View>
+  );
+}
+
+/* ─── Load more ───────────────────────────────────────────────────────── */
+
+/**
+ * Explicit paging rather than infinite scroll. An inbox is something people
+ * scan and leave; auto-loading on scroll would keep fetching pages nobody
+ * asked for while they hunt for one alert near the top.
+ */
+function LoadMore({ onPress, busy }: { onPress: () => void; busy: boolean }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={busy}
+      className="mt-4 items-center justify-center rounded-2xl border border-line py-3.5"
+      accessibilityRole="button"
+      accessibilityLabel="Load older notifications"
+    >
+      <Text className="text-[13px] font-semibold text-ink-muted">
+        {busy ? "Loading…" : "Load older"}
+      </Text>
+    </Pressable>
   );
 }
 
