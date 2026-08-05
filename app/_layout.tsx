@@ -91,8 +91,14 @@ function ThemedChrome({ children }: { children: React.ReactNode }) {
  * and Privacy Policy *before* an account exists — bouncing those taps back to
  * the welcome screen left the fineprint unreadable, and app review expects a
  * privacy policy that's reachable without signing in.
+ *
+ * `+not-found` is public so a bad link explains itself. Guarding it meant a
+ * signed-out user who tapped a stale universal link was silently dropped on
+ * the welcome screen with no hint that the link was dead — indistinguishable
+ * from the app just having launched. The screen offers signed-out visitors
+ * only the sign-in route, so nothing behind the guard is reachable from it.
  */
-const PUBLIC_SEGMENTS = new Set(["(auth)", "legal"]);
+const PUBLIC_SEGMENTS = new Set(["(auth)", "legal", "+not-found"]);
 
 /**
  * RootStack — auth-aware navigator.
@@ -234,6 +240,15 @@ function RootStack() {
         name="admin"
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
+      {/* Collector profiles. A drill-down from Community, so it pushes over
+          the tab bar the way every other detail screen does. */}
+      <Stack.Screen
+        name="u/[handle]"
+        options={{ presentation: "card", animation: "slide_from_right" }}
+      />
+      {/* Unmatched routes. Keeps the stack's default `fade` — a dead link
+          shouldn't arrive with the confident slide of a real destination. */}
+      <Stack.Screen name="+not-found" />
     </Stack>
   );
 }

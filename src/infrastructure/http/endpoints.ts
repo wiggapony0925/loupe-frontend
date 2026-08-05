@@ -21,6 +21,30 @@ export const ENDPOINTS = {
     posts: `${V1}/blog/posts`,
     post: (slug: string) => `${V1}/blog/posts/${slug}`,
   },
+  /**
+   * Community — collector profiles, the follow graph, and shared vaults.
+   * Native on mobile as of this slice; the WebView embed it replaced could
+   * never show the tab bar or reuse the app's card rows.
+   */
+  social: {
+    me: `${V1}/social/me`,
+    avatar: `${V1}/social/me/avatar`,
+    search: `${V1}/social/search`,
+    suggested: `${V1}/social/suggested`,
+    requests: `${V1}/social/requests`,
+    acceptRequest: (id: string) => `${V1}/social/requests/${id}/accept`,
+    declineRequest: (id: string) => `${V1}/social/requests/${id}/decline`,
+    profile: (handle: string) => `${V1}/social/users/${encodeURIComponent(handle)}`,
+    follow: (handle: string) =>
+      `${V1}/social/users/${encodeURIComponent(handle)}/follow`,
+    like: (handle: string) => `${V1}/social/users/${encodeURIComponent(handle)}/like`,
+    followers: (handle: string) =>
+      `${V1}/social/users/${encodeURIComponent(handle)}/followers`,
+    following: (handle: string) =>
+      `${V1}/social/users/${encodeURIComponent(handle)}/following`,
+    collection: (handle: string) =>
+      `${V1}/social/users/${encodeURIComponent(handle)}/collection`,
+  },
   auth: {
     register: `${V1}/auth/register`,
     login: `${V1}/auth/login`,

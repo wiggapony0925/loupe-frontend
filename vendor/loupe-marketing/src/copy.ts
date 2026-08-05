@@ -56,3 +56,27 @@ export const FEATURES = [
 
 export type MarketingFeature = (typeof FEATURES)[number];
 
+/**
+ * The dead end.
+ *
+ * A 404 is the one screen a user reaches by accident, so the words have to do
+ * the work the layout can't: say plainly that nothing is broken on their end,
+ * and offer the two places worth going. Shared so the site and the app own up
+ * to a bad link in the same voice — a stale push notification and a stale
+ * bookmark should not read as two different products.
+ *
+ * `ctaBrowse` is deliberately generic ("the market", not "/cards") because the
+ * destination differs per client: the web has a catalog route, the app has a
+ * Search tab.
+ */
+export const NOT_FOUND = {
+  code: "404",
+  title: "This page got away from us",
+  message:
+    "The page you're looking for doesn't exist or may have moved. Let's get you back on track.",
+  ctaHome: "Back home",
+  ctaBrowse: "Browse the market",
+  /** Shown instead of `ctaHome` when there's no session to go home to. */
+  ctaSignedOut: "Go to sign in",
+} as const;
+

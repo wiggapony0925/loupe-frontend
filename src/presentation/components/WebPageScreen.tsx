@@ -18,6 +18,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import Constants from "expo-constants";
+import * as Updates from "expo-updates";
 import { WebView } from "react-native-webview";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { config } from "@/shared/config";
@@ -86,7 +88,13 @@ export function WebPageScreen({
   const sep = path.includes("?") ? "&" : "?";
   const scopeParam =
     embed === "app" ? `&scope=${encodeURIComponent(allowedKey)}` : "";
-  const uri = `${config.webUrl}${path}${sep}embed=${embed}${scopeParam}`;
+  // Cache-buster tied to the running JS bundle: each OTA/build changes the
+  // document URL, so the WebView can't keep serving a stale SPA shell from
+  // its heuristic cache (stale shell = 404s for routes added since).
+  const bust = encodeURIComponent(
+    Updates.updateId ?? Constants.expoConfig?.version ?? "dev",
+  );
+  const uri = `${config.webUrl}${path}${sep}embed=${embed}${scopeParam}&b=${bust}`;
 
   // Runs before the web app's own scripts (mirrors the dev-portal screen):
   // seed embed scope + native theme + (optionally) the session token so the

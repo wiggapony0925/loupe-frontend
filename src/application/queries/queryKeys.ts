@@ -91,6 +91,17 @@ export const queryKeys = {
     all: ["scans"] as const,
     mine: () => ["scans", "mine"] as const,
   },
+  social: {
+    all: ["social"] as const,
+    me: () => ["social", "me"] as const,
+    suggested: () => ["social", "suggested"] as const,
+    requests: () => ["social", "requests"] as const,
+    search: (q: string) => ["social", "search", q] as const,
+    profile: (handle: string) => ["social", "profile", handle] as const,
+    collection: (handle: string) => ["social", "collection", handle] as const,
+    followers: (handle: string) => ["social", "followers", handle] as const,
+    following: (handle: string) => ["social", "following", handle] as const,
+  },
   scanners: {
     all: ["scanners"] as const,
     list: () => ["scanners"] as const,

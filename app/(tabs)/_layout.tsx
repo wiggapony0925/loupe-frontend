@@ -176,6 +176,13 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* Community lives INSIDE the tab navigator purely so the bar stays on
+          screen there — the old WebView embed sat above the tabs at the root
+          and dropped it, which is most of why the page read as a website in
+          a frame. `href: null` keeps it out of the dial: the entry point is
+          the people icon on Command, and a sixth item would crowd a bar
+          deliberately built as a compact pill. */}
+      <Tabs.Screen name="community" options={{ href: null, title: "Community" }} />
     </Tabs>
   );
 }
@@ -242,9 +249,20 @@ function LoupeTabBar(
   );
 
   // Keep the highlight under the active tab (navigation from anywhere).
+  //
+  // Community lives inside this navigator so the bar stays on screen there,
+  // but it has no icon in the dial. Without the second branch the highlight
+  // simply stopped where it was, leaving Community looking like it had put
+  // the user on Search.
   useEffect(() => {
-    if (!dragName) moveHighlightTo(activeName);
-  }, [activeName, dragName, moveHighlightTo]);
+    if (dragName) return;
+    const inDial = NAV_TABS.some((t) => t.name === activeName);
+    if (inDial) {
+      moveHighlightTo(activeName);
+    } else {
+      highlightReady.value = withTiming(0, { duration: 140 });
+    }
+  }, [activeName, dragName, moveHighlightTo, highlightReady]);
 
   const hitTest = useCallback((x: number): string | null => {
     for (const t of NAV_TABS) {

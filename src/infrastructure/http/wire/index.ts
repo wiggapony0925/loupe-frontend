@@ -13,6 +13,7 @@ export * from "./grading";
 export * from "./scan";
 export * from "./collection";
 export * from "./providers";
+export * from "./social";
 export * from "./ws";
 export * from "./health";
 export * from "./setProgress";

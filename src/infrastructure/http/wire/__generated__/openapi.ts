@@ -3751,6 +3751,250 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/social/avatar/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Profile picture bytes */
+        get: operations["get_avatar_v1_social_avatar__user_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My social profile
+         * @description Null ``profile`` until the user claims a username (drives onboarding).
+         */
+        get: operations["get_me_v1_social_me_get"];
+        /** Claim or update my social profile */
+        put: operations["put_me_v1_social_me_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/me/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload my profile picture */
+        post: operations["upload_avatar_v1_social_me_avatar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My pending incoming follow requests */
+        get: operations["list_requests_v1_social_requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/requests/{request_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept a follow request */
+        post: operations["accept_request_v1_social_requests__request_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/requests/{request_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decline a follow request */
+        post: operations["decline_request_v1_social_requests__request_id__decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Find collectors by handle or name */
+        get: operations["search_users_v1_social_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/suggested": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Collectors you might want to follow */
+        get: operations["suggested_users_v1_social_suggested_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/users/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** View a collector's profile */
+        get: operations["view_profile_v1_social_users__username__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/users/{username}/collection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A collector's vault (privacy-gated) */
+        get: operations["view_collection_v1_social_users__username__collection_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/users/{username}/follow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Follow (or request to follow) a collector */
+        post: operations["follow_user_v1_social_users__username__follow_post"];
+        /** Unfollow, or cancel a pending request */
+        delete: operations["unfollow_user_v1_social_users__username__follow_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/users/{username}/followers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who follows this collector */
+        get: operations["list_followers_v1_social_users__username__followers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/users/{username}/following": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who this collector follows */
+        get: operations["list_following_v1_social_users__username__following_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/users/{username}/like": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Appreciate a collector's collection */
+        post: operations["like_user_v1_social_users__username__like_post"];
+        /** Withdraw a like */
+        delete: operations["unlike_user_v1_social_users__username__like_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/waitlist": {
         parameters: {
             query?: never;
@@ -4683,6 +4927,14 @@ export interface components {
              */
             tcg?: string | null;
         };
+        /** Body_upload_avatar_v1_social_me_avatar_post */
+        Body_upload_avatar_v1_social_me_avatar_post: {
+            /**
+             * Image
+             * @description JPEG/PNG/WebP, max 5 MB.
+             */
+            image: string;
+        };
         /**
          * CardAnalytics
          * @description Derived market metrics for one card (public, read-only).
@@ -5515,6 +5767,34 @@ export interface components {
             enabled: boolean;
             /** Label */
             label?: string | null;
+        };
+        /**
+         * FollowRequestRead
+         * @description One pending incoming follow request (the requester's card).
+         */
+        FollowRequestRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            requester: components["schemas"]["SocialUserCard"];
+        };
+        /**
+         * FollowStateRead
+         * @description Result of a follow/unfollow action — the new relationship.
+         */
+        FollowStateRead: {
+            /**
+             * Relationship
+             * @enum {string}
+             */
+            relationship: "self" | "following" | "requested" | "none";
         };
         /** ForeignKeyInfo */
         ForeignKeyInfo: {
@@ -6654,6 +6934,22 @@ export interface components {
          * @enum {string}
          */
         PriceSourceEnum: "ebay" | "tcgplayer" | "pricecharting" | "sci" | "manual";
+        /**
+         * ProfileLikeRead
+         * @description Result of a like/unlike — the new state plus the fresh total.
+         *
+         *     Returning the count means the client never has to guess or refetch the
+         *     profile to keep the heart and the number in agreement.
+         */
+        ProfileLikeRead: {
+            /**
+             * Like Count
+             * @default 0
+             */
+            like_count: number;
+            /** Liked */
+            liked: boolean;
+        };
         /** PulseEvent */
         PulseEvent: {
             /** Actor */
@@ -7571,6 +7867,240 @@ export interface components {
             plan: components["schemas"]["PlanConfigRead"];
             /** Updated At */
             updated_at?: string | null;
+        };
+        /**
+         * SocialCollectionItem
+         * @description A holding as shown to OTHER collectors — deliberately excludes the
+         *     owner's cost basis (purchase price/date) and private notes.
+         */
+        SocialCollectionItem: {
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+            /** Card Image Url */
+            card_image_url?: string | null;
+            /** Card Name */
+            card_name?: string | null;
+            /** Card Number */
+            card_number?: string | null;
+            /** Card Set Name */
+            card_set_name?: string | null;
+            /** Card Tcg */
+            card_tcg?: string | null;
+            /** Condition */
+            condition?: string | null;
+            /** Estimated Value Usd */
+            estimated_value_usd?: string | null;
+            /** Grade */
+            grade: string;
+            /**
+             * Graded At
+             * Format: date-time
+             */
+            graded_at: string;
+            /** House */
+            house: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /**
+         * SocialCollectionRead
+         * @description ``GET /v1/social/users/{username}/collection`` — privacy-gated vault.
+         */
+        SocialCollectionRead: {
+            /** Estimated Value Usd */
+            estimated_value_usd?: string | null;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["SocialCollectionItem"][];
+            /**
+             * Total Cards
+             * @default 0
+             */
+            total_cards: number;
+        };
+        /**
+         * SocialMeRead
+         * @description ``GET /v1/social/me`` — profile (null until claimed) + inbox badge.
+         */
+        SocialMeRead: {
+            /**
+             * Incoming Request Count
+             * @default 0
+             */
+            incoming_request_count: number;
+            profile?: components["schemas"]["SocialProfileRead"] | null;
+        };
+        /**
+         * SocialProfileRead
+         * @description The caller's own social profile.
+         */
+        SocialProfileRead: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Bio */
+            bio?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Is Private
+             * @default false
+             */
+            is_private: boolean;
+            /** Location */
+            location?: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Username */
+            username: string;
+        };
+        /**
+         * SocialProfileUpsert
+         * @description Body for ``PUT /v1/social/me`` — claims or updates the profile.
+         */
+        SocialProfileUpsert: {
+            /** Bio */
+            bio?: string | null;
+            /**
+             * Is Private
+             * @default false
+             */
+            is_private: boolean;
+            /**
+             * Location
+             * @description Self-reported 'City, Region' — optional.
+             */
+            location?: string | null;
+            /**
+             * Username
+             * @description Handle (letters, digits, dot, underscore). Stored lowercase.
+             */
+            username: string;
+        };
+        /**
+         * SocialProfileView
+         * @description ``GET /v1/social/users/{username}`` — a profile as seen by the viewer.
+         */
+        SocialProfileView: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Bio */
+            bio?: string | null;
+            /**
+             * Can View Collection
+             * @default false
+             */
+            can_view_collection: boolean;
+            /**
+             * Card Count
+             * @default 0
+             */
+            card_count: number;
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Follower Count
+             * @default 0
+             */
+            follower_count: number;
+            /**
+             * Following Count
+             * @default 0
+             */
+            following_count: number;
+            /**
+             * Is Private
+             * @default false
+             */
+            is_private: boolean;
+            /**
+             * Is Pro
+             * @default false
+             */
+            is_pro: boolean;
+            /**
+             * Joined At
+             * Format: date-time
+             */
+            joined_at: string;
+            /**
+             * Like Count
+             * @default 0
+             */
+            like_count: number;
+            /** Location */
+            location?: string | null;
+            /**
+             * Relationship
+             * @default none
+             * @enum {string}
+             */
+            relationship: "self" | "following" | "requested" | "none";
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Username */
+            username: string;
+            /**
+             * View Count
+             * @default 0
+             */
+            view_count: number;
+            /**
+             * Viewer Has Liked
+             * @default false
+             */
+            viewer_has_liked: boolean;
+        };
+        /**
+         * SocialUserCard
+         * @description One row in search results / follower lists (Collectr-style row).
+         */
+        SocialUserCard: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Is Private
+             * @default false
+             */
+            is_private: boolean;
+            /**
+             * Is Pro
+             * @default false
+             */
+            is_pro: boolean;
+            /** Location */
+            location?: string | null;
+            /**
+             * Relationship
+             * @default none
+             * @enum {string}
+             */
+            relationship: "self" | "following" | "requested" | "none";
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Username */
+            username: string;
         };
         /**
          * SubscriptionCancelRequest
@@ -14894,6 +15424,519 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_avatar_v1_social_avatar__user_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_me_v1_social_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialMeRead"];
+                };
+            };
+        };
+    };
+    put_me_v1_social_me_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SocialProfileUpsert"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_avatar_v1_social_me_avatar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_avatar_v1_social_me_avatar_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_requests_v1_social_requests_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowRequestRead"][];
+                };
+            };
+        };
+    };
+    accept_request_v1_social_requests__request_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_request_v1_social_requests__request_id__decline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_users_v1_social_search_get: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialUserCard"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggested_users_v1_social_suggested_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialUserCard"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    view_profile_v1_social_users__username__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialProfileView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    view_collection_v1_social_users__username__collection_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialCollectionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    follow_user_v1_social_users__username__follow_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowStateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unfollow_user_v1_social_users__username__follow_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowStateRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_followers_v1_social_users__username__followers_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialUserCard"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_following_v1_social_users__username__following_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialUserCard"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    like_user_v1_social_users__username__like_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileLikeRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlike_user_v1_social_users__username__like_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileLikeRead"];
                 };
             };
             /** @description Validation Error */

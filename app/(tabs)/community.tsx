@@ -1,0 +1,361 @@
+/**
+ * Community — native.
+ *
+ * This replaces a WebView that loaded `/app/community?embed=app`. The embed
+ * worked, but it sat at the root of the stack ABOVE the tab navigator, so the
+ * bottom bar vanished the moment you opened it — which is most of why the
+ * page read as a website in a frame rather than part of the app. Living in
+ * `(tabs)` fixes that structurally, and going native buys the rest: real
+ * momentum scrolling, the app's own rows and type, and no token hand-off.
+ *
+ * Order of the page is the order of what a user needs:
+ *   1. Claim a handle — nothing else works until this exists.
+ *   2. Follow requests — someone is waiting on you.
+ *   3. Search — you came here looking for a specific person.
+ *   4. Suggested — you didn't, and an empty page would end the session.
+ */
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Search, UserPlus, X } from "lucide-react-native";
+import { CollectorRow } from "@/presentation/features/social/CollectorRow";
+import { ClaimUsernameCard } from "@/presentation/features/social/ClaimUsernameCard";
+import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
+import {
+  useCollectorSearch,
+  useFollowCollector,
+  useFollowRequests,
+  useRespondToRequest,
+  useSocialMe,
+  useSuggestedCollectors,
+} from "@/application/queries/social/useSocial";
+import { routes } from "@/shared/routes";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+
+export default function CommunityScreen() {
+  const p = useThemedPalette();
+  const [q, setQ] = useState("");
+
+  const me = useSocialMe();
+  const claimed = !!me.data?.profile;
+
+  const requests = useFollowRequests();
+  const suggested = useSuggestedCollectors(claimed);
+  const search = useCollectorSearch(q);
+  const follow = useFollowCollector();
+  const respond = useRespondToRequest();
+
+  const searching = q.trim().length >= 2;
+  const results = search.data ?? [];
+
+  const openProfile = (handle: string) => router.push(routes.collector(handle));
+
+  return (
+    <View style={[styles.root, { backgroundColor: p.bg.base }]}>
+      <SafeAreaView edges={["top"]} style={styles.safe}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={me.isRefetching || suggested.isRefetching}
+              onRefresh={() => {
+                void me.refetch();
+                void suggested.refetch();
+                void requests.refetch();
+              }}
+              tintColor={p.ink.dim}
+            />
+          }
+        >
+          <View style={styles.head}>
+            <Text style={[styles.title, { color: p.ink.default }]}>Community</Text>
+            <Text style={[styles.sub, { color: p.ink.muted }]}>
+              Follow collectors and see what they own.
+            </Text>
+          </View>
+
+          {/* Nothing below works until a handle exists, so it goes first and
+              the rest of the page stays hidden behind it. */}
+          {me.isLoading ? (
+            <View style={styles.loading}>
+              <ActivityIndicator color={p.ink.dim} />
+            </View>
+          ) : !claimed ? (
+            <ClaimUsernameCard />
+          ) : (
+            <>
+              <MyProfileCard
+                username={me.data!.profile!.username}
+                avatarUrl={me.data!.profile!.avatar_url}
+                onPress={() => router.push(routes.myProfile())}
+              />
+
+              {requests.data && requests.data.length > 0 ? (
+                <Section title="Follow requests" count={requests.data.length}>
+                  {requests.data.map((r) => (
+                    <View key={r.id} style={styles.requestRow}>
+                      <CollectorRow
+                        user={r.requester}
+                        onPress={() => openProfile(r.requester.username)}
+                      />
+                      <View style={styles.decision}>
+                        <Pressable
+                          onPress={() =>
+                            respond.mutate({ id: r.id, accept: true })
+                          }
+                          disabled={respond.isPending}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Accept @${r.requester.username}`}
+                          style={[
+                            styles.decisionBtn,
+                            { backgroundColor: withAlpha(p.accent.mint, 0.16) },
+                          ]}
+                        >
+                          <Text
+                            style={[styles.decisionText, { color: p.accent.mint }]}
+                          >
+                            Accept
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() =>
+                            respond.mutate({ id: r.id, accept: false })
+                          }
+                          disabled={respond.isPending}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Decline @${r.requester.username}`}
+                          style={[
+                            styles.decisionBtn,
+                            { borderWidth: 1, borderColor: p.line.default },
+                          ]}
+                        >
+                          <Text
+                            style={[styles.decisionText, { color: p.ink.muted }]}
+                          >
+                            Decline
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ))}
+                </Section>
+              ) : null}
+
+              <View
+                style={[
+                  styles.search,
+                  { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+                ]}
+              >
+                <Search size={16} color={p.ink.dim} />
+                <TextInput
+                  value={q}
+                  onChangeText={setQ}
+                  placeholder="Search collectors"
+                  placeholderTextColor={p.ink.dim}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  style={[styles.searchInput, { color: p.ink.default }]}
+                  accessibilityLabel="Search collectors"
+                />
+                {q.length > 0 ? (
+                  <Pressable
+                    onPress={() => setQ("")}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear search"
+                  >
+                    <X size={15} color={p.ink.dim} />
+                  </Pressable>
+                ) : null}
+              </View>
+
+              {searching ? (
+                <Section title="Results">
+                  {search.isLoading ? (
+                    <View style={styles.loading}>
+                      <ActivityIndicator color={p.ink.dim} />
+                    </View>
+                  ) : results.length === 0 ? (
+                    <Text style={[styles.empty, { color: p.ink.dim }]}>
+                      No collectors match “{q.trim()}”.
+                    </Text>
+                  ) : (
+                    results.map((u) => (
+                      <CollectorRow
+                        key={u.user_id}
+                        user={u}
+                        onPress={() => openProfile(u.username)}
+                        onToggleFollow={follow.mutate}
+                        pending={follow.isPending}
+                      />
+                    ))
+                  )}
+                </Section>
+              ) : (
+                <Section title="Find other collectors">
+                  {suggested.isLoading ? (
+                    <View style={styles.loading}>
+                      <ActivityIndicator color={p.ink.dim} />
+                    </View>
+                  ) : (suggested.data?.length ?? 0) === 0 ? (
+                    <Text style={[styles.empty, { color: p.ink.dim }]}>
+                      No suggestions yet — search for someone by handle.
+                    </Text>
+                  ) : (
+                    suggested.data!.map((u) => (
+                      <CollectorRow
+                        key={u.user_id}
+                        user={u}
+                        onPress={() => openProfile(u.username)}
+                        onToggleFollow={follow.mutate}
+                        pending={follow.isPending}
+                      />
+                    ))
+                  )}
+                </Section>
+              )}
+            </>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+/** Your own row, pinned above the lists — the way into your profile. */
+function MyProfileCard({
+  username,
+  avatarUrl,
+  onPress,
+}: {
+  username: string;
+  avatarUrl: string | null;
+  onPress: () => void;
+}) {
+  const p = useThemedPalette();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Open my profile"
+      style={[
+        styles.mine,
+        { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+      ]}
+    >
+      <SocialAvatar handle={username} url={avatarUrl} size={40} />
+      <View style={styles.mineIdent}>
+        <Text style={[styles.mineName, { color: p.ink.default }]}>
+          @{username}
+        </Text>
+        <Text style={[styles.mineSub, { color: p.ink.dim }]}>
+          View your profile
+        </Text>
+      </View>
+      <UserPlus size={15} color={p.ink.dim} />
+    </Pressable>
+  );
+}
+
+function Section({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count?: number;
+  children: React.ReactNode;
+}) {
+  const p = useThemedPalette();
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHead}>
+        <Text style={[styles.sectionTitle, { color: p.ink.muted }]}>
+          {title.toUpperCase()}
+        </Text>
+        {count ? (
+          <View
+            style={[styles.badge, { backgroundColor: withAlpha(p.accent.mint, 0.18) }]}
+          >
+            <Text style={[styles.badgeText, { color: p.accent.mint }]}>
+              {count}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  safe: { flex: 1 },
+  // Bottom padding clears the floating tab pill — content that scrolls
+  // under it looks like it was cut off rather than deliberately layered.
+  content: { padding: 20, paddingBottom: 130, gap: 4 },
+  head: { gap: 3, marginBottom: 14 },
+  title: { fontSize: 28, fontWeight: "800", letterSpacing: -0.9 },
+  sub: { fontSize: 13.5 },
+  mine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 12,
+  },
+  mineIdent: { flex: 1, gap: 1 },
+  mineName: { fontSize: 15, fontWeight: "700" },
+  mineSub: { fontSize: 12 },
+  section: { marginTop: 20, gap: 2 },
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginBottom: 4,
+  },
+  sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
+  badge: {
+    minWidth: 18,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: { fontSize: 10.5, fontWeight: "800" },
+  search: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    marginTop: 20,
+  },
+  searchInput: { flex: 1, fontSize: 15, paddingVertical: 12 },
+  requestRow: { gap: 2 },
+  decision: { flexDirection: "row", gap: 8, paddingBottom: 8 },
+  decisionBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 11,
+    alignItems: "center",
+  },
+  decisionText: { fontSize: 13, fontWeight: "700" },
+  loading: { paddingVertical: 22, alignItems: "center" },
+  empty: { fontSize: 13, paddingVertical: 10 },
+});

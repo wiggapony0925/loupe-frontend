@@ -6,6 +6,8 @@ import { router } from "expo-router";
 import { ArrowUpRight, Bell, Camera, Settings2, Users } from "lucide-react-native";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
+import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
+import { useSocialMe } from "@/application/queries/social/useSocial";
 import { useNotificationFeed } from "@/application/notifications/useNotificationFeed";
 import { fetchCollectionSummary } from "@/infrastructure/repositories/forensicRepository";
 import { HardwareStatusWidget, useScannerConnection } from "@/presentation/features/scanner";
@@ -418,6 +420,46 @@ export default function CommandCenterScreen() {
   );
 }
 
+/**
+ * The navbar identity chip.
+ *
+ * Shows your own avatar once you've claimed a handle and opens your profile —
+ * the generic people icon that used to sit here went to the collector
+ * directory, which is a place to find *other* people, not the place you'd
+ * expect your own face to lead.
+ *
+ * Before a handle exists there is no profile to open, so it falls back to
+ * Community, where the claim card is the whole page.
+ */
+function ProfileButton() {
+  const p = useThemedPalette();
+  const me = useSocialMe();
+  const profile = me.data?.profile ?? null;
+
+  return (
+    <Pressable
+      onPress={() =>
+        router.push(profile ? routes.myProfile() : routes.community())
+      }
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={profile ? "Open my profile" : "Open community"}
+      className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated overflow-hidden"
+      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+    >
+      {profile ? (
+        <SocialAvatar
+          handle={profile.username}
+          url={profile.avatar_url}
+          size={34}
+        />
+      ) : (
+        <Users size={16} color={p.ink.muted} />
+      )}
+    </Pressable>
+  );
+}
+
 function StaticNavbar() {
   const p = useThemedPalette();
   // Every notification type, not just price alerts: an announcement posted
@@ -431,16 +473,7 @@ function StaticNavbar() {
         <Text className="text-base font-semibold tracking-tight text-ink">Loupe</Text>
       </View>
       <View className="flex-row items-center gap-2">
-        <Pressable
-          onPress={() => router.push(routes.community())}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Open community"
-          className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
-          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-        >
-          <Users size={16} color={p.ink.muted} />
-        </Pressable>
+        <ProfileButton />
         <Pressable
           onPress={() => router.push(routes.notifications())}
           hitSlop={8}

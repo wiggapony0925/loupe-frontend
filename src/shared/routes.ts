@@ -23,6 +23,10 @@ const enc = (s: string): string => encodeURIComponent(s);
 export const routes = {
   home: () => "/" as const,
   vault: () => "/vault" as const,
+  /** Search / browse tab — the app's catalog surface. */
+  search: () => "/search" as const,
+  /** Pre-auth front door. The only destination a signed-out visitor can reach. */
+  welcome: () => "/(auth)/welcome" as const,
   analytics: () => "/analytics" as const,
   settings: () => "/settings" as const,
   /** Statements archive — monthly/yearly PDF portfolio statements. */
@@ -32,8 +36,14 @@ export const routes = {
   sealedDetail: (productId: string) => `/sealed/${productId}` as const,
   /** Deep link to the standalone price-alert list. */
   watchlist: () => "/watchlist" as const,
-  /** Community — follows, collector profiles, shared collections (web embed). */
+  /** Community — follows, collector profiles, shared vaults. NATIVE (the
+   *  WebView embed it replaced couldn't show the tab bar). Lives in the tab
+   *  group so the bottom bar stays on screen. */
   community: () => "/community" as const,
+  /** A collector's profile. */
+  collector: (handle: string) => `/u/${enc(handle)}`,
+  /** My own profile — the same screen, resolved from my claimed handle. */
+  myProfile: () => "/u/@me" as const,
   card: (id: string) => `/card/${enc(id)}`,
   /** Sets explorer (browse the set catalog → a set's cards), bundled in-app. */
   sets: () => "/sets" as const,

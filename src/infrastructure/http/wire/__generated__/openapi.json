@@ -1922,6 +1922,21 @@
         "title": "Body_identify_card_v1_cards_identify_post",
         "type": "object"
       },
+      "Body_upload_avatar_v1_social_me_avatar_post": {
+        "properties": {
+          "image": {
+            "contentMediaType": "application/octet-stream",
+            "description": "JPEG/PNG/WebP, max 5 MB.",
+            "title": "Image",
+            "type": "string"
+          }
+        },
+        "required": [
+          "image"
+        ],
+        "title": "Body_upload_avatar_v1_social_me_avatar_post",
+        "type": "object"
+      },
       "CardAnalytics": {
         "additionalProperties": false,
         "description": "Derived market metrics for one card (public, read-only).",
@@ -4160,6 +4175,51 @@
           "enabled"
         ],
         "title": "FeatureFlagUpsert",
+        "type": "object"
+      },
+      "FollowRequestRead": {
+        "description": "One pending incoming follow request (the requester's card).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requester": {
+            "$ref": "#/components/schemas/SocialUserCard"
+          }
+        },
+        "required": [
+          "id",
+          "requester",
+          "created_at"
+        ],
+        "title": "FollowRequestRead",
+        "type": "object"
+      },
+      "FollowStateRead": {
+        "description": "Result of a follow/unfollow action \u2014 the new relationship.",
+        "properties": {
+          "relationship": {
+            "enum": [
+              "self",
+              "following",
+              "requested",
+              "none"
+            ],
+            "title": "Relationship",
+            "type": "string"
+          }
+        },
+        "required": [
+          "relationship"
+        ],
+        "title": "FollowStateRead",
         "type": "object"
       },
       "ForeignKeyInfo": {
@@ -6978,6 +7038,25 @@
         "title": "PriceSourceEnum",
         "type": "string"
       },
+      "ProfileLikeRead": {
+        "description": "Result of a like/unlike \u2014 the new state plus the fresh total.\n\nReturning the count means the client never has to guess or refetch the\nprofile to keep the heart and the number in agreement.",
+        "properties": {
+          "like_count": {
+            "default": 0,
+            "title": "Like Count",
+            "type": "integer"
+          },
+          "liked": {
+            "title": "Liked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "liked"
+        ],
+        "title": "ProfileLikeRead",
+        "type": "object"
+      },
       "PulseEvent": {
         "properties": {
           "actor": {
@@ -9538,6 +9617,488 @@
           "announcement"
         ],
         "title": "SiteConfigRead",
+        "type": "object"
+      },
+      "SocialCollectionItem": {
+        "description": "A holding as shown to OTHER collectors \u2014 deliberately excludes the\nowner's cost basis (purchase price/date) and private notes.",
+        "properties": {
+          "card_id": {
+            "format": "uuid",
+            "title": "Card Id",
+            "type": "string"
+          },
+          "card_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Image Url"
+          },
+          "card_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Name"
+          },
+          "card_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Number"
+          },
+          "card_set_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Set Name"
+          },
+          "card_tcg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Tcg"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "estimated_value_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Value Usd"
+          },
+          "grade": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Grade",
+            "type": "string"
+          },
+          "graded_at": {
+            "format": "date-time",
+            "title": "Graded At",
+            "type": "string"
+          },
+          "house": {
+            "title": "House",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "card_id",
+          "grade",
+          "house",
+          "graded_at"
+        ],
+        "title": "SocialCollectionItem",
+        "type": "object"
+      },
+      "SocialCollectionRead": {
+        "description": "``GET /v1/social/users/{username}/collection`` \u2014 privacy-gated vault.",
+        "properties": {
+          "estimated_value_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Value Usd"
+          },
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SocialCollectionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total_cards": {
+            "default": 0,
+            "title": "Total Cards",
+            "type": "integer"
+          }
+        },
+        "title": "SocialCollectionRead",
+        "type": "object"
+      },
+      "SocialMeRead": {
+        "description": "``GET /v1/social/me`` \u2014 profile (null until claimed) + inbox badge.",
+        "properties": {
+          "incoming_request_count": {
+            "default": 0,
+            "title": "Incoming Request Count",
+            "type": "integer"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SocialProfileRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "SocialMeRead",
+        "type": "object"
+      },
+      "SocialProfileRead": {
+        "description": "The caller's own social profile.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "bio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bio"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "is_private": {
+            "default": false,
+            "title": "Is Private",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username",
+          "created_at"
+        ],
+        "title": "SocialProfileRead",
+        "type": "object"
+      },
+      "SocialProfileUpsert": {
+        "description": "Body for ``PUT /v1/social/me`` \u2014 claims or updates the profile.",
+        "properties": {
+          "bio": {
+            "anyOf": [
+              {
+                "maxLength": 280,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bio"
+          },
+          "is_private": {
+            "default": false,
+            "title": "Is Private",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Self-reported 'City, Region' \u2014 optional.",
+            "title": "Location"
+          },
+          "username": {
+            "description": "Handle (letters, digits, dot, underscore). Stored lowercase.",
+            "maxLength": 30,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._]{2,29}$",
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username"
+        ],
+        "title": "SocialProfileUpsert",
+        "type": "object"
+      },
+      "SocialProfileView": {
+        "description": "``GET /v1/social/users/{username}`` \u2014 a profile as seen by the viewer.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "bio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bio"
+          },
+          "can_view_collection": {
+            "default": false,
+            "title": "Can View Collection",
+            "type": "boolean"
+          },
+          "card_count": {
+            "default": 0,
+            "title": "Card Count",
+            "type": "integer"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "follower_count": {
+            "default": 0,
+            "title": "Follower Count",
+            "type": "integer"
+          },
+          "following_count": {
+            "default": 0,
+            "title": "Following Count",
+            "type": "integer"
+          },
+          "is_private": {
+            "default": false,
+            "title": "Is Private",
+            "type": "boolean"
+          },
+          "is_pro": {
+            "default": false,
+            "title": "Is Pro",
+            "type": "boolean"
+          },
+          "joined_at": {
+            "format": "date-time",
+            "title": "Joined At",
+            "type": "string"
+          },
+          "like_count": {
+            "default": 0,
+            "title": "Like Count",
+            "type": "integer"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "relationship": {
+            "default": "none",
+            "enum": [
+              "self",
+              "following",
+              "requested",
+              "none"
+            ],
+            "title": "Relationship",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "view_count": {
+            "default": 0,
+            "title": "View Count",
+            "type": "integer"
+          },
+          "viewer_has_liked": {
+            "default": false,
+            "title": "Viewer Has Liked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "user_id",
+          "username",
+          "joined_at"
+        ],
+        "title": "SocialProfileView",
+        "type": "object"
+      },
+      "SocialUserCard": {
+        "description": "One row in search results / follower lists (Collectr-style row).",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "is_private": {
+            "default": false,
+            "title": "Is Private",
+            "type": "boolean"
+          },
+          "is_pro": {
+            "default": false,
+            "title": "Is Pro",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "relationship": {
+            "default": "none",
+            "enum": [
+              "self",
+              "following",
+              "requested",
+              "none"
+            ],
+            "title": "Relationship",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username"
+        ],
+        "title": "SocialUserCard",
         "type": "object"
       },
       "SubscriptionCancelRequest": {
@@ -22036,6 +22597,839 @@
         "summary": "Full card checklist for one set (owned + still-missing)",
         "tags": [
           "sets"
+        ]
+      }
+    },
+    "/v1/social/avatar/{user_id}": {
+      "get": {
+        "operationId": "get_avatar_v1_social_avatar__user_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Profile picture bytes",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/me": {
+      "get": {
+        "description": "Null ``profile`` until the user claims a username (drives onboarding).",
+        "operationId": "get_me_v1_social_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialMeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My social profile",
+        "tags": [
+          "social"
+        ]
+      },
+      "put": {
+        "operationId": "put_me_v1_social_me_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SocialProfileUpsert"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialProfileRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Claim or update my social profile",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/me/avatar": {
+      "post": {
+        "operationId": "upload_avatar_v1_social_me_avatar_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_avatar_v1_social_me_avatar_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialProfileRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload my profile picture",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/requests": {
+      "get": {
+        "operationId": "list_requests_v1_social_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FollowRequestRead"
+                  },
+                  "title": "Response List Requests V1 Social Requests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My pending incoming follow requests",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/requests/{request_id}/accept": {
+      "post": {
+        "operationId": "accept_request_v1_social_requests__request_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accept a follow request",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/requests/{request_id}/decline": {
+      "post": {
+        "operationId": "decline_request_v1_social_requests__request_id__decline_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decline a follow request",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/search": {
+      "get": {
+        "operationId": "search_users_v1_social_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 60,
+              "minLength": 2,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SocialUserCard"
+                  },
+                  "title": "Response Search Users V1 Social Search Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Find collectors by handle or name",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/suggested": {
+      "get": {
+        "operationId": "suggested_users_v1_social_suggested_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SocialUserCard"
+                  },
+                  "title": "Response Suggested Users V1 Social Suggested Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Collectors you might want to follow",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/users/{username}": {
+      "get": {
+        "operationId": "view_profile_v1_social_users__username__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialProfileView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "View a collector's profile",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/users/{username}/collection": {
+      "get": {
+        "operationId": "view_collection_v1_social_users__username__collection_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 60,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialCollectionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "A collector's vault (privacy-gated)",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/users/{username}/follow": {
+      "delete": {
+        "operationId": "unfollow_user_v1_social_users__username__follow_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowStateRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unfollow, or cancel a pending request",
+        "tags": [
+          "social"
+        ]
+      },
+      "post": {
+        "operationId": "follow_user_v1_social_users__username__follow_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowStateRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Follow (or request to follow) a collector",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/users/{username}/followers": {
+      "get": {
+        "operationId": "list_followers_v1_social_users__username__followers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SocialUserCard"
+                  },
+                  "title": "Response List Followers V1 Social Users  Username  Followers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Who follows this collector",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/users/{username}/following": {
+      "get": {
+        "operationId": "list_following_v1_social_users__username__following_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SocialUserCard"
+                  },
+                  "title": "Response List Following V1 Social Users  Username  Following Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Who this collector follows",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/users/{username}/like": {
+      "delete": {
+        "operationId": "unlike_user_v1_social_users__username__like_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileLikeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Withdraw a like",
+        "tags": [
+          "social"
+        ]
+      },
+      "post": {
+        "operationId": "like_user_v1_social_users__username__like_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileLikeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Appreciate a collector's collection",
+        "tags": [
+          "social"
         ]
       }
     },
