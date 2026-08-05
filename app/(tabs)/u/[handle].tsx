@@ -36,7 +36,10 @@ import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { ProfileStats } from "@/presentation/features/social/ProfileStats";
 import { CollectionGrid } from "@/presentation/features/social/CollectionGrid";
-import { CollectionSetsRail } from "@/presentation/features/social/CollectionSetsRail";
+import {
+  CollectionSetsRail,
+  PortfolioShelf,
+} from "@/presentation/features/social/CollectionSetsRail";
 import {
   useCollectorCollection,
   useCollectorProfile,
@@ -327,7 +330,12 @@ export default function CollectorProfileScreen() {
                 </View>
               ) : (
                 <>
-                  {/* "They have 5 Evolving Skies" — the set shelf. */}
+                  {/* Curated collections first — the thing collectors mean
+                      by "my collections" — then the derived set context. */}
+                  <PortfolioShelf
+                    portfolios={collection.data?.portfolios ?? []}
+                    isSelf={!!isSelf}
+                  />
                   <CollectionSetsRail sets={collection.data?.sets ?? []} />
                   <CollectionGrid items={collection.data?.items ?? []} />
                 </>

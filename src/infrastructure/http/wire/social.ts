@@ -97,6 +97,16 @@ export interface SocialCollectionItemWire {
   graded_at: string;
 }
 
+/** One of the collector's CURATED collections (binders/decks). */
+export interface SocialPortfolioWire {
+  id: string;
+  name: string;
+  color: string | null;
+  count: number;
+  estimated_value_usd: string | null;
+  cover_image_url: string | null;
+}
+
 /** One set inside a shared collection — "5 Evolving Skies". */
 export interface SocialCollectionSetWire {
   name: string;
@@ -108,6 +118,8 @@ export interface SocialCollectionSetWire {
 export interface SocialCollectionWire {
   total_cards: number;
   estimated_value_usd: string | null;
+  /** Curated portfolios (binders), largest value first. */
+  portfolios?: SocialPortfolioWire[];
   /** Whole-collection breakdown, largest value first (may be absent on
    *  older backends — treat missing as empty). */
   sets?: SocialCollectionSetWire[];

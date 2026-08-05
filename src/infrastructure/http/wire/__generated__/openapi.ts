@@ -8290,6 +8290,11 @@ export interface components {
              */
             items: components["schemas"]["SocialCollectionItem"][];
             /**
+             * Portfolios
+             * @default []
+             */
+            portfolios: components["schemas"]["SocialPortfolioRead"][];
+            /**
              * Sets
              * @default []
              */
@@ -8328,6 +8333,31 @@ export interface components {
              */
             incoming_request_count: number;
             profile?: components["schemas"]["SocialProfileRead"] | null;
+        };
+        /**
+         * SocialPortfolioRead
+         * @description One of the collector's CURATED collections (binders/decks) — the
+         *     thing users mean by "my collections", distinct from catalog sets.
+         */
+        SocialPortfolioRead: {
+            /** Color */
+            color?: string | null;
+            /**
+             * Count
+             * @default 0
+             */
+            count: number;
+            /** Cover Image Url */
+            cover_image_url?: string | null;
+            /** Estimated Value Usd */
+            estimated_value_usd?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /**
          * SocialProfileRead

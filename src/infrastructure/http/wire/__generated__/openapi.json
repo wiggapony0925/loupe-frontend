@@ -10091,6 +10091,14 @@
             "title": "Items",
             "type": "array"
           },
+          "portfolios": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SocialPortfolioRead"
+            },
+            "title": "Portfolios",
+            "type": "array"
+          },
           "sets": {
             "default": [],
             "items": {
@@ -10170,6 +10178,65 @@
           }
         },
         "title": "SocialMeRead",
+        "type": "object"
+      },
+      "SocialPortfolioRead": {
+        "description": "One of the collector's CURATED collections (binders/decks) \u2014 the\nthing users mean by \"my collections\", distinct from catalog sets.",
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "cover_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Url"
+          },
+          "estimated_value_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Value Usd"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "SocialPortfolioRead",
         "type": "object"
       },
       "SocialProfileRead": {

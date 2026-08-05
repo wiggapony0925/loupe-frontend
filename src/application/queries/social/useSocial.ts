@@ -51,7 +51,13 @@ export function useSuggestedCollectors(
   const { isAuthenticated } = useAuth();
   return useQuery<SocialUserCardWire[]>({
     queryKey: queryKeys.social.suggested(),
-    queryFn: () => apiFetch<SocialUserCardWire[]>(ENDPOINTS.social.suggested),
+    // 30, not the server default 10: the featured rail takes eight and the
+    // "More collectors" list below needs enough left over to feel like a
+    // community rather than a footnote.
+    queryFn: () =>
+      apiFetch<SocialUserCardWire[]>(ENDPOINTS.social.suggested, {
+        query: { limit: 30 },
+      }),
     enabled: isAuthenticated && enabled,
     staleTime: 5 * 60_000,
   });
