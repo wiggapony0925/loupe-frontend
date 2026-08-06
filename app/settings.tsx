@@ -36,6 +36,9 @@ import { getCurrency } from "@/shared/currency";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { ProMembershipCard } from "@/presentation/features/pro";
+import { useSocialMe } from "@/application/queries/social/useSocial";
+import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
+import { routes } from "@/shared/routes";
 
 type PageKey = "menu" | "general" | "appearance" | "legal" | "about";
 
@@ -116,6 +119,9 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
 function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   const p = useThemedPalette();
   const { user, signOut, signOutEverywhere } = useAuth();
+  // One identity everywhere: the hero bubble mirrors the community profile
+  // picture, so changing it there updates this page too.
+  const socialProfile = useSocialMe().data?.profile ?? null;
   const version = Constants.expoConfig?.version ?? "0.1.0";
   const [copied, setCopied] = useState(false);
   const [signingOutAll, setSigningOutAll] = useState(false);
@@ -145,22 +151,46 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
 
   return (
     <View>
-      {/* Hero — large title + mint-ringed avatar bubble */}
+      {/* Hero — large title + mint-ringed avatar bubble. The bubble shows the
+          SAME picture as the community profile (one identity everywhere);
+          tapping it opens community settings, where the picture is changed. */}
       <View className="flex-row items-center justify-between px-5 pb-4 pt-1">
         <Text className="text-[40px] font-bold tracking-tight text-ink">Settings</Text>
-        <View
+        <Pressable
+          onPress={() =>
+            router.push(
+              socialProfile ? routes.communitySettings() : routes.community(),
+            )
+          }
+          accessibilityRole="button"
+          accessibilityLabel={
+            socialProfile
+              ? "Your profile picture. Opens community settings."
+              : "Set up your community profile"
+          }
           className="h-14 w-14 items-center justify-center rounded-full"
-          style={{ borderWidth: 2, borderColor: p.accent.mint }}
+          style={({ pressed }) => [
+            { borderWidth: 2, borderColor: p.accent.mint },
+            pressed && { opacity: 0.7 },
+          ]}
         >
-          <View
-            className="h-11 w-11 items-center justify-center rounded-full"
-            style={{ backgroundColor: `${p.accent.mint}22` }}
-          >
-            <Text className="text-lg font-bold" style={{ color: p.accent.mint }}>
-              {initial}
-            </Text>
-          </View>
-        </View>
+          {socialProfile?.avatar_url ? (
+            <SocialAvatar
+              handle={socialProfile.username}
+              url={socialProfile.avatar_url}
+              size={44}
+            />
+          ) : (
+            <View
+              className="h-11 w-11 items-center justify-center rounded-full"
+              style={{ backgroundColor: `${p.accent.mint}22` }}
+            >
+              <Text className="text-lg font-bold" style={{ color: p.accent.mint }}>
+                {initial}
+              </Text>
+            </View>
+          )}
+        </Pressable>
       </View>
 
       {/* Loupe Pro membership — upgrade CTA for free users, billing for Pro.

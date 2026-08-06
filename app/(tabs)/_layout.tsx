@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Modal,
   Platform,
@@ -50,6 +50,7 @@ import {
   useActiveIsland,
   type IslandPresentation,
 } from "@/presentation/navigation/islandNavStore";
+import { IslandDial, type DialItem } from "@/presentation/navigation/IslandDial";
 
 const isIOS = Platform.OS === "ios";
 
@@ -193,9 +194,6 @@ export default function TabsLayout() {
 
 // ───────────────────────── iOS custom tab bar ─────────────────────────
 
-const ITEM_W = 50; // per-icon hit target
-const ITEM_H = 44;
-
 /**
  * LoupeTabBar — the iOS bar. A COMPACT, CENTERED liquid-glass pill (not the
  * full-width spread of the stock bar) with an iOS-Camera-style page dial:
@@ -216,98 +214,6 @@ function LoupeTabBar(
   // useIslandPresence; the bar itself knows no feature specifics.
   const island = useActiveIsland();
 
-  // Item layout (x + width) in the pill's coordinate space, keyed by route.
-  const layouts = useRef<Record<string, { x: number; width: number }>>({});
-  const highlightX = useSharedValue(0);
-  const highlightW = useSharedValue(ITEM_W);
-  const highlightReady = useSharedValue(0);
-  // `dragName` drives rendering (icon tint); the ref mirrors it so the pan
-  // callbacks can compare/commit without side effects inside a setState updater.
-  const [dragName, setDragName] = useState<string | null>(null);
-  const dragNameRef = useRef<string | null>(null);
-  const setDrag = useCallback((name: string | null) => {
-    dragNameRef.current = name;
-    setDragName(name);
-  }, []);
-
-  const moveHighlightTo = useCallback(
-    (name: string, animated = true) => {
-      const l = layouts.current[name];
-      if (!l) return;
-      highlightReady.value = 1;
-      if (animated) {
-        highlightX.value = withSpring(l.x, { damping: 22, stiffness: 260, mass: 0.7 });
-        highlightW.value = withSpring(l.width, { damping: 22, stiffness: 260 });
-      } else {
-        highlightX.value = l.x;
-        highlightW.value = l.width;
-      }
-    },
-    [highlightX, highlightW, highlightReady],
-  );
-
-  // Keep the highlight under the active tab (navigation from anywhere).
-  //
-  // Community lives inside this navigator so the bar stays on screen there,
-  // but it has no icon in the dial. Without the second branch the highlight
-  // simply stopped where it was, leaving Community looking like it had put
-  // the user on Search.
-  useEffect(() => {
-    if (dragName) return;
-    const inDial = NAV_TABS.some((t) => t.name === activeName);
-    if (inDial) {
-      moveHighlightTo(activeName);
-    } else {
-      highlightReady.value = withTiming(0, { duration: 140 });
-    }
-  }, [activeName, dragName, moveHighlightTo, highlightReady]);
-
-  const hitTest = useCallback((x: number): string | null => {
-    for (const t of NAV_TABS) {
-      const l = layouts.current[t.name];
-      if (l && x >= l.x && x <= l.x + l.width) return t.name;
-    }
-    return null;
-  }, []);
-
-  const onDragMove = useCallback(
-    (x: number) => {
-      const hit = hitTest(x);
-      if (hit && hit !== dragNameRef.current) {
-        Haptics.selectionAsync().catch(() => {});
-        moveHighlightTo(hit);
-        setDrag(hit);
-      }
-    },
-    [hitTest, moveHighlightTo, setDrag],
-  );
-
-  const commitDrag = useCallback(() => {
-    const name = dragNameRef.current;
-    if (name && name !== activeName) {
-      navigation.navigate(name as never);
-    } else {
-      moveHighlightTo(activeName);
-    }
-    setDrag(null);
-  }, [activeName, navigation, moveHighlightTo, setDrag]);
-
-  // Horizontal drag = page dial. activeOffsetX lets vertical/short touches
-  // fall through to the per-item Pressables (plain taps still navigate).
-  const pan = Gesture.Pan()
-    .runOnJS(true)
-    .activeOffsetX([-10, 10])
-    .onBegin((e) => onDragMove(e.x))
-    .onUpdate((e) => onDragMove(e.x))
-    .onEnd(commitDrag)
-    .onFinalize(commitDrag);
-
-  const highlightStyle = useAnimatedStyle(() => ({
-    opacity: highlightReady.value,
-    width: highlightW.value,
-    transform: [{ translateX: highlightX.value }],
-  }));
-
   if (!isIOS) {
     // Android: overlay the contextual island above the stock bar when active.
     if (island) {
@@ -323,72 +229,53 @@ function LoupeTabBar(
     return <BottomTabBar {...props} />;
   }
 
-  const tap = (name: string) => {
-    Haptics.selectionAsync().catch(() => {});
-    if (name !== activeName) navigation.navigate(name as never);
-  };
-
-  // Split nav tabs around the center FAB: [Command, Vault] · FAB · [Search, Analytics].
-  const left = NAV_TABS.slice(0, 2);
-  const right = NAV_TABS.slice(2);
+  // The page dial: [Command, Vault] · Scan FAB · [Search, Analytics],
+  // rendered through the SHARED IslandDial so press-and-drag switching is
+  // identical on every island face (community included).
+  const dialItems: DialItem[] = [
+    ...NAV_TABS.slice(0, 2).map((t) => tabItem(t, p)),
+    {
+      key: "__scan__",
+      label: "Scan a card",
+      selectable: false,
+      width: 60,
+      render: () => <ScanFab palette={p} variant="ios" />,
+    },
+    ...NAV_TABS.slice(2).map((t) => tabItem(t, p)),
+  ];
 
   return (
     <LoupeFloatingIsland
       bottomInset={Math.max(insets.bottom, 10)}
       island={island}
       tabDial={
-        <GestureDetector gesture={pan}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                {
-                  position: "absolute",
-                  top: (60 - ITEM_H) / 2,
-                  height: ITEM_H,
-                  borderRadius: 999,
-                  backgroundColor: withAlpha(p.accent.mint, 0.16),
-                  borderWidth: StyleSheet.hairlineWidth,
-                  borderColor: withAlpha(p.accent.mint, 0.5),
-                },
-                highlightStyle,
-              ]}
-            />
-
-            {left.map((t) => (
-              <NavItem
-                key={t.name}
-                tab={t}
-                active={(dragName ?? activeName) === t.name}
-                palette={p}
-                onPress={() => tap(t.name)}
-                onLayout={(x, width) => {
-                  layouts.current[t.name] = { x, width };
-                  if (t.name === activeName && !dragName) moveHighlightTo(t.name, false);
-                }}
-              />
-            ))}
-
-            <ScanFab palette={p} variant="ios" />
-
-            {right.map((t) => (
-              <NavItem
-                key={t.name}
-                tab={t}
-                active={(dragName ?? activeName) === t.name}
-                palette={p}
-                onPress={() => tap(t.name)}
-                onLayout={(x, width) => {
-                  layouts.current[t.name] = { x, width };
-                  if (t.name === activeName && !dragName) moveHighlightTo(t.name, false);
-                }}
-              />
-            ))}
-          </View>
-        </GestureDetector>
+        <IslandDial
+          items={dialItems}
+          activeKey={NAV_TABS.some((t) => t.name === activeName) ? activeName : null}
+          onCommit={(key) => navigation.navigate(key as never)}
+        />
       }
     />
   );
+}
+
+/** One page tab as a dial item. */
+function tabItem(
+  t: (typeof NAV_TABS)[number],
+  p: ReturnType<typeof useThemedPalette>,
+): DialItem {
+  const { Icon } = t;
+  return {
+    key: t.name,
+    label: t.label,
+    render: (active: boolean) => (
+      <Icon
+        size={22}
+        color={active ? p.accent.mint : p.ink.dim}
+        strokeWidth={active ? 2.5 : 2}
+      />
+    ),
+  };
 }
 
 /**
@@ -432,38 +319,6 @@ function LoupeFloatingIsland({
         {Badge ? <Badge /> : null}
       </Animated.View>
     </View>
-  );
-}
-
-function NavItem({
-  tab,
-  active,
-  palette: p,
-  onPress,
-  onLayout,
-}: {
-  tab: { name: string; label: string; Icon: LucideIcon };
-  active: boolean;
-  palette: ReturnType<typeof useThemedPalette>;
-  onPress: () => void;
-  onLayout: (x: number, width: number) => void;
-}) {
-  const { Icon } = tab;
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      accessibilityLabel={tab.label}
-      onLayout={(e) => onLayout(e.nativeEvent.layout.x, e.nativeEvent.layout.width)}
-      style={{ width: ITEM_W, height: 60, alignItems: "center", justifyContent: "center" }}
-    >
-      <Icon
-        size={22}
-        color={active ? p.accent.mint : p.ink.dim}
-        strokeWidth={active ? 2.5 : 2}
-      />
-    </Pressable>
   );
 }
 
