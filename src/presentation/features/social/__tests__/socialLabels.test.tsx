@@ -161,3 +161,17 @@ describe("usernameError", () => {
     expect(usernameError("  ash  ")).toBeNull();
   });
 });
+
+describe("pluralize — the Settings profile card regression", () => {
+  it("agrees on a count of one", () => {
+    // "1 profile views" shipped and was visible on the Settings profile card.
+    expect(`${1} profile ${pluralize(1, "view")}`).toBe("1 profile view");
+    expect(`${1} ${pluralize(1, "follower")}`).toBe("1 follower");
+    expect(`${1} ${pluralize(1, "like")}`).toBe("1 like");
+  });
+
+  it("pluralizes zero and many", () => {
+    expect(`${0} profile ${pluralize(0, "view")}`).toBe("0 profile views");
+    expect(`${5} ${pluralize(5, "follower")}`).toBe("5 followers");
+  });
+});

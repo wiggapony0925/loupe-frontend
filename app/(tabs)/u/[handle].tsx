@@ -208,6 +208,10 @@ export default function CollectorProfileScreen() {
               ) : null}
             </View>
 
+            {/* Settings-language stat tiles — the same bordered figure cards
+                that head the Settings page, from the shared GroupedList. Bare
+                numbers floating in open space had nothing anchoring them to
+                the rest of the app. */}
             <ProfileStats
               cardCount={data.card_count}
               followerCount={data.follower_count}
@@ -279,7 +283,7 @@ export default function CollectorProfileScreen() {
                 {/* ONE collection headline — the shelves below carry their
                     own labels (PORTFOLIOS / SEALED / TOP SETS), so "your"
                     never repeats down the page. */}
-                <Text style={[styles.collectionTitle, { color: p.ink.default }]}>
+                <Text style={[styles.collectionTitle, { color: p.ink.dim }]}>
                   Collection
                 </Text>
                 {/* Cards + sealed combined — the vault's combined headline
@@ -515,7 +519,21 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  collectionTitle: { fontSize: 15, fontWeight: "800", letterSpacing: -0.3 },
+  /**
+   * Settings' section-label spec exactly (10 / 600 / uppercase / +3 tracking).
+   * A bespoke 15/800 heading here was a second, competing way of saying
+   * "new section" in an app that already had one.
+   *
+   * The shelf captions below stay 11/700 at normal tracking — larger but
+   * dimmer and untracked, so structure (tiny, wide) and content caption
+   * (normal) read as different tiers rather than as rival headings.
+   */
+  collectionTitle: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 3,
+    textTransform: "uppercase",
+  },
   collectionValue: {
     fontSize: 15,
     fontWeight: "800",

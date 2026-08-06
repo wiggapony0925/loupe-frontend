@@ -45,6 +45,8 @@ import {
 import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
 import { formatMoney, getCurrency } from "@/shared/currency";
 import { useCollectionsOverview } from "@/application/queries/collection/useCollectionsOverview";
+import { Row, Section, StatTile } from "@/presentation/components/GroupedList";
+import { pluralize } from "@/presentation/features/social/socialLabels";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { ProMembershipCard } from "@/presentation/features/pro";
@@ -262,7 +264,11 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
               </Text>
               <Text numberOfLines={1} className="mt-0.5 text-[11px] text-ink-dim">
                 {myStats
-                  ? `${myStats.follower_count.toLocaleString()} followers · ${myStats.view_count.toLocaleString()} profile views · ${myStats.like_count.toLocaleString()} likes`
+                  ? [
+                      `${myStats.follower_count.toLocaleString()} ${pluralize(myStats.follower_count, "follower")}`,
+                      `${myStats.view_count.toLocaleString()} profile ${pluralize(myStats.view_count, "view")}`,
+                      `${myStats.like_count.toLocaleString()} ${pluralize(myStats.like_count, "like")}`,
+                    ].join(" · ")
                   : (user?.email ?? "")}
               </Text>
             </View>
@@ -541,105 +547,10 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
 }
 
 /** Robinhood-style number tile: big value, whisper label, tap = shortcut. */
-function StatTile({
-  label,
-  value,
-  onPress,
-}: {
-  label: string;
-  value: string;
-  onPress?: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}: ${value}`}
-      style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.7 : 1 })}
-    >
-      <View className="rounded-2xl border border-line bg-bg-elevated px-3 py-3">
-        <Text numberOfLines={1} className="text-[18px] font-bold text-ink">
-          {value}
-        </Text>
-        <Text
-          numberOfLines={1}
-          className="mt-0.5 text-[10px] font-semibold uppercase tracking-[1.5px] text-ink-dim"
-        >
-          {label}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
 
 /* ─── Shared row primitives ──────────────────────────────────────────── */
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View>
-      <Text className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-        {title}
-      </Text>
-      <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
-        {children}
-      </View>
-    </View>
-  );
-}
 
-function Row({
-  icon: Icon,
-  iconTint,
-  label,
-  description,
-  trailing,
-  onPress,
-  isLast = false,
-}: {
-  icon: LucideIcon;
-  iconTint?: string;
-  label: string;
-  description?: string;
-  trailing?: React.ReactNode;
-  onPress?: () => void;
-  isLast?: boolean;
-}) {
-  const p = useThemedPalette();
-  const tint = iconTint ?? p.ink.muted;
-  const Body = (
-    <View
-      className={`flex-row items-center gap-3 px-4 py-3.5 ${isLast ? "" : "border-b border-line"}`}
-    >
-      <View
-        className="h-8 w-8 items-center justify-center rounded-lg"
-        style={{ backgroundColor: `${tint}18` }}
-      >
-        <Icon size={16} color={tint} />
-      </View>
-      <View className="flex-1">
-        <Text className="text-[14px] font-medium text-ink">{label}</Text>
-        {description ? (
-          <Text className="mt-0.5 text-[11px] text-ink-dim">{description}</Text>
-        ) : null}
-      </View>
-      {trailing}
-    </View>
-  );
-  if (onPress) {
-    return (
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-      >
-        {Body}
-      </Pressable>
-    );
-  }
-  return Body;
-}
 
 function ToggleRow(
   props: Omit<Parameters<typeof Row>[0], "trailing"> & {
