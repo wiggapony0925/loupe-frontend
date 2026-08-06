@@ -126,14 +126,17 @@ export default function CollectorProfileScreen() {
   const cardsValue = collection.data?.estimated_value_usd;
   const sealedValue = collection.data?.sealed_value_usd;
   const totalValue = collection.data?.total_value_usd ?? cardsValue;
-  const breakdown = [
-    cardsValue != null && data
-      ? `${formatStat(data.card_count)} ${pluralize(data.card_count, "card")} · ${money(cardsValue)}`
-      : null,
-    sealedValue != null && (collection.data?.sealed_count ?? 0) > 0
-      ? `${collection.data?.sealed_count} sealed · ${money(sealedValue)}`
-      : null,
-  ].filter(Boolean);
+  // Only break the total down when sealed actually contributes — otherwise
+  // the line would just repeat the headline with extra words.
+  const hasSealedValue =
+    sealedValue != null && (collection.data?.sealed_count ?? 0) > 0;
+  const breakdown =
+    hasSealedValue && cardsValue != null && data
+      ? [
+          `${formatStat(data.card_count)} ${pluralize(data.card_count, "card")} · ${money(cardsValue)}`,
+          `${collection.data?.sealed_count} sealed · ${money(sealedValue)}`,
+        ]
+      : [];
 
   return (
     <View style={[styles.root, { backgroundColor: p.bg.base }]}>
@@ -309,7 +312,7 @@ export default function CollectorProfileScreen() {
                         ? "Remove your like"
                         : "Like this collection"
                     }
-                    style={({ pressed }) => [
+                    style={[
                       styles.heart,
                       {
                         borderColor: data.viewer_has_liked
@@ -318,7 +321,6 @@ export default function CollectorProfileScreen() {
                         backgroundColor: data.viewer_has_liked
                           ? withAlpha(p.accent.rose, 0.1)
                           : withAlpha(p.ink.default, 0.04),
-                        opacity: pressed ? 0.7 : 1,
                       },
                     ]}
                   >
@@ -485,7 +487,7 @@ function ActionButton({
       disabled={busy}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [
+      style={[
         styles.action,
         primary
           ? { backgroundColor: p.accent.mint }
@@ -494,7 +496,7 @@ function ActionButton({
               borderColor: p.line.default,
               backgroundColor: withAlpha(p.ink.default, 0.04),
             },
-        { opacity: busy ? 0.6 : pressed ? 0.85 : 1 },
+        busy ? { opacity: 0.6 } : null,
       ]}
     >
       {busy ? (

@@ -270,12 +270,11 @@ export default function CommunityScreen() {
                       onPress={() => router.push("/stores")}
                       accessibilityRole="button"
                       accessibilityLabel="Card shops near you. Opens the map."
-                      style={({ pressed }) => [
+                      style={[
                         styles.mapRow,
                         {
                           borderColor: p.line.default,
                           backgroundColor: p.bg.elevated,
-                          opacity: pressed ? 0.75 : 1,
                         },
                       ]}
                     >

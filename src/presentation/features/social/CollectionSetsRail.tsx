@@ -71,10 +71,9 @@ function Shelf({ label, tiles }: { label: string; tiles: ShelfTile[] }) {
               disabled={!t.onPress}
               accessibilityRole={t.onPress ? "button" : undefined}
               accessibilityLabel={t.onPress ? `${t.name}. Open card list.` : undefined}
-              style={({ pressed }) => [
+              style={[
                 styles.tile,
                 { borderColor: p.line.default, backgroundColor: p.bg.elevated },
-                pressed ? { opacity: 0.7 } : null,
               ]}
             >
               <View

@@ -94,13 +94,7 @@ export function PortfolioSheet({
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel="Close"
-              style={({ pressed }) => [
-                styles.close,
-                {
-                  backgroundColor: p.bg.elevated,
-                  opacity: pressed ? 0.6 : 1,
-                },
-              ]}
+              style={[styles.close, { backgroundColor: p.bg.elevated }]}
             >
               <X size={16} color={p.ink.dim} />
             </Pressable>
