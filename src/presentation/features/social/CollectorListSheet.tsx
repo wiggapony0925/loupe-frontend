@@ -15,20 +15,19 @@
 import React from "react";
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useFollowCollector } from "@/application/queries/social/useSocial";
 import type { SocialUserCardWire } from "@/infrastructure/http";
+import { BottomSheet } from "@/presentation/components/BottomSheet";
 import { CollectorRow } from "@/presentation/features/social/CollectorRow";
-import { radius, spacing, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
 export interface CollectorListSheetProps {
@@ -66,27 +65,8 @@ export function CollectorListSheet({
   };
 
   return (
-    <Modal
-      visible={visible}
-      onRequestClose={onClose}
-      animationType="slide"
-      presentationStyle="overFullScreen"
-      transparent
-    >
-      <View style={styles.backdrop}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <SafeAreaView
-          edges={["bottom"]}
-          style={[styles.sheet, { backgroundColor: p.bg.base }]}
-        >
-          <View style={styles.handleRow}>
-            <View
-              style={[styles.handle, { backgroundColor: withAlpha(p.ink.dim, 0.3) }]}
-            />
-          </View>
-          <Text style={[styles.title, { color: p.ink.default }]}>{title}</Text>
-
-          {loading ? (
+    <BottomSheet visible={visible} onClose={onClose} title={title}>
+      {loading ? (
             <View style={styles.center}>
               <ActivityIndicator color={p.ink.dim} />
             </View>
@@ -142,39 +122,13 @@ export function CollectorListSheet({
                   </View>
                 );
               })}
-            </ScrollView>
-          )}
-        </SafeAreaView>
-      </View>
-    </Modal>
+        </ScrollView>
+      )}
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.55)",
-  },
-  sheet: {
-    maxHeight: "72%",
-    minHeight: "38%",
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-  },
-  handleRow: {
-    alignItems: "center",
-    paddingTop: spacing.sm + 2,
-    paddingBottom: spacing.xs,
-  },
-  handle: { width: 40, height: 4, borderRadius: 2 },
-  title: {
-    fontSize: 17,
-    fontWeight: "800",
-    letterSpacing: -0.2,
-    textAlign: "center",
-    paddingBottom: spacing.sm,
-  },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   empty: { fontSize: 13, textAlign: "center" },
   list: { paddingHorizontal: 16, paddingBottom: 16 },

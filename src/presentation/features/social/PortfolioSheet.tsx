@@ -9,17 +9,14 @@ import React from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { X } from "lucide-react-native";
 import { useCollectorPortfolio } from "@/application/queries/social/useSocial";
+import { BottomSheet } from "@/presentation/components/BottomSheet";
 import type { SocialCollectionItemWire } from "@/infrastructure/http";
 import { CardSparkRow } from "@/presentation/cards";
 import { useThemedPalette } from "@/presentation/theme/tokens";
@@ -61,46 +58,13 @@ export function PortfolioSheet({
     : "";
 
   return (
-    <Modal
+    <BottomSheet
       visible={collectionId != null}
-      onRequestClose={onClose}
-      animationType="slide"
-      presentationStyle="overFullScreen"
-      transparent
+      onClose={onClose}
+      title={binder?.name ?? "Collection"}
+      subtitle={sub || null}
     >
-      <View style={styles.backdrop}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <SafeAreaView
-          edges={["bottom"]}
-          style={[styles.sheet, { backgroundColor: p.bg.base }]}
-        >
-          <View style={[styles.grabber, { backgroundColor: p.line.default }]} />
-          <View style={styles.header}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text
-                numberOfLines={1}
-                style={[styles.title, { color: p.ink.default }]}
-              >
-                {binder?.name ?? "Collection"}
-              </Text>
-              {sub ? (
-                <Text numberOfLines={1} style={[styles.sub, { color: p.ink.dim }]}>
-                  {sub}
-                </Text>
-              ) : null}
-            </View>
-            <Pressable
-              onPress={onClose}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-              style={[styles.close, { backgroundColor: p.bg.elevated }]}
-            >
-              <X size={16} color={p.ink.dim} />
-            </Pressable>
-          </View>
-
-          {q.isLoading ? (
+      {q.isLoading ? (
             <View style={styles.center}>
               <ActivityIndicator color={p.accent.mint} />
             </View>
@@ -145,46 +109,13 @@ export function PortfolioSheet({
                   />
                 );
               }}
-            />
-          )}
-        </SafeAreaView>
-      </View>
-    </Modal>
+        />
+      )}
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)" },
-  sheet: {
-    maxHeight: "78%",
-    minHeight: "45%",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 8,
-  },
-  grabber: {
-    alignSelf: "center",
-    width: 40,
-    height: 5,
-    borderRadius: 3,
-    marginBottom: 10,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-  },
-  title: { fontSize: 18, fontWeight: "800", letterSpacing: -0.3 },
-  sub: { fontSize: 12, marginTop: 2 },
-  close: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   center: { paddingVertical: 48, alignItems: "center" },
   empty: { textAlign: "center", paddingVertical: 40, fontSize: 13 },
 });
