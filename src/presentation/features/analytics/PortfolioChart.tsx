@@ -744,7 +744,7 @@ export function PortfolioChart({
       {/* Backend-computed chart intelligence: attribution, best/worst
           day, range band, in-range acquisitions. Hidden while scrubbing so
           the finger owns the surface. */}
-      {scrub === null ? <ChartInsights series={data} /> : null}
+      {scrub === null ? <ChartInsights series={data} bleedX={bleedX} /> : null}
 
       <CurrencyPickerSheet
         visible={pickerOpen}
