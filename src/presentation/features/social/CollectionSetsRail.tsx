@@ -54,6 +54,9 @@ function Shelf({ label, tiles }: { label: string; tiles: ShelfTile[] }) {
           const tint = t.tint || p.accent.mint;
           const Icon = t.icon === "folder" ? FolderKanban : Layers;
           return (
+            // Mini spark-row anatomy (art left, text right) — the house
+            // pattern for card rows. The cover keeps the card's OWN 5:7
+            // portrait shape, full art, never a landscape crop.
             <View
               key={t.key}
               style={[
@@ -61,25 +64,21 @@ function Shelf({ label, tiles }: { label: string; tiles: ShelfTile[] }) {
                 { borderColor: p.line.default, backgroundColor: p.bg.elevated },
               ]}
             >
-              {t.cover ? (
-                <Image
-                  source={{ uri: t.cover }}
-                  style={styles.cover}
-                  contentFit="cover"
-                  transition={120}
-                  accessibilityIgnoresInvertColors
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.cover,
-                    styles.coverFallback,
-                    { backgroundColor: withAlpha(tint, 0.12) },
-                  ]}
-                >
-                  <Icon size={20} color={tint} strokeWidth={2.2} />
-                </View>
-              )}
+              <View
+                style={[styles.art, { backgroundColor: withAlpha(tint, 0.1) }]}
+              >
+                {t.cover ? (
+                  <Image
+                    source={{ uri: t.cover }}
+                    style={styles.artImage}
+                    contentFit="cover"
+                    transition={120}
+                    accessibilityIgnoresInvertColors
+                  />
+                ) : (
+                  <Icon size={18} color={tint} strokeWidth={2.2} />
+                )}
+              </View>
               <View style={styles.meta}>
                 <Text
                   numberOfLines={1}
@@ -173,14 +172,26 @@ const styles = StyleSheet.create({
   bleed: { marginHorizontal: -PAGE_PADDING },
   rail: { paddingHorizontal: PAGE_PADDING, gap: 10, paddingVertical: 2 },
   tile: {
-    width: 132,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    width: 186,
     borderWidth: 1,
     borderRadius: 16,
-    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 9,
   },
-  cover: { width: "100%", height: 92 },
-  coverFallback: { alignItems: "center", justifyContent: "center" },
-  meta: { paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
+  // True 5:7 portrait — the card's own shape, full art, no crop.
+  art: {
+    width: 40,
+    height: 56,
+    borderRadius: 7,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  artImage: { width: "100%", height: "100%" },
+  meta: { flex: 1, gap: 2, minWidth: 0 },
   name: { fontSize: 12.5, fontWeight: "700", letterSpacing: -0.2 },
   sub: { fontSize: 11 },
 });
