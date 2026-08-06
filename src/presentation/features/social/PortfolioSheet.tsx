@@ -7,7 +7,6 @@
  */
 import React from "react";
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -19,7 +18,7 @@ import { useCollectorPortfolio } from "@/application/queries/social/useSocial";
 import { BottomSheet } from "@/presentation/components/BottomSheet";
 import type { SocialCollectionItemWire } from "@/infrastructure/http";
 import { CardSparkRow } from "@/presentation/cards";
-import { useThemedPalette } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
 function money(v: string | null): string | null {
@@ -63,12 +62,36 @@ export function PortfolioSheet({
       onClose={onClose}
       title={binder?.name ?? "Collection"}
       subtitle={sub || null}
+      overlay
+      minHeight="45%"
+      maxHeight="78%"
     >
       {q.isLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator color={p.accent.mint} />
+        // Card-row skeletons in the vault row's own shape.
+        <View style={styles.skeletons}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.skeletonRow}>
+              <View
+                style={[styles.skeletonThumb, { backgroundColor: withAlpha(p.ink.dim, 0.12) }]}
+              />
+              <View style={{ flex: 1, gap: 7 }}>
+                <View
+                  style={[
+                    styles.skeletonBar,
+                    { width: "55%", backgroundColor: withAlpha(p.ink.dim, 0.12) },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.skeletonBar,
+                    { width: "32%", backgroundColor: withAlpha(p.ink.dim, 0.08) },
+                  ]}
+                />
+              </View>
             </View>
-          ) : (
+          ))}
+        </View>
+      ) : (
             <FlatList
               data={binder?.items ?? []}
               keyExtractor={(item) => item.id}
@@ -118,4 +141,13 @@ export function PortfolioSheet({
 const styles = StyleSheet.create({
   center: { paddingVertical: 48, alignItems: "center" },
   empty: { textAlign: "center", paddingVertical: 40, fontSize: 13 },
+  skeletons: { gap: 4, paddingTop: 6 },
+  skeletonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 9,
+  },
+  skeletonThumb: { width: 42, height: 58, borderRadius: 8 },
+  skeletonBar: { height: 10, borderRadius: 5 },
 });

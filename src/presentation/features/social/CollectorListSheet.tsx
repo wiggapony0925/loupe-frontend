@@ -14,7 +14,6 @@
  */
 import React from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,6 +21,7 @@ import {
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
+import { Users } from "lucide-react-native";
 import { router } from "expo-router";
 import { useFollowCollector } from "@/application/queries/social/useSocial";
 import type { SocialUserCardWire } from "@/infrastructure/http";
@@ -65,16 +65,49 @@ export function CollectorListSheet({
   };
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title={title}>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={title}
+      subtitle={rows ? `${rows.length} ${rows.length === 1 ? "person" : "people"}` : null}
+      // The popover this always was: floats over the profile, never a
+      // full page-sheet takeover.
+      overlay
+      minHeight="45%"
+      maxHeight="78%"
+    >
       {loading ? (
-            <View style={styles.center}>
-              <ActivityIndicator color={p.ink.dim} />
+        // Skeleton rows, not a spinner — the sheet keeps its shape while
+        // the list arrives, so nothing jumps when it lands.
+        <View style={styles.skeletons}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.skeletonRow}>
+              <View
+                style={[styles.skeletonAvatar, { backgroundColor: withAlpha(p.ink.dim, 0.12) }]}
+              />
+              <View style={{ flex: 1, gap: 7 }}>
+                <View
+                  style={[
+                    styles.skeletonBar,
+                    { width: "45%", backgroundColor: withAlpha(p.ink.dim, 0.12) },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.skeletonBar,
+                    { width: "28%", backgroundColor: withAlpha(p.ink.dim, 0.08) },
+                  ]}
+                />
+              </View>
             </View>
-          ) : !rows || rows.length === 0 ? (
-            <View style={styles.center}>
-              <Text style={[styles.empty, { color: p.ink.muted }]}>{emptyText}</Text>
-            </View>
-          ) : (
+          ))}
+        </View>
+      ) : !rows || rows.length === 0 ? (
+        <View style={styles.center}>
+          <Users size={22} color={p.ink.dim} strokeWidth={2} />
+          <Text style={[styles.empty, { color: p.ink.muted }]}>{emptyText}</Text>
+        </View>
+      ) : (
             <ScrollView contentContainerStyle={styles.list}>
               {rows.map((user) => {
                 const note = noteFor?.(user) ?? null;
@@ -129,6 +162,15 @@ export function CollectorListSheet({
 }
 
 const styles = StyleSheet.create({
+  skeletons: { gap: 4, paddingTop: 6 },
+  skeletonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+  },
+  skeletonAvatar: { width: 44, height: 44, borderRadius: 22 },
+  skeletonBar: { height: 10, borderRadius: 5 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   empty: { fontSize: 13, textAlign: "center" },
   list: { paddingHorizontal: 16, paddingBottom: 16 },

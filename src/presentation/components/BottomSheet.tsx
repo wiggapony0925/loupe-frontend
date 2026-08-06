@@ -35,6 +35,14 @@ interface BottomSheetProps {
    * Use for short confirms (remove card) so the sheet isn't mostly empty.
    */
   compact?: boolean;
+  /**
+   * Present as the partial-height bottom overlay on iOS too (backdrop +
+   * rounded sheet), instead of the full native page sheet. For popovers
+   * designed to float over their page (followers list, binder drill-in).
+   */
+  overlay?: boolean;
+  /** Overlay-only: keep the sheet at least this tall (e.g. "45%"). */
+  minHeight?: ViewStyle["minHeight"];
   children: React.ReactNode;
 }
 
@@ -48,11 +56,14 @@ export function BottomSheet({
   maxHeight = "82%",
   closeDisabled = false,
   compact = false,
+  overlay = false,
+  minHeight,
   children,
 }: BottomSheetProps) {
   const p = useThemedPalette();
-  // Compact confirms always present as a bottom overlay so height hugs content.
-  const sheetFromBottom = Platform.OS !== "ios" || compact;
+  // Compact confirms and overlay popovers present from the bottom; only
+  // full-page sheets use the native iOS pageSheet.
+  const sheetFromBottom = Platform.OS !== "ios" || compact || overlay;
 
   return (
     <Modal
@@ -81,6 +92,7 @@ export function BottomSheet({
           style={{
             flex: sheetFromBottom ? undefined : 1,
             maxHeight: sheetFromBottom ? maxHeight : undefined,
+            minHeight: sheetFromBottom && !compact ? minHeight : undefined,
             paddingHorizontal: spacing.xl,
             paddingBottom: spacing.xl,
             backgroundColor: p.bg.base,
