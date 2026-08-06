@@ -46,7 +46,10 @@ function Shelf({ label, tiles }: { label: string; tiles: ShelfTile[] }) {
   if (tiles.length === 0) return null;
   return (
     <View style={styles.shelf}>
-      <Text style={[styles.label, { color: p.ink.muted }]}>{label}</Text>
+      {/* ink.dim, not ink.muted: these are CHILDREN of the page's Collection
+          heading. At muted they matched it in weight and the hierarchy read
+          flat — three headings all shouting at the same volume. */}
+      <Text style={[styles.label, { color: p.ink.dim }]}>{label}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -210,7 +213,7 @@ export function CollectionSetsRail({
 }
 
 const styles = StyleSheet.create({
-  shelf: { gap: 6 },
+  shelf: { gap: 10 },
   label: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   bleed: { marginHorizontal: -PAGE_PADDING },
   rail: { paddingHorizontal: PAGE_PADDING, gap: 10, paddingVertical: 2 },

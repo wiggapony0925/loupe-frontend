@@ -273,12 +273,14 @@ export default function CollectorProfileScreen() {
             </View>
 
             <View style={styles.collection}>
-              <View style={styles.collectionHead}>
+              <View
+                style={[styles.collectionHead, { borderBottomColor: p.line.default }]}
+              >
                 {/* ONE collection headline — the shelves below carry their
                     own labels (PORTFOLIOS / SEALED / TOP SETS), so "your"
                     never repeats down the page. */}
-                <Text style={[styles.sectionTitle, { color: p.ink.muted }]}>
-                  COLLECTION
+                <Text style={[styles.collectionTitle, { color: p.ink.default }]}>
+                  Collection
                 </Text>
                 {/* Cards + sealed combined — the vault's combined headline
                     basis. Falls back to cards-only from older payloads. */}
@@ -328,7 +330,17 @@ export default function CollectorProfileScreen() {
                     sets={collection.data?.sets ?? []}
                     totalSets={collection.data?.total_sets}
                   />
-                  <CollectionGrid items={collection.data?.items ?? []} />
+                  {/* Labelled: after three captioned shelves an unlabelled
+                      grid of ~100 cards read as the page having lost its
+                      structure and started dumping. */}
+                  {(collection.data?.items?.length ?? 0) > 0 ? (
+                    <View style={styles.shelf}>
+                      <Text style={[styles.sectionTitle, { color: p.ink.dim }]}>
+                        {`ALL CARDS · ${collection.data?.total_cards ?? collection.data?.items?.length ?? 0}`}
+                      </Text>
+                      <CollectionGrid items={collection.data?.items ?? []} />
+                    </View>
+                  ) : null}
                 </>
               )}
             </View>
@@ -484,19 +496,34 @@ const styles = StyleSheet.create({
     borderRadius: 13,
   },
   actionText: { fontSize: 14.5, fontWeight: "700" },
-  collection: { gap: 10, marginTop: 4 },
+  // Shelves need room between them or PORTFOLIOS / SEALED / TOP SETS run
+  // together into one undifferentiated stack of tiny grey captions.
+  collection: { gap: 22, marginTop: 8 },
+  /**
+   * The section anchor.
+   *
+   * COLLECTION and the shelf labels below it used to share one treatment
+   * (11px / 700 / +1 tracking), so a section header and its own children read
+   * as siblings and the page had no hierarchy at all. This is now a real
+   * heading — larger, full-strength ink, on a hairline rule — and the shelf
+   * labels stay small and dim underneath it.
+   */
   collectionHead: {
     flexDirection: "row",
     alignItems: "baseline",
     justifyContent: "space-between",
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  collectionTitle: { fontSize: 15, fontWeight: "800", letterSpacing: -0.3 },
   collectionValue: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "800",
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
     fontVariant: ["tabular-nums"],
   },
   sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
+  shelf: { gap: 10 },
   gate: {
     borderWidth: 1,
     borderRadius: 16,
