@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import * as Updates from "expo-updates";
+import * as Haptics from "expo-haptics";
 import {
   Bell,
   Bluetooth,
@@ -151,6 +152,7 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   const { currency } = useDisplayCurrency();
   const version = Constants.expoConfig?.version ?? "0.1.0";
   const [copied, setCopied] = useState(false);
+  const [proOpen, setProOpen] = useState(false);
   const [signingOutAll, setSigningOutAll] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -166,6 +168,16 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
       copyTimer.current = setTimeout(() => setCopied(false), 1600);
     } catch {
       Alert.alert("Account ID", id);
+    }
+  };
+
+  const doSignOutEverywhere = async () => {
+    setSigningOutAll(true);
+    try {
+      await signOutEverywhere();
+      router.replace("/");
+    } finally {
+      setSigningOutAll(false);
     }
   };
 
@@ -270,9 +282,40 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         </View>
       </View>
 
-      {/* Loupe Pro membership — upgrade CTA for free users, billing for Pro.
-          Renders nothing while subscriptions are switched off. */}
-      <ProMembershipCard />
+      {/* Loupe Pro membership — collapsed to one row; expand to see the
+          full card. (The card renders nothing while subscriptions are off,
+          so the expanded state degrades to just the row.) */}
+      <View className="mt-4 px-5">
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            setProOpen((v) => !v);
+          }}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: proOpen }}
+          accessibilityLabel="Loupe Pro membership"
+          className="flex-row items-center gap-3 py-2"
+        >
+          <View
+            className="h-8 w-8 items-center justify-center rounded-lg"
+            style={{ backgroundColor: `${p.accent.amber}18` }}
+          >
+            <Crown size={16} color={p.accent.amber} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-[14px] font-medium text-ink">Loupe Pro</Text>
+            <Text className="mt-0.5 text-[11px] text-ink-dim">
+              Membership, billing, and benefits
+            </Text>
+          </View>
+          <ChevronRight
+            size={16}
+            color={p.ink.dim}
+            style={{ transform: [{ rotate: proOpen ? "90deg" : "0deg" }] }}
+          />
+        </Pressable>
+        {proOpen ? <ProMembershipCard /> : null}
+      </View>
 
       {/* Grouped menu — same Section/Row language as the sub-pages. */}
       <View className="mt-5 px-5" style={{ gap: 30 }}>
@@ -463,10 +506,20 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
       <View className="mt-7 px-5">
         <Pressable
           onPress={() => {
-            // Tap = do it (house style: no confirm popups). Logging out is
-            // fully reversible — sign back in and the vault is untouched.
-            signOut();
-            router.replace("/");
+            // The ONE deliberate exception to tap-= -do-it: the user asked
+            // for a guard here. Logging out is reversible, but accidental
+            // sign-outs on a shared couch are annoying enough to confirm.
+            Alert.alert("Log out?", "You can sign back in anytime.", [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Log out",
+                style: "destructive",
+                onPress: () => {
+                  signOut();
+                  router.replace("/");
+                },
+              },
+            ]);
           }}
           accessibilityRole="button"
           accessibilityLabel="Log out"
@@ -491,12 +544,19 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         {/* Secondary: revoke every device/session (kill switch for a lost
             device or stolen token). Subtle text link under the main pill. */}
         <Pressable
-          onPress={async () => {
-            // Immediate (house style) — revokes every session; recovering is
-            // just signing back in, so no confirm dialog.
-            setSigningOutAll(true);
-            await signOutEverywhere();
-            router.replace("/");
+          onPress={() => {
+            Alert.alert(
+              "Sign out everywhere?",
+              "Every device gets signed out, including this one.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Sign out everywhere",
+                  style: "destructive",
+                  onPress: () => void doSignOutEverywhere(),
+                },
+              ],
+            );
           }}
           disabled={signingOutAll}
           hitSlop={8}

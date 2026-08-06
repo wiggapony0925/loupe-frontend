@@ -49,6 +49,9 @@ export default function CommunitySettingsScreen() {
   const [location, setLocation] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Freshly picked photo, shown instantly while (and after) it uploads.
+  const [pickedUri, setPickedUri] = useState<string | null>(null);
+  const [photoSaved, setPhotoSaved] = useState(false);
   const [armedLeave, setArmedLeave] = useState(false);
   const [seeded, setSeeded] = useState(false);
 
@@ -68,13 +71,6 @@ export default function CommunitySettingsScreen() {
   const upload = useUploadAvatar();
   const deactivate = useDeactivateCommunity();
   const busy = save.isPending || deactivate.isPending;
-
-  const dirty =
-    seeded &&
-    (username.trim() !== (profile?.username ?? "") ||
-      bio.trim() !== (profile?.bio ?? "") ||
-      location.trim() !== (profile?.location ?? "") ||
-      isPrivate !== (profile?.is_private ?? false));
 
   const pickAvatar = async () => {
     Haptics.selectionAsync().catch(() => {});
@@ -97,6 +93,10 @@ export default function CommunitySettingsScreen() {
       });
       const asset = result.assets?.[0];
       if (result.canceled || !asset?.uri) return;
+      // Show the picked photo IMMEDIATELY — waiting for the round trip made
+      // a successful change look like nothing happened.
+      setPickedUri(asset.uri);
+      setPhotoSaved(false);
       upload.mutate(
         { uri: asset.uri, mimeType: asset.mimeType ?? "image/jpeg" },
         {
@@ -105,9 +105,12 @@ export default function CommunitySettingsScreen() {
               Haptics.NotificationFeedbackType.Success,
             ).catch(() => {});
             setError(null);
+            setPhotoSaved(true);
           },
-          onError: (e) =>
-            setError(`Couldn't upload the photo: ${e.message}. Try again.`),
+          onError: (e) => {
+            setPickedUri(null);
+            setError(`Couldn't upload the photo: ${e.message}. Try again.`);
+          },
         },
       );
     } catch (e) {
@@ -203,7 +206,7 @@ export default function CommunitySettingsScreen() {
             >
               <SocialAvatar
                 handle={profile?.username ?? (username || "?")}
-                url={profile?.avatar_url}
+                url={pickedUri ?? profile?.avatar_url}
                 size={48}
               />
             </View>
@@ -231,6 +234,21 @@ export default function CommunitySettingsScreen() {
             ) : null}
           </Pressable>
         </View>
+
+        {/* The photo saves itself the moment it's picked — say so, or a
+            successful change looks like nothing happened. */}
+        {photoSaved ? (
+          <Text
+            className="px-5 pb-2 text-[12px] font-semibold"
+            style={{ color: p.accent.mint }}
+          >
+            Photo updated — it may take a minute to show everywhere.
+          </Text>
+        ) : upload.isPending ? (
+          <Text className="px-5 pb-2 text-[12px] text-ink-dim">
+            Uploading photo…
+          </Text>
+        ) : null}
 
         {me.isLoading && !seeded ? (
           <View className="items-center py-16">
@@ -318,12 +336,12 @@ export default function CommunitySettingsScreen() {
             <View className="px-5 pt-5">
               <Pressable
                 onPress={onSave}
-                disabled={busy || (!dirty && !!profile)}
+                disabled={busy}
                 accessibilityRole="button"
                 className="h-12 items-center justify-center rounded-full"
                 style={{
                   backgroundColor: p.accent.mint,
-                  opacity: busy ? 0.6 : !dirty && profile ? 0.35 : 1,
+                  opacity: busy ? 0.6 : 1,
                 }}
               >
                 {save.isPending ? (

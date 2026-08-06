@@ -66,7 +66,7 @@ export default function StoresScreen() {
   const location = useUserLocation();
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const effectiveCenter = center ?? location.coords;
-  const stores = useNearbyStores(effectiveCenter);
+  const stores = useNearbyStores(effectiveCenter, 15);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const mapRef = useRef<InstanceType<MapsModule["default"]> | null>(null);
   const listRef = useRef<FlatList<NearbyStoreWire>>(null);
@@ -203,7 +203,12 @@ export default function StoresScreen() {
               Card shops near you
             </Text>
             {stores.isFetching ? (
-              <ActivityIndicator size="small" color={p.ink.dim} />
+              <View style={styles.scanning}>
+                <ActivityIndicator size="small" color={p.ink.dim} />
+                <Text style={[styles.scanningText, { color: p.ink.dim }]}>
+                  {stores.data ? "Updating" : "Scanning area"}
+                </Text>
+              </View>
             ) : null}
           </View>
           <View style={{ width: 38 }} />
@@ -212,7 +217,26 @@ export default function StoresScreen() {
 
       {/* Bottom rail — the shops as swipeable cards, synced with the pins. */}
       <SafeAreaView edges={["bottom"]} pointerEvents="box-none" style={styles.bottom}>
-        {rows.length === 0 && !stores.isLoading ? (
+        {stores.isLoading ? (
+          <View style={{ flexDirection: "row", gap: 12, paddingHorizontal: PAGE_PADDING }}>
+            {[0, 1].map((i) => (
+              <View
+                key={i}
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: p.bg.elevated,
+                    borderColor: p.line.default,
+                    minHeight: 140,
+                    justifyContent: "center",
+                  },
+                ]}
+              >
+                <ActivityIndicator color={withAlpha(p.accent.mint, 0.6)} />
+              </View>
+            ))}
+          </View>
+        ) : rows.length === 0 ? (
           <View
             style={[
               styles.emptyCard,
@@ -262,7 +286,12 @@ export default function StoresScreen() {
   );
 }
 
-/** One shop as a swipeable bottom card. */
+/**
+ * One shop as a swipeable bottom card — Resy's venue-card anatomy, in
+ * Loupe's clothes: category · distance eyebrow, the venue name BIG, an
+ * address/hours line, and a row of solid action pills where Resy puts its
+ * time slots.
+ */
 function StoreCard({
   store,
   selected,
@@ -274,11 +303,15 @@ function StoreCard({
 }) {
   const p = useThemedPalette();
   const isCore = store.category === "Card & game store";
+  const distance =
+    store.distance_km < 1
+      ? `${Math.round(store.distance_km * 1000)} m`
+      : `${store.distance_km.toFixed(1)} km`;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${store.name}, ${store.category}, ${store.distance_km} kilometers away`}
+      accessibilityLabel={`${store.name}, ${store.category}, ${distance} away`}
       style={[
         styles.card,
         {
@@ -287,59 +320,40 @@ function StoreCard({
         },
       ]}
     >
-      <View style={styles.cardHead}>
-        <Text numberOfLines={1} style={[styles.cardName, { color: p.ink.default }]}>
-          {store.name}
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.cardEyebrow,
+          { color: isCore ? p.accent.mint : p.ink.muted },
+        ]}
+      >
+        {store.category.toUpperCase()} · {distance.toUpperCase()}
+      </Text>
+      <Text numberOfLines={1} style={[styles.cardName, { color: p.ink.default }]}>
+        {store.name}
+      </Text>
+      {store.address || store.opening_hours ? (
+        <Text numberOfLines={1} style={[styles.cardAddress, { color: p.ink.dim }]}>
+          {[store.address, store.opening_hours].filter(Boolean).join(" · ")}
         </Text>
-        <Text style={[styles.cardDistance, { color: p.ink.dim }]}>
-          {store.distance_km < 1
-            ? `${Math.round(store.distance_km * 1000)} m`
-            : `${store.distance_km.toFixed(1)} km`}
-        </Text>
-      </View>
-      <View style={styles.cardMetaRow}>
-        <View
-          style={[
-            styles.chip,
-            {
-              backgroundColor: withAlpha(isCore ? p.accent.mint : p.ink.dim, 0.14),
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.chipText,
-              { color: isCore ? p.accent.mint : p.ink.muted },
-            ]}
-          >
-            {store.category}
-          </Text>
-        </View>
-        {store.address ? (
-          <Text
-            numberOfLines={1}
-            style={[styles.cardAddress, { color: p.ink.dim }]}
-          >
-            {store.address}
-          </Text>
-        ) : null}
-      </View>
+      ) : null}
       <View style={styles.cardActions}>
-        <ActionChip
-          icon={<Navigation size={13} color={p.accent.mint} strokeWidth={2.4} />}
+        <SlotPill
+          primary
+          icon={<Navigation size={13} color="#06140d" strokeWidth={2.6} />}
           label="Directions"
           onPress={() => void Linking.openURL(directionsUrl(store))}
         />
         {store.website ? (
-          <ActionChip
-            icon={<Globe size={13} color={p.accent.blue} strokeWidth={2.4} />}
+          <SlotPill
+            icon={<Globe size={13} color={p.ink.default} strokeWidth={2.4} />}
             label="Website"
             onPress={() => void Linking.openURL(store.website as string)}
           />
         ) : null}
         {store.phone ? (
-          <ActionChip
-            icon={<Phone size={13} color={p.ink.muted} strokeWidth={2.4} />}
+          <SlotPill
+            icon={<Phone size={13} color={p.ink.default} strokeWidth={2.4} />}
             label="Call"
             onPress={() =>
               void Linking.openURL(`tel:${(store.phone as string).replace(/\s/g, "")}`)
@@ -351,14 +365,16 @@ function StoreCard({
   );
 }
 
-function ActionChip({
+function SlotPill({
   icon,
   label,
   onPress,
+  primary = false,
 }: {
   icon: React.ReactNode;
   label: string;
   onPress: () => void;
+  primary?: boolean;
 }) {
   const p = useThemedPalette();
   return (
@@ -366,17 +382,22 @@ function ActionChip({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [
+      style={[
         styles.action,
-        {
-          borderColor: p.line.default,
-          backgroundColor: p.bg.base,
-          opacity: pressed ? 0.6 : 1,
-        },
+        primary
+          ? { backgroundColor: p.accent.mint }
+          : { backgroundColor: withAlpha(p.ink.default, 0.07) },
       ]}
     >
       {icon}
-      <Text style={[styles.actionText, { color: p.ink.default }]}>{label}</Text>
+      <Text
+        style={[
+          styles.actionText,
+          { color: primary ? "#06140d" : p.ink.default },
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -455,38 +476,26 @@ const styles = StyleSheet.create({
   bottom: { position: "absolute", left: 0, right: 0, bottom: 10 },
   card: {
     width: CARD_WIDTH,
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1.5,
-    padding: 14,
-    gap: 8,
+    padding: 16,
+    gap: 5,
   },
-  cardHead: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  cardName: { flex: 1, fontSize: 15.5, fontWeight: "800", letterSpacing: -0.3 },
-  cardDistance: { fontSize: 12, fontWeight: "700" },
-  cardMetaRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  chip: {
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-  },
-  chipText: { fontSize: 10.5, fontWeight: "800", letterSpacing: 0.3 },
-  cardAddress: { flex: 1, fontSize: 11.5 },
-  cardActions: { flexDirection: "row", gap: 8 },
+  cardEyebrow: { fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
+  cardName: { fontSize: 19, fontWeight: "800", letterSpacing: -0.5 },
+  cardAddress: { fontSize: 12 },
+  cardActions: { flexDirection: "row", gap: 8, marginTop: 8 },
   action: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  actionText: { fontSize: 12, fontWeight: "700" },
+  actionText: { fontSize: 12.5, fontWeight: "700" },
+  scanning: { flexDirection: "row", alignItems: "center", gap: 6 },
+  scanningText: { fontSize: 11.5, fontWeight: "600" },
   emptyCard: {
     marginHorizontal: PAGE_PADDING,
     borderRadius: 20,

@@ -58,6 +58,12 @@ export function SocialAvatar({
   const resolved = absolutize(url);
   const initial = (name?.trim() || handle).charAt(0).toUpperCase();
 
+  // A failed load must not poison the component forever: when the URL
+  // changes (a fresh upload bumps ?v=N), try the image again.
+  React.useEffect(() => {
+    setFailed(false);
+  }, [resolved]);
+
   if (resolved && !failed) {
     return (
       <Image

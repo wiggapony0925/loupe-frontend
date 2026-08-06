@@ -41,6 +41,79 @@ function money(v: string | null): string | null {
   return `$${Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
+/**
+ * ShowcaseShelf — the Collectr-style treatment: the ART is the hero.
+ * A rail of tall cards, each with the collection's cover presented like a
+ * product shot (full card, contained, on a soft tint), name + count·value
+ * beneath. Used for PORTFOLIOS and SEALED — the things a collector chose.
+ */
+function ShowcaseShelf({ label, tiles }: { label: string; tiles: ShelfTile[] }) {
+  const p = useThemedPalette();
+  if (tiles.length === 0) return null;
+  return (
+    <View style={styles.shelf}>
+      <Text style={[styles.label, { color: p.ink.dim }]}>{label}</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.bleed}
+        contentContainerStyle={styles.rail}
+      >
+        {tiles.map((t) => {
+          const tint = t.tint || p.accent.mint;
+          const Icon =
+            t.icon === "folder" ? FolderKanban : t.icon === "box" ? Package : Layers;
+          return (
+            <Pressable
+              key={t.key}
+              onPress={t.onPress}
+              disabled={!t.onPress}
+              accessibilityRole={t.onPress ? "button" : undefined}
+              accessibilityLabel={
+                t.onPress ? `${t.name}. Open card list.` : undefined
+              }
+              style={[
+                styles.showcase,
+                { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+              ]}
+            >
+              <View
+                style={[styles.showcaseArt, { backgroundColor: withAlpha(tint, 0.09) }]}
+              >
+                {t.cover ? (
+                  <Image
+                    source={{ uri: t.cover }}
+                    style={styles.showcaseImage}
+                    contentFit="contain"
+                    transition={140}
+                    accessibilityIgnoresInvertColors
+                  />
+                ) : (
+                  <Icon size={26} color={tint} strokeWidth={2} />
+                )}
+              </View>
+              <View style={styles.showcaseMeta}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.showcaseName, { color: p.ink.default }]}
+                >
+                  {t.name}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.sub, { color: p.ink.dim }]}
+                >
+                  {t.sub}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
 function Shelf({ label, tiles }: { label: string; tiles: ShelfTile[] }) {
   const p = useThemedPalette();
   if (tiles.length === 0) return null;
@@ -136,7 +209,7 @@ export function PortfolioShelf({
   }));
   // "PORTFOLIOS", not "your collections" — the page's COLLECTION headline
   // already owns that word once.
-  return <Shelf label={`PORTFOLIOS · ${portfolios.length}`} tiles={tiles} />;
+  return <ShowcaseShelf label={`PORTFOLIOS · ${portfolios.length}`} tiles={tiles} />;
 }
 
 /** Sealed product (boxes, ETBs) — its own category with its own value. */
@@ -170,7 +243,7 @@ export function SealedShelf({
   ]
     .filter(Boolean)
     .join(" · ");
-  return <Shelf label={label} tiles={tiles} />;
+  return <ShowcaseShelf label={label} tiles={tiles} />;
 }
 
 /** Top catalog sets by value, capped with a "+N more" tile. */
@@ -239,4 +312,20 @@ const styles = StyleSheet.create({
   meta: { flex: 1, gap: 2, minWidth: 0 },
   name: { fontSize: 12.5, fontWeight: "700", letterSpacing: -0.2 },
   sub: { fontSize: 11 },
+  showcase: {
+    width: 168,
+    borderWidth: 1,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+  // The cover as a product shot: full card, contained, breathing room.
+  showcaseArt: {
+    height: 128,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+  },
+  showcaseImage: { width: "78%", height: "100%" },
+  showcaseMeta: { paddingHorizontal: 12, paddingVertical: 10, gap: 2 },
+  showcaseName: { fontSize: 13.5, fontWeight: "800", letterSpacing: -0.3 },
 });
