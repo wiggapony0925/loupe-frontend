@@ -1,15 +1,17 @@
 /**
  * A collector's profile — native.
  *
- * Replaces the web `/app/u/:handle` page the Community WebView used to show.
- * The gain isn't only chrome: their cards now render as the app's own card
- * rows, so tapping one goes straight to the native card screen with live
- * pricing and your own ownership context, instead of bouncing through a
- * bridge that had to intercept web links and translate them.
+ * Anatomy is deliberately the one every social app taught people:
  *
- * `@me` resolves to your own profile, so the avatar in the navbar and a tap
- * on another collector both land on exactly the same screen — one layout to
- * keep right, and your own profile always looks the way others see it.
+ *   avatar ◀ | cards · followers · following   ← identity + numbers, one band
+ *   Name, @handle · location, bio              ← who they are
+ *   [ Follow ── mint ] [ ♥ ]                   ← the two verbs
+ *   COLLECTION VALUE  $68,066                  ← the Robinhood moment
+ *   portfolios ▸ sealed ▸ top sets ▸ all cards ← what they own
+ *
+ * `@me` resolves to your own profile server-side, so the navbar avatar and a
+ * tap on another collector land on the same screen — one layout to keep
+ * right, and your own profile always looks the way others see it.
  */
 import React from "react";
 import {
@@ -17,6 +19,7 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -25,11 +28,12 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronLeft,
+  Heart,
   Lock,
   MapPin,
   Pencil,
   Settings2,
-  Users,
+  Share as ShareIcon,
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
@@ -56,7 +60,10 @@ import { PortfolioSheet } from "@/presentation/features/social/PortfolioSheet";
 import {
   collectionGateReason,
   followLabel,
+  formatStat,
+  pluralize,
 } from "@/presentation/features/social/socialLabels";
+import { config } from "@/shared/config";
 import { routes } from "@/shared/routes";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -82,8 +89,6 @@ export default function CollectorProfileScreen() {
   // (People · Home · My profile) on screen here, same as the Community tab.
   useCommunityIslandPresence();
 
-  // Followers / Following popup (the reusable collector-list sheet).
-  // Which binder's card list is open (PortfolioSheet), if any.
   const [openPortfolioId, setOpenPortfolioId] = React.useState<string | null>(null);
   const [listKind, setListKind] = React.useState<"followers" | "following" | null>(
     null,
@@ -101,6 +106,35 @@ export default function CollectorProfileScreen() {
       })
     : null;
 
+  const shareProfile = async () => {
+    if (!data) return;
+    Haptics.selectionAsync().catch(() => {});
+    try {
+      // The web profile is the public face of the same account.
+      await Share.share({ url: `${config.webUrl}/app/u/${data.username}` });
+    } catch {
+      // User dismissed the sheet — nothing to do.
+    }
+  };
+
+  const toggleLike = () => {
+    if (!data || isSelf) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    like.mutate({ handle: data.username, liked: data.viewer_has_liked });
+  };
+
+  const cardsValue = collection.data?.estimated_value_usd;
+  const sealedValue = collection.data?.sealed_value_usd;
+  const totalValue = collection.data?.total_value_usd ?? cardsValue;
+  const breakdown = [
+    cardsValue != null && data
+      ? `${formatStat(data.card_count)} ${pluralize(data.card_count, "card")} · ${money(cardsValue)}`
+      : null,
+    sealedValue != null && (collection.data?.sealed_count ?? 0) > 0
+      ? `${collection.data?.sealed_count} sealed · ${money(sealedValue)}`
+      : null,
+  ].filter(Boolean);
+
   return (
     <View style={[styles.root, { backgroundColor: p.bg.base }]}>
       <SafeAreaView edges={["top"]} style={styles.safe}>
@@ -115,8 +149,7 @@ export default function CollectorProfileScreen() {
             <ChevronLeft size={19} color={p.ink.default} />
           </Pressable>
           <Text numberOfLines={1} style={[styles.barTitle, { color: p.ink.default }]}>
-            {/* Prefer the RESOLVED username — the raw param may be the "@me"
-                self-alias, which would render as "@@me". */}
+            {/* The RESOLVED username — the raw "@me" alias must never render. */}
             {data?.username
               ? `@${data.username}`
               : handle
@@ -131,10 +164,18 @@ export default function CollectorProfileScreen() {
               accessibilityLabel="Community settings"
               style={styles.barBtn}
             >
-              <Settings2 size={16} color={p.ink.muted} />
+              <Settings2 size={17} color={p.ink.muted} />
             </Pressable>
           ) : (
-            <View style={styles.barBtnGhost} />
+            <Pressable
+              onPress={() => void shareProfile()}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Share this profile"
+              style={styles.barBtn}
+            >
+              <ShareIcon size={16} color={p.ink.muted} />
+            </Pressable>
           )}
         </View>
 
@@ -165,18 +206,36 @@ export default function CollectorProfileScreen() {
               />
             }
           >
-            {/* Centered hero. Left-aligned avatar-beside-name is the shape of
-                a LIST ROW — it read as one more entry in a directory rather
-                than as the subject of the page. Centering, and letting the
-                identity own the full width, is what makes it a profile. */}
-            <View style={styles.header}>
+            {/* Identity band — avatar left, the three numbers filling the
+                rest. The one arrangement that instantly reads "profile". */}
+            <View style={styles.identity}>
               <SocialAvatar
                 handle={data.username}
                 name={data.display_name}
                 url={data.avatar_url}
-                size={92}
+                size={84}
                 isPro={data.is_pro}
               />
+              <ProfileStats
+                cardCount={data.card_count}
+                followerCount={data.follower_count}
+                followingCount={data.following_count}
+                // Lists are privacy-gated server-side — only offer the tap
+                // when the viewer could actually see them.
+                onPressFollowers={
+                  data.can_view_collection
+                    ? () => setListKind("followers")
+                    : undefined
+                }
+                onPressFollowing={
+                  data.can_view_collection
+                    ? () => setListKind("following")
+                    : undefined
+                }
+              />
+            </View>
+
+            <View style={styles.who}>
               <Text style={[styles.name, { color: p.ink.default }]}>
                 {data.display_name?.trim() || `@${data.username}`}
               </Text>
@@ -186,18 +245,18 @@ export default function CollectorProfileScreen() {
                     @{data.username}
                   </Text>
                 ) : null}
-                {data.is_private ? (
-                  <View style={styles.metaItem}>
-                    <Lock size={11} color={p.ink.dim} strokeWidth={2.4} />
-                    <Text style={[styles.meta, { color: p.ink.dim }]}>Private</Text>
-                  </View>
-                ) : null}
                 {data.location ? (
                   <View style={styles.metaItem}>
                     <MapPin size={11} color={p.ink.dim} strokeWidth={2.4} />
                     <Text style={[styles.meta, { color: p.ink.dim }]}>
                       {data.location}
                     </Text>
+                  </View>
+                ) : null}
+                {data.is_private ? (
+                  <View style={styles.metaItem}>
+                    <Lock size={11} color={p.ink.dim} strokeWidth={2.4} />
+                    <Text style={[styles.meta, { color: p.ink.dim }]}>Private</Text>
                   </View>
                 ) : null}
               </View>
@@ -208,41 +267,10 @@ export default function CollectorProfileScreen() {
               ) : null}
             </View>
 
-            {/* Settings-language stat tiles — the same bordered figure cards
-                that head the Settings page, from the shared GroupedList. Bare
-                numbers floating in open space had nothing anchoring them to
-                the rest of the app. */}
-            <ProfileStats
-              cardCount={data.card_count}
-              followerCount={data.follower_count}
-              followingCount={data.following_count}
-              likeCount={data.like_count}
-              viewCount={data.view_count}
-              viewerHasLiked={data.viewer_has_liked}
-              isSelf={!!isSelf}
-              // Lists are server-gated by privacy — only offer the tap when
-              // the viewer could actually see them (own/public/followed).
-              onPressFollowers={
-                data.can_view_collection ? () => setListKind("followers") : undefined
-              }
-              onPressFollowing={
-                data.can_view_collection ? () => setListKind("following") : undefined
-              }
-              onToggleLike={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                like.mutate({
-                  handle: data.username,
-                  liked: data.viewer_has_liked,
-                });
-              }}
-            />
-
-            {/* One action row, both cases. The old layout gave a stranger a
-                full-width mint Follow bar but gave YOU a two-line "Find other
-                collectors" advert card sitting where the action belongs —
-                the loudest object on your own profile, pushing your
-                collection below the fold. Two equal buttons instead: the
-                thing you came to do, and the thing that grows the numbers. */}
+            {/* The verbs. A stranger gets Follow + the heart; you get Edit +
+                Share (growth belongs on Community, not as an ad on your own
+                page). The heart carries its count — a like is an action with
+                a scoreboard, not a statistic with a button attached. */}
             <View style={styles.actions}>
               {isSelf ? (
                 <>
@@ -252,99 +280,141 @@ export default function CollectorProfileScreen() {
                     onPress={() => router.push(routes.communitySettings())}
                   />
                   <ActionButton
-                    label="Find collectors"
-                    Icon={Users}
-                    primary
-                    onPress={() => router.push(routes.community())}
+                    label="Share profile"
+                    Icon={ShareIcon}
+                    onPress={() => void shareProfile()}
                   />
                 </>
               ) : (
-                <ActionButton
-                  label={followLabel(data.relationship)}
-                  primary={data.relationship === "none"}
-                  busy={follow.isPending}
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    follow.mutate({
-                      handle: data.username,
-                      following:
-                        data.relationship === "following" ||
-                        data.relationship === "requested",
-                    });
-                  }}
-                />
+                <>
+                  <ActionButton
+                    label={followLabel(data.relationship)}
+                    primary={data.relationship === "none"}
+                    busy={follow.isPending}
+                    onPress={() => {
+                      Haptics.selectionAsync().catch(() => {});
+                      follow.mutate({
+                        handle: data.username,
+                        following:
+                          data.relationship === "following" ||
+                          data.relationship === "requested",
+                      });
+                    }}
+                  />
+                  <Pressable
+                    onPress={toggleLike}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      data.viewer_has_liked
+                        ? "Remove your like"
+                        : "Like this collection"
+                    }
+                    style={({ pressed }) => [
+                      styles.heart,
+                      {
+                        borderColor: data.viewer_has_liked
+                          ? withAlpha(p.accent.rose, 0.5)
+                          : p.line.default,
+                        backgroundColor: data.viewer_has_liked
+                          ? withAlpha(p.accent.rose, 0.1)
+                          : withAlpha(p.ink.default, 0.04),
+                        opacity: pressed ? 0.7 : 1,
+                      },
+                    ]}
+                  >
+                    <Heart
+                      size={15}
+                      color={data.viewer_has_liked ? p.accent.rose : p.ink.muted}
+                      fill={data.viewer_has_liked ? p.accent.rose : "transparent"}
+                      strokeWidth={2.2}
+                    />
+                    {data.like_count > 0 ? (
+                      <Text
+                        style={[
+                          styles.heartCount,
+                          {
+                            color: data.viewer_has_liked
+                              ? p.accent.rose
+                              : p.ink.muted,
+                          },
+                        ]}
+                      >
+                        {formatStat(data.like_count)}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                </>
               )}
             </View>
 
-            <View style={styles.collection}>
-              <View
-                style={[styles.collectionHead, { borderBottomColor: p.line.default }]}
-              >
-                {/* ONE collection headline — the shelves below carry their
-                    own labels (PORTFOLIOS / SEALED / TOP SETS), so "your"
-                    never repeats down the page. */}
-                <Text style={[styles.collectionTitle, { color: p.ink.dim }]}>
-                  Collection
+            {/* Owner-only reach line. Views never show publicly — a visit
+                counter on display tells every visitor they were counted. */}
+            {isSelf ? (
+              <Text style={[styles.reach, { color: p.ink.dim }]}>
+                {formatStat(data.like_count)} {pluralize(data.like_count, "like")} ·{" "}
+                {formatStat(data.view_count)} profile{" "}
+                {pluralize(data.view_count, "view")}
+              </Text>
+            ) : null}
+
+            {gate ? (
+              <View style={styles.gate}>
+                <Text style={[styles.gateTitle, { color: p.ink.default }]}>
+                  {gate.title}
                 </Text>
-                {/* Cards + sealed combined — the vault's combined headline
-                    basis. Falls back to cards-only from older payloads. */}
-                {(collection.data?.total_value_usd ??
-                  collection.data?.estimated_value_usd) != null ? (
-                  <Text style={[styles.collectionValue, { color: p.accent.mint }]}>
-                    $
-                    {Number(
-                      collection.data?.total_value_usd ??
-                        collection.data?.estimated_value_usd,
-                    ).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                  </Text>
+                <Text style={[styles.gateBody, { color: p.ink.muted }]}>
+                  {gate.body}
+                </Text>
+              </View>
+            ) : collection.isLoading ? (
+              <View style={styles.center}>
+                <ActivityIndicator color={p.ink.dim} />
+              </View>
+            ) : (
+              <View style={styles.collection}>
+                {/* The Robinhood moment: the portfolio's worth as the big
+                    figure, cards/sealed as its breakdown whisper. */}
+                {totalValue != null ? (
+                  <View style={styles.valueBlock}>
+                    <Text style={[styles.valueLabel, { color: p.ink.dim }]}>
+                      COLLECTION VALUE
+                    </Text>
+                    <Text style={[styles.valueFigure, { color: p.ink.default }]}>
+                      {money(totalValue)}
+                    </Text>
+                    {breakdown.length > 0 ? (
+                      <Text style={[styles.valueBreakdown, { color: p.ink.dim }]}>
+                        {breakdown.join("  +  ")}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {/* Curated collections first — the thing collectors mean by
+                    "my collections" — then sealed, then set context. */}
+                <PortfolioShelf
+                  portfolios={collection.data?.portfolios ?? []}
+                  onTilePress={(id) => setOpenPortfolioId(id)}
+                />
+                <SealedShelf
+                  sealed={collection.data?.sealed ?? []}
+                  totalCount={collection.data?.sealed_count}
+                  totalValue={collection.data?.sealed_value_usd}
+                />
+                <CollectionSetsRail
+                  sets={collection.data?.sets ?? []}
+                  totalSets={collection.data?.total_sets}
+                />
+                {(collection.data?.items?.length ?? 0) > 0 ? (
+                  <View style={styles.shelf}>
+                    <Text style={[styles.sectionTitle, { color: p.ink.dim }]}>
+                      {`ALL CARDS · ${collection.data?.total_cards ?? collection.data?.items?.length ?? 0}`}
+                    </Text>
+                    <CollectionGrid items={collection.data?.items ?? []} />
+                  </View>
                 ) : null}
               </View>
-              {gate ? (
-                <View
-                  style={styles.gate}
-                >
-                  <Text style={[styles.gateTitle, { color: p.ink.default }]}>
-                    {gate.title}
-                  </Text>
-                  <Text style={[styles.gateBody, { color: p.ink.muted }]}>
-                    {gate.body}
-                  </Text>
-                </View>
-              ) : collection.isLoading ? (
-                <View style={styles.center}>
-                  <ActivityIndicator color={p.ink.dim} />
-                </View>
-              ) : (
-                <>
-                  {/* Curated collections first — the thing collectors mean
-                      by "my collections" — then sealed, then set context. */}
-                  <PortfolioShelf
-                    portfolios={collection.data?.portfolios ?? []}
-                    onTilePress={(id) => setOpenPortfolioId(id)}
-                  />
-                  <SealedShelf
-                    sealed={collection.data?.sealed ?? []}
-                    totalCount={collection.data?.sealed_count}
-                    totalValue={collection.data?.sealed_value_usd}
-                  />
-                  <CollectionSetsRail
-                    sets={collection.data?.sets ?? []}
-                    totalSets={collection.data?.total_sets}
-                  />
-                  {/* Labelled: after three captioned shelves an unlabelled
-                      grid of ~100 cards read as the page having lost its
-                      structure and started dumping. */}
-                  {(collection.data?.items?.length ?? 0) > 0 ? (
-                    <View style={styles.shelf}>
-                      <Text style={[styles.sectionTitle, { color: p.ink.dim }]}>
-                        {`ALL CARDS · ${collection.data?.total_cards ?? collection.data?.items?.length ?? 0}`}
-                      </Text>
-                      <CollectionGrid items={collection.data?.items ?? []} />
-                    </View>
-                  ) : null}
-                </>
-              )}
-            </View>
+            )}
           </ScrollView>
         )}
       </SafeAreaView>
@@ -383,6 +453,10 @@ export default function CollectorProfileScreen() {
   );
 }
 
+function money(v: string | number): string {
+  return `$${Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
 /**
  * ActionButton — the profile's one button shape.
  *
@@ -398,7 +472,7 @@ function ActionButton({
   busy = false,
 }: {
   label: string;
-  Icon?: typeof Users;
+  Icon?: typeof Pencil;
   onPress: () => void;
   primary?: boolean;
   busy?: boolean;
@@ -446,102 +520,65 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 12,
   },
-  // Bare, unringed icons. Settings' back affordance is a plain chevron, and
-  // two outlined circles floating in the header were the only rings left on
-  // the screen once the cards went.
   barBtn: {
     width: 34,
     height: 34,
     alignItems: "center",
     justifyContent: "center",
   },
-  barBtnGhost: { width: 34, height: 34 },
   barTitle: { flex: 1, fontSize: 15, fontWeight: "700", textAlign: "center" },
-  content: { padding: 20, paddingBottom: 60, gap: 16 },
+  content: { padding: 20, paddingBottom: 60, gap: 14 },
   center: { paddingVertical: 40, alignItems: "center", gap: 6 },
   errorTitle: { fontSize: 17, fontWeight: "700" },
   errorBody: { fontSize: 13.5, textAlign: "center", maxWidth: 300 },
-  header: { alignItems: "center", gap: 8, paddingTop: 4 },
-  name: {
-    fontSize: 23,
-    fontWeight: "800",
-    letterSpacing: -0.7,
-    textAlign: "center",
-    marginTop: 4,
-  },
+  identity: { flexDirection: "row", alignItems: "center", gap: 18, paddingTop: 2 },
+  who: { gap: 3 },
+  name: { fontSize: 21, fontWeight: "800", letterSpacing: -0.5 },
   metaLine: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     flexWrap: "wrap",
     gap: 10,
   },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 3 },
   meta: { fontSize: 12.5 },
-  // Constrained + centered: a bio running the full 335pt width reads as body
-  // copy in an article, not as a line about a person.
-  bio: {
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: "center",
-    maxWidth: 300,
-    marginTop: 2,
-  },
-  actions: { flexDirection: "row", gap: 10 },
+  bio: { fontSize: 13.5, lineHeight: 19, marginTop: 3 },
+  actions: { flexDirection: "row", gap: 10, marginTop: 4 },
   action: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
-    paddingVertical: 12,
+    paddingVertical: 11,
     borderRadius: 13,
   },
   actionText: { fontSize: 14.5, fontWeight: "700" },
-  // Shelves need room between them or PORTFOLIOS / SEALED / TOP SETS run
-  // together into one undifferentiated stack of tiny grey captions.
-  collection: { gap: 22, marginTop: 8 },
-  /**
-   * The section anchor.
-   *
-   * COLLECTION and the shelf labels below it used to share one treatment
-   * (11px / 700 / +1 tracking), so a section header and its own children read
-   * as siblings and the page had no hierarchy at all. This is now a real
-   * heading — larger, full-strength ink, on a hairline rule — and the shelf
-   * labels stay small and dim underneath it.
-   */
-  collectionHead: {
+  // The heart is square-ish so the Follow button stays the widest object.
+  heart: {
     flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    paddingBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: 16,
+    borderRadius: 13,
+    borderWidth: 1,
   },
-  /**
-   * Settings' section-label spec exactly (10 / 600 / uppercase / +3 tracking).
-   * A bespoke 15/800 heading here was a second, competing way of saying
-   * "new section" in an app that already had one.
-   *
-   * The shelf captions below stay 11/700 at normal tracking — larger but
-   * dimmer and untracked, so structure (tiny, wide) and content caption
-   * (normal) read as different tiers rather than as rival headings.
-   */
-  collectionTitle: {
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 3,
-    textTransform: "uppercase",
-  },
-  collectionValue: {
-    fontSize: 15,
+  heartCount: { fontSize: 13, fontWeight: "700" },
+  reach: { fontSize: 12, textAlign: "center" },
+  collection: { gap: 22, marginTop: 6 },
+  valueBlock: { gap: 2, paddingTop: 4 },
+  valueLabel: { fontSize: 10, fontWeight: "600", letterSpacing: 3 },
+  valueFigure: {
+    fontSize: 32,
     fontWeight: "800",
-    letterSpacing: -0.3,
+    letterSpacing: -1,
     fontVariant: ["tabular-nums"],
   },
+  valueBreakdown: { fontSize: 12.5, marginTop: 2 },
   sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   shelf: { gap: 10 },
-  // A sentence, not a panel. "This vault is private" boxed and centred read
-  // as an error dialog for something that isn't an error.
+  // A sentence, not a panel — "this vault is private" isn't an error.
   gate: { paddingVertical: 20, gap: 4, alignItems: "center" },
   gateTitle: { fontSize: 15, fontWeight: "700" },
   gateBody: { fontSize: 13, textAlign: "center" },
