@@ -1,21 +1,26 @@
 /**
- * ProfileStats — the row of numbers under a collector's name.
+ * ProfileStats — the numbers under a collector's name.
  *
- * Five figures compete for one line on a phone, so they're ranked rather than
- * shown flat: cards / followers / following are the social spine and are
- * always tappable-looking; likes and views are the vanity pair and sit
- * quieter beneath. Giving all five equal weight made the row read as a
- * dashboard and none of it registered.
+ * Three figures, inline, no container. The previous pass put them in a
+ * bordered rounded box with the likes/views pair as two outlined chips
+ * floating underneath, and the result read as a form control with stray
+ * buttons attached rather than as someone's profile. Instagram, Robinhood and
+ * every profile worth copying draw these as bare numbers in open space: the
+ * value is the loud thing, the label is a whisper, and nothing is boxed.
  *
- * Views are only ever shown to the profile's owner. A public "1,204 people
- * looked at this" invites comparison between collectors over a number they
- * can't influence, and it quietly tells everyone who visits that they were
- * counted.
+ * Likes and views fold into ONE quiet line beneath instead of competing as
+ * chips. They're the secondary pair — interesting, not structural — and on a
+ * 375pt phone five equally-weighted figures across meant none of them
+ * registered.
+ *
+ * Views are shown only to the profile's owner. A public "1,204 people looked
+ * at this" invites comparison over a number you can't influence, and tells
+ * everyone who visits that they were counted.
  */
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Eye, Heart } from "lucide-react-native";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { Heart } from "lucide-react-native";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 import { formatStat, pluralize } from "./socialLabels";
 
 export interface ProfileStatsProps {
@@ -47,22 +52,20 @@ export function ProfileStats({
 
   return (
     <View style={styles.wrap}>
-      <View style={[styles.spine, { borderColor: p.line.default }]}>
+      <View style={styles.row}>
         <Stat value={cardCount} label={pluralize(cardCount, "card")} />
-        <Divider />
         <Stat
           value={followerCount}
           label={pluralize(followerCount, "follower")}
           onPress={onPressFollowers}
         />
-        <Divider />
         <Stat value={followingCount} label="following" onPress={onPressFollowing} />
       </View>
 
-      <View style={styles.vanity}>
-        {/* On someone else's profile the heart is the control that produces
-            this number, so it's a button. On your own it's just a readout —
-            you can't like yourself. */}
+      {/* One line, not two chips. On your own profile it's a readout; on
+          someone else's the heart is the control that produces the number,
+          so only that half is pressable. */}
+      <View style={styles.meta}>
         <Pressable
           onPress={isSelf ? undefined : onToggleLike}
           disabled={isSelf}
@@ -74,40 +77,32 @@ export function ProfileStats({
                 ? "Remove your like"
                 : "Like this collection"
           }
-          hitSlop={6}
-          style={[
-            styles.chip,
-            {
-              borderColor: viewerHasLiked ? "transparent" : p.line.default,
-              backgroundColor: viewerHasLiked
-                ? withAlpha(p.accent.rose, 0.16)
-                : "transparent",
-            },
-          ]}
+          hitSlop={8}
+          style={styles.metaItem}
         >
           <Heart
-            size={13}
+            size={12}
             color={viewerHasLiked ? p.accent.rose : p.ink.dim}
             fill={viewerHasLiked ? p.accent.rose : "transparent"}
             strokeWidth={2.2}
           />
           <Text
             style={[
-              styles.chipText,
-              { color: viewerHasLiked ? p.accent.rose : p.ink.muted },
+              styles.metaText,
+              { color: viewerHasLiked ? p.accent.rose : p.ink.dim },
             ]}
           >
-            {formatStat(likeCount)}
+            {formatStat(likeCount)} {pluralize(likeCount, "like")}
           </Text>
         </Pressable>
 
         {isSelf ? (
-          <View style={[styles.chip, { borderColor: p.line.default }]}>
-            <Eye size={13} color={p.ink.dim} strokeWidth={2.2} />
-            <Text style={[styles.chipText, { color: p.ink.muted }]}>
+          <>
+            <Text style={[styles.metaText, { color: p.ink.dim }]}>·</Text>
+            <Text style={[styles.metaText, { color: p.ink.dim }]}>
               {formatStat(viewCount)} {pluralize(viewCount, "view")}
             </Text>
-          </View>
+          </>
         ) : null}
       </View>
     </View>
@@ -140,33 +135,19 @@ function Stat({
   );
 }
 
-function Divider() {
-  const p = useThemedPalette();
-  return <View style={[styles.divider, { backgroundColor: p.line.default }]} />;
-}
-
 const styles = StyleSheet.create({
-  wrap: { gap: 10 },
-  spine: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingVertical: 12,
+  wrap: { gap: 10, alignItems: "center" },
+  row: { flexDirection: "row", alignSelf: "stretch" },
+  stat: { flex: 1, alignItems: "center", gap: 1 },
+  statValue: {
+    fontSize: 21,
+    fontWeight: "800",
+    letterSpacing: -0.6,
+    // Tabular so the three columns don't shift width as counts tick over.
+    fontVariant: ["tabular-nums"],
   },
-  stat: { flex: 1, alignItems: "center", gap: 2 },
-  statValue: { fontSize: 17, fontWeight: "800", letterSpacing: -0.4 },
-  statLabel: { fontSize: 11 },
-  divider: { width: 1, alignSelf: "stretch", marginVertical: 4 },
-  vanity: { flexDirection: "row", gap: 8 },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-  },
-  chipText: { fontSize: 12, fontWeight: "600" },
+  statLabel: { fontSize: 11.5 },
+  meta: { flexDirection: "row", alignItems: "center", gap: 6 },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  metaText: { fontSize: 12 },
 });
