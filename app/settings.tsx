@@ -7,22 +7,31 @@ import Constants from "expo-constants";
 import * as Updates from "expo-updates";
 import {
   Bell,
+  Bluetooth,
   Camera,
   ChevronLeft,
   ChevronRight,
+  Crown,
+  FileText,
   Github,
   Info,
+  KeyRound,
+  LifeBuoy,
   LogOut,
   Mail,
   Monitor,
   Moon,
+  Newspaper,
   RotateCcw,
   Shield,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Sun,
+  Users,
   Vibrate,
   Wand2,
+  Wrench,
   type LucideIcon,
 } from "lucide-react-native";
 import { useOnboarding } from "@/application/stores/onboardingStore";
@@ -33,11 +42,15 @@ import {
   useUserSettings,
 } from "@/application/queries/auth/useUserSettings";
 import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
-import { getCurrency } from "@/shared/currency";
+import { formatMoney, getCurrency } from "@/shared/currency";
+import { useCollectionsOverview } from "@/application/queries/collection/useCollectionsOverview";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { ProMembershipCard } from "@/presentation/features/pro";
-import { useSocialMe } from "@/application/queries/social/useSocial";
+import {
+  useCollectorProfile,
+  useSocialMe,
+} from "@/application/queries/social/useSocial";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import { routes } from "@/shared/routes";
 
@@ -122,7 +135,17 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   const { user, signOut, signOutEverywhere } = useAuth();
   // One identity everywhere: the hero bubble mirrors the community profile
   // picture, so changing it there updates this page too.
-  const socialProfile = useSocialMe().data?.profile ?? null;
+  const socialMe = useSocialMe();
+  const socialProfile = socialMe.data?.profile ?? null;
+  const requestCount = socialMe.data?.incoming_request_count ?? 0;
+  // My own full profile stats (followers / views / likes) via the @me alias —
+  // only fetched once a handle is claimed.
+  const myStats = useCollectorProfile(socialProfile ? "@me" : null).data ?? null;
+  // Canonical portfolio numbers — the backend's "All" overview entry.
+  const overview = useCollectionsOverview().data ?? null;
+  const allEntry = overview?.find((c) => c.is_all) ?? null;
+  const binderCount = overview ? overview.filter((c) => !c.is_all).length : null;
+  const { currency } = useDisplayCurrency();
   const version = Constants.expoConfig?.version ?? "0.1.0";
   const [copied, setCopied] = useState(false);
   const [signingOutAll, setSigningOutAll] = useState(false);
@@ -194,90 +217,229 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         </Pressable>
       </View>
 
+      {/* Identity card — who you are here + your community reach. Taps
+          through to the public profile (or to claiming a handle). */}
+      <View className="px-5">
+        <Pressable
+          onPress={() =>
+            router.push(socialProfile ? routes.myProfile() : routes.community())
+          }
+          accessibilityRole="button"
+          accessibilityLabel={
+            socialProfile ? "View my collector profile" : "Join the community"
+          }
+          style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+        >
+          <View className="flex-row items-center gap-3 rounded-2xl border border-line bg-bg-elevated px-4 py-4">
+            {socialProfile ? (
+              <SocialAvatar
+                handle={socialProfile.username}
+                url={socialProfile.avatar_url}
+                size={52}
+              />
+            ) : (
+              <View
+                className="h-[52px] w-[52px] items-center justify-center rounded-full"
+                style={{ backgroundColor: `${p.accent.mint}22` }}
+              >
+                <Text className="text-xl font-bold" style={{ color: p.accent.mint }}>
+                  {initial}
+                </Text>
+              </View>
+            )}
+            <View className="flex-1">
+              <Text numberOfLines={1} className="text-[16px] font-bold text-ink">
+                {displayName}
+              </Text>
+              <Text
+                numberOfLines={1}
+                className="mt-0.5 text-[12px] font-semibold"
+                style={{ color: p.accent.mint }}
+              >
+                {socialProfile ? `@${socialProfile.username}` : "Claim your @handle"}
+              </Text>
+              <Text numberOfLines={1} className="mt-0.5 text-[11px] text-ink-dim">
+                {myStats
+                  ? `${myStats.follower_count.toLocaleString()} followers · ${myStats.view_count.toLocaleString()} profile views · ${myStats.like_count.toLocaleString()} likes`
+                  : (user?.email ?? "")}
+              </Text>
+            </View>
+            <ChevronRight size={18} color={p.ink.dim} />
+          </View>
+        </Pressable>
+
+        {/* At-a-glance numbers — live backend data, each tile a shortcut. */}
+        <View className="mt-3 flex-row" style={{ gap: 10 }}>
+          <StatTile
+            label="Portfolio"
+            value={allEntry ? formatMoney(allEntry.total_value_usd, currency) : "—"}
+            onPress={() => router.push(routes.analytics())}
+          />
+          <StatTile
+            label="Cards"
+            value={allEntry ? allEntry.card_count.toLocaleString() : "—"}
+            onPress={() => router.push(routes.vault())}
+          />
+          <StatTile
+            label="Collections"
+            value={binderCount != null ? String(binderCount) : "—"}
+            onPress={() => router.push(routes.vault())}
+          />
+        </View>
+      </View>
+
       {/* Loupe Pro membership — upgrade CTA for free users, billing for Pro.
           Renders nothing while subscriptions are switched off. */}
       <ProMembershipCard />
 
-      {/* Menu rows — hairline separators, no card containers */}
-      <View className="mt-2 border-t border-line">
-        <MenuRow
-          title="Community"
-          subtitle="Follow collectors, share your collection"
-          onPress={() => router.push("/community")}
-        />
-        <MenuRow
-          title="Loupe Support"
-          subtitle="Help center, contact us 24/7, your support chats"
-          onPress={() => router.push("/support")}
-        />
-        <MenuRow
-          title="Blog"
-          subtitle="Product news, set drops, and collecting guides"
-          onPress={() => router.push("/blog")}
-        />
-        <MenuRow
-          title="Manage subscription"
-          subtitle="Loupe Pro plan, billing, usage, and benefits"
-          onPress={() => router.push("/subscription")}
-        />
-        <MenuRow
-          title="Statements"
-          subtitle="Monthly & annual PDF portfolio statements"
-          onPress={() => router.push("/statements")}
-        />
-        <MenuRow
-          title="Preferences"
-          subtitle="Currency, capture, haptics, notifications"
-          onPress={() => onNavigate("general")}
-        />
-        <MenuRow
-          title="Appearance"
-          subtitle="Light, dark, system theme · precision palette"
-          onPress={() => onNavigate("appearance")}
-        />
-        <MenuRow
-          title="Devices"
-          subtitle="Loupe scanner, BLE pairing, firmware"
-          onPress={() => router.push("/scan/pair")}
-        />
-        {user?.is_admin ? (
-          <MenuRow
-            title="Developer portal"
-            subtitle="Admin — users, Pro plan, flags, announcements"
-            onPress={() => router.push("/admin")}
+      {/* Grouped menu — same Section/Row language as the sub-pages. */}
+      <View className="mt-4 px-5" style={{ gap: 16 }}>
+        <Section title="Collecting">
+          <Row
+            icon={Users}
+            iconTint={p.accent.blue}
+            label="Community"
+            description="Follow collectors, share your collection"
+            trailing={
+              <View className="flex-row items-center" style={{ gap: 8 }}>
+                {requestCount > 0 ? (
+                  <View
+                    className="items-center justify-center rounded-full px-1.5"
+                    style={{ backgroundColor: p.accent.mint, minWidth: 20, height: 20 }}
+                  >
+                    <Text style={{ color: "#06140d", fontSize: 11, fontWeight: "800" }}>
+                      {requestCount}
+                    </Text>
+                  </View>
+                ) : null}
+                <ChevronRight size={16} color={p.ink.dim} />
+              </View>
+            }
+            onPress={() => router.push("/community")}
           />
-        ) : null}
-        {user ? (
-          <MenuRow
-            title="Replay introduction"
-            subtitle="Watch the home tour again"
-            onPress={() => {
-              useOnboarding.getState().reset(String(user.id));
-              router.replace("/(tabs)");
-            }}
+          <Row
+            icon={FileText}
+            iconTint={p.accent.purple}
+            label="Statements"
+            description="Monthly & annual PDF portfolio statements"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => router.push("/statements")}
           />
-        ) : null}
-        <MenuRow
-          title="Change password"
-          subtitle="Update your password · signs out other devices"
-          onPress={() => router.push("/change-password")}
-        />
-        <MenuRow
-          title="Security and privacy"
-          subtitle="Captures stay on-device until you grade · full policy"
-          onPress={() => router.push("/legal/privacy")}
-        />
-        <MenuRow
-          title="Legal"
-          subtitle="Terms of service, privacy policy, cookies"
-          onPress={() => onNavigate("legal")}
-        />
-        <MenuRow
-          title="About"
-          subtitle={`Version ${version} · build, source, credits`}
-          onPress={() => onNavigate("about")}
-          isLast
-        />
+          <Row
+            icon={Bluetooth}
+            iconTint={p.accent.mint}
+            label="Devices"
+            description="Loupe scanner, BLE pairing, firmware"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => router.push("/scan/pair")}
+          />
+          <Row
+            icon={Crown}
+            iconTint={p.accent.amber}
+            label="Manage subscription"
+            description="Loupe Pro plan, billing, usage, and benefits"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => router.push("/subscription")}
+            isLast
+          />
+        </Section>
+
+        <Section title="App">
+          <Row
+            icon={SlidersHorizontal}
+            iconTint={p.accent.mint}
+            label="Preferences"
+            description="Currency, capture, haptics, notifications"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => onNavigate("general")}
+          />
+          <Row
+            icon={Moon}
+            iconTint={p.accent.blue}
+            label="Appearance"
+            description="Light, dark, system theme · precision palette"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => onNavigate("appearance")}
+          />
+          {user ? (
+            <Row
+              icon={RotateCcw}
+              label="Replay introduction"
+              description="Watch the home tour again"
+              trailing={<ChevronRight size={16} color={p.ink.dim} />}
+              onPress={() => {
+                useOnboarding.getState().reset(String(user.id));
+                router.replace("/(tabs)");
+              }}
+              isLast={!user.is_admin}
+            />
+          ) : null}
+          {user?.is_admin ? (
+            <Row
+              icon={Wrench}
+              iconTint={p.accent.amber}
+              label="Developer portal"
+              description="Admin — users, Pro plan, flags, announcements"
+              trailing={<ChevronRight size={16} color={p.ink.dim} />}
+              onPress={() => router.push("/admin")}
+              isLast
+            />
+          ) : null}
+        </Section>
+
+        <Section title="Security">
+          <Row
+            icon={KeyRound}
+            iconTint={p.accent.rose}
+            label="Change password"
+            description="Update your password · signs out other devices"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => router.push("/change-password")}
+          />
+          <Row
+            icon={ShieldCheck}
+            iconTint={p.accent.mint}
+            label="Security and privacy"
+            description="Captures stay on-device until you grade · full policy"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => router.push("/legal/privacy")}
+          />
+          <Row
+            icon={Shield}
+            label="Legal"
+            description="Terms of service, privacy policy, cookies"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => onNavigate("legal")}
+            isLast
+          />
+        </Section>
+
+        <Section title="Resources">
+          <Row
+            icon={LifeBuoy}
+            iconTint={p.accent.blue}
+            label="Loupe Support"
+            description="Help center, contact us 24/7, your support chats"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => router.push("/support")}
+          />
+          <Row
+            icon={Newspaper}
+            iconTint={p.accent.amber}
+            label="Blog"
+            description="Product news, set drops, and collecting guides"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => router.push("/blog")}
+          />
+          <Row
+            icon={Info}
+            label="About"
+            description={`Version ${version} · build, source, credits`}
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => onNavigate("about")}
+            isLast
+          />
+        </Section>
       </View>
 
       {/* Account info block */}
@@ -368,34 +530,34 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   );
 }
 
-function MenuRow({
-  title,
-  subtitle,
+/** Robinhood-style number tile: big value, whisper label, tap = shortcut. */
+function StatTile({
+  label,
+  value,
   onPress,
-  isLast = false,
 }: {
-  title: string;
-  subtitle: string;
-  onPress: () => void;
-  isLast?: boolean;
+  label: string;
+  value: string;
+  onPress?: () => void;
 }) {
-  const p = useThemedPalette();
-
   return (
     <Pressable
       onPress={onPress}
+      disabled={!onPress}
       accessibilityRole="button"
-      accessibilityLabel={title}
-      style={({ pressed }) => ({ opacity: pressed ? 0.55 : 1 })}
+      accessibilityLabel={`${label}: ${value}`}
+      style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.7 : 1 })}
     >
-      <View
-        className={`flex-row items-center gap-3 px-5 py-5 ${isLast ? "" : "border-b border-line"}`}
-      >
-        <View className="flex-1">
-          <Text className="text-[17px] font-semibold text-ink">{title}</Text>
-          <Text className="mt-1 text-[13px] leading-[18px] text-ink-muted">{subtitle}</Text>
-        </View>
-        <ChevronRight size={18} color={p.ink.dim} />
+      <View className="rounded-2xl border border-line bg-bg-elevated px-3 py-3">
+        <Text numberOfLines={1} className="text-[18px] font-bold text-ink">
+          {value}
+        </Text>
+        <Text
+          numberOfLines={1}
+          className="mt-0.5 text-[10px] font-semibold uppercase tracking-[1.5px] text-ink-dim"
+        >
+          {label}
+        </Text>
       </View>
     </Pressable>
   );
