@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Constants from "expo-constants";
+import * as Updates from "expo-updates";
 import {
   Bell,
   Camera,
@@ -743,13 +744,27 @@ function AboutTab() {
   const p = useThemedPalette();
   const version = Constants.expoConfig?.version ?? "0.1.0";
   const sdk = Constants.expoConfig?.sdkVersion ?? "—";
-  const build = useMemo(() => `Build ${(Constants.nativeBuildVersion ?? "dev").toString()}`, []);
+  const build = (Constants.nativeBuildVersion ?? "dev").toString();
+  // WHICH JS is actually running — the ground truth for "did the update
+  // land?". Embedded = the bundle compiled into this build; an OTA id tail
+  // identifies the exact published update.
+  const runningJs = !Updates.isEnabled
+    ? "dev · OTA disabled"
+    : Updates.isEmbeddedLaunch
+      ? "embedded JS"
+      : `OTA …${(Updates.updateId ?? "").slice(-12)}`;
 
   return (
     <>
       <Section title="App">
         <Row icon={Info} label="Version" description={`${version} · Expo SDK ${sdk}`} />
-        <Row icon={Sparkles} iconTint={p.accent.mint} label="Channel" description={build} />
+        <Row
+          icon={Sparkles}
+          iconTint={p.accent.mint}
+          label="Software"
+          description={`Build ${build} · ${runningJs}`}
+        />
+        <UpdateCheckRow />
         <Row
           icon={Camera}
           iconTint={p.accent.blue}
@@ -789,6 +804,59 @@ function AboutTab() {
         © {new Date().getFullYear()} Loupe · All rights reserved
       </Text>
     </>
+  );
+}
+
+/**
+ * Check-now row: taps straight through check → download → reload (the app
+ * restarts on the new version). Status reads inline in the description —
+ * no popups, per house taste.
+ */
+function UpdateCheckRow() {
+  const p = useThemedPalette();
+  const [status, setStatus] = useState<
+    "idle" | "checking" | "downloading" | "current" | "error"
+  >("idle");
+
+  const description = !Updates.isEnabled
+    ? "Unavailable in dev builds"
+    : status === "checking"
+      ? "Checking…"
+      : status === "downloading"
+        ? "Downloading — the app will refresh"
+        : status === "current"
+          ? "You're on the latest version"
+          : status === "error"
+            ? "Couldn't check — tap to try again"
+            : "Fetch and apply the latest release now";
+
+  const run = async () => {
+    if (!Updates.isEnabled || status === "checking" || status === "downloading")
+      return;
+    try {
+      setStatus("checking");
+      const r = await Updates.checkForUpdateAsync();
+      if (!r.isAvailable) {
+        setStatus("current");
+        return;
+      }
+      setStatus("downloading");
+      await Updates.fetchUpdateAsync();
+      await Updates.reloadAsync();
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  return (
+    <Row
+      icon={RotateCcw}
+      iconTint={p.accent.blue}
+      label="Check for updates"
+      description={description}
+      trailing={<ChevronRight size={16} color={p.ink.dim} />}
+      onPress={() => void run()}
+    />
   );
 }
 
