@@ -15,6 +15,7 @@ import { ApiProvider } from "@/presentation/providers/ApiProvider";
 import { AuthProvider } from "@/presentation/providers/AuthProvider";
 import { ProProvider } from "@/presentation/features/pro";
 import { useAppStateRefresh } from "@/presentation/providers/useAppStateRefresh";
+import { useOtaFreshness } from "@/presentation/providers/useOtaFreshness";
 
 interface Props {
   children: React.ReactNode;
@@ -43,5 +44,8 @@ export function AppProviders({ children }: Props) {
  */
 function AppStateBridge({ children }: { children: React.ReactNode }) {
   useAppStateRefresh();
+  // OTA updates apply at launch/foreground boundaries instead of waiting
+  // for the cold start after next — see the hook for the policy.
+  useOtaFreshness();
   return <>{children}</>;
 }

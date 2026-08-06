@@ -88,11 +88,15 @@ export function WebPageScreen({
   const sep = path.includes("?") ? "&" : "?";
   const scopeParam =
     embed === "app" ? `&scope=${encodeURIComponent(allowedKey)}` : "";
-  // Cache-buster tied to the running JS bundle: each OTA/build changes the
-  // document URL, so the WebView can't keep serving a stale SPA shell from
-  // its heuristic cache (stale shell = 404s for routes added since).
+  // Cache-buster: OTA/build id PLUS a per-mount nonce. The id part defeats
+  // the WebView's heuristic cache across app updates (stale SPA shell =
+  // 404s for routes added since); the nonce makes every OPEN of a bundled
+  // page fetch the current shell, so a web-only deploy (no OTA involved)
+  // shows up the next time the screen is opened — index.html ships
+  // Cache-Control: no-cache, so the cost is one tiny revalidation.
+  const nonce = useMemo(() => Date.now().toString(36), []);
   const bust = encodeURIComponent(
-    Updates.updateId ?? Constants.expoConfig?.version ?? "dev",
+    `${Updates.updateId ?? Constants.expoConfig?.version ?? "dev"}-${nonce}`,
   );
   const uri = `${config.webUrl}${path}${sep}embed=${embed}${scopeParam}&b=${bust}`;
 
@@ -225,6 +229,9 @@ export function WebPageScreen({
           onShouldStartLoadWithRequest={onShouldStart}
           onMessage={onMessage}
           onLoadEnd={() => setLoading(false)}
+          // iOS reclaims WebView content processes under memory pressure;
+          // without this the embed comes back as a blank white sheet.
+          onContentProcessDidTerminate={() => webRef.current?.reload()}
           startInLoadingState={false}
           originWhitelist={["*"]}
           style={{ flex: 1, backgroundColor: p.bg.base }}
