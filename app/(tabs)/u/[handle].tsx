@@ -31,7 +31,6 @@ import {
   Heart,
   Lock,
   MapPin,
-  Pencil,
   Settings2,
   Share as ShareIcon,
 } from "lucide-react-native";
@@ -216,7 +215,7 @@ export default function CollectorProfileScreen() {
                 handle={data.username}
                 name={data.display_name}
                 url={data.avatar_url}
-                size={84}
+                size={80}
                 isPro={data.is_pro}
               />
               <ProfileStats
@@ -279,12 +278,10 @@ export default function CollectorProfileScreen() {
                 <>
                   <ActionButton
                     label="Edit profile"
-                    Icon={Pencil}
                     onPress={() => router.push(routes.communitySettings())}
                   />
                   <ActionButton
                     label="Share profile"
-                    Icon={ShareIcon}
                     onPress={() => void shareProfile()}
                   />
                 </>
@@ -314,14 +311,9 @@ export default function CollectorProfileScreen() {
                     }
                     style={[
                       styles.heart,
-                      {
-                        borderColor: data.viewer_has_liked
-                          ? withAlpha(p.accent.rose, 0.5)
-                          : p.line.default,
-                        backgroundColor: data.viewer_has_liked
-                          ? withAlpha(p.accent.rose, 0.1)
-                          : withAlpha(p.ink.default, 0.04),
-                      },
+                      data.viewer_has_liked
+                        ? { backgroundColor: withAlpha(p.accent.rose, 0.14) }
+                        : { backgroundColor: withAlpha(p.ink.default, 0.07) },
                     ]}
                   >
                     <Heart
@@ -379,7 +371,7 @@ export default function CollectorProfileScreen() {
                 {totalValue != null ? (
                   <View style={styles.valueBlock}>
                     <Text style={[styles.valueLabel, { color: p.ink.dim }]}>
-                      COLLECTION VALUE
+                      Collection value
                     </Text>
                     <Text style={[styles.valueFigure, { color: p.ink.default }]}>
                       {money(totalValue)}
@@ -474,7 +466,7 @@ function ActionButton({
   busy = false,
 }: {
   label: string;
-  Icon?: typeof Pencil;
+  Icon?: typeof Settings2;
   onPress: () => void;
   primary?: boolean;
   busy?: boolean;
@@ -491,11 +483,7 @@ function ActionButton({
         styles.action,
         primary
           ? { backgroundColor: p.accent.mint }
-          : {
-              borderWidth: 1,
-              borderColor: p.line.default,
-              backgroundColor: withAlpha(p.ink.default, 0.04),
-            },
+          : { backgroundColor: withAlpha(p.ink.default, 0.07) },
         busy ? { opacity: 0.6 } : null,
       ]}
     >
@@ -529,13 +517,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   barTitle: { flex: 1, fontSize: 15, fontWeight: "700", textAlign: "center" },
-  content: { padding: 20, paddingBottom: 60, gap: 14 },
+  content: { padding: 20, paddingBottom: 60, gap: 12 },
   center: { paddingVertical: 40, alignItems: "center", gap: 6 },
   errorTitle: { fontSize: 17, fontWeight: "700" },
   errorBody: { fontSize: 13.5, textAlign: "center", maxWidth: 300 },
-  identity: { flexDirection: "row", alignItems: "center", gap: 18, paddingTop: 2 },
+  identity: { flexDirection: "row", alignItems: "center", gap: 16, paddingTop: 2 },
   who: { gap: 3 },
-  name: { fontSize: 21, fontWeight: "800", letterSpacing: -0.5 },
+  name: { fontSize: 20, fontWeight: "800", letterSpacing: -0.5 },
   metaLine: {
     flexDirection: "row",
     alignItems: "center",
@@ -552,29 +540,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
-    paddingVertical: 11,
-    borderRadius: 13,
+    paddingVertical: 9,
+    borderRadius: 10,
   },
-  actionText: { fontSize: 14.5, fontWeight: "700" },
+  actionText: { fontSize: 13.5, fontWeight: "700", letterSpacing: -0.1 },
   // The heart is square-ish so the Follow button stays the widest object.
   heart: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    paddingHorizontal: 16,
-    borderRadius: 13,
-    borderWidth: 1,
+    paddingHorizontal: 15,
+    borderRadius: 10,
   },
   heartCount: { fontSize: 13, fontWeight: "700" },
-  reach: { fontSize: 12, textAlign: "center" },
-  collection: { gap: 22, marginTop: 6 },
+  reach: { fontSize: 11.5, textAlign: "center" },
+  collection: { gap: 18, marginTop: 8 },
   valueBlock: { gap: 2, paddingTop: 4 },
-  valueLabel: { fontSize: 10, fontWeight: "600", letterSpacing: 3 },
+  valueLabel: { fontSize: 12, fontWeight: "500" },
   valueFigure: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: "800",
-    letterSpacing: -1,
+    letterSpacing: -0.8,
     fontVariant: ["tabular-nums"],
   },
   valueBreakdown: { fontSize: 12.5, marginTop: 2 },

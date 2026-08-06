@@ -45,7 +45,7 @@ import {
 import { CurrencyPickerSheet } from "@/presentation/components/CurrencyPickerSheet";
 import { formatMoney, getCurrency } from "@/shared/currency";
 import { useCollectionsOverview } from "@/application/queries/collection/useCollectionsOverview";
-import { Row, Section, StatTile } from "@/presentation/components/GroupedList";
+import { Row, Section } from "@/presentation/components/GroupedList";
 import { pluralize } from "@/presentation/features/social/socialLabels";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import { useAuth } from "@/presentation/providers/AuthProvider";
@@ -221,8 +221,9 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         </Pressable>
       </View>
 
-      {/* Identity card — who you are here + your community reach. Taps
-          through to the public profile (or to claiming a handle). */}
+      {/* Who you are — flat text under the hero, no boxes, no second avatar
+          (the hero bubble is the ONLY face on this screen). Name + handle
+          tap through to the public profile. */}
       <View className="px-5">
         <Pressable
           onPress={() =>
@@ -232,67 +233,38 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           accessibilityLabel={
             socialProfile ? "View my collector profile" : "Join the community"
           }
-          style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
         >
-          {/* Flat, not carded. This was the first thing on the screen and the
-              box around it announced "container" before it announced "you". */}
-          <View className="flex-row items-center gap-3.5 py-2">
-            {socialProfile ? (
-              <SocialAvatar
-                handle={socialProfile.username}
-                url={socialProfile.avatar_url}
-                size={52}
-              />
-            ) : (
-              <View
-                className="h-[52px] w-[52px] items-center justify-center rounded-full"
-                style={{ backgroundColor: `${p.accent.mint}22` }}
-              >
-                <Text className="text-xl font-bold" style={{ color: p.accent.mint }}>
-                  {initial}
-                </Text>
-              </View>
-            )}
-            <View className="flex-1">
-              <Text numberOfLines={1} className="text-[16px] font-bold text-ink">
-                {displayName}
-              </Text>
-              <Text
-                numberOfLines={1}
-                className="mt-0.5 text-[12px] font-semibold"
-                style={{ color: p.accent.mint }}
-              >
-                {socialProfile ? `@${socialProfile.username}` : "Claim your @handle"}
-              </Text>
-              <Text numberOfLines={1} className="mt-0.5 text-[11px] text-ink-dim">
-                {myStats
-                  ? [
-                      `${myStats.follower_count.toLocaleString()} ${pluralize(myStats.follower_count, "follower")}`,
-                      `${myStats.view_count.toLocaleString()} profile ${pluralize(myStats.view_count, "view")}`,
-                      `${myStats.like_count.toLocaleString()} ${pluralize(myStats.like_count, "like")}`,
-                    ].join(" · ")
-                  : (user?.email ?? "")}
-              </Text>
-            </View>
-            <ChevronRight size={18} color={p.ink.dim} />
-          </View>
+          <Text numberOfLines={1} className="text-[19px] font-bold tracking-tight text-ink">
+            {displayName}
+          </Text>
+          <Text numberOfLines={1} className="mt-0.5 text-[12.5px] text-ink-dim">
+            <Text style={{ color: p.accent.mint, fontWeight: "600" }}>
+              {socialProfile ? `@${socialProfile.username}` : "Claim your @handle"}
+            </Text>
+            {myStats
+              ? `   ${myStats.follower_count.toLocaleString()} ${pluralize(myStats.follower_count, "follower")} · ${myStats.view_count.toLocaleString()} ${pluralize(myStats.view_count, "view")} · ${myStats.like_count.toLocaleString()} ${pluralize(myStats.like_count, "like")}`
+              : user?.email
+                ? `   ${user.email}`
+                : ""}
+          </Text>
         </Pressable>
 
-        {/* At-a-glance numbers — live backend data, each tile a shortcut. */}
-        <View className="mt-4 flex-row" style={{ gap: 20 }}>
-          <StatTile
-            label="Portfolio"
+        {/* The numbers, bare — figure over whisper, hugging left like a
+            ledger line. No tiles, no borders, no even spreading. */}
+        <View className="mt-5 flex-row" style={{ gap: 30 }}>
+          <Figure
             value={allEntry ? formatMoney(allEntry.total_value_usd, currency) : "—"}
+            label="portfolio"
             onPress={() => router.push(routes.analytics())}
           />
-          <StatTile
-            label="Cards"
+          <Figure
             value={allEntry ? allEntry.card_count.toLocaleString() : "—"}
+            label="cards"
             onPress={() => router.push(routes.vault())}
           />
-          <StatTile
-            label="Collections"
+          <Figure
             value={binderCount != null ? String(binderCount) : "—"}
+            label="collections"
             onPress={() => router.push(routes.vault())}
           />
         </View>
@@ -897,6 +869,37 @@ function AboutTab() {
  * restarts on the new version). Status reads inline in the description —
  * no popups, per house taste.
  */
+/** A bare number over a whisper label — the Settings ledger line. */
+function Figure({
+  value,
+  label,
+  onPress,
+}: {
+  value: string;
+  label: string;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? "button" : "text"}
+      accessibilityLabel={`${label}: ${value}`}
+    >
+      <Text
+        numberOfLines={1}
+        className="text-[18px] font-bold text-ink"
+        style={{ letterSpacing: -0.4, fontVariant: ["tabular-nums"] }}
+      >
+        {value}
+      </Text>
+      <Text numberOfLines={1} className="mt-0.5 text-[11px] text-ink-dim">
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 function UpdateCheckRow() {
   const p = useThemedPalette();
   const [status, setStatus] = useState<
