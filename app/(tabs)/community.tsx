@@ -1,18 +1,16 @@
 /**
  * Community — native.
  *
- * This replaces a WebView that loaded `/app/community?embed=app`. The embed
- * worked, but it sat at the root of the stack ABOVE the tab navigator, so the
- * bottom bar vanished the moment you opened it — which is most of why the
- * page read as a website in a frame rather than part of the app. Living in
- * `(tabs)` fixes that structurally, and going native buys the rest: real
- * momentum scrolling, the app's own rows and type, and no token hand-off.
- *
- * Order of the page is the order of what a user needs:
+ * Restructured around what a user actually does here, in order:
  *   1. Claim a handle — nothing else works until this exists.
- *   2. Follow requests — someone is waiting on you.
- *   3. Search — you came here looking for a specific person.
- *   4. Suggested — you didn't, and an empty page would end the session.
+ *   2. Search — pinned under the title; you came looking for someone.
+ *   3. Follow requests — one line each, decide without leaving the list.
+ *   4. Featured collectors — faces on a rail; the browse moment.
+ *   5. More collectors — the directory.
+ *   6. In real life — the card-shop map; community isn't only online.
+ *
+ * While focused, the island navbar morphs into the community rail
+ * (People · Home · My profile) — see CommunityIsland.
  */
 import React, { useState } from "react";
 import {
@@ -27,7 +25,8 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, X } from "lucide-react-native";
+import { Check, ChevronRight, MapPin, Search, X } from "lucide-react-native";
+import * as Haptics from "expo-haptics";
 import { CollectorRow } from "@/presentation/features/social/CollectorRow";
 import { ClaimUsernameCard } from "@/presentation/features/social/ClaimUsernameCard";
 import { FeaturedCollectorRail } from "@/presentation/features/social/FeaturedCollectorRail";
@@ -48,8 +47,6 @@ export default function CommunityScreen() {
   const p = useThemedPalette();
   const [q, setQ] = useState("");
 
-  // While this screen is focused the island navbar morphs into the
-  // community rail (People · Home · My profile) — see CommunityIsland.
   useCommunityIslandPresence();
 
   const me = useSocialMe();
@@ -116,8 +113,6 @@ export default function CommunityScreen() {
             ) : null}
           </View>
 
-          {/* Nothing below works until a handle exists, so it goes first and
-              the rest of the page stays hidden behind it. */}
           {me.isLoading ? (
             <View style={styles.loading}>
               <ActivityIndicator color={p.ink.dim} />
@@ -126,57 +121,9 @@ export default function CommunityScreen() {
             <ClaimUsernameCard />
           ) : (
             <>
-              {requests.data && requests.data.length > 0 ? (
-                <Section title="Follow requests" count={requests.data.length}>
-                  {requests.data.map((r) => (
-                    <View key={r.id} style={styles.requestRow}>
-                      <CollectorRow
-                        user={r.requester}
-                        onPress={() => openProfile(r.requester.username)}
-                      />
-                      <View style={styles.decision}>
-                        <Pressable
-                          onPress={() =>
-                            respond.mutate({ id: r.id, accept: true })
-                          }
-                          disabled={respond.isPending}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Accept @${r.requester.username}`}
-                          style={[
-                            styles.decisionBtn,
-                            { backgroundColor: withAlpha(p.accent.mint, 0.16) },
-                          ]}
-                        >
-                          <Text
-                            style={[styles.decisionText, { color: p.accent.mint }]}
-                          >
-                            Accept
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() =>
-                            respond.mutate({ id: r.id, accept: false })
-                          }
-                          disabled={respond.isPending}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Decline @${r.requester.username}`}
-                          style={[
-                            styles.decisionBtn,
-                            { borderWidth: 1, borderColor: p.line.default },
-                          ]}
-                        >
-                          <Text
-                            style={[styles.decisionText, { color: p.ink.muted }]}
-                          >
-                            Decline
-                          </Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  ))}
-                </Section>
-              ) : null}
-
+              {/* Search sits directly under the title — finding a specific
+                  person is the page's first verb, not something buried
+                  beneath an inbox. */}
               <View
                 style={[
                   styles.search,
@@ -231,8 +178,58 @@ export default function CommunityScreen() {
                 </Section>
               ) : (
                 <>
-                  {/* Faces first: suggested collectors as an App-Store-style
-                      rail of cards, spillover as rows beneath. */}
+                  {/* Requests: ONE line per person — the face, and the
+                      decision as two compact controls in the row's own
+                      trailing slot. A second line of wide Accept/Decline
+                      bars made three requests fill the screen. */}
+                  {requests.data && requests.data.length > 0 ? (
+                    <Section title="Follow requests" count={requests.data.length}>
+                      {requests.data.map((r) => (
+                        <CollectorRow
+                          key={r.id}
+                          user={r.requester}
+                          onPress={() => openProfile(r.requester.username)}
+                          trailing={
+                            <View style={styles.decision}>
+                              <Pressable
+                                onPress={() => {
+                                  Haptics.selectionAsync().catch(() => {});
+                                  respond.mutate({ id: r.id, accept: true });
+                                }}
+                                disabled={respond.isPending}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Accept @${r.requester.username}`}
+                                style={[
+                                  styles.decide,
+                                  { backgroundColor: p.accent.mint },
+                                ]}
+                              >
+                                <Check size={15} color="#06140d" strokeWidth={3} />
+                              </Pressable>
+                              <Pressable
+                                onPress={() => {
+                                  Haptics.selectionAsync().catch(() => {});
+                                  respond.mutate({ id: r.id, accept: false });
+                                }}
+                                disabled={respond.isPending}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Decline @${r.requester.username}`}
+                                style={[
+                                  styles.decide,
+                                  { borderWidth: 1, borderColor: p.line.default },
+                                ]}
+                              >
+                                <X size={14} color={p.ink.muted} strokeWidth={2.6} />
+                              </Pressable>
+                            </View>
+                          }
+                        />
+                      ))}
+                    </Section>
+                  ) : null}
+
+                  {/* Faces first: featured collectors as an App-Store-style
+                      rail of cards, the directory as rows beneath. */}
                   <Section title="Featured collectors">
                     {discover.isLoading ? (
                       <View style={styles.loading}>
@@ -251,6 +248,7 @@ export default function CommunityScreen() {
                       />
                     )}
                   </Section>
+
                   {(discover.data?.more.length ?? 0) > 0 ? (
                     <Section title="More collectors">
                       {discover.data!.more.map((u) => (
@@ -264,6 +262,42 @@ export default function CommunityScreen() {
                       ))}
                     </Section>
                   ) : null}
+
+                  {/* The community isn't only online — hand off to the map
+                      of physical card shops. */}
+                  <Section title="In real life">
+                    <Pressable
+                      onPress={() => router.push("/stores")}
+                      accessibilityRole="button"
+                      accessibilityLabel="Card shops near you. Opens the map."
+                      style={({ pressed }) => [
+                        styles.mapRow,
+                        {
+                          borderColor: p.line.default,
+                          backgroundColor: p.bg.elevated,
+                          opacity: pressed ? 0.75 : 1,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.mapIcon,
+                          { backgroundColor: withAlpha(p.accent.mint, 0.14) },
+                        ]}
+                      >
+                        <MapPin size={16} color={p.accent.mint} strokeWidth={2.4} />
+                      </View>
+                      <View style={styles.mapText}>
+                        <Text style={[styles.mapTitle, { color: p.ink.default }]}>
+                          Card shops near you
+                        </Text>
+                        <Text style={[styles.mapSub, { color: p.ink.dim }]}>
+                          Local game stores that sell trading cards, on a map.
+                        </Text>
+                      </View>
+                      <ChevronRight size={16} color={p.ink.dim} />
+                    </Pressable>
+                  </Section>
                 </>
               )}
             </>
@@ -287,7 +321,7 @@ function Section({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHead}>
-        <Text style={[styles.sectionTitle, { color: p.ink.muted }]}>
+        <Text style={[styles.sectionTitle, { color: p.ink.dim }]}>
           {title.toUpperCase()}
         </Text>
         {count ? (
@@ -321,7 +355,7 @@ const styles = StyleSheet.create({
   headAvatar: { borderWidth: 2, borderRadius: 999, padding: 2 },
   title: { fontSize: 28, fontWeight: "800", letterSpacing: -0.9 },
   sub: { fontSize: 13.5 },
-  section: { marginTop: 20, gap: 2 },
+  section: { marginTop: 22, gap: 2 },
   sectionHead: {
     flexDirection: "row",
     alignItems: "center",
@@ -344,18 +378,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
     paddingHorizontal: 13,
-    marginTop: 20,
   },
   searchInput: { flex: 1, fontSize: 15, paddingVertical: 12 },
-  requestRow: { gap: 2 },
-  decision: { flexDirection: "row", gap: 8, paddingBottom: 8 },
-  decisionBtn: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: 11,
+  decision: { flexDirection: "row", gap: 8 },
+  decide: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
+    justifyContent: "center",
   },
-  decisionText: { fontSize: 13, fontWeight: "700" },
   loading: { paddingVertical: 22, alignItems: "center" },
   empty: { fontSize: 13, paddingVertical: 10 },
+  mapRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 13,
+    marginTop: 4,
+  },
+  mapIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mapText: { flex: 1, gap: 1 },
+  mapTitle: { fontSize: 14.5, fontWeight: "700", letterSpacing: -0.2 },
+  mapSub: { fontSize: 12 },
 });

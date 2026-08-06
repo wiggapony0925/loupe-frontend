@@ -16,7 +16,7 @@ import * as Haptics from "expo-haptics";
 import type { SocialUserCardWire } from "@/infrastructure/http";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import { followLabel } from "@/presentation/features/social/socialLabels";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 
 const PAGE_PADDING = 20;
 
@@ -64,7 +64,7 @@ export function FeaturedCollectorRail({
               handle={u.username}
               name={u.display_name}
               url={u.avatar_url}
-              size={62}
+              size={68}
               isPro={u.is_pro}
             />
             <Text
@@ -74,7 +74,12 @@ export function FeaturedCollectorRail({
               {u.display_name?.trim() || `@${u.username}`}
             </Text>
             <Text numberOfLines={1} style={[styles.meta, { color: p.ink.dim }]}>
-              {u.display_name?.trim() ? `@${u.username}` : (u.location ?? " ")}
+              {[
+                u.display_name?.trim() ? `@${u.username}` : null,
+                u.location,
+              ]
+                .filter(Boolean)
+                .join(" · ") || " "}
             </Text>
 
             <Pressable
@@ -90,14 +95,14 @@ export function FeaturedCollectorRail({
                 styles.pill,
                 engaged
                   ? { borderWidth: 1, borderColor: p.line.default }
-                  : { backgroundColor: withAlpha(p.accent.mint, 0.16) },
+                  : { backgroundColor: p.accent.mint },
                 pending ? { opacity: 0.5 } : null,
               ]}
             >
               <Text
                 style={[
                   styles.pillText,
-                  { color: engaged ? p.ink.muted : p.accent.mint },
+                  { color: engaged ? p.ink.muted : "#06140d" },
                 ]}
               >
                 {followLabel(u.relationship)}
@@ -118,7 +123,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    width: 148,
+    width: 156,
     alignItems: "center",
     gap: 6,
     borderWidth: 1,
