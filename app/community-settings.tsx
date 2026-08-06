@@ -99,12 +99,21 @@ export default function CommunitySettingsScreen() {
       if (result.canceled || !asset?.uri) return;
       upload.mutate(
         { uri: asset.uri, mimeType: asset.mimeType ?? "image/jpeg" },
-        { onError: (e) => setError(e.message) },
+        {
+          onSuccess: () => {
+            Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success,
+            ).catch(() => {});
+            setError(null);
+          },
+          onError: (e) =>
+            setError(`Couldn't upload the photo: ${e.message}. Try again.`),
+        },
       );
-    } catch {
-      Alert.alert(
-        "Almost there",
-        "Changing your photo needs the next app update — everything else works now.",
+    } catch (e) {
+      // Tell the truth — a picker error is not "update the app".
+      setError(
+        `Couldn't open your photo library: ${e instanceof Error ? e.message : String(e)}`,
       );
     }
   };
