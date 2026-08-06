@@ -6,7 +6,7 @@
  * day-long cache, so refetching as the user pans is cheap; we still round
  * the key client-side so tiny GPS jitter reuses the same query cache row.
  */
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type { NearbyStoresWire } from "@/infrastructure/http";
@@ -26,5 +26,10 @@ export function useNearbyStores(
       }),
     enabled: lat != null && lng != null,
     staleTime: 10 * 60_000,
+    // Reopening the map inside half an hour is instant, and searching a
+    // new area keeps the previous results on screen while it loads —
+    // the drawer never blanks mid-search.
+    gcTime: 30 * 60_000,
+    placeholderData: keepPreviousData,
   });
 }
