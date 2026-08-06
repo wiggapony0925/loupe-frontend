@@ -110,7 +110,7 @@ export default function CollectorProfileScreen() {
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel="Go back"
-            style={[styles.barBtn, { borderColor: p.line.default }]}
+            style={styles.barBtn}
           >
             <ChevronLeft size={19} color={p.ink.default} />
           </Pressable>
@@ -129,7 +129,7 @@ export default function CollectorProfileScreen() {
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel="Community settings"
-              style={[styles.barBtn, { borderColor: p.line.default }]}
+              style={styles.barBtn}
             >
               <Settings2 size={16} color={p.ink.muted} />
             </Pressable>
@@ -301,10 +301,7 @@ export default function CollectorProfileScreen() {
               </View>
               {gate ? (
                 <View
-                  style={[
-                    styles.gate,
-                    { borderColor: p.line.default, backgroundColor: p.bg.elevated },
-                  ]}
+                  style={styles.gate}
                 >
                   <Text style={[styles.gateTitle, { color: p.ink.default }]}>
                     {gate.title}
@@ -449,11 +446,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 12,
   },
+  // Bare, unringed icons. Settings' back affordance is a plain chevron, and
+  // two outlined circles floating in the header were the only rings left on
+  // the screen once the cards went.
   barBtn: {
     width: 34,
     height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -542,13 +540,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   shelf: { gap: 10 },
-  gate: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 18,
-    gap: 4,
-    alignItems: "center",
-  },
+  // A sentence, not a panel. "This vault is private" boxed and centred read
+  // as an error dialog for something that isn't an error.
+  gate: { paddingVertical: 20, gap: 4, alignItems: "center" },
   gateTitle: { fontSize: 15, fontWeight: "700" },
   gateBody: { fontSize: 13, textAlign: "center" },
 });

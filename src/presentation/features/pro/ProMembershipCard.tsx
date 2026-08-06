@@ -12,7 +12,7 @@
  *   • pro                → member-since + benefits + "Manage billing"
  */
 import React from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Check, ChevronRight, Sparkles } from "lucide-react-native";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useBillingConfig } from "@/application/queries";
@@ -59,42 +59,22 @@ export function ProMembershipCard() {
 
   return (
     <View className="px-5 pb-4">
+      {/*
+        Flat, ruled block — no card, no glow.
+        This carried a tinted fill, a mint border AND two 200pt offscreen
+        colour blobs bleeding through it. On a screen of otherwise plain rows
+        it was doing three decorative things at once and read as a template
+        rather than as your membership. A single hairline above it separates
+        it from the stats; the mint is spent on the wordmark and the ticks,
+        where it means something.
+      */}
       <View
         style={{
-          borderRadius: 20,
-          borderWidth: 1,
-          borderColor: withAlpha(p.accent.mint, isPro ? 0.35 : 0.22),
-          backgroundColor: p.bg.sunken,
-          overflow: "hidden",
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: p.line.default,
         }}
       >
-        {/* Sheen / glow accents (same metal-card vibe as statements) */}
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            top: -50,
-            right: -50,
-            width: 220,
-            height: 220,
-            borderRadius: 110,
-            backgroundColor: withAlpha(p.accent.mint, isPro ? 0.1 : 0.06),
-          }}
-        />
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            bottom: -70,
-            left: -50,
-            width: 190,
-            height: 190,
-            borderRadius: 95,
-            backgroundColor: withAlpha(p.accent.blue, 0.05),
-          }}
-        />
-
-        <View style={{ padding: 18, gap: 14 }}>
+        <View style={{ paddingVertical: 18, gap: 14 }}>
           {/* Wordmark row + status chip */}
           <View
             style={{
@@ -257,16 +237,14 @@ export function ProMembershipCard() {
             /* Pro without a Stripe portal (granted plan / billing not yet
                provisioned) — state it plainly instead of a dead-end button. */
             <View
+              // A statement, not a control. Boxed and centred it looked like
+              // a button that does nothing when tapped — the one thing a
+              // status line must never look like.
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                justifyContent: "center",
                 gap: 6,
-                paddingVertical: 11,
-                borderRadius: 13,
-                borderWidth: 1,
-                borderColor: p.line.default,
-                backgroundColor: p.bg.elevated,
+                paddingTop: 2,
               }}
             >
               <Check size={13} color={p.accent.mint} strokeWidth={3} />

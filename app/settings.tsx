@@ -234,7 +234,9 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           }
           style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
         >
-          <View className="flex-row items-center gap-3 rounded-2xl border border-line bg-bg-elevated px-4 py-4">
+          {/* Flat, not carded. This was the first thing on the screen and the
+              box around it announced "container" before it announced "you". */}
+          <View className="flex-row items-center gap-3.5 py-2">
             {socialProfile ? (
               <SocialAvatar
                 handle={socialProfile.username}
@@ -277,7 +279,7 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         </Pressable>
 
         {/* At-a-glance numbers — live backend data, each tile a shortcut. */}
-        <View className="mt-3 flex-row" style={{ gap: 10 }}>
+        <View className="mt-4 flex-row" style={{ gap: 20 }}>
           <StatTile
             label="Portfolio"
             value={allEntry ? formatMoney(allEntry.total_value_usd, currency) : "—"}
@@ -301,7 +303,7 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
       <ProMembershipCard />
 
       {/* Grouped menu — same Section/Row language as the sub-pages. */}
-      <View className="mt-4 px-5" style={{ gap: 16 }}>
+      <View className="mt-5 px-5" style={{ gap: 30 }}>
         <Section title="Collecting">
           <Row
             icon={Users}
@@ -628,7 +630,7 @@ function GeneralTab() {
 
       <Pressable
         onPress={() => s.reset()}
-        className="mt-2 flex-row items-center justify-center gap-2 rounded-2xl border border-line bg-bg-elevated px-5 py-4"
+        className="mt-2 flex-row items-center justify-center gap-2 rounded-xl px-5 py-4"
         style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
         accessibilityRole="button"
         accessibilityLabel="Reset settings"
@@ -755,7 +757,7 @@ function AppearanceTab() {
         <ThemePicker value={themeMode} onChange={setThemeMode} />
       </Section>
 
-      <View className="rounded-2xl border border-line bg-bg-elevated p-4">
+      <View className="py-2">
         <View className="flex-row items-center gap-2">
           <Sparkles size={13} color={p.accent.mint} />
           <Text className="text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">

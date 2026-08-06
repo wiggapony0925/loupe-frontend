@@ -1,16 +1,19 @@
 /**
- * GroupedList — the app's settings-style layout language.
+ * GroupedList — the app's list layout language. Flat, not carded.
  *
- * A dim, wide-tracked section caption over a single rounded card, rows
- * hairline-separated inside it, each row led by a tinted icon square. Plus
- * `StatTile` for the bordered figure cards that sit above a group.
+ * Content sits directly on the page. Structure comes from ONE hairline
+ * between rows and from the type scale — never from a box.
  *
- * These lived privately inside `app/settings.tsx`, which is why every other
- * screen that wanted the same look re-invented a slightly different version of
- * it — different radii, different label tracking, different row padding. The
- * Settings page is the best-organised surface in the app; extracting its
- * primitives means other screens *are* that language rather than imitating it,
- * and a spacing decision is made once.
+ * The previous version wrapped every group in a rounded bordered card and put
+ * each row's icon inside a tinted square. Stacked down a screen that reads as
+ * generated scaffolding: a page of identical containers where the containers
+ * are the loudest thing and the content is incidental. iOS Settings, Things,
+ * Linear — everything that feels considered — draws a dim caption, then rows
+ * on the page background, and lets a single hairline do the separating.
+ *
+ * The one rule worth keeping from the carded version: the separator insets to
+ * where the label starts, so the icon column reads as a margin rather than a
+ * cell in a table.
  *
  *   <StatRow>
  *     <StatTile label="Portfolio" value="$68.1k" />
@@ -22,13 +25,18 @@
  *   </Section>
  */
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 
+/** Where a row's text begins — icon (20) + its gap (14). */
+const ROW_TEXT_INSET = 34;
+
 /**
- * A bordered figure card. `value` is the loud thing; `label` is a whisper
- * beneath it, so a row of these reads as data rather than as buttons.
+ * A figure and its name. No border, no fill — the number carries it.
+ *
+ * A bordered tile per statistic made three numbers look like three buttons,
+ * and put six edges on screen to communicate nothing.
  */
 export function StatTile({
   label,
@@ -39,35 +47,34 @@ export function StatTile({
   value: string;
   onPress?: () => void;
 }) {
+  const p = useThemedPalette();
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? "button" : "text"}
       accessibilityLabel={`${label}: ${value}`}
-      style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.7 : 1 })}
+      style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.6 : 1 })}
     >
-      <View className="rounded-2xl border border-line bg-bg-elevated px-3 py-3">
-        <Text numberOfLines={1} className="text-[18px] font-bold text-ink">
-          {value}
-        </Text>
-        <Text
-          numberOfLines={1}
-          className="mt-0.5 text-[10px] font-semibold uppercase tracking-[1.5px] text-ink-dim"
-        >
-          {label}
-        </Text>
-      </View>
+      <Text
+        numberOfLines={1}
+        style={[styles.statValue, { color: p.ink.default }]}
+      >
+        {value}
+      </Text>
+      <Text numberOfLines={1} style={[styles.statLabel, { color: p.ink.dim }]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
-/** Equal-width tiles across one line. Three is the comfortable maximum. */
+/** Figures across one line. Three is the comfortable maximum on a phone. */
 export function StatRow({ children }: { children: React.ReactNode }) {
-  return <View className="flex-row gap-2.5">{children}</View>;
+  return <View style={styles.statRow}>{children}</View>;
 }
 
-/** A captioned group: the label sits OUTSIDE the card, as on iOS. */
+/** A captioned group of rows, flat on the page. */
 export function Section({
   title,
   children,
@@ -75,23 +82,21 @@ export function Section({
   title: string;
   children: React.ReactNode;
 }) {
+  const p = useThemedPalette();
   return (
     <View>
-      <Text className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[3px] text-ink-dim">
-        {title}
-      </Text>
-      <View className="overflow-hidden rounded-2xl border border-line bg-bg-elevated">
-        {children}
-      </View>
+      <Text style={[styles.sectionLabel, { color: p.ink.dim }]}>{title}</Text>
+      <View>{children}</View>
     </View>
   );
 }
 
 /**
- * One row inside a {@link Section}.
+ * One row in a {@link Section}.
  *
- * `isLast` drops the separator — the card's own rounded edge ends the group,
- * and a hairline sitting on top of it reads as a rendering artefact.
+ * `isLast` drops the separator — a hairline under the final row is a line
+ * fencing off empty space, which is why carded lists always looked like they
+ * had one border too many.
  */
 export function Row({
   icon: Icon,
@@ -113,37 +118,74 @@ export function Row({
   const p = useThemedPalette();
   const tint = iconTint ?? p.ink.muted;
   const Body = (
-    <View
-      className={`flex-row items-center gap-3 px-4 py-3.5 ${isLast ? "" : "border-b border-line"}`}
-    >
-      <View
-        className="h-8 w-8 items-center justify-center rounded-lg"
-        // 18 hex ≈ 9% — a tint that reads as a coloured chip without becoming
-        // a second competing surface.
-        style={{ backgroundColor: `${tint}18` }}
-      >
-        <Icon size={16} color={tint} />
-      </View>
-      <View className="flex-1">
-        <Text className="text-[14px] font-medium text-ink">{label}</Text>
+    <View style={styles.row}>
+      <Icon size={20} color={tint} strokeWidth={1.9} />
+      <View style={styles.rowText}>
+        <Text style={[styles.rowLabel, { color: p.ink.default }]}>{label}</Text>
         {description ? (
-          <Text className="mt-0.5 text-[11px] text-ink-dim">{description}</Text>
+          <Text style={[styles.rowDescription, { color: p.ink.dim }]}>
+            {description}
+          </Text>
         ) : null}
       </View>
       {trailing}
     </View>
   );
+
+  const separated = (
+    <View>
+      {Body}
+      {isLast ? null : (
+        <View
+          style={[
+            styles.separator,
+            { backgroundColor: p.line.default, marginLeft: ROW_TEXT_INSET },
+          ]}
+        />
+      )}
+    </View>
+  );
+
   if (onPress) {
     return (
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={label}
-        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        style={({ pressed }) => ({ opacity: pressed ? 0.55 : 1 })}
       >
-        {Body}
+        {separated}
       </Pressable>
     );
   }
-  return Body;
+  return separated;
 }
+
+const styles = StyleSheet.create({
+  statRow: { flexDirection: "row", gap: 20 },
+  statValue: {
+    fontSize: 22,
+    fontWeight: "700",
+    letterSpacing: -0.6,
+    fontVariant: ["tabular-nums"],
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    marginTop: 2,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 3,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  row: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 13 },
+  rowText: { flex: 1, gap: 1 },
+  rowLabel: { fontSize: 15, fontWeight: "500" },
+  rowDescription: { fontSize: 12 },
+  separator: { height: StyleSheet.hairlineWidth },
+});
