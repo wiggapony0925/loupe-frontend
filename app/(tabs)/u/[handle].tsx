@@ -63,11 +63,10 @@ export default function CollectorProfileScreen() {
   const params = useLocalSearchParams<{ handle?: string }>();
   const raw = typeof params.handle === "string" ? params.handle : "";
 
-  // `@me` is resolved client-side rather than server-side: the backend's
-  // RESERVED_USERNAMES already forbids "me" as a handle, so there's no
-  // collision, and this keeps the route shareable as a real @handle.
+  // `@me` resolves SERVER-side (house rule: backend owns the logic) — the
+  // route passes straight through and every endpoint understands the alias.
   const me = useSocialMe();
-  const handle = raw === "@me" || raw === "me" ? (me.data?.profile?.username ?? null) : raw;
+  const handle = raw === "me" ? "@me" : raw || null;
 
   const profile = useCollectorProfile(handle);
   const follow = useFollowCollector();
@@ -87,7 +86,7 @@ export default function CollectorProfileScreen() {
   );
   const followers = useFollowers(handle, listKind === "followers");
   const following = useFollowing(handle, listKind === "following");
-  const removeFollower = useRemoveFollower(me.data?.profile?.username ?? null);
+  const removeFollower = useRemoveFollower(isSelf ? handle : null);
   const activeList = listKind === "followers" ? followers : following;
 
   const gate = data
@@ -336,7 +335,10 @@ export default function CollectorProfileScreen() {
                     portfolios={collection.data?.portfolios ?? []}
                     isSelf={!!isSelf}
                   />
-                  <CollectionSetsRail sets={collection.data?.sets ?? []} />
+                  <CollectionSetsRail
+                    sets={collection.data?.sets ?? []}
+                    totalSets={collection.data?.total_sets}
+                  />
                   <CollectionGrid items={collection.data?.items ?? []} />
                 </>
               )}

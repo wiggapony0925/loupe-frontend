@@ -19,6 +19,7 @@ import {
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type {
+  DiscoverWire,
   FriendOwnerWire,
   SocialCollectionWire,
   SocialFollowRequestWire,
@@ -41,6 +42,20 @@ export function useSocialMe(): UseQueryResult<SocialMeWire> {
     queryFn: () => apiFetch<SocialMeWire>(ENDPOINTS.social.me),
     enabled: isAuthenticated,
     staleTime: 60_000,
+  });
+}
+
+/** The Community page's shelves, composed and RANKED by the backend —
+ *  `featured` and `more` arrive disjoint and ordered; render verbatim. */
+export function useDiscoverCollectors(
+  enabled = true,
+): UseQueryResult<DiscoverWire> {
+  const { isAuthenticated } = useAuth();
+  return useQuery<DiscoverWire>({
+    queryKey: queryKeys.social.discover(),
+    queryFn: () => apiFetch<DiscoverWire>(ENDPOINTS.social.discover),
+    enabled: isAuthenticated && enabled,
+    staleTime: 5 * 60_000,
   });
 }
 
@@ -171,6 +186,16 @@ export function useFollowCollector() {
       qc.setQueriesData<SocialUserCardWire[]>(
         { queryKey: queryKeys.social.suggested() },
         flip,
+      );
+      qc.setQueriesData<DiscoverWire>(
+        { queryKey: queryKeys.social.discover() },
+        (d) =>
+          d
+            ? {
+                featured: flip(d.featured) ?? d.featured,
+                more: flip(d.more) ?? d.more,
+              }
+            : d,
       );
       qc.setQueriesData<SocialUserCardWire[]>(
         { queryKey: ["social", "search"] },

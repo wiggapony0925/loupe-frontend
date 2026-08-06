@@ -34,11 +34,11 @@ import { FeaturedCollectorRail } from "@/presentation/features/social/FeaturedCo
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import {
   useCollectorSearch,
+  useDiscoverCollectors,
   useFollowCollector,
   useFollowRequests,
   useRespondToRequest,
   useSocialMe,
-  useSuggestedCollectors,
 } from "@/application/queries/social/useSocial";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { routes } from "@/shared/routes";
@@ -56,7 +56,8 @@ export default function CommunityScreen() {
   const claimed = !!me.data?.profile;
 
   const requests = useFollowRequests();
-  const suggested = useSuggestedCollectors(claimed);
+  // Composed + ranked server-side; featured/more arrive disjoint.
+  const discover = useDiscoverCollectors(claimed);
   const search = useCollectorSearch(q);
   const follow = useFollowCollector();
   const respond = useRespondToRequest();
@@ -74,10 +75,10 @@ export default function CommunityScreen() {
           keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
-              refreshing={me.isRefetching || suggested.isRefetching}
+              refreshing={me.isRefetching || discover.isRefetching}
               onRefresh={() => {
                 void me.refetch();
-                void suggested.refetch();
+                void discover.refetch();
                 void requests.refetch();
               }}
               tintColor={p.ink.dim}
@@ -233,26 +234,26 @@ export default function CommunityScreen() {
                   {/* Faces first: suggested collectors as an App-Store-style
                       rail of cards, spillover as rows beneath. */}
                   <Section title="Featured collectors">
-                    {suggested.isLoading ? (
+                    {discover.isLoading ? (
                       <View style={styles.loading}>
                         <ActivityIndicator color={p.ink.dim} />
                       </View>
-                    ) : (suggested.data?.length ?? 0) === 0 ? (
+                    ) : (discover.data?.featured.length ?? 0) === 0 ? (
                       <Text style={[styles.empty, { color: p.ink.dim }]}>
                         No suggestions yet — search for someone by handle.
                       </Text>
                     ) : (
                       <FeaturedCollectorRail
-                        users={suggested.data!.slice(0, 8)}
+                        users={discover.data!.featured}
                         onOpen={openProfile}
                         onToggleFollow={follow.mutate}
                         pending={follow.isPending}
                       />
                     )}
                   </Section>
-                  {(suggested.data?.length ?? 0) > 8 ? (
+                  {(discover.data?.more.length ?? 0) > 0 ? (
                     <Section title="More collectors">
-                      {suggested.data!.slice(8).map((u) => (
+                      {discover.data!.more.map((u) => (
                         <CollectorRow
                           key={u.user_id}
                           user={u}

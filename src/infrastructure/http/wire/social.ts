@@ -115,9 +115,17 @@ export interface SocialCollectionSetWire {
   cover_image_url: string | null;
 }
 
+/** The Community page's people shelves, composed and ranked server-side. */
+export interface DiscoverWire {
+  featured: SocialUserCardWire[];
+  more: SocialUserCardWire[];
+}
+
 export interface SocialCollectionWire {
   total_cards: number;
   estimated_value_usd: string | null;
+  /** Vault-wide set count — `sets` is capped server-side to the top few. */
+  total_sets?: number;
   /** Curated portfolios (binders), largest value first. */
   portfolios?: SocialPortfolioWire[];
   /** Whole-collection breakdown, largest value first (may be absent on

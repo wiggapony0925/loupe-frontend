@@ -95,6 +95,7 @@ export const queryKeys = {
     all: ["social"] as const,
     me: () => ["social", "me"] as const,
     suggested: () => ["social", "suggested"] as const,
+    discover: () => ["social", "discover"] as const,
     requests: () => ["social", "requests"] as const,
     search: (q: string) => ["social", "search", q] as const,
     profile: (handle: string) => ["social", "profile", handle] as const,

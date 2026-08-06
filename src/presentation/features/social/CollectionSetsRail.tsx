@@ -132,13 +132,16 @@ export function PortfolioShelf({
 /** Top catalog sets by value, capped with a "+N more" tile. */
 export function CollectionSetsRail({
   sets,
+  totalSets,
 }: {
   sets: readonly SocialCollectionSetWire[];
+  /** Vault-wide set count from the server — `sets` arrives pre-capped. */
+  totalSets?: number;
 }) {
   const p = useThemedPalette();
   if (sets.length < 2) return null;
-  const shown = sets.slice(0, MAX_SET_TILES);
-  const hidden = sets.length - shown.length;
+  const shown = sets.slice(0, MAX_SET_TILES); // belt for pre-cap payloads
+  const hidden = Math.max(0, (totalSets ?? sets.length) - shown.length);
   const tiles: ShelfTile[] = shown.map((s) => ({
     key: s.name,
     name: s.name,

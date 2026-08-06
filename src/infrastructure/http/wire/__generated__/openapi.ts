@@ -3926,6 +3926,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/social/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Community page's people shelves, composed server-side
+         * @description Ranked and split by the backend — `featured` and `more` are disjoint;
+         *     clients render them verbatim (no slicing, no dedupe, no ordering).
+         */
+        get: operations["discover_collectors_v1_social_discover_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/social/me": {
         parameters: {
             query?: never;
@@ -5683,6 +5704,26 @@ export interface components {
              * Format: email
              */
             email: string;
+        };
+        /**
+         * DiscoverRead
+         * @description ``GET /v1/social/discover`` — the Community page, composed server-side.
+         *
+         *     ``featured`` and ``more`` are guaranteed DISJOINT and ranked by the
+         *     backend (most-followed, then largest collection, then newest), so
+         *     clients render the two shelves verbatim — no slicing, no dedupe.
+         */
+        DiscoverRead: {
+            /**
+             * Featured
+             * @default []
+             */
+            featured: components["schemas"]["SocialUserCard"][];
+            /**
+             * More
+             * @default []
+             */
+            more: components["schemas"]["SocialUserCard"][];
         };
         /** EmailLogDetail */
         EmailLogDetail: {
@@ -8304,6 +8345,11 @@ export interface components {
              * @default 0
              */
             total_cards: number;
+            /**
+             * Total Sets
+             * @default 0
+             */
+            total_sets: number;
         };
         /**
          * SocialCollectionSet
@@ -16133,6 +16179,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discover_collectors_v1_social_discover_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoverRead"];
                 };
             };
         };

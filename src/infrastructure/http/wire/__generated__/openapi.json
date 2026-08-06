@@ -3430,6 +3430,29 @@
         "title": "DevLoginRequest",
         "type": "object"
       },
+      "DiscoverRead": {
+        "description": "``GET /v1/social/discover`` \u2014 the Community page, composed server-side.\n\n``featured`` and ``more`` are guaranteed DISJOINT and ranked by the\nbackend (most-followed, then largest collection, then newest), so\nclients render the two shelves verbatim \u2014 no slicing, no dedupe.",
+        "properties": {
+          "featured": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SocialUserCard"
+            },
+            "title": "Featured",
+            "type": "array"
+          },
+          "more": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SocialUserCard"
+            },
+            "title": "More",
+            "type": "array"
+          }
+        },
+        "title": "DiscoverRead",
+        "type": "object"
+      },
       "EmailLogDetail": {
         "properties": {
           "attempts": {
@@ -10110,6 +10133,11 @@
           "total_cards": {
             "default": 0,
             "title": "Total Cards",
+            "type": "integer"
+          },
+          "total_sets": {
+            "default": 0,
+            "title": "Total Sets",
             "type": "integer"
           }
         },
@@ -23522,6 +23550,33 @@
           }
         ],
         "summary": "Collectors I follow who own this card",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/discover": {
+      "get": {
+        "description": "Ranked and split by the backend \u2014 `featured` and `more` are disjoint;\nclients render them verbatim (no slicing, no dedupe, no ordering).",
+        "operationId": "discover_collectors_v1_social_discover_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoverRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The Community page's people shelves, composed server-side",
         "tags": [
           "social"
         ]

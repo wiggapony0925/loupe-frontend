@@ -42,6 +42,7 @@ export const ENDPOINTS = {
     avatar: `${V1}/social/me/avatar`,
     search: `${V1}/social/search`,
     suggested: `${V1}/social/suggested`,
+    discover: `${V1}/social/discover`,
     requests: `${V1}/social/requests`,
     acceptRequest: (id: string) => `${V1}/social/requests/${id}/accept`,
     declineRequest: (id: string) => `${V1}/social/requests/${id}/decline`,
