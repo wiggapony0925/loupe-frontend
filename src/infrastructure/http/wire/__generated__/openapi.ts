@@ -3451,6 +3451,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/stores/nearby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Card & game shops near a point (server-ranked, cached) */
+        get: operations["stores_nearby_v1_public_stores_nearby_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/trending": {
         parameters: {
             query?: never;
@@ -7046,6 +7063,49 @@ export interface components {
             code: string;
             /** Mfa Token */
             mfa_token: string;
+        };
+        /**
+         * NearbyStore
+         * @description One physical shop near the caller. Positions are WGS84.
+         */
+        NearbyStore: {
+            /** Address */
+            address?: string | null;
+            /** Category */
+            category: string;
+            /** Distance Km */
+            distance_km: number;
+            /** Id */
+            id: string;
+            /** Lat */
+            lat: number;
+            /** Lng */
+            lng: number;
+            /** Name */
+            name: string;
+            /** Opening Hours */
+            opening_hours?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Website */
+            website?: string | null;
+        };
+        /**
+         * NearbyStoresRead
+         * @description Ranked nearby shops (dedicated card stores first, then distance).
+         */
+        NearbyStoresRead: {
+            /**
+             * Source
+             * @default live
+             * @enum {string}
+             */
+            source: "live" | "cached" | "unavailable";
+            /**
+             * Stores
+             * @default []
+             */
+            stores: components["schemas"]["NearbyStore"][];
         };
         /**
          * NotificationPage
@@ -15232,6 +15292,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stores_nearby_v1_public_stores_nearby_get: {
+        parameters: {
+            query: {
+                lat: number;
+                lng: number;
+                radius_km?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NearbyStoresRead"];
                 };
             };
             /** @description Validation Error */

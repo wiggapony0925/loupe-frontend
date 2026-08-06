@@ -6701,6 +6701,114 @@
         "title": "MfaVerifyRequest",
         "type": "object"
       },
+      "NearbyStore": {
+        "description": "One physical shop near the caller. Positions are WGS84.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "distance_km": {
+            "title": "Distance Km",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lat": {
+            "title": "Lat",
+            "type": "number"
+          },
+          "lng": {
+            "title": "Lng",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "opening_hours": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Hours"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "lat",
+          "lng",
+          "distance_km",
+          "category"
+        ],
+        "title": "NearbyStore",
+        "type": "object"
+      },
+      "NearbyStoresRead": {
+        "description": "Ranked nearby shops (dedicated card stores first, then distance).",
+        "properties": {
+          "source": {
+            "default": "live",
+            "enum": [
+              "live",
+              "cached",
+              "unavailable"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "stores": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NearbyStore"
+            },
+            "title": "Stores",
+            "type": "array"
+          }
+        },
+        "title": "NearbyStoresRead",
+        "type": "object"
+      },
       "NotificationPage": {
         "description": "A page of the inbox plus the badge count.\n\n``unread`` is the total across the whole inbox, not this page \u2014 the badge\nmust not change just because the user scrolled.",
         "properties": {
@@ -22033,6 +22141,73 @@
           }
         },
         "summary": "Batch mini price series for a set of cards (list-row sparklines)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/stores/nearby": {
+      "get": {
+        "operationId": "stores_nearby_v1_public_stores_nearby_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lat",
+            "required": true,
+            "schema": {
+              "maximum": 90,
+              "minimum": -90,
+              "title": "Lat",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lng",
+            "required": true,
+            "schema": {
+              "maximum": 180,
+              "minimum": -180,
+              "title": "Lng",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "radius_km",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Radius Km",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NearbyStoresRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Card & game shops near a point (server-ranked, cached)",
         "tags": [
           "public"
         ]

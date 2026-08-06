@@ -19,6 +19,7 @@ import {
   LifeBuoy,
   LogOut,
   Mail,
+  MapPin,
   Monitor,
   Moon,
   Newspaper,
@@ -317,6 +318,14 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
               </View>
             }
             onPress={() => router.push("/community")}
+          />
+          <Row
+            icon={MapPin}
+            iconTint={p.accent.rose}
+            label="Card shops near me"
+            description="Stores around you that sell trading cards, on a map"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => router.push("/stores")}
           />
           <Row
             icon={FileText}

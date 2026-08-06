@@ -100,6 +100,8 @@ export const ENDPOINTS = {
      *  lens run over the deep pool with true pagination. Backs the search
      *  page's "view more" rail-filter tag. `game=all` only for `trending`. */
     carouselRail: `${V1}/public/carousels/rail`,
+    /** Card & game shops near a point — server-ranked, kv-cached, no auth. */
+    storesNearby: `${V1}/public/stores/nearby`,
   },
   me: {
     root: `${V1}/me`,

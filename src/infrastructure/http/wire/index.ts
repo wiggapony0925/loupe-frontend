@@ -14,6 +14,7 @@ export * from "./scan";
 export * from "./collection";
 export * from "./providers";
 export * from "./social";
+export * from "./stores";
 export * from "./ws";
 export * from "./health";
 export * from "./setProgress";

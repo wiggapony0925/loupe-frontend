@@ -32,7 +32,8 @@
               "com.googleusercontent.apps.714615078104-ta4c6j64ir3rqauqvf593q8llu8i2kr4"
             ]
           }
-        ]
+        ],
+        "NSLocationWhenInUseUsageDescription": "Loupe uses your location to show nearby card shops and local listings."
       }
     },
     "android": {
@@ -63,7 +64,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Loupe uses your location to find this card for sale near you on Facebook Marketplace."
+          "locationWhenInUsePermission": "Loupe uses your location to show nearby card shops and local listings."
         }
       ],
       "expo-sharing",
