@@ -45,8 +45,10 @@ function collectEndpointPaths(node: unknown, trail: string[] = []): { path: stri
     return [{ path: node, where: trail.join(".") }];
   }
   if (typeof node === "function") {
-    // All path-builders in ENDPOINTS take a single id-like argument.
-    const built = (node as (id: string) => string)("__ID__");
+    // Path-builders take one or more id-like arguments (e.g. social.portfolio
+    // takes handle + collectionId) — pass the sentinel for every slot; extra
+    // arguments are simply ignored by single-arg builders.
+    const built = (node as (...ids: string[]) => string)("__ID__", "__ID__");
     return [{ path: built, where: trail.join(".") }];
   }
   if (node && typeof node === "object") {

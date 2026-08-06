@@ -22,6 +22,7 @@ import type {
   DiscoverWire,
   FriendOwnerWire,
   SocialCollectionWire,
+  SocialPortfolioItemsWire,
   SocialFollowRequestWire,
   SocialFollowStateWire,
   SocialLikeStateWire,
@@ -142,6 +143,23 @@ export function useCollectorCollection(
         ENDPOINTS.social.collection(handle as string),
       ),
     enabled: isAuthenticated && !!handle && canView,
+    staleTime: 60_000,
+  });
+}
+
+/** One curated binder, drilled into — fetched when its sheet opens. */
+export function useCollectorPortfolio(
+  handle: string | null | undefined,
+  collectionId: string | null,
+): UseQueryResult<SocialPortfolioItemsWire> {
+  const { isAuthenticated } = useAuth();
+  return useQuery<SocialPortfolioItemsWire>({
+    queryKey: queryKeys.social.portfolio(handle ?? "", collectionId ?? ""),
+    queryFn: () =>
+      apiFetch<SocialPortfolioItemsWire>(
+        ENDPOINTS.social.portfolio(handle as string, collectionId as string),
+      ),
+    enabled: isAuthenticated && !!handle && !!collectionId,
     staleTime: 60_000,
   });
 }

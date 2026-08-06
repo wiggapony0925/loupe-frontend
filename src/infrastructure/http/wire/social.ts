@@ -121,16 +121,46 @@ export interface DiscoverWire {
   more: SocialUserCardWire[];
 }
 
+/** One sealed SKU on a shared profile (boxes, ETBs, bundles…). */
+export interface SocialSealedItemWire {
+  product_id: string;
+  name: string;
+  set_name: string | null;
+  product_type: string;
+  tcg: string;
+  image_url: string | null;
+  quantity: number;
+  /** TOTAL for the row (unit value x quantity). */
+  estimated_value_usd: string | null;
+}
+
 export interface SocialCollectionWire {
   total_cards: number;
   estimated_value_usd: string | null;
+  /** Sealed rollup — unopened units / their value / cards+sealed headline.
+   *  Absent on older backends; treat missing as zero/absent. */
+  sealed_count?: number;
+  sealed_value_usd?: string | null;
+  total_value_usd?: string | null;
   /** Vault-wide set count — `sets` is capped server-side to the top few. */
   total_sets?: number;
   /** Curated portfolios (binders), largest value first. */
   portfolios?: SocialPortfolioWire[];
+  /** Sealed shelf, largest value first (server-capped). */
+  sealed?: SocialSealedItemWire[];
   /** Whole-collection breakdown, largest value first (may be absent on
    *  older backends — treat missing as empty). */
   sets?: SocialCollectionSetWire[];
+  items: SocialCollectionItemWire[];
+}
+
+/** ``GET /v1/social/users/{u}/collections/{id}`` — one binder, drilled into. */
+export interface SocialPortfolioItemsWire {
+  id: string;
+  name: string;
+  color: string | null;
+  count: number;
+  estimated_value_usd: string | null;
   items: SocialCollectionItemWire[];
 }
 

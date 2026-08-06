@@ -56,6 +56,8 @@ export const ENDPOINTS = {
       `${V1}/social/users/${encodeURIComponent(handle)}/following`,
     collection: (handle: string) =>
       `${V1}/social/users/${encodeURIComponent(handle)}/collection`,
+    portfolio: (handle: string, collectionId: string) =>
+      `${V1}/social/users/${encodeURIComponent(handle)}/collections/${encodeURIComponent(collectionId)}`,
     removeFollower: (handle: string) =>
       `${V1}/social/me/followers/${encodeURIComponent(handle)}`,
     cardOwners: (cardRef: string) =>

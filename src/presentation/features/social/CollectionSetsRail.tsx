@@ -11,12 +11,13 @@
  * One shared tile primitive keeps both shelves visually identical.
  */
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
-import { FolderKanban, Layers } from "lucide-react-native";
+import { FolderKanban, Layers, Package } from "lucide-react-native";
 import type {
   SocialCollectionSetWire,
   SocialPortfolioWire,
+  SocialSealedItemWire,
 } from "@/infrastructure/http";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -30,7 +31,9 @@ interface ShelfTile {
   cover: string | null;
   /** Cover fallback tint (portfolio color, else accent). */
   tint?: string | null;
-  icon: "folder" | "layers";
+  icon: "folder" | "layers" | "box";
+  /** Tap-through (portfolio tiles open their card list). */
+  onPress?: () => void;
 }
 
 function money(v: string | null): string | null {
@@ -52,16 +55,23 @@ function Shelf({ label, tiles }: { label: string; tiles: ShelfTile[] }) {
       >
         {tiles.map((t) => {
           const tint = t.tint || p.accent.mint;
-          const Icon = t.icon === "folder" ? FolderKanban : Layers;
+          const Icon =
+            t.icon === "folder" ? FolderKanban : t.icon === "box" ? Package : Layers;
           return (
             // Mini spark-row anatomy (art left, text right) — the house
             // pattern for card rows. The cover keeps the card's OWN 5:7
-            // portrait shape, full art, never a landscape crop.
-            <View
+            // portrait shape, full art, never a landscape crop. A disabled
+            // Pressable is just a View, so only tap-through tiles react.
+            <Pressable
               key={t.key}
-              style={[
+              onPress={t.onPress}
+              disabled={!t.onPress}
+              accessibilityRole={t.onPress ? "button" : undefined}
+              accessibilityLabel={t.onPress ? `${t.name}. Open card list.` : undefined}
+              style={({ pressed }) => [
                 styles.tile,
                 { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+                pressed ? { opacity: 0.7 } : null,
               ]}
             >
               <View
@@ -90,7 +100,7 @@ function Shelf({ label, tiles }: { label: string; tiles: ShelfTile[] }) {
                   {t.sub}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           );
         })}
       </ScrollView>
@@ -101,10 +111,11 @@ function Shelf({ label, tiles }: { label: string; tiles: ShelfTile[] }) {
 /** The collector's curated collections (binders/decks). */
 export function PortfolioShelf({
   portfolios,
-  isSelf,
+  onTilePress,
 }: {
   portfolios: readonly SocialPortfolioWire[];
-  isSelf: boolean;
+  /** Tap a binder → open its card list (PortfolioSheet). */
+  onTilePress?: (collectionId: string) => void;
 }) {
   if (portfolios.length === 0) return null;
   const tiles: ShelfTile[] = portfolios.map((c) => ({
@@ -119,13 +130,45 @@ export function PortfolioShelf({
     cover: c.cover_image_url,
     tint: c.color,
     icon: "folder",
+    onPress: onTilePress ? () => onTilePress(c.id) : undefined,
   }));
-  return (
-    <Shelf
-      label={isSelf ? `YOUR COLLECTIONS · ${portfolios.length}` : `COLLECTIONS · ${portfolios.length}`}
-      tiles={tiles}
-    />
-  );
+  // "PORTFOLIOS", not "your collections" — the page's COLLECTION headline
+  // already owns that word once.
+  return <Shelf label={`PORTFOLIOS · ${portfolios.length}`} tiles={tiles} />;
+}
+
+/** Sealed product (boxes, ETBs) — its own category with its own value. */
+export function SealedShelf({
+  sealed,
+  totalCount,
+  totalValue,
+}: {
+  sealed: readonly SocialSealedItemWire[];
+  /** Unopened units vault-wide (tiles arrive server-capped). */
+  totalCount?: number;
+  totalValue?: string | null;
+}) {
+  if (sealed.length === 0) return null;
+  const tiles: ShelfTile[] = sealed.map((s) => ({
+    key: s.product_id,
+    name: s.name,
+    sub: [
+      s.quantity > 1 ? `x${s.quantity}` : null,
+      money(s.estimated_value_usd),
+      s.set_name,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    cover: s.image_url,
+    icon: "box",
+  }));
+  const label = [
+    `SEALED · ${totalCount ?? sealed.length}`,
+    money(totalValue ?? null),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return <Shelf label={label} tiles={tiles} />;
 }
 
 /** Top catalog sets by value, capped with a "+N more" tile. */

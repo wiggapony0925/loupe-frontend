@@ -39,6 +39,7 @@ import { CollectionGrid } from "@/presentation/features/social/CollectionGrid";
 import {
   CollectionSetsRail,
   PortfolioShelf,
+  SealedShelf,
 } from "@/presentation/features/social/CollectionSetsRail";
 import {
   useCollectorCollection,
@@ -51,6 +52,7 @@ import {
   useSocialMe,
 } from "@/application/queries/social/useSocial";
 import { CollectorListSheet } from "@/presentation/features/social/CollectorListSheet";
+import { PortfolioSheet } from "@/presentation/features/social/PortfolioSheet";
 import {
   collectionGateReason,
   followLabel,
@@ -81,6 +83,8 @@ export default function CollectorProfileScreen() {
   useCommunityIslandPresence();
 
   // Followers / Following popup (the reusable collector-list sheet).
+  // Which binder's card list is open (PortfolioSheet), if any.
+  const [openPortfolioId, setOpenPortfolioId] = React.useState<string | null>(null);
   const [listKind, setListKind] = React.useState<"followers" | "following" | null>(
     null,
   );
@@ -111,7 +115,13 @@ export default function CollectorProfileScreen() {
             <ChevronLeft size={19} color={p.ink.default} />
           </Pressable>
           <Text numberOfLines={1} style={[styles.barTitle, { color: p.ink.default }]}>
-            {handle ? `@${handle}` : "Profile"}
+            {/* Prefer the RESOLVED username — the raw param may be the "@me"
+                self-alias, which would render as "@@me". */}
+            {data?.username
+              ? `@${data.username}`
+              : handle
+                ? `@${handle.replace(/^@/, "")}`
+                : "Profile"}
           </Text>
           {isSelf ? (
             <Pressable
@@ -294,18 +304,22 @@ export default function CollectorProfileScreen() {
 
             <View style={styles.collection}>
               <View style={styles.collectionHead}>
+                {/* ONE collection headline — the shelves below carry their
+                    own labels (PORTFOLIOS / SEALED / TOP SETS), so "your"
+                    never repeats down the page. */}
                 <Text style={[styles.sectionTitle, { color: p.ink.muted }]}>
-                  {isSelf ? "YOUR COLLECTION" : "COLLECTION"}
+                  COLLECTION
                 </Text>
-                {/* The number that makes a collection a portfolio — same
-                    grade-aware basis as the vault headline. */}
-                {collection.data?.estimated_value_usd != null ? (
+                {/* Cards + sealed combined — the vault's combined headline
+                    basis. Falls back to cards-only from older payloads. */}
+                {(collection.data?.total_value_usd ??
+                  collection.data?.estimated_value_usd) != null ? (
                   <Text style={[styles.collectionValue, { color: p.accent.mint }]}>
                     $
-                    {Number(collection.data.estimated_value_usd).toLocaleString(
-                      "en-US",
-                      { maximumFractionDigits: 0 },
-                    )}
+                    {Number(
+                      collection.data?.total_value_usd ??
+                        collection.data?.estimated_value_usd,
+                    ).toLocaleString("en-US", { maximumFractionDigits: 0 })}
                   </Text>
                 ) : null}
               </View>
@@ -330,10 +344,15 @@ export default function CollectorProfileScreen() {
               ) : (
                 <>
                   {/* Curated collections first — the thing collectors mean
-                      by "my collections" — then the derived set context. */}
+                      by "my collections" — then sealed, then set context. */}
                   <PortfolioShelf
                     portfolios={collection.data?.portfolios ?? []}
-                    isSelf={!!isSelf}
+                    onTilePress={(id) => setOpenPortfolioId(id)}
+                  />
+                  <SealedShelf
+                    sealed={collection.data?.sealed ?? []}
+                    totalCount={collection.data?.sealed_count}
+                    totalValue={collection.data?.sealed_value_usd}
                   />
                   <CollectionSetsRail
                     sets={collection.data?.sets ?? []}
@@ -368,6 +387,14 @@ export default function CollectorProfileScreen() {
         removePendingHandle={
           removeFollower.isPending ? removeFollower.variables?.handle : null
         }
+      />
+
+      {/* Binder drill-in — tap a portfolio tile, see its cards as the
+          vault's own list rows. */}
+      <PortfolioSheet
+        handle={handle}
+        collectionId={openPortfolioId}
+        onClose={() => setOpenPortfolioId(null)}
       />
     </View>
   );

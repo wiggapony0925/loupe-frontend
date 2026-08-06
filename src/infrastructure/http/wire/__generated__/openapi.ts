@@ -4130,6 +4130,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/social/users/{username}/collections/{collection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One of a collector's portfolios, drilled into (privacy-gated) */
+        get: operations["view_portfolio_v1_social_users__username__collections__collection_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/social/users/{username}/follow": {
         parameters: {
             query?: never;
@@ -8336,6 +8353,18 @@ export interface components {
              */
             portfolios: components["schemas"]["SocialPortfolioRead"][];
             /**
+             * Sealed
+             * @default []
+             */
+            sealed: components["schemas"]["SocialSealedItem"][];
+            /**
+             * Sealed Count
+             * @default 0
+             */
+            sealed_count: number;
+            /** Sealed Value Usd */
+            sealed_value_usd?: string | null;
+            /**
              * Sets
              * @default []
              */
@@ -8350,6 +8379,8 @@ export interface components {
              * @default 0
              */
             total_sets: number;
+            /** Total Value Usd */
+            total_value_usd?: string | null;
         };
         /**
          * SocialCollectionSet
@@ -8379,6 +8410,34 @@ export interface components {
              */
             incoming_request_count: number;
             profile?: components["schemas"]["SocialProfileRead"] | null;
+        };
+        /**
+         * SocialPortfolioItemsRead
+         * @description ``GET /v1/social/users/{username}/collections/{id}`` — one binder,
+         *     drilled into: the cards inside a single curated portfolio.
+         */
+        SocialPortfolioItemsRead: {
+            /** Color */
+            color?: string | null;
+            /**
+             * Count
+             * @default 0
+             */
+            count: number;
+            /** Estimated Value Usd */
+            estimated_value_usd?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["SocialCollectionItem"][];
+            /** Name */
+            name: string;
         };
         /**
          * SocialPortfolioRead
@@ -8533,6 +8592,34 @@ export interface components {
              * @default false
              */
             viewer_has_liked: boolean;
+        };
+        /**
+         * SocialSealedItem
+         * @description One sealed SKU a collector holds (boxes, ETBs, bundles…).
+         */
+        SocialSealedItem: {
+            /** Estimated Value Usd */
+            estimated_value_usd?: string | null;
+            /** Image Url */
+            image_url?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Product Type */
+            product_type: string;
+            /**
+             * Quantity
+             * @default 1
+             */
+            quantity: number;
+            /** Set Name */
+            set_name?: string | null;
+            /** Tcg */
+            tcg: string;
         };
         /**
          * SocialUserCard
@@ -16529,6 +16616,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialCollectionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    view_portfolio_v1_social_users__username__collections__collection_id__get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                username: string;
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialPortfolioItemsRead"];
                 };
             };
             /** @description Validation Error */

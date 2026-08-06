@@ -10122,6 +10122,31 @@
             "title": "Portfolios",
             "type": "array"
           },
+          "sealed": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SocialSealedItem"
+            },
+            "title": "Sealed",
+            "type": "array"
+          },
+          "sealed_count": {
+            "default": 0,
+            "title": "Sealed Count",
+            "type": "integer"
+          },
+          "sealed_value_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sealed Value Usd"
+          },
           "sets": {
             "default": [],
             "items": {
@@ -10139,6 +10164,18 @@
             "default": 0,
             "title": "Total Sets",
             "type": "integer"
+          },
+          "total_value_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Value Usd"
           }
         },
         "title": "SocialCollectionRead",
@@ -10206,6 +10243,62 @@
           }
         },
         "title": "SocialMeRead",
+        "type": "object"
+      },
+      "SocialPortfolioItemsRead": {
+        "description": "``GET /v1/social/users/{username}/collections/{id}`` \u2014 one binder,\ndrilled into: the cards inside a single curated portfolio.",
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "estimated_value_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Value Usd"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SocialCollectionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "SocialPortfolioItemsRead",
         "type": "object"
       },
       "SocialPortfolioRead": {
@@ -10503,6 +10596,75 @@
           "joined_at"
         ],
         "title": "SocialProfileView",
+        "type": "object"
+      },
+      "SocialSealedItem": {
+        "description": "One sealed SKU a collector holds (boxes, ETBs, bundles\u2026).",
+        "properties": {
+          "estimated_value_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Value Usd"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "product_type": {
+            "title": "Product Type",
+            "type": "string"
+          },
+          "quantity": {
+            "default": 1,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "set_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Name"
+          },
+          "tcg": {
+            "title": "Tcg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "name",
+          "product_type",
+          "tcg"
+        ],
+        "title": "SocialSealedItem",
         "type": "object"
       },
       "SocialUserCard": {
@@ -24101,6 +24263,86 @@
           }
         ],
         "summary": "A collector's vault (privacy-gated)",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/users/{username}/collections/{collection_id}": {
+      "get": {
+        "operationId": "view_portfolio_v1_social_users__username__collections__collection_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "collection_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 60,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialPortfolioItemsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One of a collector's portfolios, drilled into (privacy-gated)",
         "tags": [
           "social"
         ]

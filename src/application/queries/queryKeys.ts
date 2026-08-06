@@ -100,6 +100,8 @@ export const queryKeys = {
     search: (q: string) => ["social", "search", q] as const,
     profile: (handle: string) => ["social", "profile", handle] as const,
     collection: (handle: string) => ["social", "collection", handle] as const,
+    portfolio: (handle: string, collectionId: string) =>
+      ["social", "portfolio", handle, collectionId] as const,
     followers: (handle: string) => ["social", "followers", handle] as const,
     following: (handle: string) => ["social", "following", handle] as const,
     cardOwners: (cardRef: string) => ["social", "card-owners", cardRef] as const,
