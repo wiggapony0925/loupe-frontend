@@ -60,7 +60,12 @@ export function FriendOwnersSection({ cardRef }: { cardRef: string }) {
                 { marginLeft: i === 0 ? 0 : -10, borderColor: p.bg.elevated },
               ]}
             >
-              <SocialAvatar handle={owner.username} url={owner.avatar_url} size={28} />
+              <SocialAvatar
+                handle={owner.username}
+                name={owner.display_name}
+                url={owner.avatar_url}
+                size={28}
+              />
             </View>
           ))}
           {rows.length <= 1 ? (

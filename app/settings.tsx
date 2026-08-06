@@ -201,6 +201,7 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
           {socialProfile?.avatar_url ? (
             <SocialAvatar
               handle={socialProfile.username}
+              name={displayName}
               url={socialProfile.avatar_url}
               size={44}
             />

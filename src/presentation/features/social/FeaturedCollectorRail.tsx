@@ -62,6 +62,7 @@ export function FeaturedCollectorRail({
           >
             <SocialAvatar
               handle={u.username}
+              name={u.display_name}
               url={u.avatar_url}
               size={62}
               isPro={u.is_pro}

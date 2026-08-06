@@ -168,6 +168,7 @@ export default function CollectorProfileScreen() {
             <View style={styles.header}>
               <SocialAvatar
                 handle={data.username}
+                name={data.display_name}
                 url={data.avatar_url}
                 size={76}
                 isPro={data.is_pro}

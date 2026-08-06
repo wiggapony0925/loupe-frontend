@@ -58,6 +58,7 @@ export function CollectorRow({
     >
       <SocialAvatar
         handle={user.username}
+        name={user.display_name}
         url={user.avatar_url}
         isPro={user.is_pro}
       />
