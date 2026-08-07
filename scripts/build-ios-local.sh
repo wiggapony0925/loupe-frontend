@@ -53,9 +53,9 @@ die() { printf '\n\033[1;31mx  %s\033[0m\n' "$1" >&2; exit 1; }
 # space mid-archive leaves a corrupt DerivedData that fails confusingly.
 FREE_GB=$(df -g "$ROOT" | awk 'NR==2 {print $4}')
 say "Preflight — ${FREE_GB}GB free"
-if [ "$FREE_GB" -lt 25 ]; then
-  echo "  React Native builds from source here; under ~25GB this usually dies"
-  echo "  partway through with a misleading compile error. Reclaim space:"
+if [ "$FREE_GB" -lt 15 ]; then
+  echo "  React Native ships PREBUILT now (buildReactNativeFromSource=false); under ~15GB"
+  echo "  an archive can still run out mid-way. Reclaim space:"
   echo "    rm -rf ~/Library/Developer/Xcode/DerivedData/*"
   echo "    rm -rf ~/Library/Caches/CocoaPods && pod cache clean --all"
   echo "    rm -rf \"$ROOT/ios/build\" \"$ROOT/build\""

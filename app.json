@@ -19,7 +19,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.loupe.client",
-      "buildNumber": "241",
+      "buildNumber": "242",
       "usesAppleSignIn": true,
       "entitlements": {
         "aps-environment": "production"
@@ -75,7 +75,7 @@
         {
           "ios": {
             "deploymentTarget": "16.0",
-            "buildReactNativeFromSource": true
+            "buildReactNativeFromSource": false
           }
         }
       ],
