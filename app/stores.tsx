@@ -74,7 +74,7 @@ try {
 
 const CARD_WIDTH = 316;
 const PAGE_PADDING = 16;
-/** Drawer height the map actions dock above — keep in sync with the card. */
+/** First-paint estimate only — the real height is measured via onLayout. */
 const DRAWER_HEIGHT = 250;
 
 /** Chip filters over the backend's category labels — instant, client-side. */
@@ -120,6 +120,10 @@ export default function StoresScreen() {
   // Which shop's detail sheet is open (tap a card to open it).
   const [detailId, setDetailId] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  // The drawer sizes to its content (skeletons, a card, or the empty state
+  // are all different heights), so the float above it is MEASURED, not a
+  // constant — otherwise it drifts away from the sheet as content changes.
+  const [drawerHeight, setDrawerHeight] = useState(DRAWER_HEIGHT);
   const [filter, setFilter] = useState("all");
   const savedStores = useSavedStores(filter === "saved");
   const toggleSave = useToggleSaveStore();
@@ -351,7 +355,10 @@ export default function StoresScreen() {
       </SafeAreaView>
 
       {/* ── Search-this-area + locate (float above the drawer) ── */}
-      <View pointerEvents="box-none" style={styles.mapActions}>
+      <View
+        pointerEvents="box-none"
+        style={[styles.mapActions, { bottom: drawerHeight + 12 }]}
+      >
         {searchArmed ? (
           <Pressable
             onPress={searchHere}
@@ -384,7 +391,10 @@ export default function StoresScreen() {
       </View>
 
       {/* ── The drawer: dark panel, grabber, swipeable venue cards ── */}
-      <View style={[styles.drawer, { backgroundColor: p.bg.base }]}>
+      <View
+        style={[styles.drawer, { backgroundColor: p.bg.base }]}
+        onLayout={(e) => setDrawerHeight(e.nativeEvent.layout.height)}
+      >
         <View style={[styles.grabber, { backgroundColor: p.line.default }]} />
         <SafeAreaView edges={["bottom"]}>
           {stores.isLoading ? (
@@ -788,8 +798,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: PAGE_PADDING,
     right: PAGE_PADDING,
-    // Sits directly above the drawer so it travels with the sheet instead
-    // of floating at an arbitrary height.
+    // `bottom` is supplied inline from the MEASURED drawer height so the
+    // pill tracks the sheet; this is only the first-paint fallback.
     bottom: DRAWER_HEIGHT + 12,
     flexDirection: "row",
     alignItems: "center",
