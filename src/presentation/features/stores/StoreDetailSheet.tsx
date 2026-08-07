@@ -25,6 +25,7 @@
  *   Reviews (ours — Resy has no equivalent, so it uses the same card idiom)
  */
 import React, { useEffect, useRef, useState } from "react";
+import { Animated, Easing } from "react-native";
 import {
   ActivityIndicator,
   Linking,
@@ -62,6 +63,7 @@ import {
 } from "@/application/queries/stores/useNearbyStores";
 import type { NearbyStoreWire, StoreReviewWire } from "@/infrastructure/http";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
+import { useTheme } from "@/presentation/theme";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 // Lazy map module — the sheet ships by OTA; binaries without it show the
@@ -73,12 +75,6 @@ try {
   Maps = require("react-native-maps") as MapsModule;
 } catch {
   Maps = null;
-}
-
-function hueFor(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i += 1) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return h % 360;
 }
 
 function directionsUrl(store: NearbyStoreWire): string {
@@ -160,6 +156,7 @@ export function StoreDetailSheet({
   onClose: () => void;
 }) {
   const p = useThemedPalette();
+  const { scheme } = useTheme();
   const detail = useStoreDetail(storeId);
   const upsert = useUpsertStoreReview();
   const remove = useDeleteStoreReview();
@@ -181,10 +178,21 @@ export function StoreDetailSheet({
   // Resy's handoff: past the hero, the floating ✕/♡/↗ become a solid bar
   // with the venue name centered.
   const [scrolled, setScrolled] = useState(false);
-  const hasPhoto = !!store?.photo_url && !photoFailed;
+  // Photo OR map behind the controls — either way they're over imagery.
+  const hasPhoto = true;
   // Swipe-down to dismiss, but only from the top of the scroll — otherwise
   // a downward flick mid-page would close the sheet instead of scrolling.
   const atTop = useRef(true);
+  // Slide-in: the sheet used to pop into place with no transition.
+  const slide = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.timing(slide, {
+      toValue: storeId ? 0 : 1,
+      duration: storeId ? 320 : 200,
+      easing: storeId ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [storeId, slide]);
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_e, g) =>
@@ -214,7 +222,6 @@ export function StoreDetailSheet({
       ? `${Math.round(store.distance_km * 1000)} m`
       : `${(store.distance_km * 0.621371).toFixed(1)} mi`
     : "";
-  const tint = store ? `hsl(${hueFor(store.name)}, 48%, 52%)` : p.accent.mint;
 
   const submit = () => {
     if (!storeId || rating < 1) return;
@@ -251,8 +258,21 @@ export function StoreDetailSheet({
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <Pressable style={styles.scrim} onPress={onClose} />
-      <View
-        style={[styles.sheet, { backgroundColor: p.bg.base }]}
+      <Animated.View
+        style={[
+          styles.sheet,
+          { backgroundColor: p.bg.base },
+          {
+            transform: [
+              {
+                translateY: slide.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 900],
+                }),
+              },
+            ],
+          },
+        ]}
         {...panResponder.panHandlers}
       >
         <View style={styles.grabber}>
@@ -347,23 +367,39 @@ export function StoreDetailSheet({
                 />
               ) : (
                 <>
+                  {/* No photo published → show WHERE it is. A live map of
+                      the block beats a flat colour every time. */}
+                  {Maps && store && store.lat !== 0 ? (
+                    <Maps.default
+                      style={StyleSheet.absoluteFill}
+                      pointerEvents="none"
+                      initialRegion={{
+                        latitude: store.lat,
+                        longitude: store.lng,
+                        latitudeDelta: 0.006,
+                        longitudeDelta: 0.006,
+                      }}
+                      scrollEnabled={false}
+                      zoomEnabled={false}
+                      userInterfaceStyle={scheme === "dark" ? "dark" : "light"}
+                    >
+                      <Maps.Marker
+                        coordinate={{ latitude: store.lat, longitude: store.lng }}
+                        pinColor={p.accent.rose}
+                      />
+                    </Maps.default>
+                  ) : null}
                   <View
                     style={[
-                      styles.heroMark,
-                      { backgroundColor: withAlpha(tint, 0.18) },
+                      styles.heroBadge,
+                      { backgroundColor: withAlpha("#000000", 0.55) },
                     ]}
                   >
-                    <Store size={30} color={tint} strokeWidth={1.8} />
+                    <Store size={13} color="#ffffff" strokeWidth={2.2} />
+                    <Text style={styles.heroBadgeText}>
+                      {store?.category ?? "Card shop"}
+                    </Text>
                   </View>
-                  <Text
-                    numberOfLines={2}
-                    style={[styles.heroFallbackName, { color: p.ink.muted }]}
-                  >
-                    {store?.name ?? "Card shop"}
-                  </Text>
-                  <Text style={[styles.heroFallbackNote, { color: p.ink.dim }]}>
-                    No photo published
-                  </Text>
                 </>
               )}
             </View>
@@ -389,7 +425,17 @@ export function StoreDetailSheet({
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
                       () => {},
                     );
-                    toggleSave.mutate({ storeId, saved });
+                    toggleSave.mutate(
+                      { storeId, saved },
+                      {
+                        onError: (e) =>
+                          setError(
+                            /401|auth/i.test(e.message)
+                              ? "Sign in to save shops."
+                              : `Couldn't save: ${e.message}`,
+                          ),
+                      },
+                    );
                   }}
                   hitSlop={10}
                   accessibilityRole="button"
@@ -425,6 +471,12 @@ export function StoreDetailSheet({
               </View>
             ) : null}
           </View>
+
+          {error ? (
+            <View style={styles.block}>
+              <Text style={[styles.error, { color: p.accent.rose }]}>{error}</Text>
+            </View>
+          ) : null}
 
           {/* ── Identity block ── */}
           <View style={styles.block}>
@@ -796,7 +848,7 @@ export function StoreDetailSheet({
             )}
           </View>
         </ScrollView>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -923,20 +975,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
   },
-  heroMark: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  heroBadge: {
+    position: "absolute",
+    left: 14,
+    bottom: 14,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
   },
-  heroFallbackName: {
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "center",
-    paddingHorizontal: 40,
-  },
-  heroFallbackNote: { fontSize: 12 },
+  heroBadgeText: { color: "#ffffff", fontSize: 12, fontWeight: "700" },
   heroTop: {
     position: "absolute",
     top: 10,

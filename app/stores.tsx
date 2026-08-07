@@ -52,6 +52,7 @@ import {
 import {
   useNearbyStores,
   useSavedStores,
+  useToggleSaveStore,
 } from "@/application/queries/stores/useNearbyStores";
 import { useUserLocation } from "@/application/location/useUserLocation";
 import { StoreDetailSheet } from "@/presentation/features/stores/StoreDetailSheet";
@@ -124,6 +125,7 @@ export default function StoresScreen() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const savedStores = useSavedStores(filter === "saved");
+  const toggleSave = useToggleSaveStore();
   const mapRef = useRef<InstanceType<MapsModule["default"]> | null>(null);
   const listRef = useRef<FlatList<NearbyStoreWire>>(null);
 
@@ -455,6 +457,9 @@ export default function StoresScreen() {
                 <StoreCard
                   store={item}
                   selected={item.id === selectedId}
+                  onToggleSave={() =>
+                    toggleSave.mutate({ storeId: item.id, saved: item.is_saved })
+                  }
                   onPress={() => {
                     // First tap focuses the pin; tapping the focused card
                     // opens its page — Resy's exact interaction.
@@ -488,10 +493,12 @@ function StoreCard({
   store,
   selected,
   onPress,
+  onToggleSave,
 }: {
   store: NearbyStoreWire;
   selected: boolean;
   onPress: () => void;
+  onToggleSave: () => void;
 }) {
   const p = useThemedPalette();
   const isCore = store.category === "Card & game store";
@@ -526,16 +533,28 @@ function StoreCard({
         >
           <Text style={styles.distanceText}>{distance}</Text>
         </View>
-        {store.is_saved ? (
-          <View
-            style={[
-              styles.savedBadge,
-              { backgroundColor: withAlpha("#000000", 0.45) },
-            ]}
-          >
-            <Heart size={13} color={p.accent.rose} fill={p.accent.rose} strokeWidth={0} />
-          </View>
-        ) : null}
+        <Pressable
+          onPress={(e) => {
+            // Don't let the tap fall through to the card (which focuses
+            // the pin / opens the page).
+            e.stopPropagation?.();
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            onToggleSave();
+          }}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={
+            store.is_saved ? `Remove ${store.name} from saved` : `Save ${store.name}`
+          }
+          style={[styles.savedBadge, { backgroundColor: withAlpha("#000000", 0.5) }]}
+        >
+          <Heart
+            size={15}
+            color={store.is_saved ? p.accent.rose : "#ffffff"}
+            fill={store.is_saved ? p.accent.rose : "transparent"}
+            strokeWidth={2.2}
+          />
+        </Pressable>
       </View>
       <View style={styles.cardBody}>
         <Text numberOfLines={1} style={[styles.cardName, { color: p.ink.default }]}>
