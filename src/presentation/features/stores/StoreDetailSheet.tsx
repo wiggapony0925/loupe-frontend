@@ -3,7 +3,7 @@
  * screenshots the user supplied, in Loupe's palette.
  *
  * Screen 1 (top of sheet):
- *   ┌ hero photo, rounded, thin accent hairline ─────────┐
+ *   ┌ hero photo, full-bleed to the sheet edges ─────────┐
  *   │ (✕)                              (♡) (↗)          │
  *   │                                   [ View All (n) ] │
  *   └────────────────────────────────────────────────────┘
@@ -316,7 +316,7 @@ export function StoreDetailSheet({
         >
           {/* ── Hero: photo edge-to-edge with the accent hairline, controls
                 floating on top, "View All" pill bottom-right (Resy). ── */}
-          <View style={[styles.hero, { borderColor: withAlpha(p.accent.amber, 0.55) }]}>
+          <View style={styles.hero}>
             <View
               style={[
                 styles.heroArt,
@@ -983,12 +983,9 @@ const styles = StyleSheet.create({
   },
   topBarRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   hero: {
-    // Resy insets the frame and rings it in gold — measured off the
-    // screenshots. Full-bleed was my misread.
-    marginHorizontal: 10,
-    marginTop: 10,
-    borderRadius: 10,
-    borderWidth: 1.5,
+    // Full width of the sheet, no frame: the user asked for the image to
+    // fill it edge to edge, and a border around a map reads as a widget
+    // rather than a header.
     overflow: "hidden",
   },
   heroArt: {

@@ -129,11 +129,13 @@ xcodebuild archive \
 [ -d "$ARCHIVE" ] || die "Archive not produced."
 
 # ------------------------------------------------------------------ export
+# NOTE: exportOptions.plist lives in scripts/, not ios/ — `expo prebuild`
+# above regenerates ios/ and would delete it, failing every export.
 say "Exporting .ipa"
 rm -rf "$ROOT/build/ipa"
 xcodebuild -exportArchive \
   -archivePath "$ARCHIVE" \
-  -exportOptionsPlist "$ROOT/ios/exportOptions.plist" \
+  -exportOptionsPlist "$ROOT/scripts/exportOptions.plist" \
   -exportPath "$ROOT/build/ipa" \
   -allowProvisioningUpdates \
   | (command -v xcbeautify >/dev/null && xcbeautify || cat)

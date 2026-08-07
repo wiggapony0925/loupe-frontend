@@ -74,6 +74,8 @@ try {
 
 const CARD_WIDTH = 316;
 const PAGE_PADDING = 16;
+/** Drawer height the map actions dock above — keep in sync with the card. */
+const DRAWER_HEIGHT = 250;
 
 /** Chip filters over the backend's category labels — instant, client-side. */
 const FILTERS: { key: string; label: string; match: (c: string) => boolean }[] = [
@@ -150,7 +152,10 @@ export default function StoresScreen() {
     viewRegion != null &&
     // 1.2 km: at 3 km you could pan a whole neighbourhood and never be
     // offered the search. Also offer it whenever the area came back empty.
-    (drift > 1.2 || (rows.length === 0 && !stores.isFetching));
+    (drift > 1.2 ||
+      // An empty or failed area is exactly when you want to retry.
+      (rows.length === 0 && !stores.isFetching) ||
+      stores.data?.source === "unavailable");
 
   const focusStore = useCallback(
     (store: NearbyStoreWire, index: number, fromMap: boolean) => {
@@ -383,6 +388,8 @@ export default function StoresScreen() {
         <View style={[styles.grabber, { backgroundColor: p.line.default }]} />
         <SafeAreaView edges={["bottom"]}>
           {stores.isLoading ? (
+            // Skeletons mirror the real card's anatomy — art block, title,
+            // meta line, action pill — so nothing jumps when data lands.
             <View style={styles.skeletonRow}>
               {[0, 1].map((i) => (
                 <View
@@ -393,24 +400,29 @@ export default function StoresScreen() {
                   ]}
                 >
                   <View
-                    style={[
-                      styles.artBlock,
-                      { backgroundColor: withAlpha(p.accent.mint, 0.08) },
-                    ]}
-                  >
-                    <ActivityIndicator color={withAlpha(p.accent.mint, 0.6)} />
-                  </View>
-                  <View style={{ padding: 14, gap: 8 }}>
+                    style={[styles.artBlock, { backgroundColor: p.bg.sunken }]}
+                  />
+                  <View style={{ padding: 14, gap: 9 }}>
                     <View
                       style={[
                         styles.skeletonBar,
-                        { width: "60%", backgroundColor: withAlpha(p.ink.dim, 0.12) },
+                        {
+                          width: "70%",
+                          height: 15,
+                          backgroundColor: withAlpha(p.ink.dim, 0.16),
+                        },
                       ]}
                     />
                     <View
                       style={[
                         styles.skeletonBar,
-                        { width: "40%", backgroundColor: withAlpha(p.ink.dim, 0.08) },
+                        { width: "45%", backgroundColor: withAlpha(p.ink.dim, 0.1) },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.skeletonPill,
+                        { backgroundColor: withAlpha(p.ink.dim, 0.12) },
                       ]}
                     />
                   </View>
@@ -776,7 +788,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: PAGE_PADDING,
     right: PAGE_PADDING,
-    bottom: 258,
+    // Sits directly above the drawer so it travels with the sheet instead
+    // of floating at an arbitrary height.
+    bottom: DRAWER_HEIGHT + 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -809,6 +823,7 @@ const styles = StyleSheet.create({
   },
   skeletonRow: { flexDirection: "row", gap: 12, paddingHorizontal: PAGE_PADDING },
   skeletonBar: { height: 10, borderRadius: 5 },
+  skeletonPill: { height: 32, width: 116, borderRadius: 10, marginTop: 3 },
   card: {
     width: CARD_WIDTH,
     borderRadius: 18,
