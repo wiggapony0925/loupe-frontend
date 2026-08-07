@@ -7,7 +7,17 @@
  *   Name, @handle · location, bio              ← who they are
  *   [ Follow ── mint ] [ ♥ ]                   ← the two verbs
  *   COLLECTION VALUE  $68,066                  ← the Robinhood moment
- *   portfolios ▸ sealed ▸ top sets ▸ all cards ← what they own
+ *   [ 124 cards | 6 binders | 12 sets | 3 ]    ← what the figure is made of
+ *   ALL CARDS · 124                            ← ONE section for the cards:
+ *     search · sort/set chips                    controls,
+ *     portfolios ▸ top sets                      then the shelves that
+ *     ▦ the grid                                 describe them, then the cards
+ *   SEALED                                     ← not cards, so not inside
+ *
+ * The shelves are NESTED rather than stacked above the grid: as siblings they
+ * pushed the actual collection off the first two screens, and they describe
+ * the same thing the section is about. They hide while a search or set filter
+ * is active — see CollectionGrid's `interlude`.
  *
  * `@me` resolves to your own profile server-side, so the navbar avatar and a
  * tap on another collector land on the same screen — one layout to keep
@@ -136,6 +146,29 @@ export default function CollectorProfileScreen() {
           `${collection.data?.sealed_count} sealed · ${money(sealedValue)}`,
         ]
       : [];
+
+  // What the headline is MADE OF, as four scannable numbers. Each is
+  // dropped when it would read as a zero — an empty "0 sealed" column is
+  // an absence dressed up as a fact.
+  const facts: { label: string; value: string }[] = [];
+  if (data?.card_count) {
+    facts.push({ label: "Cards", value: formatStat(data.card_count) });
+  }
+  const portfolioCount = collection.data?.portfolios?.length ?? 0;
+  if (portfolioCount > 0) {
+    facts.push({
+      label: pluralize(portfolioCount, "Binder"),
+      value: formatStat(portfolioCount),
+    });
+  }
+  const setCount = collection.data?.total_sets ?? collection.data?.sets?.length ?? 0;
+  if (setCount > 0) {
+    facts.push({ label: pluralize(setCount, "Set"), value: formatStat(setCount) });
+  }
+  const sealedCount = collection.data?.sealed_count ?? 0;
+  if (sealedCount > 0) {
+    facts.push({ label: "Sealed", value: formatStat(sealedCount) });
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: p.bg.base }]}>
@@ -367,7 +400,10 @@ export default function CollectorProfileScreen() {
             ) : (
               <View style={styles.collection}>
                 {/* The Robinhood moment: the portfolio's worth as the big
-                    figure, cards/sealed as its breakdown whisper. */}
+                    figure, then a scannable strip of what makes it up.
+                    The strip replaces a prose breakdown line — four labelled
+                    numbers answer "what do they actually own" at a glance,
+                    where a sentence had to be read. */}
                 {totalValue != null ? (
                   <View style={styles.valueBlock}>
                     <Text style={[styles.valueLabel, { color: p.ink.dim }]}>
@@ -381,22 +417,54 @@ export default function CollectorProfileScreen() {
                         {breakdown.join("  +  ")}
                       </Text>
                     ) : null}
+                    {facts.length > 0 ? (
+                      <View
+                        style={[
+                          styles.factStrip,
+                          {
+                            borderColor: p.line.default,
+                            backgroundColor: p.bg.elevated,
+                          },
+                        ]}
+                      >
+                        {facts.map((f, i) => (
+                          <React.Fragment key={f.label}>
+                            {i > 0 ? (
+                              <View
+                                style={[
+                                  styles.factRule,
+                                  { backgroundColor: p.line.default },
+                                ]}
+                              />
+                            ) : null}
+                            <View style={styles.fact}>
+                              <Text
+                                style={[
+                                  styles.factValue,
+                                  { color: p.ink.default },
+                                ]}
+                              >
+                                {f.value}
+                              </Text>
+                              <Text
+                                style={[styles.factLabel, { color: p.ink.dim }]}
+                              >
+                                {f.label}
+                              </Text>
+                            </View>
+                          </React.Fragment>
+                        ))}
+                      </View>
+                    ) : null}
                   </View>
                 ) : null}
 
-                {/* Curated collections first — the thing collectors mean by
-                    "my collections" — then sealed, then set context. */}
-                {/* Curated first, then the set context they sit in, then
-                    the CARDS themselves as the page's centre of gravity,
-                    with sealed product closing it out. */}
-                <PortfolioShelf
-                  portfolios={collection.data?.portfolios ?? []}
-                  onTilePress={(id) => setOpenPortfolioId(id)}
-                />
-                <CollectionSetsRail
-                  sets={collection.data?.sets ?? []}
-                  totalSets={collection.data?.total_sets}
-                />
+                {/* ONE section for "their collection": the cards, with the
+                    shelves that describe them (portfolios, top sets) nested
+                    between the filters and the grid. They used to be three
+                    sibling sections stacked above the cards, which pushed the
+                    actual collection off the first two screens. Sealed stays
+                    outside — it isn't cards. */}
                 {(collection.data?.items?.length ?? 0) > 0 ? (
                   <View style={styles.shelf}>
                     <Text style={[styles.sectionTitle, { color: p.ink.dim }]}>
@@ -407,9 +475,34 @@ export default function CollectorProfileScreen() {
                       ownerLabel={
                         isSelf ? "your collection" : `@${data.username}'s cards`
                       }
+                      interlude={
+                        <>
+                          <PortfolioShelf
+                            portfolios={collection.data?.portfolios ?? []}
+                            onTilePress={(id) => setOpenPortfolioId(id)}
+                          />
+                          <CollectionSetsRail
+                            sets={collection.data?.sets ?? []}
+                            totalSets={collection.data?.total_sets}
+                          />
+                        </>
+                      }
                     />
                   </View>
-                ) : null}
+                ) : (
+                  // No cards to hang them off — show the shelves standalone
+                  // so a sealed-only or binder-only collector isn't blank.
+                  <>
+                    <PortfolioShelf
+                      portfolios={collection.data?.portfolios ?? []}
+                      onTilePress={(id) => setOpenPortfolioId(id)}
+                    />
+                    <CollectionSetsRail
+                      sets={collection.data?.sets ?? []}
+                      totalSets={collection.data?.total_sets}
+                    />
+                  </>
+                )}
                 <SealedShelf
                   sealed={collection.data?.sealed ?? []}
                   totalCount={collection.data?.sealed_count}
@@ -573,6 +666,30 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   valueBreakdown: { fontSize: 12.5, marginTop: 2 },
+  // The headline's composition, as one hairline panel. Columns share the row
+  // equally (flex:1) so the strip stays balanced at two facts or at four.
+  factStrip: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+    paddingVertical: 12,
+    marginTop: 14,
+  },
+  fact: { flex: 1, alignItems: "center", gap: 3 },
+  factValue: {
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+    fontVariant: ["tabular-nums"],
+  },
+  factLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  factRule: { width: StyleSheet.hairlineWidth, marginVertical: 2 },
   sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   shelf: { gap: 10 },
   // A sentence, not a panel — "this vault is private" isn't an error.

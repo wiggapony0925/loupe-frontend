@@ -78,6 +78,8 @@ module.exports = {
     {
       displayName: "app",
       preset: "jest-expo",
+      // Mocks the native modules every component reaches transitively.
+      setupFiles: [path.join(__dirname, "jest.setup.app.js")],
       moduleNameMapper,
       modulePathIgnorePatterns: ignoreWorktrees,
       testMatch: [

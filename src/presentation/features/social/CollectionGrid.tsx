@@ -71,9 +71,21 @@ function toCollectionCard(item: SocialCollectionItemWire): CollectionCard {
 export function CollectionGrid({
   items,
   ownerLabel = "this collection",
+  interlude,
 }: {
   items: readonly SocialCollectionItemWire[];
   ownerLabel?: string;
+  /**
+   * Rendered between the filter rail and the results — the collector's
+   * shelves (portfolios, top sets) live INSIDE this section rather than
+   * stacked above it, so the page has one "their collection" region.
+   *
+   * Hidden the moment a search or set filter is active: once you're
+   * drilling for a card, a carousel between you and the results is in the
+   * way, and the shelves describe the WHOLE collection, not the subset on
+   * screen.
+   */
+  interlude?: React.ReactNode;
 }) {
   const p = useThemedPalette();
   const { width } = useWindowDimensions();
@@ -206,6 +218,10 @@ export function CollectionGrid({
           : null}
       </ScrollView>
 
+      {interlude && !filtering ? (
+        <View style={styles.interlude}>{interlude}</View>
+      ) : null}
+
       {filtering ? (
         <Text style={[styles.count, { color: p.ink.dim }]}>
           {cards.length} {cards.length === 1 ? "card" : "cards"}
@@ -305,6 +321,9 @@ function Chip({
 
 const styles = StyleSheet.create({
   wrap: { gap: 10 },
+  // Breathing room around the nested shelves so they read as their own
+  // band inside the section rather than another row of chips.
+  interlude: { gap: 18, marginTop: 4, marginBottom: 2 },
   controlRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   search: {
     flex: 1,
