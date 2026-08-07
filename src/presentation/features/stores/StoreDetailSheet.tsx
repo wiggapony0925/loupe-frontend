@@ -1,19 +1,28 @@
 /**
- * StoreDetailSheet — tap a shop on the map, get its page.
+ * StoreDetailSheet — the shop's page, built to the Resy venue-detail
+ * screenshots the user supplied, in Loupe's palette.
  *
- * Resy's venue-detail anatomy, in Loupe's theme and for card shops:
+ * Screen 1 (top of sheet):
+ *   ┌ hero photo, rounded, thin accent hairline ─────────┐
+ *   │ (✕)                              (♡) (↗)          │
+ *   │                                   [ View All (n) ] │
+ *   └────────────────────────────────────────────────────┘
+ *   Big two-line name
+ *   ★ 4.3 (32) · Card & game store · $$
+ *   ◉ Neighborhood · 2.2 mi
+ *   ──────────────────────────────────────────
+ *   [ ⌂ Directions ]  ← the "Notify DINNER" slot
+ *   ⓘ status banner
  *
- *   ▔▔▔▔ hero photo (or themed art block) ▔▔▔▔
- *   Big name
- *   ★ 4.3 (12) · Card & game store · 2.2 km
- *   [ Directions ] [ Website ] [ Call ]
- *   ── About / address ──────────────
- *   ── Community reviews ────────────
- *   ★★★★★  write yours…            ← real reviews, real handles
- *
- * Photos come from what the shop itself publishes (backend resolves the
- * OSM image tag or its site's og:image) — a miss falls back to the same
- * themed art block the map card uses, never a broken image.
+ * Screen 2 (scrolled):
+ *   About <name> · description · More
+ *   ┌ map thumbnail ┐
+ *   │  ◉ pin        │
+ *   ├───────────────┤
+ *   │ full address  │
+ *   └───────────────┘
+ *   ┌ info card: name, ★ line, ◉ line, then link rows ┐
+ *   Reviews (ours — Resy has no equivalent, so it uses the same card idiom)
  */
 import React, { useEffect, useState } from "react";
 import {
@@ -29,16 +38,40 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
-import { Globe, Navigation, Phone, Star, Store, Trash2 } from "lucide-react-native";
+import {
+  ArrowUpRight,
+  Globe,
+  Heart,
+  Info,
+  MapPin,
+  Navigation,
+  Phone,
+  Share2,
+  Star,
+  Store,
+  Trash2,
+  X,
+} from "lucide-react-native";
+import { Share } from "react-native";
 import {
   useDeleteStoreReview,
   useStoreDetail,
   useUpsertStoreReview,
 } from "@/application/queries/stores/useNearbyStores";
 import type { NearbyStoreWire, StoreReviewWire } from "@/infrastructure/http";
-import { BottomSheet } from "@/presentation/components/BottomSheet";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+
+// Lazy map module — the sheet ships by OTA; binaries without it show the
+// address card alone rather than crashing.
+type MapsModule = typeof import("react-native-maps");
+let Maps: MapsModule | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Maps = require("react-native-maps") as MapsModule;
+} catch {
+  Maps = null;
+}
 
 function hueFor(name: string): number {
   let h = 0;
@@ -53,8 +86,52 @@ function directionsUrl(store: NearbyStoreWire): string {
     : `geo:${store.lat},${store.lng}?q=${store.lat},${store.lng}(${q})`;
 }
 
-/** Read-only star row (rating display). */
-function Stars({ value, size = 13 }: { value: number; size?: number }) {
+/** Resy's rating line: solid star, bold value, muted count. */
+function RatingLine({
+  rating,
+  count,
+  category,
+  size = 14,
+}: {
+  rating: number | null;
+  count: number;
+  category?: string | null;
+  size?: number;
+}) {
+  const p = useThemedPalette();
+  return (
+    <View style={styles.inlineRow}>
+      {rating != null ? (
+        <>
+          <Star
+            size={size}
+            color={p.accent.amber}
+            fill={p.accent.amber}
+            strokeWidth={0}
+          />
+          <Text style={[styles.ratingValue, { color: p.accent.amber, fontSize: size }]}>
+            {rating.toFixed(1)}
+          </Text>
+          <Text style={[styles.metaText, { color: p.ink.muted, fontSize: size }]}>
+            ({count})
+          </Text>
+        </>
+      ) : (
+        <Text style={[styles.metaText, { color: p.ink.dim, fontSize: size }]}>
+          No reviews yet
+        </Text>
+      )}
+      {category ? (
+        <Text style={[styles.metaText, { color: p.ink.muted, fontSize: size }]}>
+          {" · "}
+          {category}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function Stars({ value, size = 12 }: { value: number; size?: number }) {
   const p = useThemedPalette();
   return (
     <View style={styles.starRow}>
@@ -64,7 +141,7 @@ function Stars({ value, size = 13 }: { value: number; size?: number }) {
           size={size}
           color={i <= Math.round(value) ? p.accent.amber : p.ink.dim}
           fill={i <= Math.round(value) ? p.accent.amber : "transparent"}
-          strokeWidth={2}
+          strokeWidth={1.8}
         />
       ))}
     </View>
@@ -76,9 +153,7 @@ export function StoreDetailSheet({
   fallback,
   onClose,
 }: {
-  /** Which shop — null keeps the sheet closed. */
   storeId: string | null;
-  /** The map card's copy, so the sheet has content before detail lands. */
   fallback?: NearbyStoreWire | null;
   onClose: () => void;
 }) {
@@ -94,15 +169,24 @@ export function StoreDetailSheet({
   const [rating, setRating] = useState(0);
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [composing, setComposing] = useState(false);
 
-  // Seed the composer from my existing review whenever the sheet opens on
-  // a different store (editing should start from what I wrote).
   useEffect(() => {
     setRating(mine?.rating ?? 0);
     setBody(mine?.body ?? "");
     setError(null);
+    setComposing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId, mine?.id]);
+
+  if (storeId == null) return null;
+
+  const distance = store
+    ? store.distance_km < 1
+      ? `${Math.round(store.distance_km * 1000)} m`
+      : `${(store.distance_km * 0.621371).toFixed(1)} mi`
+    : "";
+  const tint = store ? `hsl(${hueFor(store.name)}, 48%, 52%)` : p.accent.mint;
 
   const submit = () => {
     if (!storeId || rating < 1) return;
@@ -110,10 +194,13 @@ export function StoreDetailSheet({
     upsert.mutate(
       { storeId, rating, body: body.trim() || null },
       {
-        onSuccess: () => setError(null),
+        onSuccess: () => {
+          setError(null);
+          setComposing(false);
+        },
         onError: (e) =>
           setError(
-            e.message.includes("username")
+            /username|claim/i.test(e.message)
               ? "Claim a username in Community before reviewing."
               : e.message,
           ),
@@ -121,215 +208,437 @@ export function StoreDetailSheet({
     );
   };
 
-  const distance = store
-    ? store.distance_km < 1
-      ? `${Math.round(store.distance_km * 1000)} m`
-      : `${store.distance_km.toFixed(1)} km`
-    : "";
-  const tint = store ? `hsl(${hueFor(store.name)}, 48%, 52%)` : p.accent.mint;
+  const shareStore = async () => {
+    if (!store) return;
+    try {
+      await Share.share({
+        message: `${store.name} — ${store.address ?? store.category}`,
+        url: directionsUrl(store),
+      });
+    } catch {
+      /* dismissed */
+    }
+  };
 
   return (
-    <BottomSheet
-      visible={storeId != null}
-      onClose={onClose}
-      title={store?.name ?? "Card shop"}
-      subtitle={
-        store
-          ? [store.category, distance].filter(Boolean).join(" · ")
-          : null
-      }
-      overlay
-      minHeight="55%"
-      maxHeight="88%"
-    >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.body}
-      >
-        {/* Hero — the shop's own photo, else its themed art block. */}
-        <View style={[styles.hero, { backgroundColor: withAlpha(tint, 0.16) }]}>
-          {store?.photo_url ? (
-            <Image
-              source={{ uri: store.photo_url }}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              transition={160}
-              accessibilityIgnoresInvertColors
-            />
-          ) : (
-            <>
-              <Store size={34} color={tint} strokeWidth={1.8} />
-              <Text style={[styles.heroInitial, { color: withAlpha(tint, 0.5) }]}>
-                {(store?.name ?? "?").charAt(0).toUpperCase()}
-              </Text>
-            </>
-          )}
-        </View>
-
-        {/* Rating line — the community's verdict, Resy's star row. */}
-        <View style={styles.ratingLine}>
-          {store?.rating != null ? (
-            <>
-              <Stars value={store.rating} />
-              <Text style={[styles.ratingValue, { color: p.ink.default }]}>
-                {store.rating.toFixed(1)}
-              </Text>
-              <Text style={[styles.ratingCount, { color: p.ink.dim }]}>
-                ({store.review_count})
-              </Text>
-            </>
-          ) : (
-            <Text style={[styles.ratingCount, { color: p.ink.dim }]}>
-              No reviews yet — be the first.
-            </Text>
-          )}
-        </View>
-
-        {/* Actions — Resy's slot row. */}
-        {store ? (
-          <View style={styles.actions}>
-            <Action
-              primary
-              icon={<Navigation size={13} color="#06140d" strokeWidth={2.6} />}
-              label="Directions"
-              onPress={() => void Linking.openURL(directionsUrl(store))}
-            />
-            {store.website ? (
-              <Action
-                icon={<Globe size={13} color={p.ink.default} strokeWidth={2.4} />}
-                label="Website"
-                onPress={() => void Linking.openURL(store.website as string)}
-              />
-            ) : null}
-            {store.phone ? (
-              <Action
-                icon={<Phone size={13} color={p.ink.default} strokeWidth={2.4} />}
-                label="Call"
-                onPress={() =>
-                  void Linking.openURL(
-                    `tel:${(store.phone as string).replace(/\s/g, "")}`,
-                  )
-                }
-              />
-            ) : null}
-          </View>
-        ) : null}
-
-        {store?.address || store?.opening_hours ? (
-          <View style={[styles.infoCard, { backgroundColor: p.bg.elevated }]}>
-            {store.address ? (
-              <Text style={[styles.infoText, { color: p.ink.default }]}>
-                {store.address}
-              </Text>
-            ) : null}
-            {store.opening_hours ? (
-              <Text style={[styles.infoHours, { color: p.ink.dim }]}>
-                {store.opening_hours}
-              </Text>
-            ) : null}
-          </View>
-        ) : null}
-
-        {/* ── Community reviews ── */}
-        <Text style={[styles.sectionTitle, { color: p.ink.dim }]}>
-          COMMUNITY REVIEWS
-        </Text>
-
-        {/* Composer — tap a star, add a note. */}
-        <View style={[styles.composer, { borderColor: p.line.default }]}>
-          <View style={styles.starPick}>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Pressable
-                key={i}
-                onPress={() => {
-                  Haptics.selectionAsync().catch(() => {});
-                  setRating(i);
-                }}
-                hitSlop={6}
-                accessibilityRole="button"
-                accessibilityLabel={`Rate ${i} ${i === 1 ? "star" : "stars"}`}
-              >
-                <Star
-                  size={24}
-                  color={i <= rating ? p.accent.amber : p.ink.dim}
-                  fill={i <= rating ? p.accent.amber : "transparent"}
-                  strokeWidth={2}
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <Pressable style={styles.scrim} onPress={onClose} />
+      <View style={[styles.sheet, { backgroundColor: p.bg.base }]}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scroll}
+        >
+          {/* ── Hero: photo edge-to-edge with the accent hairline, controls
+                floating on top, "View All" pill bottom-right (Resy). ── */}
+          <View style={[styles.hero, { borderColor: withAlpha(p.accent.amber, 0.55) }]}>
+            <View
+              style={[styles.heroArt, { backgroundColor: withAlpha(tint, 0.16) }]}
+            >
+              {store?.photo_url ? (
+                <Image
+                  source={{ uri: store.photo_url }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  transition={180}
+                  accessibilityIgnoresInvertColors
                 />
-              </Pressable>
-            ))}
-            {mine ? (
+              ) : (
+                <>
+                  <Store size={40} color={tint} strokeWidth={1.6} />
+                  <Text style={[styles.heroInitial, { color: withAlpha(tint, 0.45) }]}>
+                    {(store?.name ?? "?").charAt(0).toUpperCase()}
+                  </Text>
+                </>
+              )}
+            </View>
+
+            <View style={styles.heroTop} pointerEvents="box-none">
               <Pressable
-                onPress={() => {
-                  if (!storeId) return;
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
-                    () => {},
-                  );
-                  remove.mutate({ storeId });
-                  setRating(0);
-                  setBody("");
-                }}
-                hitSlop={8}
+                onPress={onClose}
+                hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel="Delete my review"
-                style={styles.deleteBtn}
+                accessibilityLabel="Close"
+                style={styles.heroBtn}
               >
-                <Trash2 size={15} color={p.accent.rose} strokeWidth={2.2} />
+                <X size={26} color="#ffffff" strokeWidth={2.2} />
               </Pressable>
+              <View style={styles.heroTopRight}>
+                <Pressable
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setComposing(true);
+                  }}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Review this shop"
+                  style={styles.heroBtn}
+                >
+                  <Heart
+                    size={24}
+                    color="#ffffff"
+                    fill={mine ? "#ffffff" : "transparent"}
+                    strokeWidth={2}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={() => void shareStore()}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share this shop"
+                  style={styles.heroBtn}
+                >
+                  <Share2 size={22} color="#ffffff" strokeWidth={2} />
+                </Pressable>
+              </View>
+            </View>
+
+            {store?.photo_url ? (
+              <View style={styles.viewAll}>
+                <Text style={styles.viewAllText}>View All (1)</Text>
+              </View>
             ) : null}
           </View>
-          <TextInput
-            value={body}
-            onChangeText={setBody}
-            placeholder="Singles selection, prices, play space…"
-            placeholderTextColor={p.ink.dim}
-            multiline
-            maxLength={1000}
-            style={[styles.composerInput, { color: p.ink.default }]}
-            accessibilityLabel="Write your review"
-          />
-          {error ? (
-            <Text style={[styles.error, { color: p.accent.rose }]}>{error}</Text>
-          ) : null}
-          <Pressable
-            onPress={submit}
-            disabled={rating < 1 || upsert.isPending}
-            accessibilityRole="button"
-            accessibilityLabel={mine ? "Update my review" : "Post my review"}
-            style={[
-              styles.post,
-              {
-                backgroundColor:
-                  rating < 1 ? withAlpha(p.ink.default, 0.08) : p.accent.mint,
-              },
-            ]}
-          >
-            {upsert.isPending ? (
-              <ActivityIndicator size="small" color="#06140d" />
-            ) : (
-              <Text
+
+          {/* ── Identity block ── */}
+          <View style={styles.block}>
+            <Text style={[styles.name, { color: p.ink.default }]}>
+              {store?.name ?? "Card shop"}
+            </Text>
+            <RatingLine
+              rating={store?.rating ?? null}
+              count={store?.review_count ?? 0}
+              category={store?.category}
+            />
+            <View style={styles.inlineRow}>
+              <MapPin size={14} color={p.ink.muted} strokeWidth={2.2} />
+              <Text style={[styles.metaText, { color: p.ink.muted }]}>
+                {[store?.address?.split(",").slice(-1)[0]?.trim(), distance]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.rule, { backgroundColor: p.line.default }]} />
+
+          {/* ── Primary action (Resy's "Notify DINNER" slot) ── */}
+          <View style={styles.block}>
+            <View style={styles.actionRow}>
+              <Pressable
+                onPress={() => store && void Linking.openURL(directionsUrl(store))}
+                accessibilityRole="button"
+                accessibilityLabel="Directions"
                 style={[
-                  styles.postText,
-                  { color: rating < 1 ? p.ink.dim : "#06140d" },
+                  styles.bigAction,
+                  { borderColor: p.line.default, backgroundColor: p.bg.elevated },
                 ]}
               >
-                {mine ? "Update review" : "Post review"}
-              </Text>
-            )}
-          </Pressable>
-        </View>
+                <View style={styles.inlineRow}>
+                  <Navigation size={15} color={p.ink.default} strokeWidth={2.4} />
+                  <Text style={[styles.bigActionLabel, { color: p.ink.default }]}>
+                    Directions
+                  </Text>
+                </View>
+                <Text style={[styles.bigActionSub, { color: p.ink.dim }]}>
+                  {distance.toUpperCase()}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setComposing(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Write a review"
+                style={[
+                  styles.bigAction,
+                  { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+                ]}
+              >
+                <View style={styles.inlineRow}>
+                  <Star size={15} color={p.ink.default} strokeWidth={2.4} />
+                  <Text style={[styles.bigActionLabel, { color: p.ink.default }]}>
+                    {mine ? "Edit review" : "Review"}
+                  </Text>
+                </View>
+                <Text style={[styles.bigActionSub, { color: p.ink.dim }]}>
+                  {store?.review_count ? `${store.review_count} TOTAL` : "BE FIRST"}
+                </Text>
+              </Pressable>
+            </View>
 
-        {detail.isLoading ? (
-          <ActivityIndicator color={p.ink.dim} style={{ marginTop: 16 }} />
-        ) : reviews.length === 0 ? (
-          <Text style={[styles.noReviews, { color: p.ink.dim }]}>
-            No reviews yet. Tell other collectors what this shop is like.
-          </Text>
-        ) : (
-          reviews.map((r) => <ReviewRow key={r.id} review={r} />)
-        )}
-      </ScrollView>
-    </BottomSheet>
+            {/* Resy's ⓘ availability banner → our data-provenance note. */}
+            <View
+              style={[
+                styles.banner,
+                { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+              ]}
+            >
+              <Info size={15} color={p.ink.dim} strokeWidth={2.2} />
+              <Text style={[styles.bannerText, { color: p.ink.muted }]}>
+                {store?.opening_hours ? (
+                  <>
+                    Hours: <Text style={{ fontWeight: "700" }}>{store.opening_hours}</Text>
+                  </>
+                ) : (
+                  <>
+                    Hours aren&apos;t listed for this shop.{" "}
+                    <Text style={{ fontWeight: "700" }}>
+                      Call ahead before travelling.
+                    </Text>
+                  </>
+                )}
+              </Text>
+            </View>
+          </View>
+
+          {/* ── About + map card (Resy screen 2) ── */}
+          <View style={styles.block}>
+            <Text style={[styles.sectionHead, { color: p.ink.default }]}>
+              About {store?.name ?? "this shop"}
+            </Text>
+            <Text style={[styles.about, { color: p.ink.muted }]}>
+              {store?.category === "Card & game store"
+                ? "A dedicated card and game store — singles, sealed product, and usually table space for play."
+                : "Listed as a shop that may carry trading cards alongside its main range. Worth a call before you travel."}
+            </Text>
+
+            <View style={[styles.mapCard, { backgroundColor: p.bg.elevated }]}>
+              {Maps && store ? (
+                <Maps.default
+                  style={styles.mapThumb}
+                  pointerEvents="none"
+                  initialRegion={{
+                    latitude: store.lat,
+                    longitude: store.lng,
+                    latitudeDelta: 0.012,
+                    longitudeDelta: 0.012,
+                  }}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                >
+                  <Maps.Marker
+                    coordinate={{ latitude: store.lat, longitude: store.lng }}
+                    pinColor={p.accent.rose}
+                  />
+                </Maps.default>
+              ) : (
+                <View
+                  style={[
+                    styles.mapThumb,
+                    { alignItems: "center", justifyContent: "center" },
+                  ]}
+                >
+                  <MapPin size={22} color={p.ink.dim} />
+                </View>
+              )}
+              <Pressable
+                onPress={() => store && void Linking.openURL(directionsUrl(store))}
+                accessibilityRole="button"
+                accessibilityLabel="Open in Maps"
+                style={styles.addressBar}
+              >
+                <Text style={[styles.address, { color: p.ink.default }]}>
+                  {store?.address ?? "Address not listed"}
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Info card with link rows — Resy's website / phone / social. */}
+            <View style={[styles.infoCard, { backgroundColor: p.bg.elevated }]}>
+              <View style={styles.infoHead}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.infoName, { color: p.ink.default }]}
+                >
+                  {store?.name}
+                </Text>
+                <RatingLine
+                  rating={store?.rating ?? null}
+                  count={store?.review_count ?? 0}
+                  category={store?.category}
+                  size={13}
+                />
+              </View>
+              {store?.website ? (
+                <LinkRow
+                  label={store.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                  icon={<Globe size={15} color={p.ink.dim} strokeWidth={2.2} />}
+                  external
+                  onPress={() => void Linking.openURL(store.website as string)}
+                />
+              ) : null}
+              {store?.phone ? (
+                <LinkRow
+                  label={store.phone}
+                  icon={<Phone size={15} color={p.ink.dim} strokeWidth={2.2} />}
+                  onPress={() =>
+                    void Linking.openURL(
+                      `tel:${(store.phone as string).replace(/\s/g, "")}`,
+                    )
+                  }
+                />
+              ) : null}
+            </View>
+          </View>
+
+          {/* ── Reviews ── */}
+          <View style={styles.block}>
+            <Text style={[styles.sectionHead, { color: p.ink.default }]}>
+              Reviews {store?.review_count ? `(${store.review_count})` : ""}
+            </Text>
+
+            {composing || mine ? (
+              <View style={[styles.composer, { backgroundColor: p.bg.elevated }]}>
+                <View style={styles.starPick}>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Pressable
+                      key={i}
+                      onPress={() => {
+                        Haptics.selectionAsync().catch(() => {});
+                        setRating(i);
+                      }}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Rate ${i} ${i === 1 ? "star" : "stars"}`}
+                    >
+                      <Star
+                        size={26}
+                        color={i <= rating ? p.accent.amber : p.ink.dim}
+                        fill={i <= rating ? p.accent.amber : "transparent"}
+                        strokeWidth={1.8}
+                      />
+                    </Pressable>
+                  ))}
+                  {mine ? (
+                    <Pressable
+                      onPress={() => {
+                        if (!storeId) return;
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
+                          () => {},
+                        );
+                        remove.mutate({ storeId });
+                        setRating(0);
+                        setBody("");
+                        setComposing(false);
+                      }}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete my review"
+                      style={{ marginLeft: "auto" }}
+                    >
+                      <Trash2 size={16} color={p.accent.rose} strokeWidth={2.2} />
+                    </Pressable>
+                  ) : null}
+                </View>
+                <TextInput
+                  value={body}
+                  onChangeText={setBody}
+                  placeholder="Singles selection, prices, play space…"
+                  placeholderTextColor={p.ink.dim}
+                  multiline
+                  maxLength={1000}
+                  style={[styles.composerInput, { color: p.ink.default }]}
+                  accessibilityLabel="Write your review"
+                />
+                {error ? (
+                  <Text style={[styles.error, { color: p.accent.rose }]}>{error}</Text>
+                ) : null}
+                <Pressable
+                  onPress={submit}
+                  disabled={rating < 1 || upsert.isPending}
+                  accessibilityRole="button"
+                  accessibilityLabel={mine ? "Update my review" : "Post my review"}
+                  style={[
+                    styles.post,
+                    {
+                      backgroundColor:
+                        rating < 1 ? withAlpha(p.ink.default, 0.08) : p.accent.mint,
+                    },
+                  ]}
+                >
+                  {upsert.isPending ? (
+                    <ActivityIndicator size="small" color="#06140d" />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.postText,
+                        { color: rating < 1 ? p.ink.dim : "#06140d" },
+                      ]}
+                    >
+                      {mine ? "Update review" : "Post review"}
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setComposing(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Write a review"
+                style={[
+                  styles.writePrompt,
+                  { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+                ]}
+              >
+                <Stars value={0} size={18} />
+                <Text style={[styles.writePromptText, { color: p.ink.muted }]}>
+                  Rate this shop
+                </Text>
+              </Pressable>
+            )}
+
+            {detail.isLoading ? (
+              <ActivityIndicator color={p.ink.dim} style={{ marginTop: 14 }} />
+            ) : reviews.length === 0 ? (
+              <Text style={[styles.noReviews, { color: p.ink.dim }]}>
+                No reviews yet. Tell other collectors what this shop is like.
+              </Text>
+            ) : (
+              reviews.map((r) => <ReviewRow key={r.id} review={r} />)
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+function LinkRow({
+  label,
+  icon,
+  onPress,
+  external = false,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onPress: () => void;
+  external?: boolean;
+}) {
+  const p = useThemedPalette();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      style={[styles.linkRow, { borderTopColor: p.line.default }]}
+    >
+      {icon}
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.linkText,
+          { color: p.ink.default, textDecorationLine: external ? "underline" : "none" },
+        ]}
+      >
+        {label}
+      </Text>
+      {external ? <ArrowUpRight size={14} color={p.ink.dim} strokeWidth={2.2} /> : null}
+    </Pressable>
   );
 }
 
@@ -349,7 +658,7 @@ function ReviewRow({ review }: { review: StoreReviewWire }) {
         size={34}
       />
       <View style={{ flex: 1, gap: 3 }}>
-        <View style={styles.reviewHead}>
+        <View style={styles.inlineRow}>
           <Text numberOfLines={1} style={[styles.reviewWho, { color: p.ink.default }]}>
             {review.display_name?.trim() || `@${review.username ?? "collector"}`}
           </Text>
@@ -357,101 +666,146 @@ function ReviewRow({ review }: { review: StoreReviewWire }) {
             <Text style={[styles.youTag, { color: p.accent.mint }]}>You</Text>
           ) : null}
         </View>
-        <View style={styles.reviewMeta}>
+        <View style={styles.inlineRow}>
           <Stars value={review.rating} size={11} />
           <Text style={[styles.reviewDate, { color: p.ink.dim }]}>{when}</Text>
         </View>
         {review.body ? (
-          <Text style={[styles.reviewBody, { color: p.ink.muted }]}>
-            {review.body}
-          </Text>
+          <Text style={[styles.reviewBody, { color: p.ink.muted }]}>{review.body}</Text>
         ) : null}
       </View>
     </View>
   );
 }
 
-function Action({
-  icon,
-  label,
-  onPress,
-  primary = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onPress: () => void;
-  primary?: boolean;
-}) {
-  const p = useThemedPalette();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={[
-        styles.action,
-        primary
-          ? { backgroundColor: p.accent.mint }
-          : { backgroundColor: withAlpha(p.ink.default, 0.07) },
-      ]}
-    >
-      {icon}
-      <Text
-        style={[styles.actionText, { color: primary ? "#06140d" : p.ink.default }]}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  body: { paddingBottom: 24, gap: 12 },
-  hero: {
-    height: 168,
-    borderRadius: 16,
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.55)" },
+  // Near-full-height like Resy's detail sheet, with the map peeking above.
+  sheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "93%",
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
     overflow: "hidden",
+  },
+  scroll: { paddingBottom: 40 },
+  hero: {
+    margin: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    overflow: "hidden",
+  },
+  heroArt: {
+    height: 300,
     alignItems: "center",
     justifyContent: "center",
   },
-  heroInitial: { position: "absolute", right: 16, bottom: 4, fontSize: 84, fontWeight: "900" },
-  ratingLine: { flexDirection: "row", alignItems: "center", gap: 6 },
-  starRow: { flexDirection: "row", gap: 1.5 },
-  ratingValue: { fontSize: 13.5, fontWeight: "800" },
-  ratingCount: { fontSize: 12.5 },
-  actions: { flexDirection: "row", gap: 8 },
-  action: {
+  heroInitial: { position: "absolute", right: 18, bottom: 6, fontSize: 96, fontWeight: "900" },
+  heroTop: {
+    position: "absolute",
+    top: 10,
+    left: 12,
+    right: 12,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    justifyContent: "space-between",
+  },
+  heroTopRight: { flexDirection: "row", alignItems: "center", gap: 18 },
+  heroBtn: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  viewAll: {
+    position: "absolute",
+    right: 14,
+    bottom: 14,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 8,
+    paddingHorizontal: 14,
     paddingVertical: 9,
   },
-  actionText: { fontSize: 12.5, fontWeight: "700" },
-  infoCard: { borderRadius: 14, padding: 13, gap: 3 },
-  infoText: { fontSize: 13.5, fontWeight: "600" },
-  infoHours: { fontSize: 12 },
-  sectionTitle: { fontSize: 10, fontWeight: "700", letterSpacing: 2, marginTop: 4 },
-  composer: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 10 },
-  starPick: { flexDirection: "row", alignItems: "center", gap: 8 },
-  deleteBtn: { marginLeft: "auto" },
-  composerInput: { fontSize: 13.5, minHeight: 44, textAlignVertical: "top" },
-  error: { fontSize: 12 },
-  post: { borderRadius: 10, paddingVertical: 10, alignItems: "center" },
-  postText: { fontSize: 13.5, fontWeight: "800" },
-  noReviews: { fontSize: 13, paddingVertical: 14 },
+  viewAllText: { color: "#111111", fontSize: 14, fontWeight: "600" },
+  block: { paddingHorizontal: 18, paddingTop: 14, gap: 8 },
+  name: { fontSize: 30, fontWeight: "800", letterSpacing: -0.8, lineHeight: 36 },
+  inlineRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  ratingValue: { fontWeight: "800" },
+  metaText: { fontSize: 14 },
+  starRow: { flexDirection: "row", gap: 1.5 },
+  rule: { height: StyleSheet.hairlineWidth, marginHorizontal: 18, marginTop: 16 },
+  actionRow: { flexDirection: "row", gap: 10 },
+  bigAction: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    gap: 3,
+  },
+  bigActionLabel: { fontSize: 15, fontWeight: "700" },
+  bigActionSub: { fontSize: 11, fontWeight: "600", letterSpacing: 0.6 },
+  banner: {
+    flexDirection: "row",
+    gap: 9,
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 13,
+    marginTop: 4,
+  },
+  bannerText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  sectionHead: {
+    fontSize: 19,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+    marginTop: 6,
+  },
+  about: { fontSize: 15, lineHeight: 22 },
+  mapCard: { borderRadius: 10, overflow: "hidden", marginTop: 8 },
+  mapThumb: { height: 190, width: "100%" },
+  addressBar: { paddingHorizontal: 14, paddingVertical: 14 },
+  address: { fontSize: 16, fontWeight: "600" },
+  infoCard: { borderRadius: 10, overflow: "hidden", marginTop: 12 },
+  infoHead: { padding: 14, gap: 5 },
+  infoName: { fontSize: 18, fontWeight: "800", letterSpacing: -0.3 },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    paddingHorizontal: 14,
+    paddingVertical: 15,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  linkText: { flex: 1, fontSize: 15.5 },
+  composer: { borderRadius: 10, padding: 13, gap: 10, marginTop: 4 },
+  starPick: { flexDirection: "row", alignItems: "center", gap: 9 },
+  composerInput: { fontSize: 14, minHeight: 46, textAlignVertical: "top" },
+  error: { fontSize: 12.5 },
+  post: { borderRadius: 8, paddingVertical: 11, alignItems: "center" },
+  postText: { fontSize: 14, fontWeight: "800" },
+  writePrompt: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 13,
+    marginTop: 4,
+  },
+  writePromptText: { fontSize: 14.5, fontWeight: "600" },
+  noReviews: { fontSize: 14, paddingVertical: 16 },
   review: {
     flexDirection: "row",
     gap: 11,
-    paddingTop: 12,
-    marginTop: 2,
+    paddingTop: 13,
+    marginTop: 3,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  reviewHead: { flexDirection: "row", alignItems: "center", gap: 6 },
-  reviewWho: { fontSize: 13.5, fontWeight: "700" },
+  reviewWho: { fontSize: 14, fontWeight: "700" },
   youTag: { fontSize: 10.5, fontWeight: "800" },
-  reviewMeta: { flexDirection: "row", alignItems: "center", gap: 7 },
-  reviewDate: { fontSize: 11 },
-  reviewBody: { fontSize: 13, lineHeight: 18, marginTop: 2 },
+  reviewDate: { fontSize: 11.5 },
+  reviewBody: { fontSize: 14, lineHeight: 19, marginTop: 2 },
 });
