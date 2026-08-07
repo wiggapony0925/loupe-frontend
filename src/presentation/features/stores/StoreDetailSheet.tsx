@@ -24,12 +24,11 @@
  *   ┌ info card: name, ★ line, ◉ line, then link rows ┐
  *   Reviews (ours — Resy has no equivalent, so it uses the same card idiom)
  */
-import React, { useEffect, useRef, useState } from "react";
-import { Animated, Easing } from "react-native";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
-  PanResponder,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -180,31 +179,6 @@ export function StoreDetailSheet({
   const [scrolled, setScrolled] = useState(false);
   // Photo OR map behind the controls — either way they're over imagery.
   const hasPhoto = true;
-  // Swipe-down to dismiss, but only from the top of the scroll — otherwise
-  // a downward flick mid-page would close the sheet instead of scrolling.
-  const atTop = useRef(true);
-  // Slide-in: the sheet used to pop into place with no transition.
-  const slide = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    Animated.timing(slide, {
-      toValue: storeId ? 0 : 1,
-      duration: storeId ? 320 : 200,
-      easing: storeId ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [storeId, slide]);
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_e, g) =>
-        atTop.current && g.dy > 12 && Math.abs(g.dy) > Math.abs(g.dx),
-      onPanResponderRelease: (_e, g) => {
-        if (g.dy > 90 || g.vy > 0.8) {
-          Haptics.selectionAsync().catch(() => {});
-          onClose();
-        }
-      },
-    }),
-  ).current;
 
   useEffect(() => {
     setRating(mine?.rating ?? 0);
@@ -256,28 +230,18 @@ export function StoreDetailSheet({
   };
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      <Pressable style={styles.scrim} onPress={onClose} />
-      <Animated.View
-        style={[
-          styles.sheet,
-          { backgroundColor: p.bg.base },
-          {
-            transform: [
-              {
-                translateY: slide.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 900],
-                }),
-              },
-            ],
-          },
-        ]}
-        {...panResponder.panHandlers}
-      >
-        <View style={styles.grabber}>
-          <View style={[styles.grabberBar, { backgroundColor: p.line.strong }]} />
-        </View>
+    <Modal
+      visible={storeId != null}
+      onRequestClose={onClose}
+      animationType="slide"
+      // The native iOS sheet (UISheetPresentationController): slides up AND
+      // down with UIKit's own curve, drag-to-dismiss included. A hand-rolled
+      // View could never match it — and unmounted before its exit animation
+      // could play, which is what read as a flicker.
+      presentationStyle={Platform.OS === "ios" ? "pageSheet" : "overFullScreen"}
+      transparent={Platform.OS !== "ios"}
+    >
+      <View style={[styles.sheet, { backgroundColor: p.bg.base }]}>
         {scrolled ? (
           <View
             style={[
@@ -341,7 +305,6 @@ export function StoreDetailSheet({
           onScroll={(e) => {
             // Swap at the point the hero leaves the frame.
             const y = e.nativeEvent.contentOffset.y;
-            atTop.current = y <= 2;
             if (y > 250 !== scrolled) setScrolled(y > 250);
           }}
         >
@@ -848,8 +811,8 @@ export function StoreDetailSheet({
             )}
           </View>
         </ScrollView>
-      </Animated.View>
-    </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -924,21 +887,9 @@ function ReviewRow({ review }: { review: StoreReviewWire }) {
 }
 
 const styles = StyleSheet.create({
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.55)" },
-  // Near-full-height like Resy's detail sheet, with the map peeking above.
-  sheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: "93%",
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-    overflow: "hidden",
-  },
+  // The native sheet owns its corners, height and gestures.
+  sheet: { flex: 1 },
   scroll: { paddingBottom: 40 },
-  grabber: { alignItems: "center", paddingTop: 7, paddingBottom: 5 },
-  grabberBar: { width: 40, height: 5, borderRadius: 3 },
   // Solid bar that replaces the floating hero controls on scroll.
   topBar: {
     position: "absolute",

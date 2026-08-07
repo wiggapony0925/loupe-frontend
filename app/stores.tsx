@@ -538,20 +538,45 @@ function StoreCard({
           />
         ) : (
           <>
-            {/* Designed placeholder: a tinted disc with the shop's initial
-                on a neutral surface. A flat colour block read as broken. */}
+            {/* No published photo → a live map of the block. Real imagery
+                of the actual place beats any placeholder. */}
+            {Maps ? (
+              <Maps.default
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+                initialRegion={{
+                  latitude: store.lat,
+                  longitude: store.lng,
+                  latitudeDelta: 0.005,
+                  longitudeDelta: 0.005,
+                }}
+                scrollEnabled={false}
+                zoomEnabled={false}
+                rotateEnabled={false}
+                pitchEnabled={false}
+              >
+                <Maps.Marker
+                  coordinate={{ latitude: store.lat, longitude: store.lng }}
+                  pinColor={p.accent.rose}
+                />
+              </Maps.default>
+            ) : (
+              <View
+                style={[styles.artDisc, { backgroundColor: withAlpha(tint, 0.16) }]}
+              >
+                <Text style={[styles.artLetter, { color: tint }]}>
+                  {store.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
             <View
-              style={[styles.artDisc, { backgroundColor: withAlpha(tint, 0.16) }]}
+              style={[
+                styles.artCaption,
+                { backgroundColor: withAlpha("#000000", 0.55) },
+              ]}
             >
-              <Text style={[styles.artLetter, { color: tint }]}>
-                {store.name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.artCaption}>
-              <Store size={12} color={p.ink.dim} strokeWidth={2.2} />
-              <Text style={[styles.artCaptionText, { color: p.ink.dim }]}>
-                {store.category}
-              </Text>
+              <Store size={11} color="#ffffff" strokeWidth={2.2} />
+              <Text style={styles.artCaptionText}>{store.category}</Text>
             </View>
           </>
         )}
@@ -813,8 +838,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   artLetter: { fontSize: 24, fontWeight: "900", letterSpacing: -0.5 },
-  artCaption: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8 },
-  artCaptionText: { fontSize: 11.5, fontWeight: "600" },
+  artCaption: {
+    position: "absolute",
+    left: 10,
+    bottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  artCaptionText: { color: "#ffffff", fontSize: 11, fontWeight: "700" },
   distanceBadge: {
     position: "absolute",
     top: 10,
