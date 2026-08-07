@@ -537,23 +537,25 @@ export function StoreDetailSheet({
 
           {/* ── Primary action (Resy's "Notify DINNER" slot) ── */}
           <View style={styles.block}>
+            {/* Resy's slot: ONE compact left-aligned button — label over a
+                small-caps sub-label. Two full-width tiles was my invention. */}
             <View style={styles.actionRow}>
               <Pressable
                 onPress={() => store && void Linking.openURL(directionsUrl(store))}
                 accessibilityRole="button"
                 accessibilityLabel="Directions"
                 style={[
-                  styles.bigAction,
+                  styles.slotAction,
                   { borderColor: p.line.default, backgroundColor: p.bg.elevated },
                 ]}
               >
                 <View style={styles.inlineRow}>
-                  <Navigation size={15} color={p.ink.default} strokeWidth={2.4} />
-                  <Text style={[styles.bigActionLabel, { color: p.ink.default }]}>
+                  <Navigation size={14} color={p.ink.default} strokeWidth={2.4} />
+                  <Text style={[styles.slotLabel, { color: p.ink.default }]}>
                     Directions
                   </Text>
                 </View>
-                <Text style={[styles.bigActionSub, { color: p.ink.dim }]}>
+                <Text style={[styles.slotSub, { color: p.ink.dim }]}>
                   {distance.toUpperCase()}
                 </Text>
               </Pressable>
@@ -565,17 +567,17 @@ export function StoreDetailSheet({
                 accessibilityRole="button"
                 accessibilityLabel="Write a review"
                 style={[
-                  styles.bigAction,
+                  styles.slotAction,
                   { borderColor: p.line.default, backgroundColor: p.bg.elevated },
                 ]}
               >
                 <View style={styles.inlineRow}>
-                  <Star size={15} color={p.ink.default} strokeWidth={2.4} />
-                  <Text style={[styles.bigActionLabel, { color: p.ink.default }]}>
+                  <Star size={14} color={p.ink.default} strokeWidth={2.4} />
+                  <Text style={[styles.slotLabel, { color: p.ink.default }]}>
                     {mine ? "Edit review" : "Review"}
                   </Text>
                 </View>
-                <Text style={[styles.bigActionSub, { color: p.ink.dim }]}>
+                <Text style={[styles.slotSub, { color: p.ink.dim }]}>
                   {store?.review_count ? `${store.review_count} TOTAL` : "BE FIRST"}
                 </Text>
               </Pressable>
@@ -981,13 +983,16 @@ const styles = StyleSheet.create({
   },
   topBarRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   hero: {
-    // Full-bleed like Resy — the photo is the width of the sheet.
-    borderTopWidth: 1.5,
-    borderBottomWidth: 1.5,
+    // Resy insets the frame and rings it in gold — measured off the
+    // screenshots. Full-bleed was my misread.
+    marginHorizontal: 10,
+    marginTop: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
     overflow: "hidden",
   },
   heroArt: {
-    height: 320,
+    height: 300,
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
@@ -1030,24 +1035,25 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   viewAllText: { color: "#111111", fontSize: 14, fontWeight: "600" },
-  block: { paddingHorizontal: 18, paddingTop: 14, gap: 8 },
-  name: { fontSize: 30, fontWeight: "800", letterSpacing: -0.8, lineHeight: 36 },
+  block: { paddingHorizontal: 18, paddingTop: 16, gap: 7 },
+  name: { fontSize: 32, fontWeight: "800", letterSpacing: -1, lineHeight: 38 },
   inlineRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   ratingValue: { fontWeight: "800" },
-  metaText: { fontSize: 14 },
+  metaText: { fontSize: 15 },
   starRow: { flexDirection: "row", gap: 1.5 },
   rule: { height: StyleSheet.hairlineWidth, marginHorizontal: 18, marginTop: 16 },
-  actionRow: { flexDirection: "row", gap: 10 },
-  bigAction: {
-    flex: 1,
+  // Left-aligned, content-sized — Resy's "Notify / DINNER" proportions.
+  actionRow: { flexDirection: "row", gap: 10, alignSelf: "flex-start" },
+  slotAction: {
     borderWidth: 1,
     borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    gap: 3,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    gap: 1,
+    alignItems: "center",
   },
-  bigActionLabel: { fontSize: 15, fontWeight: "700" },
-  bigActionSub: { fontSize: 11, fontWeight: "600", letterSpacing: 0.6 },
+  slotLabel: { fontSize: 16, fontWeight: "700", letterSpacing: -0.2 },
+  slotSub: { fontSize: 10.5, fontWeight: "600", letterSpacing: 0.8 },
   banner: {
     flexDirection: "row",
     gap: 9,
