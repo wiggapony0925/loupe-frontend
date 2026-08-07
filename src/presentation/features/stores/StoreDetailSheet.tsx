@@ -62,6 +62,7 @@ import {
 } from "@/application/queries/stores/useNearbyStores";
 import type { NearbyStoreWire, StoreReviewWire } from "@/infrastructure/http";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
+import { StorePlaceholder } from "@/presentation/features/stores/StorePlaceholder";
 import { useTheme } from "@/presentation/theme";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -351,18 +352,22 @@ export function StoreDetailSheet({
                         pinColor={p.accent.rose}
                       />
                     </Maps.default>
+                  ) : (
+                    <StorePlaceholder name={store?.name ?? "Card shop"} size="hero" />
+                  )}
+                  {Maps && store && store.lat !== 0 ? (
+                    <View
+                      style={[
+                        styles.heroBadge,
+                        { backgroundColor: withAlpha("#000000", 0.55) },
+                      ]}
+                    >
+                      <Store size={13} color="#ffffff" strokeWidth={2.2} />
+                      <Text numberOfLines={1} style={styles.heroBadgeText}>
+                        {store.name}
+                      </Text>
+                    </View>
                   ) : null}
-                  <View
-                    style={[
-                      styles.heroBadge,
-                      { backgroundColor: withAlpha("#000000", 0.55) },
-                    ]}
-                  >
-                    <Store size={13} color="#ffffff" strokeWidth={2.2} />
-                    <Text style={styles.heroBadgeText}>
-                      {store?.category ?? "Card shop"}
-                    </Text>
-                  </View>
                 </>
               )}
             </View>
@@ -937,7 +942,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
-  heroBadgeText: { color: "#ffffff", fontSize: 12, fontWeight: "700" },
+  heroBadgeText: { color: "#ffffff", fontSize: 12, fontWeight: "700", maxWidth: 260 },
   heroTop: {
     position: "absolute",
     top: 10,

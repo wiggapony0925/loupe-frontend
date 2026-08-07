@@ -57,6 +57,7 @@ import {
 } from "@/application/queries/stores/useNearbyStores";
 import { useUserLocation } from "@/application/location/useUserLocation";
 import { StoreDetailSheet } from "@/presentation/features/stores/StoreDetailSheet";
+import { StorePlaceholder } from "@/presentation/features/stores/StorePlaceholder";
 import type { NearbyStoreWire } from "@/infrastructure/http";
 import { useTheme } from "@/presentation/theme";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
@@ -93,13 +94,6 @@ function directionsUrl(store: NearbyStoreWire): string {
   return Platform.OS === "ios"
     ? `https://maps.apple.com/?q=${q}&ll=${store.lat},${store.lng}`
     : `geo:${store.lat},${store.lng}?q=${store.lat},${store.lng}(${q})`;
-}
-
-/** Stable per-store hue for the art block (same trick as SocialAvatar). */
-function hueFor(name: string): number {
-  let h = 0;
-  for (let i = 0; i < name.length; i += 1) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return h % 360;
 }
 
 function kmBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
@@ -509,7 +503,6 @@ function StoreCard({
 }) {
   const p = useThemedPalette();
   const isCore = store.category === "Card & game store";
-  const tint = `hsl(${hueFor(store.name)}, 48%, 52%)`;
   const distance =
     store.distance_km < 1
       ? `${Math.round(store.distance_km * 1000)} m`
@@ -561,23 +554,21 @@ function StoreCard({
                 />
               </Maps.default>
             ) : (
+              <StorePlaceholder name={store.name} />
+            )}
+            {Maps ? (
               <View
-                style={[styles.artDisc, { backgroundColor: withAlpha(tint, 0.16) }]}
+                style={[
+                  styles.artCaption,
+                  { backgroundColor: withAlpha("#000000", 0.55) },
+                ]}
               >
-                <Text style={[styles.artLetter, { color: tint }]}>
-                  {store.name.charAt(0).toUpperCase()}
+                <Store size={11} color="#ffffff" strokeWidth={2.2} />
+                <Text numberOfLines={1} style={styles.artCaptionText}>
+                  {store.name}
                 </Text>
               </View>
-            )}
-            <View
-              style={[
-                styles.artCaption,
-                { backgroundColor: withAlpha("#000000", 0.55) },
-              ]}
-            >
-              <Store size={11} color="#ffffff" strokeWidth={2.2} />
-              <Text style={styles.artCaptionText}>{store.category}</Text>
-            </View>
+            ) : null}
           </>
         )}
         <View
@@ -830,14 +821,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 2,
   },
-  artDisc: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  artLetter: { fontSize: 24, fontWeight: "900", letterSpacing: -0.5 },
   artCaption: {
     position: "absolute",
     left: 10,
@@ -849,7 +832,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
-  artCaptionText: { color: "#ffffff", fontSize: 11, fontWeight: "700" },
+  artCaptionText: { color: "#ffffff", fontSize: 11, fontWeight: "700", maxWidth: 210 },
   distanceBadge: {
     position: "absolute",
     top: 10,
