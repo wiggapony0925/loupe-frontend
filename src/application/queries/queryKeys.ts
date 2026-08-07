@@ -111,6 +111,7 @@ export const queryKeys = {
     nearby: (lat: number, lng: number, radiusKm: number) =>
       ["stores", "nearby", lat, lng, radiusKm] as const,
     detail: (storeId: string) => ["stores", "detail", storeId] as const,
+    saved: () => ["stores", "saved"] as const,
   },
   scanners: {
     all: ["scanners"] as const,

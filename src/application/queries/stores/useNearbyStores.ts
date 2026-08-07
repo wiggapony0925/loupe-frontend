@@ -16,9 +16,12 @@ import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type {
   NearbyStoresWire,
+  SavedStoresWire,
   StoreDetailWire,
   StoreReviewWire,
+  StoreSaveWire,
 } from "@/infrastructure/http";
+import { useAuth } from "@/presentation/providers/AuthProvider";
 import { queryKeys } from "../queryKeys";
 
 export function useNearbyStores(
@@ -81,5 +84,53 @@ export function useDeleteStoreReview() {
         method: "DELETE",
       }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.stores.all }),
+  });
+}
+
+/** Heart a shop into (or out of) my saved places. Optimistic. */
+export function useToggleSaveStore() {
+  const qc = useQueryClient();
+  return useMutation<
+    StoreSaveWire,
+    Error,
+    { storeId: string; saved: boolean }
+  >({
+    mutationFn: ({ storeId, saved }) =>
+      apiFetch<StoreSaveWire>(ENDPOINTS.publicCatalog.storeSave(storeId), {
+        method: saved ? "DELETE" : "PUT",
+      }),
+    onSuccess: (data) => {
+      // Patch the flag everywhere it renders rather than refetching the
+      // map — a heart must never lag behind the tap.
+      qc.setQueriesData<NearbyStoresWire>(
+        { queryKey: queryKeys.stores.all },
+        (old) =>
+          old && "stores" in old
+            ? {
+                ...old,
+                stores: old.stores.map((s) =>
+                  s.id === data.store_id ? { ...s, is_saved: data.is_saved } : s,
+                ),
+              }
+            : old,
+      );
+      qc.setQueriesData<StoreDetailWire>(
+        { queryKey: queryKeys.stores.detail(data.store_id) },
+        (old) =>
+          old ? { ...old, store: { ...old.store, is_saved: data.is_saved } } : old,
+      );
+      void qc.invalidateQueries({ queryKey: queryKeys.stores.saved() });
+    },
+  });
+}
+
+/** My saved places, newest first. */
+export function useSavedStores(enabled = true) {
+  const { isAuthenticated } = useAuth();
+  return useQuery<SavedStoresWire>({
+    queryKey: queryKeys.stores.saved(),
+    queryFn: () => apiFetch<SavedStoresWire>(ENDPOINTS.publicCatalog.storesSaved),
+    enabled: isAuthenticated && enabled,
+    staleTime: 60_000,
   });
 }

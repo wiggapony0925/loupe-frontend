@@ -3468,6 +3468,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/stores/saved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My saved places
+         * @description Newest first. Declared BEFORE /{store_id} so "saved" is never
+         *     swallowed as a store id.
+         */
+        get: operations["saved_places_v1_public_stores_saved_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/stores/{store_id}": {
         parameters: {
             query?: never;
@@ -3504,6 +3525,27 @@ export interface paths {
         post?: never;
         /** Delete my review of a shop */
         delete: operations["delete_store_review_v1_public_stores__store_id__review_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/stores/{store_id}/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save this shop to my places
+         * @description Idempotent — hearting twice leaves one save.
+         */
+        put: operations["save_store_v1_public_stores__store_id__save_put"];
+        post?: never;
+        /** Remove this shop from my places */
+        delete: operations["unsave_store_v1_public_stores__store_id__save_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -7118,6 +7160,11 @@ export interface components {
             distance_km: number;
             /** Id */
             id: string;
+            /**
+             * Is Saved
+             * @default false
+             */
+            is_saved: boolean;
             /** Lat */
             lat: number;
             /** Lng */
@@ -7847,6 +7894,17 @@ export interface components {
             total_users: number;
             /** Trialing */
             trialing: number;
+        };
+        /**
+         * SavedStoresRead
+         * @description ``GET /v1/public/stores/saved`` — the caller's saved places.
+         */
+        SavedStoresRead: {
+            /**
+             * Stores
+             * @default []
+             */
+            stores: components["schemas"]["NearbyStore"][];
         };
         /**
          * ScanHistoryCandidate
@@ -8820,6 +8878,16 @@ export interface components {
             body?: string | null;
             /** Rating */
             rating: number;
+        };
+        /**
+         * StoreSaveRead
+         * @description Result of a save/unsave — the new state, so clients never guess.
+         */
+        StoreSaveRead: {
+            /** Is Saved */
+            is_saved: boolean;
+            /** Store Id */
+            store_id: string;
         };
         /**
          * SubscriptionCancelRequest
@@ -15443,6 +15511,26 @@ export interface operations {
             };
         };
     };
+    saved_places_v1_public_stores_saved_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedStoresRead"];
+                };
+            };
+        };
+    };
     store_detail_v1_public_stores__store_id__get: {
         parameters: {
             query?: never;
@@ -15526,6 +15614,68 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_store_v1_public_stores__store_id__save_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                store_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreSaveRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unsave_store_v1_public_stores__store_id__save_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                store_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreSaveRead"];
+                };
             };
             /** @description Validation Error */
             422: {

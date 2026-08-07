@@ -41,6 +41,7 @@ import {
   ChevronLeft,
   Compass,
   Globe,
+  Heart,
   MapPin,
   Navigation,
   Phone,
@@ -48,7 +49,10 @@ import {
   Star,
   Store,
 } from "lucide-react-native";
-import { useNearbyStores } from "@/application/queries/stores/useNearbyStores";
+import {
+  useNearbyStores,
+  useSavedStores,
+} from "@/application/queries/stores/useNearbyStores";
 import { useUserLocation } from "@/application/location/useUserLocation";
 import { StoreDetailSheet } from "@/presentation/features/stores/StoreDetailSheet";
 import type { NearbyStoreWire } from "@/infrastructure/http";
@@ -78,6 +82,8 @@ const FILTERS: { key: string; label: string; match: (c: string) => boolean }[] =
     label: "Toys & hobby",
     match: (c) => c === "Toy store" || c === "Hobby shop" || c === "May carry cards",
   },
+  // Saved swaps the source (see `rows`), so its matcher passes everything.
+  { key: "saved", label: "♥ Saved", match: () => true },
 ];
 
 function directionsUrl(store: NearbyStoreWire): string {
@@ -117,11 +123,17 @@ export default function StoresScreen() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
+  const savedStores = useSavedStores(filter === "saved");
   const mapRef = useRef<InstanceType<MapsModule["default"]> | null>(null);
   const listRef = useRef<FlatList<NearbyStoreWire>>(null);
 
   const rows = useMemo(() => {
-    const all = stores.data?.stores ?? [];
+    // The Saved chip swaps the data source entirely — your places are not
+    // bounded by the current map view.
+    const all =
+      filter === "saved"
+        ? (savedStores.data?.stores ?? [])
+        : (stores.data?.stores ?? []);
     const f = FILTERS.find((x) => x.key === filter) ?? FILTERS[0]!;
     const needle = q.trim().toLowerCase();
     return all.filter(
@@ -129,7 +141,7 @@ export default function StoresScreen() {
         f.match(s.category) &&
         (needle.length === 0 || s.name.toLowerCase().includes(needle)),
     );
-  }, [stores.data, filter, q]);
+  }, [stores.data, savedStores.data, filter, q]);
 
   // Arm "Search this area" once the viewport drifts ~3 km from what we
   // searched — Resy's model: the map is free to roam, searching is a verb.
@@ -405,16 +417,20 @@ export default function StoresScreen() {
           ) : rows.length === 0 ? (
             <View style={styles.emptyWrap}>
               <Text style={[styles.emptyTitle, { color: p.ink.default }]}>
-                {stores.data?.source === "unavailable"
-                  ? "Store search is briefly unavailable"
-                  : q || filter !== "all"
-                    ? "No shops match your filters here"
-                    : "No card shops found in this area"}
+                {filter === "saved"
+                  ? "No saved places yet"
+                  : stores.data?.source === "unavailable"
+                    ? "Store search is briefly unavailable"
+                    : q || filter !== "all"
+                      ? "No shops match your filters here"
+                      : "No card shops found in this area"}
               </Text>
               <Text style={[styles.emptyBody, { color: p.ink.dim }]}>
-                {stores.data?.source === "unavailable"
-                  ? "Try again in a minute."
-                  : "Pan the map, then tap Search this area."}
+                {filter === "saved"
+                  ? "Tap the heart on a shop to save it here."
+                  : stores.data?.source === "unavailable"
+                    ? "Try again in a minute."
+                    : "Pan the map, then tap Search this area."}
               </Text>
             </View>
           ) : (
@@ -510,6 +526,16 @@ function StoreCard({
         >
           <Text style={styles.distanceText}>{distance}</Text>
         </View>
+        {store.is_saved ? (
+          <View
+            style={[
+              styles.savedBadge,
+              { backgroundColor: withAlpha("#000000", 0.45) },
+            ]}
+          >
+            <Heart size={13} color={p.accent.rose} fill={p.accent.rose} strokeWidth={0} />
+          </View>
+        ) : null}
       </View>
       <View style={styles.cardBody}>
         <Text numberOfLines={1} style={[styles.cardName, { color: p.ink.default }]}>
@@ -747,6 +773,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   distanceText: { color: "#ffffff", fontSize: 11, fontWeight: "800" },
+  savedBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    borderRadius: 999,
+    padding: 6,
+  },
   cardBody: { padding: 14, paddingTop: 11, gap: 3 },
   cardName: { fontSize: 18, fontWeight: "800", letterSpacing: -0.45 },
   cardMeta: { fontSize: 12 },

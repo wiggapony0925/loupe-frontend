@@ -24,10 +24,11 @@
  *   ┌ info card: name, ★ line, ◉ line, then link rows ┐
  *   Reviews (ours — Resy has no equivalent, so it uses the same card idiom)
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -56,6 +57,7 @@ import { Share } from "react-native";
 import {
   useDeleteStoreReview,
   useStoreDetail,
+  useToggleSaveStore,
   useUpsertStoreReview,
 } from "@/application/queries/stores/useNearbyStores";
 import type { NearbyStoreWire, StoreReviewWire } from "@/infrastructure/http";
@@ -161,8 +163,11 @@ export function StoreDetailSheet({
   const detail = useStoreDetail(storeId);
   const upsert = useUpsertStoreReview();
   const remove = useDeleteStoreReview();
+  const toggleSave = useToggleSaveStore();
 
   const store = detail.data?.store ?? fallback ?? null;
+  const saved = store?.is_saved ?? false;
+  
   const reviews = detail.data?.reviews ?? [];
   const mine = reviews.find((r) => r.is_mine) ?? null;
 
@@ -176,6 +181,22 @@ export function StoreDetailSheet({
   // Resy's handoff: past the hero, the floating ✕/♡/↗ become a solid bar
   // with the venue name centered.
   const [scrolled, setScrolled] = useState(false);
+  const hasPhoto = !!store?.photo_url && !photoFailed;
+  // Swipe-down to dismiss, but only from the top of the scroll — otherwise
+  // a downward flick mid-page would close the sheet instead of scrolling.
+  const atTop = useRef(true);
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) =>
+        atTop.current && g.dy > 12 && Math.abs(g.dy) > Math.abs(g.dx),
+      onPanResponderRelease: (_e, g) => {
+        if (g.dy > 90 || g.vy > 0.8) {
+          Haptics.selectionAsync().catch(() => {});
+          onClose();
+        }
+      },
+    }),
+  ).current;
 
   useEffect(() => {
     setRating(mine?.rating ?? 0);
@@ -230,7 +251,13 @@ export function StoreDetailSheet({
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <Pressable style={styles.scrim} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: p.bg.base }]}>
+      <View
+        style={[styles.sheet, { backgroundColor: p.bg.base }]}
+        {...panResponder.panHandlers}
+      >
+        <View style={styles.grabber}>
+          <View style={[styles.grabberBar, { backgroundColor: p.line.strong }]} />
+        </View>
         {scrolled ? (
           <View
             style={[
@@ -256,18 +283,21 @@ export function StoreDetailSheet({
             <View style={styles.topBarRight}>
               <Pressable
                 onPress={() => {
-                  Haptics.selectionAsync().catch(() => {});
-                  setComposing(true);
+                  if (!storeId) return;
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+                    () => {},
+                  );
+                  toggleSave.mutate({ storeId, saved });
                 }}
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel="Review this shop"
+                accessibilityLabel={saved ? "Remove from saved" : "Save this shop"}
                 style={styles.topBarBtn}
               >
                 <Heart
                   size={22}
-                  color={p.ink.default}
-                  fill={mine ? p.ink.default : "transparent"}
+                  color={saved ? p.accent.rose : p.ink.default}
+                  fill={saved ? p.accent.rose : "transparent"}
                   strokeWidth={2}
                 />
               </Pressable>
@@ -291,6 +321,7 @@ export function StoreDetailSheet({
           onScroll={(e) => {
             // Swap at the point the hero leaves the frame.
             const y = e.nativeEvent.contentOffset.y;
+            atTop.current = y <= 2;
             if (y > 250 !== scrolled) setScrolled(y > 250);
           }}
         >
@@ -298,7 +329,12 @@ export function StoreDetailSheet({
                 floating on top, "View All" pill bottom-right (Resy). ── */}
           <View style={[styles.hero, { borderColor: withAlpha(p.accent.amber, 0.55) }]}>
             <View
-              style={[styles.heroArt, { backgroundColor: withAlpha(tint, 0.16) }]}
+              style={[
+                styles.heroArt,
+                // Neutral surface, NOT a tint wash: a saturated block with
+                // same-hue content read as a failed image.
+                { backgroundColor: p.bg.elevated },
+              ]}
             >
               {store?.photo_url && !photoFailed ? (
                 <Image
@@ -311,9 +347,22 @@ export function StoreDetailSheet({
                 />
               ) : (
                 <>
-                  <Store size={40} color={tint} strokeWidth={1.6} />
-                  <Text style={[styles.heroInitial, { color: withAlpha(tint, 0.45) }]}>
-                    {(store?.name ?? "?").charAt(0).toUpperCase()}
+                  <View
+                    style={[
+                      styles.heroMark,
+                      { backgroundColor: withAlpha(tint, 0.18) },
+                    ]}
+                  >
+                    <Store size={30} color={tint} strokeWidth={1.8} />
+                  </View>
+                  <Text
+                    numberOfLines={2}
+                    style={[styles.heroFallbackName, { color: p.ink.muted }]}
+                  >
+                    {store?.name ?? "Card shop"}
+                  </Text>
+                  <Text style={[styles.heroFallbackNote, { color: p.ink.dim }]}>
+                    No photo published
                   </Text>
                 </>
               )}
@@ -327,23 +376,30 @@ export function StoreDetailSheet({
                 accessibilityLabel="Close"
                 style={styles.heroBtn}
               >
-                <X size={26} color="#ffffff" strokeWidth={2.2} />
+                <X
+                  size={26}
+                  color={hasPhoto ? "#ffffff" : p.ink.default}
+                  strokeWidth={2.2}
+                />
               </Pressable>
               <View style={styles.heroTopRight}>
                 <Pressable
                   onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    setComposing(true);
+                    if (!storeId) return;
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+                      () => {},
+                    );
+                    toggleSave.mutate({ storeId, saved });
                   }}
                   hitSlop={10}
                   accessibilityRole="button"
-                  accessibilityLabel="Review this shop"
+                  accessibilityLabel={saved ? "Remove from saved" : "Save this shop"}
                   style={styles.heroBtn}
                 >
                   <Heart
                     size={24}
-                    color="#ffffff"
-                    fill={mine ? "#ffffff" : "transparent"}
+                    color={saved ? p.accent.rose : hasPhoto ? "#ffffff" : p.ink.default}
+                    fill={saved ? p.accent.rose : "transparent"}
                     strokeWidth={2}
                   />
                 </Pressable>
@@ -354,7 +410,11 @@ export function StoreDetailSheet({
                   accessibilityLabel="Share this shop"
                   style={styles.heroBtn}
                 >
-                  <Share2 size={22} color="#ffffff" strokeWidth={2} />
+                  <Share2
+                    size={22}
+                    color={hasPhoto ? "#ffffff" : p.ink.default}
+                    strokeWidth={2}
+                  />
                 </Pressable>
               </View>
             </View>
@@ -825,6 +885,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   scroll: { paddingBottom: 40 },
+  grabber: { alignItems: "center", paddingTop: 7, paddingBottom: 5 },
+  grabberBar: { width: 40, height: 5, borderRadius: 3 },
   // Solid bar that replaces the floating hero controls on scroll.
   topBar: {
     position: "absolute",
@@ -850,17 +912,31 @@ const styles = StyleSheet.create({
   },
   topBarRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   hero: {
-    margin: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
+    // Full-bleed like Resy — the photo is the width of the sheet.
+    borderTopWidth: 1.5,
+    borderBottomWidth: 1.5,
     overflow: "hidden",
   },
   heroArt: {
-    height: 300,
+    height: 320,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  heroMark: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
   },
-  heroInitial: { position: "absolute", right: 18, bottom: 6, fontSize: 96, fontWeight: "900" },
+  heroFallbackName: {
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
+    paddingHorizontal: 40,
+  },
+  heroFallbackNote: { fontSize: 12 },
   heroTop: {
     position: "absolute",
     top: 10,

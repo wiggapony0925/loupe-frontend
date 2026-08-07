@@ -6727,6 +6727,11 @@
             "title": "Id",
             "type": "string"
           },
+          "is_saved": {
+            "default": false,
+            "title": "Is Saved",
+            "type": "boolean"
+          },
           "lat": {
             "title": "Lat",
             "type": "number"
@@ -8482,6 +8487,21 @@
           "pro_by_month"
         ],
         "title": "RevenueSummary",
+        "type": "object"
+      },
+      "SavedStoresRead": {
+        "description": "``GET /v1/public/stores/saved`` \u2014 the caller's saved places.",
+        "properties": {
+          "stores": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NearbyStore"
+            },
+            "title": "Stores",
+            "type": "array"
+          }
+        },
+        "title": "SavedStoresRead",
         "type": "object"
       },
       "ScanHistoryCandidate": {
@@ -11003,6 +11023,25 @@
           "rating"
         ],
         "title": "StoreReviewUpsert",
+        "type": "object"
+      },
+      "StoreSaveRead": {
+        "description": "Result of a save/unsave \u2014 the new state, so clients never guess.",
+        "properties": {
+          "is_saved": {
+            "title": "Is Saved",
+            "type": "boolean"
+          },
+          "store_id": {
+            "title": "Store Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "store_id",
+          "is_saved"
+        ],
+        "title": "StoreSaveRead",
         "type": "object"
       },
       "SubscriptionCancelRequest": {
@@ -22363,7 +22402,39 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Card & game shops near a point (server-ranked, cached)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/stores/saved": {
+      "get": {
+        "description": "Newest first. Declared BEFORE /{store_id} so \"saved\" is never\nswallowed as a store id.",
+        "operationId": "saved_places_v1_public_stores_saved_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedStoresRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My saved places",
         "tags": [
           "public"
         ]
@@ -22508,6 +22579,99 @@
           }
         ],
         "summary": "Write or update my review of a shop",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/stores/{store_id}/save": {
+      "delete": {
+        "operationId": "unsave_store_v1_public_stores__store_id__save_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "store_id",
+            "required": true,
+            "schema": {
+              "title": "Store Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreSaveRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove this shop from my places",
+        "tags": [
+          "public"
+        ]
+      },
+      "put": {
+        "description": "Idempotent \u2014 hearting twice leaves one save.",
+        "operationId": "save_store_v1_public_stores__store_id__save_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "store_id",
+            "required": true,
+            "schema": {
+              "title": "Store Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreSaveRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save this shop to my places",
         "tags": [
           "public"
         ]

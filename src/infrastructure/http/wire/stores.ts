@@ -19,6 +19,17 @@ export interface NearbyStoreWire {
   /** Community rating over Loupe reviews (null until someone rates). */
   rating: number | null;
   review_count: number;
+  /** Whether I've hearted this shop. */
+  is_saved: boolean;
+}
+
+export interface StoreSaveWire {
+  store_id: string;
+  is_saved: boolean;
+}
+
+export interface SavedStoresWire {
+  stores: NearbyStoreWire[];
 }
 
 /** One collector's review of a shop. */

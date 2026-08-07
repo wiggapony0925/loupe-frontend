@@ -108,6 +108,11 @@ export const ENDPOINTS = {
     /** My review of a shop (PUT to write/edit, DELETE to remove). */
     storeReview: (storeId: string) =>
       `${V1}/public/stores/${encodeURIComponent(storeId)}/review`,
+    /** Heart a shop (PUT) / remove it (DELETE). */
+    storeSave: (storeId: string) =>
+      `${V1}/public/stores/${encodeURIComponent(storeId)}/save`,
+    /** My saved places. */
+    storesSaved: `${V1}/public/stores/saved`,
   },
   me: {
     root: `${V1}/me`,
