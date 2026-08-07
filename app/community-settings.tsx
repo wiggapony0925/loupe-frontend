@@ -50,6 +50,8 @@ export default function CommunitySettingsScreen() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Freshly picked photo, shown instantly while (and after) it uploads.
+  // The just-picked local file, shown instantly so a change doesn't look
+  // like nothing happened. Cleared once the SERVER's URL changes, below.
   const [pickedUri, setPickedUri] = useState<string | null>(null);
   const [photoSaved, setPhotoSaved] = useState(false);
   const [armedLeave, setArmedLeave] = useState(false);
@@ -70,6 +72,20 @@ export default function CommunitySettingsScreen() {
       setSeeded(true);
     }
   }, [seeded, me.data, profile]);
+
+  // Hand the preview back to the server's URL as soon as the upload has
+  // actually landed (avatar_url carries ?v=N, so it changes every upload).
+  // Holding the local file forever meant a picture that failed server-side
+  // still LOOKED applied until the next cold start — the screen was showing
+  // the file we'd read, not the avatar anyone else would see.
+  const serverAvatar = profile?.avatar_url ?? null;
+  const lastServerAvatar = React.useRef(serverAvatar);
+  useEffect(() => {
+    if (serverAvatar !== lastServerAvatar.current) {
+      lastServerAvatar.current = serverAvatar;
+      setPickedUri(null);
+    }
+  }, [serverAvatar]);
 
   const save = useUpsertProfile();
   const upload = useUploadAvatar();
