@@ -404,7 +404,12 @@ export default function CollectorProfileScreen() {
                     <Text style={[styles.sectionTitle, { color: p.ink.dim }]}>
                       {`ALL CARDS · ${collection.data?.total_cards ?? collection.data?.items?.length ?? 0}`}
                     </Text>
-                    <CollectionGrid items={collection.data?.items ?? []} />
+                    <CollectionGrid
+                      items={collection.data?.items ?? []}
+                      ownerLabel={
+                        isSelf ? "your collection" : `@${data.username}'s cards`
+                      }
+                    />
                   </View>
                 ) : null}
               </View>

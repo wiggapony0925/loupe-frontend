@@ -1,133 +1,173 @@
 /**
- * CollectionGrid — someone else's cards, in the app's own carousel tile
- * language.
+ * CollectionGrid — a collector's cards, rendered as YOUR VAULT renders
+ * cards.
  *
- * Each cell mirrors the storefront's CardTile recipe exactly: FULL card art
- * on the shared CardImage primitive (5:7, rounded 12, blur-up skeleton),
- * then name and a grade · value caption below — never cropped art with
- * chips floating on top. Browsing a collection should feel like browsing
- * the shop, because to the viewer that's what it is.
+ * This is deliberately not a bespoke social grid: it maps the social
+ * payload onto the same `CollectionCard` domain shape the vault uses and
+ * hands each one to `CardThumbnail`, the vault's own grid tile. Looking at
+ * someone's profile should feel exactly like looking at a vault — same
+ * art treatment, same grade pill, same value footer, same column math.
  *
- * Tapping a card opens the NATIVE card screen — live pricing, your own
- * ownership context and alerts.
+ * A search field sits above it: their collection is often hundreds of
+ * cards, and "do they have Umbreon?" is the question people actually
+ * arrive with. Filtering is client-side over the loaded page — instant,
+ * no round trip.
  */
-import React from "react";
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { router } from "expo-router";
+import React, { useMemo, useState } from "react";
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { Pressable } from "react-native";
+import { Search, X } from "lucide-react-native";
 import type { SocialCollectionItemWire } from "@/infrastructure/http";
-import { CardImage } from "@/presentation/components/CardImage";
-import { routes } from "@/shared/routes";
+import type { CollectionCard } from "@/domain/collection/types";
+import { CardThumbnail } from "@/presentation/features/collection/CardThumbnail";
+import {
+  chunkRows,
+  vaultGridColumns,
+} from "@/presentation/features/collection/vaultLayout";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 
-const GAP = 10;
-const PAGE_PADDING = 20;
-// Match CardTile's reserved text heights so wrap-rows align cell-for-cell.
-const NAME_LINE_HEIGHT = 15;
-const NAME_HEIGHT = NAME_LINE_HEIGHT * 2;
+
+/** Social payload → the vault's card shape, so the vault tile can render it. */
+function toCollectionCard(item: SocialCollectionItemWire): CollectionCard {
+  const grade = Number(item.grade);
+  return {
+    id: item.id,
+    cardId: item.card_id,
+    title: item.card_name ?? "Unknown card",
+    // Same boundary widening the vault's repository does: the union is a
+    // UI-facing enum, the backend returns arbitrary set names.
+    set: (item.card_set_name ?? "Unknown set") as CollectionCard["set"],
+    year: 0,
+    grade: Number.isFinite(grade) ? grade : 0,
+    house: item.house ?? "loupe",
+    condition: (item.condition ?? null) as CollectionCard["condition"],
+    estimatedValueUsd:
+      item.estimated_value_usd != null ? Number(item.estimated_value_usd) : 0,
+    thumbnailUri: item.card_image_url ?? "",
+    scannedAt: item.graded_at,
+    tags: [],
+  };
+}
 
 export function CollectionGrid({
   items,
+  /** Whose cards — only used for the search field's placeholder. */
+  ownerLabel = "this collection",
 }: {
   items: readonly SocialCollectionItemWire[];
+  ownerLabel?: string;
 }) {
+  const p = useThemedPalette();
   const { width } = useWindowDimensions();
-  // Three across on a normal phone; the tile width is derived rather than
-  // fixed so a small phone shrinks the art instead of dropping a column.
-  const columns = width >= 700 ? 4 : 3;
-  const tileW = (width - PAGE_PADDING * 2 - GAP * (columns - 1)) / columns;
+  const [q, setQ] = useState("");
+
+  const columns = vaultGridColumns(width);
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const filtered = needle
+      ? items.filter(
+          (i) =>
+            (i.card_name ?? "").toLowerCase().includes(needle) ||
+            (i.card_set_name ?? "").toLowerCase().includes(needle) ||
+            (i.card_number ?? "").toLowerCase().includes(needle),
+        )
+      : items;
+    return chunkRows(filtered.map(toCollectionCard), columns);
+  }, [items, q, columns]);
+
+  const total = rows.reduce((n, r) => n + r.length, 0);
+
+  if (items.length === 0) return null;
 
   return (
-    <View style={styles.grid}>
-      {items.map((item) => (
-        <CollectionTile key={item.id} item={item} width={tileW} />
-      ))}
+    <View style={styles.wrap}>
+      {/* Search their vault — the question people actually arrive with. */}
+      <View
+        style={[
+          styles.search,
+          { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+        ]}
+      >
+        <Search size={15} color={p.ink.dim} strokeWidth={2.4} />
+        <TextInput
+          value={q}
+          onChangeText={setQ}
+          placeholder={`Search ${ownerLabel}`}
+          placeholderTextColor={p.ink.dim}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          style={[styles.input, { color: p.ink.default }]}
+          accessibilityLabel="Search this collection"
+        />
+        {q.length > 0 ? (
+          <Pressable
+            onPress={() => setQ("")}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+          >
+            <X size={15} color={p.ink.dim} />
+          </Pressable>
+        ) : null}
+      </View>
+
+      {q.trim() && total === 0 ? (
+        <Text style={[styles.empty, { color: p.ink.dim }]}>
+          Nothing here matches “{q.trim()}”.
+        </Text>
+      ) : (
+        <>
+          {q.trim() ? (
+            <Text style={[styles.count, { color: p.ink.dim }]}>
+              {total} {total === 1 ? "match" : "matches"}
+            </Text>
+          ) : null}
+          {/* Rows are chunked by the vault's own column math, so the grid
+              geometry matches the vault at every screen size. */}
+          <View style={styles.grid}>
+            {rows.map((row, i) => (
+              <View key={i} style={styles.row}>
+                {row.map((card) => (
+                  <View key={card.id} style={styles.cell}>
+                    <CardThumbnail card={card} />
+                  </View>
+                ))}
+                {/* Pad the last row so a lone card doesn't stretch. */}
+                {row.length < columns
+                  ? Array.from({ length: columns - row.length }).map((_, k) => (
+                      <View key={`pad${k}`} style={styles.cell} />
+                    ))
+                  : null}
+              </View>
+            ))}
+          </View>
+        </>
+      )}
     </View>
   );
 }
 
-function CollectionTile({
-  item,
-  width,
-}: {
-  item: SocialCollectionItemWire;
-  width: number;
-}) {
-  const p = useThemedPalette();
-  const tileW = Math.round(width);
-  const grade = Number(item.grade);
-  const hasGrade = Number.isFinite(grade) && grade > 0;
-  const gradeLabel =
-    item.house === "loupe"
-      ? "Raw"
-      : hasGrade
-        ? `${item.house.toUpperCase()} ${grade % 1 === 0 ? grade : grade.toFixed(1)}`
-        : null;
-  const value =
-    item.estimated_value_usd != null
-      ? `$${Number(item.estimated_value_usd).toLocaleString("en-US", {
-          maximumFractionDigits: 0,
-        })}`
-      : null;
-
-  return (
-    <Pressable
-      onPress={() => router.push(routes.card(item.card_id))}
-      accessibilityRole="button"
-      accessibilityLabel={item.card_name ?? "Card"}
-      style={({ pressed }) => [
-        { width: tileW, overflow: "hidden", gap: 4, opacity: pressed ? 0.85 : 1 },
-      ]}
-    >
-      <CardImage
-        uri={item.card_image_url}
-        width={tileW}
-        aspectRatio={5 / 7}
-        rounded={12}
-        recyclingKey={item.id}
-        alt={item.card_name ?? "Card"}
-      />
-      <Text
-        numberOfLines={2}
-        ellipsizeMode="tail"
-        style={[
-          styles.name,
-          {
-            color: p.ink.default,
-            width: tileW,
-            height: NAME_HEIGHT,
-            lineHeight: NAME_LINE_HEIGHT,
-          },
-        ]}
-      >
-        {item.card_name ?? "Unknown card"}
-      </Text>
-      <View style={styles.caption}>
-        {gradeLabel ? (
-          <Text numberOfLines={1} style={[styles.grade, { color: p.ink.dim }]}>
-            {gradeLabel}
-          </Text>
-        ) : (
-          <View />
-        )}
-        {value ? (
-          <Text numberOfLines={1} style={[styles.value, { color: p.ink.default }]}>
-            {value}
-          </Text>
-        ) : null}
-      </View>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
-  name: { fontSize: 12, fontWeight: "600", letterSpacing: -0.1, marginTop: 2 },
-  caption: {
+  wrap: { gap: 10 },
+  search: {
     flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    gap: 6,
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
   },
-  grade: { fontSize: 11, flexShrink: 1 },
-  value: { fontSize: 11.5, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  input: { flex: 1, fontSize: 14, paddingVertical: 10 },
+  count: { fontSize: 11.5 },
+  empty: { fontSize: 13, paddingVertical: 18, textAlign: "center" },
+  grid: { gap: 12 },
+  row: { flexDirection: "row", gap: 12 },
+  cell: { flex: 1 },
 });
