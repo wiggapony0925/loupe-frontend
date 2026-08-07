@@ -170,12 +170,16 @@ export function StoreDetailSheet({
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
+  // A shop's own server can still refuse the hotlink; fall back rather
+  // than leaving a blank frame.
+  const [photoFailed, setPhotoFailed] = useState(false);
 
   useEffect(() => {
     setRating(mine?.rating ?? 0);
     setBody(mine?.body ?? "");
     setError(null);
     setComposing(false);
+    setPhotoFailed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId, mine?.id]);
 
@@ -235,12 +239,13 @@ export function StoreDetailSheet({
             <View
               style={[styles.heroArt, { backgroundColor: withAlpha(tint, 0.16) }]}
             >
-              {store?.photo_url ? (
+              {store?.photo_url && !photoFailed ? (
                 <Image
                   source={{ uri: store.photo_url }}
                   style={StyleSheet.absoluteFill}
                   contentFit="cover"
                   transition={180}
+                  onError={() => setPhotoFailed(true)}
                   accessibilityIgnoresInvertColors
                 />
               ) : (
@@ -293,7 +298,7 @@ export function StoreDetailSheet({
               </View>
             </View>
 
-            {store?.photo_url ? (
+            {store?.photo_url && !photoFailed ? (
               <View style={styles.viewAll}>
                 <Text style={styles.viewAllText}>View All (1)</Text>
               </View>
@@ -318,6 +323,68 @@ export function StoreDetailSheet({
                   .join(" · ")}
               </Text>
             </View>
+          </View>
+
+          {/* Two ratings, side by side: what COLLECTORS said here, and the
+              general public's rating — which lives in Apple/Google Maps.
+              There is no free API for those reviews, so rather than fake a
+              number we hand the user straight to the place card. */}
+          <View style={styles.ratingsBand}>
+            <View
+              style={[
+                styles.ratingCard,
+                { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+              ]}
+            >
+              <Text style={[styles.ratingCardLabel, { color: p.ink.dim }]}>
+                COLLECTORS ON LOUPE
+              </Text>
+              {store?.rating != null ? (
+                <>
+                  <View style={styles.inlineRow}>
+                    <Text style={[styles.ratingBig, { color: p.ink.default }]}>
+                      {store.rating.toFixed(1)}
+                    </Text>
+                    <Stars value={store.rating} size={13} />
+                  </View>
+                  <Text style={[styles.ratingCardSub, { color: p.ink.muted }]}>
+                    {store.review_count}{" "}
+                    {store.review_count === 1 ? "review" : "reviews"}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.ratingBig, { color: p.ink.dim }]}>—</Text>
+                  <Text style={[styles.ratingCardSub, { color: p.ink.muted }]}>
+                    Be the first to rate
+                  </Text>
+                </>
+              )}
+            </View>
+
+            <Pressable
+              onPress={() => store && void Linking.openURL(directionsUrl(store))}
+              accessibilityRole="button"
+              accessibilityLabel="See public ratings in Maps"
+              style={[
+                styles.ratingCard,
+                { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+              ]}
+            >
+              <Text style={[styles.ratingCardLabel, { color: p.ink.dim }]}>
+                PUBLIC RATING
+              </Text>
+              <View style={styles.inlineRow}>
+                <MapPin size={17} color={p.ink.default} strokeWidth={2.2} />
+                <Text style={[styles.ratingMapsText, { color: p.ink.default }]}>
+                  Maps
+                </Text>
+                <ArrowUpRight size={13} color={p.ink.dim} strokeWidth={2.2} />
+              </View>
+              <Text style={[styles.ratingCardSub, { color: p.ink.muted }]}>
+                Everyone else&apos;s reviews
+              </Text>
+            </Pressable>
           </View>
 
           <View style={[styles.rule, { backgroundColor: p.line.default }]} />
@@ -486,7 +553,12 @@ export function StoreDetailSheet({
           {/* ── Reviews ── */}
           <View style={styles.block}>
             <Text style={[styles.sectionHead, { color: p.ink.default }]}>
-              Reviews {store?.review_count ? `(${store.review_count})` : ""}
+              What other collectors say
+            </Text>
+            <Text style={[styles.sectionSub, { color: p.ink.muted }]}>
+              {store?.review_count
+                ? `${store.review_count} ${store.review_count === 1 ? "collector has" : "collectors have"} reviewed this shop.`
+                : "Reviews here come from Loupe collectors — singles selection, prices, play space."}
             </Text>
 
             {composing || mine ? (
@@ -757,6 +829,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   bannerText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  ratingsBand: { flexDirection: "row", gap: 10, paddingHorizontal: 18, paddingTop: 14 },
+  ratingCard: { flex: 1, borderWidth: 1, borderRadius: 8, padding: 12, gap: 4 },
+  ratingCardLabel: { fontSize: 9.5, fontWeight: "800", letterSpacing: 1.1 },
+  ratingBig: { fontSize: 24, fontWeight: "800", letterSpacing: -0.6 },
+  ratingMapsText: { fontSize: 17, fontWeight: "800", letterSpacing: -0.3 },
+  ratingCardSub: { fontSize: 12 },
+  sectionSub: { fontSize: 13.5, lineHeight: 19, marginTop: -2 },
   sectionHead: {
     fontSize: 19,
     fontWeight: "800",
