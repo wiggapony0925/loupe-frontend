@@ -173,6 +173,9 @@ export function StoreDetailSheet({
   // A shop's own server can still refuse the hotlink; fall back rather
   // than leaving a blank frame.
   const [photoFailed, setPhotoFailed] = useState(false);
+  // Resy's handoff: past the hero, the floating ✕/♡/↗ become a solid bar
+  // with the venue name centered.
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     setRating(mine?.rating ?? 0);
@@ -228,10 +231,68 @@ export function StoreDetailSheet({
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <Pressable style={styles.scrim} onPress={onClose} />
       <View style={[styles.sheet, { backgroundColor: p.bg.base }]}>
+        {scrolled ? (
+          <View
+            style={[
+              styles.topBar,
+              { backgroundColor: p.bg.base, borderBottomColor: p.line.default },
+            ]}
+          >
+            <Pressable
+              onPress={onClose}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              style={styles.topBarBtn}
+            >
+              <X size={24} color={p.ink.default} strokeWidth={2.2} />
+            </Pressable>
+            <Text
+              numberOfLines={1}
+              style={[styles.topBarTitle, { color: p.ink.default }]}
+            >
+              {store?.name ?? "Card shop"}
+            </Text>
+            <View style={styles.topBarRight}>
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setComposing(true);
+                }}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Review this shop"
+                style={styles.topBarBtn}
+              >
+                <Heart
+                  size={22}
+                  color={p.ink.default}
+                  fill={mine ? p.ink.default : "transparent"}
+                  strokeWidth={2}
+                />
+              </Pressable>
+              <Pressable
+                onPress={() => void shareStore()}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Share this shop"
+                style={styles.topBarBtn}
+              >
+                <Share2 size={20} color={p.ink.default} strokeWidth={2} />
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scroll}
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            // Swap at the point the hero leaves the frame.
+            const y = e.nativeEvent.contentOffset.y;
+            if (y > 250 !== scrolled) setScrolled(y > 250);
+          }}
         >
           {/* ── Hero: photo edge-to-edge with the accent hairline, controls
                 floating on top, "View All" pill bottom-right (Resy). ── */}
@@ -764,6 +825,30 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   scroll: { paddingBottom: 40 },
+  // Solid bar that replaces the floating hero controls on scroll.
+  topBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  topBarBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
+  topBarTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+    textAlign: "center",
+  },
+  topBarRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   hero: {
     margin: 10,
     borderRadius: 12,
