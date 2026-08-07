@@ -26,7 +26,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Camera, ChevronLeft, ChevronRight, LogOut } from "lucide-react-native";
+import { Camera, Check, ChevronLeft, ChevronRight, LogOut } from "lucide-react-native";
 import {
   useDeactivateCommunity,
   useSocialMe,
@@ -54,6 +54,10 @@ export default function CommunitySettingsScreen() {
   const [photoSaved, setPhotoSaved] = useState(false);
   const [armedLeave, setArmedLeave] = useState(false);
   const [seeded, setSeeded] = useState(false);
+  // Timestamp of the last successful save — drives the confirmation. A save
+  // that changes nothing visible (privacy, a cleared bio) otherwise gives no
+  // sign it worked, which reads as a broken button.
+  const [savedAt, setSavedAt] = useState<number | null>(null);
 
   // Seed the form once real server state arrives (not on every refetch,
   // or a background refresh would stomp in-progress edits).
@@ -121,6 +125,13 @@ export default function CommunitySettingsScreen() {
     }
   };
 
+  // Editing anything invalidates the "Saved" confirmation — a stale tick
+  // next to unsaved edits is worse than no tick.
+  useEffect(() => {
+    setSavedAt(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [username, bio, location, isPrivate]);
+
   const onSave = () => {
     const handle = username.trim();
     if (!USERNAME_RE.test(handle)) {
@@ -139,11 +150,20 @@ export default function CommunitySettingsScreen() {
         is_private: isPrivate,
       },
       {
-        onSuccess: () => {
+        onSuccess: (saved) => {
           Haptics.notificationAsync(
             Haptics.NotificationFeedbackType.Success,
           ).catch(() => {});
-          setSeeded(false); // re-seed from the fresh server state
+          // Re-seed from the mutation's OWN response, which is the freshest
+          // truth there is. Flipping `seeded` instead re-ran the seeding
+          // effect against the still-stale cached profile, so the form
+          // visibly snapped back to the old values until the refetch
+          // landed — indistinguishable from "my changes didn't save".
+          setUsername(saved.username);
+          setBio(saved.bio ?? "");
+          setLocation(saved.location ?? "");
+          setIsPrivate(saved.is_private);
+          setSavedAt(Date.now());
         },
         onError: (e) => setError(e.message),
       },
@@ -332,7 +352,18 @@ export default function CommunitySettingsScreen() {
               </Text>
             ) : null}
 
-            {/* Save — appears only when something changed. */}
+            {savedAt ? (
+              <View className="flex-row items-center gap-1.5 px-5 pt-3">
+                <Check size={14} color={p.accent.mint} strokeWidth={3} />
+                <Text
+                  className="text-[13px] font-semibold"
+                  style={{ color: p.accent.mint }}
+                >
+                  Saved
+                </Text>
+              </View>
+            ) : null}
+
             <View className="px-5 pt-5">
               <Pressable
                 onPress={onSave}

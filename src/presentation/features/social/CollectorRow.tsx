@@ -70,6 +70,18 @@ export function CollectorRow({
           >
             {user.display_name?.trim() || `@${user.username}`}
           </Text>
+          {user.is_admin ? (
+            <View
+              style={[
+                styles.adminTag,
+                { backgroundColor: withAlpha(p.accent.mint, 0.16) },
+              ]}
+            >
+              <Text style={[styles.adminTagText, { color: p.accent.mint }]}>
+                ADMIN
+              </Text>
+            </View>
+          ) : null}
           {user.is_private ? (
             <Lock size={11} color={p.ink.dim} strokeWidth={2.4} />
           ) : null}
@@ -131,6 +143,10 @@ export function CollectorRow({
 }
 
 const styles = StyleSheet.create({
+  // Staff marker. Mint like the Pro ring, but a TAG not a ring — a badge
+  // reading ADMIN has to be unmistakable, not decoded from a colour.
+  adminTag: { borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2 },
+  adminTagText: { fontSize: 9, fontWeight: "900", letterSpacing: 0.6 },
   row: {
     flexDirection: "row",
     alignItems: "center",

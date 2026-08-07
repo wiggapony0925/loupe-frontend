@@ -40,6 +40,7 @@ import {
   ExploreGrid,
   ExploreGridSkeleton,
 } from "@/presentation/features/social/ExploreGrid";
+import { FeaturedCollectorRail } from "@/presentation/features/social/FeaturedCollectorRail";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import {
   useCollectorSearch,
@@ -75,14 +76,9 @@ export default function CommunityScreen() {
   const searching = q.trim().length >= 2;
   const results = search.data ?? [];
 
-  // featured + more, in the server's order. They arrive disjoint and ranked;
-  // the Explore grid replaced the featured RAIL, so concatenating here is
-  // what keeps the top-ranked collectors on the page instead of dropping
-  // them along with the rail.
-  const people = React.useMemo(
-    () => [...(discover.data?.featured ?? []), ...(discover.data?.more ?? [])],
-    [discover.data],
-  );
+  // The rail renders `featured`; these rows are everyone else. The two
+  // arrive disjoint from the server, so no de-duplication is needed here.
+  const people = discover.data?.more ?? [];
 
   const openProfile = (handle: string) => router.push(routes.collector(handle));
 
@@ -282,6 +278,24 @@ export default function CommunityScreen() {
                           }
                         />
                       ))}
+                    </Section>
+                  ) : null}
+
+                  {/* Featured collectors — operator-curated when an admin
+                      has set a list, ranked otherwise. Kept ABOVE Explore:
+                      these are people worth following, and the grid below
+                      is browsing. */}
+                  {(discover.data?.featured.length ?? 0) > 0 ? (
+                    <Section
+                      title="Featured collectors"
+                      subtitle="Vaults worth following."
+                    >
+                      <FeaturedCollectorRail
+                        users={discover.data!.featured}
+                        onOpen={openProfile}
+                        onToggleFollow={follow.mutate}
+                        pending={follow.isPending}
+                      />
                     </Section>
                   ) : null}
 

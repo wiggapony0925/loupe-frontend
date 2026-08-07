@@ -3,10 +3,13 @@
  *
  * Most accounts have no uploaded picture, so the fallback is the common case
  * rather than the edge one: a MONOGRAM — the first letter of the collector's
- * name — on a hue hashed from the handle. The letter makes the row about a
- * person (an anonymous silhouette repeated down a list says nothing); the
- * stable per-handle colour means you learn to spot the same collector
- * without reading.
+ * name — on NEUTRAL GREY, the way every mainstream social app does it.
+ *
+ * It used to hash a hue from the handle, which gave a directory of strangers
+ * a different saturated colour per row. That reads as decoration, competes
+ * with the card art the app is actually about, and makes a list look like a
+ * chart. Grey lets the letter — and any real uploaded picture — carry the
+ * identity.
  */
 import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -23,15 +26,6 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 function absolutize(url: string | null | undefined): string | null {
   if (!url) return null;
   return url.startsWith("/") ? `${config.apiUrl}${url}` : url;
-}
-
-/** Stable per-handle hue. Same handle → same colour, on every device. */
-function hueFor(handle: string): number {
-  let h = 0;
-  for (let i = 0; i < handle.length; i += 1) {
-    h = (h * 31 + handle.charCodeAt(i)) >>> 0;
-  }
-  return h % 360;
 }
 
 export interface SocialAvatarProps {
@@ -53,7 +47,8 @@ export function SocialAvatar({
 }: SocialAvatarProps) {
   const p = useThemedPalette();
   const [failed, setFailed] = useState(false);
-  const tint = `hsl(${hueFor(handle)}, 62%, 58%)`;
+  // Neutral, theme-aware: a quiet surface with the letter in muted ink.
+  const tint = p.ink.muted;
   const ring = isPro ? { borderWidth: 2, borderColor: p.accent.mint } : null;
   const resolved = absolutize(url);
   const initial = (name?.trim() || handle).charAt(0).toUpperCase();
@@ -88,7 +83,7 @@ export function SocialAvatar({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: withAlpha(tint, 0.22),
+          backgroundColor: withAlpha(p.ink.default, 0.11),
         },
         ring,
       ]}

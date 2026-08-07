@@ -35,6 +35,8 @@ export interface SocialUserCardWire {
   location: string | null;
   is_private: boolean;
   is_pro: boolean;
+  /** Loupe staff — drives the ADMIN tag on people rows. */
+  is_admin: boolean;
   relationship: SocialRelationship;
   /** How many cards they own — 0 for private accounts you can't see. */
   card_count: number;
