@@ -4101,6 +4101,68 @@
         "title": "EnvVar",
         "type": "object"
       },
+      "ExploreCard": {
+        "description": "One tile in the Explore mosaic \u2014 a card somebody owns.",
+        "properties": {
+          "card_id": {
+            "format": "uuid",
+            "title": "Card Id",
+            "type": "string"
+          },
+          "card_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image_url": {
+            "title": "Image Url",
+            "type": "string"
+          },
+          "is_hero": {
+            "default": false,
+            "title": "Is Hero",
+            "type": "boolean"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "card_id",
+          "image_url",
+          "username"
+        ],
+        "title": "ExploreCard",
+        "type": "object"
+      },
+      "ExploreRead": {
+        "description": "``GET /v1/social/explore`` \u2014 the Community browse grid.\n\nCards from PUBLIC collections only, ranked and laid out server-side so\nevery client renders the same mosaic verbatim (house rule).",
+        "properties": {
+          "cards": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ExploreCard"
+            },
+            "title": "Cards",
+            "type": "array"
+          }
+        },
+        "title": "ExploreRead",
+        "type": "object"
+      },
       "ExternalRefRead": {
         "properties": {
           "confidence": {
@@ -4405,6 +4467,11 @@
             ],
             "title": "Avatar Url"
           },
+          "card_count": {
+            "default": 0,
+            "title": "Card Count",
+            "type": "integer"
+          },
           "copies": {
             "default": 1,
             "title": "Copies",
@@ -4441,6 +4508,14 @@
               }
             ],
             "title": "Location"
+          },
+          "preview_image_urls": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Preview Image Urls",
+            "type": "array"
           },
           "relationship": {
             "default": "none",
@@ -6803,6 +6878,17 @@
               }
             ],
             "title": "Website"
+          },
+          "wikidata_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wikidata Id"
           }
         },
         "required": [
@@ -10234,6 +10320,25 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "spark_delta_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spark Delta Pct"
+          },
+          "spark_points": {
+            "default": [],
+            "items": {
+              "type": "number"
+            },
+            "title": "Spark Points",
+            "type": "array"
           }
         },
         "required": [
@@ -10836,6 +10941,11 @@
             ],
             "title": "Avatar Url"
           },
+          "card_count": {
+            "default": 0,
+            "title": "Card Count",
+            "type": "integer"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -10867,6 +10977,14 @@
               }
             ],
             "title": "Location"
+          },
+          "preview_image_urls": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Preview Image Urls",
+            "type": "array"
           },
           "relationship": {
             "default": "none",
@@ -24378,6 +24496,33 @@
           }
         ],
         "summary": "The Community page's people shelves, composed server-side",
+        "tags": [
+          "social"
+        ]
+      }
+    },
+    "/v1/social/explore": {
+      "get": {
+        "description": "Ranked AND laid out server-side (including which tiles are heroes),\nso every client draws the same mosaic.",
+        "operationId": "explore_cards_v1_social_explore_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExploreRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The Community browse grid \u2014 card art from public collections",
         "tags": [
           "social"
         ]

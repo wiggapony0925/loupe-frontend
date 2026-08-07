@@ -178,3 +178,19 @@ export interface SocialProfileUpsertWire {
   location?: string | null;
   is_private?: boolean;
 }
+
+/** One tile in the Community Explore mosaic. */
+export interface ExploreCardWire {
+  id: string;
+  card_id: string;
+  card_name: string | null;
+  image_url: string;
+  /** Whose card it is — the tile's route to a person. */
+  username: string;
+  /** Server-assigned: this tile leads a hero band in the mosaic. */
+  is_hero: boolean;
+}
+
+export interface ExploreReadWire {
+  cards: ExploreCardWire[];
+}

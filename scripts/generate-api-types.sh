@@ -21,8 +21,17 @@ TYPES="${OUT_DIR}/openapi.ts"
 
 mkdir -p "${OUT_DIR}"
 
-echo "▶ Dumping OpenAPI schema from backend…"
-(cd "${BACKEND_DIR}" && python scripts/dump_openapi.py "${SCHEMA}")
+# Prefer the backend's own venv: a bare `python` is not on PATH on macOS
+# (only python3), so this step failed with "command not found" and the
+# contract fixture silently went stale.
+BACKEND_PY="${BACKEND_DIR}/.venv/bin/python"
+if [ ! -x "${BACKEND_PY}" ]; then
+  BACKEND_PY="$(command -v python3 || command -v python || true)"
+fi
+[ -x "${BACKEND_PY}" ] || { echo "No Python found for the backend schema dump." >&2; exit 1; }
+
+echo "▶ Dumping OpenAPI schema from backend… (${BACKEND_PY})"
+(cd "${BACKEND_DIR}" && "${BACKEND_PY}" scripts/dump_openapi.py "${SCHEMA}")
 
 echo "▶ Generating TypeScript types…"
 npx --no-install openapi-typescript "${SCHEMA}" -o "${TYPES}"

@@ -23,6 +23,7 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -30,21 +31,27 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Check, ChevronRight, MapPin, Search, X } from "lucide-react-native";
+import { Check, ChevronRight, MapPin, Search, Share2, X } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { CollectorRow } from "@/presentation/features/social/CollectorRow";
 import { ClaimUsernameCard } from "@/presentation/features/social/ClaimUsernameCard";
-import { FeaturedCollectorRail } from "@/presentation/features/social/FeaturedCollectorRail";
+import {
+  ExploreEmpty,
+  ExploreGrid,
+  ExploreGridSkeleton,
+} from "@/presentation/features/social/ExploreGrid";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import {
   useCollectorSearch,
   useDiscoverCollectors,
+  useExploreCards,
   useFollowCollector,
   useFollowRequests,
   useRespondToRequest,
   useSocialMe,
 } from "@/application/queries/social/useSocial";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
+import { config } from "@/shared/config";
 import { routes } from "@/shared/routes";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -60,6 +67,7 @@ export default function CommunityScreen() {
   const requests = useFollowRequests();
   // Composed + ranked server-side; featured/more arrive disjoint.
   const discover = useDiscoverCollectors(claimed);
+  const explore = useExploreCards(claimed);
   const search = useCollectorSearch(q);
   const follow = useFollowCollector();
   const respond = useRespondToRequest();
@@ -67,7 +75,28 @@ export default function CommunityScreen() {
   const searching = q.trim().length >= 2;
   const results = search.data ?? [];
 
+  // featured + more, in the server's order. They arrive disjoint and ranked;
+  // the Explore grid replaced the featured RAIL, so concatenating here is
+  // what keeps the top-ranked collectors on the page instead of dropping
+  // them along with the rail.
+  const people = React.useMemo(
+    () => [...(discover.data?.featured ?? []), ...(discover.data?.more ?? [])],
+    [discover.data],
+  );
+
   const openProfile = (handle: string) => router.push(routes.collector(handle));
+
+  /** Hand out my profile link — the growth loop this page exists for. */
+  const shareMyProfile = async () => {
+    const handle = me.data?.profile?.username;
+    if (!handle) return;
+    Haptics.selectionAsync().catch(() => {});
+    try {
+      await Share.share({ url: `${config.webUrl}/app/u/${handle}` });
+    } catch {
+      // Dismissed the sheet — nothing to do.
+    }
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: p.bg.base }]}>
@@ -77,10 +106,11 @@ export default function CommunityScreen() {
           keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
-              refreshing={me.isRefetching || discover.isRefetching}
+              refreshing={me.isRefetching || explore.isRefetching}
               onRefresh={() => {
                 void me.refetch();
                 void discover.refetch();
+                void explore.refetch();
                 void requests.refetch();
               }}
               tintColor={p.ink.dim}
@@ -96,6 +126,24 @@ export default function CommunityScreen() {
                 Follow collectors and see what they own.
               </Text>
             </View>
+            {claimed ? (
+              <Pressable
+                onPress={() => void shareMyProfile()}
+                accessibilityRole="button"
+                accessibilityLabel="Share my profile"
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.headShare,
+                  {
+                    borderColor: p.line.default,
+                    backgroundColor: p.bg.elevated,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <Share2 size={16} color={p.ink.muted} strokeWidth={2.2} />
+              </Pressable>
+            ) : null}
             {claimed ? (
               <Pressable
                 onPress={() => router.push(routes.myProfile())}
@@ -139,13 +187,13 @@ export default function CommunityScreen() {
                 <TextInput
                   value={q}
                   onChangeText={setQ}
-                  placeholder="Search collectors"
+                  placeholder="Search name, @handle or email"
                   placeholderTextColor={p.ink.dim}
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="search"
                   style={[styles.searchInput, { color: p.ink.default }]}
-                  accessibilityLabel="Search collectors"
+                  accessibilityLabel="Search collectors by name, handle, email or account id"
                 />
                 {q.length > 0 ? (
                   <Pressable
@@ -237,36 +285,33 @@ export default function CommunityScreen() {
                     </Section>
                   ) : null}
 
-                  {/* Faces first: featured collectors as an App-Store-style
-                      rail of cards, the directory as rows beneath. */}
-                  <Section
-                    title="Collections worth a look"
-                    subtitle="The most-followed vaults on Loupe."
-                  >
-                    {discover.isLoading ? (
-                      <View style={styles.loading}>
-                        <ActivityIndicator color={p.ink.dim} />
-                      </View>
-                    ) : (discover.data?.featured.length ?? 0) === 0 ? (
-                      <Text style={[styles.empty, { color: p.ink.dim }]}>
-                        No suggestions yet — search for someone by handle.
-                      </Text>
+                  {/* EXPLORE — the page's centre of gravity. Card art from
+                      public collections as a full-bleed mosaic. A directory
+                      of avatars answered "who is here" on an app about card
+                      art; this answers "what is here". Collectors with no
+                      cards are simply absent, which is why the old empty
+                      "No cards yet" frame is gone. */}
+                  <View style={styles.exploreBleed}>
+                    {explore.isLoading ? (
+                      <ExploreGridSkeleton />
+                    ) : (explore.data?.cards.length ?? 0) === 0 ? (
+                      <ExploreEmpty label="Nothing to explore yet. Follow a collector to get started." />
                     ) : (
-                      <FeaturedCollectorRail
-                        users={discover.data!.featured}
-                        onOpen={openProfile}
-                        onToggleFollow={follow.mutate}
-                        pending={follow.isPending}
+                      <ExploreGrid
+                        cards={explore.data!.cards}
+                        onOpenCard={(c) => router.push(routes.card(c.card_id))}
                       />
                     )}
-                  </Section>
+                  </View>
 
-                  {(discover.data?.more.length ?? 0) > 0 ? (
+                  {/* People, after the cards — the directory is now support
+                      for the grid rather than the whole page. */}
+                  {people.length > 0 ? (
                     <Section
-                      title="More collectors"
-                      subtitle="Everyone else building a collection."
+                      title="Collectors to follow"
+                      subtitle="People building collections worth watching."
                     >
-                      {discover.data!.more.map((u) => (
+                      {people.map((u) => (
                         <CollectorRow
                           key={u.user_id}
                           user={u}
@@ -376,11 +421,21 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   headText: { flex: 1, gap: 3 },
+  headShare: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   headAvatar: { borderWidth: 2, borderRadius: 999, padding: 2 },
   title: { fontSize: 28, fontWeight: "800", letterSpacing: -0.9 },
   sub: { fontSize: 13.5 },
   // A shelf breathes: label, its one-line reason, then the content.
   section: { marginTop: 26, gap: 2 },
+  // The mosaic is full-bleed — Instagram's grid touches both edges.
+  exploreBleed: { marginHorizontal: -20, marginTop: 22 },
   sectionHead: {
     flexDirection: "row",
     alignItems: "center",

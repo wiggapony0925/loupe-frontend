@@ -4047,6 +4047,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/social/explore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Community browse grid — card art from public collections
+         * @description Ranked AND laid out server-side (including which tiles are heroes),
+         *     so every client draws the same mosaic.
+         */
+        get: operations["explore_cards_v1_social_explore_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/social/me": {
         parameters: {
             query?: never;
@@ -6095,6 +6116,47 @@ export interface components {
             /** Value */
             value?: string | null;
         };
+        /**
+         * ExploreCard
+         * @description One tile in the Explore mosaic — a card somebody owns.
+         */
+        ExploreCard: {
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+            /** Card Name */
+            card_name?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Image Url */
+            image_url: string;
+            /**
+             * Is Hero
+             * @default false
+             */
+            is_hero: boolean;
+            /** Username */
+            username: string;
+        };
+        /**
+         * ExploreRead
+         * @description ``GET /v1/social/explore`` — the Community browse grid.
+         *
+         *     Cards from PUBLIC collections only, ranked and laid out server-side so
+         *     every client renders the same mosaic verbatim (house rule).
+         */
+        ExploreRead: {
+            /**
+             * Cards
+             * @default []
+             */
+            cards: components["schemas"]["ExploreCard"][];
+        };
         /** ExternalRefRead */
         ExternalRefRead: {
             /** Confidence */
@@ -6220,6 +6282,11 @@ export interface components {
             /** Avatar Url */
             avatar_url?: string | null;
             /**
+             * Card Count
+             * @default 0
+             */
+            card_count: number;
+            /**
              * Copies
              * @default 1
              */
@@ -6238,6 +6305,11 @@ export interface components {
             is_pro: boolean;
             /** Location */
             location?: string | null;
+            /**
+             * Preview Image Urls
+             * @default []
+             */
+            preview_image_urls: string[];
             /**
              * Relationship
              * @default none
@@ -7186,6 +7258,8 @@ export interface components {
             review_count: number;
             /** Website */
             website?: string | null;
+            /** Wikidata Id */
+            wikidata_id?: string | null;
         };
         /**
          * NearbyStoresRead
@@ -8502,6 +8576,13 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Spark Delta Pct */
+            spark_delta_pct?: number | null;
+            /**
+             * Spark Points
+             * @default []
+             */
+            spark_points: number[];
         };
         /**
          * SocialCollectionRead
@@ -8796,6 +8877,11 @@ export interface components {
         SocialUserCard: {
             /** Avatar Url */
             avatar_url?: string | null;
+            /**
+             * Card Count
+             * @default 0
+             */
+            card_count: number;
             /** Display Name */
             display_name?: string | null;
             /**
@@ -8810,6 +8896,11 @@ export interface components {
             is_pro: boolean;
             /** Location */
             location?: string | null;
+            /**
+             * Preview Image Urls
+             * @default []
+             */
+            preview_image_urls: string[];
             /**
              * Relationship
              * @default none
@@ -16729,6 +16820,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DiscoverRead"];
+                };
+            };
+        };
+    };
+    explore_cards_v1_social_explore_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExploreRead"];
                 };
             };
         };
