@@ -55,3 +55,7 @@ expo-env.d.ts
 # Tracked in git so EAS Build / CI bundling can resolve the require() paths in
 # src/shared/setLogos.generated.ts without hitting external APIs server-side.
 # To refresh: `node scripts/fetch-set-logos.mjs && node scripts/generate-set-logo-registry.mjs`
+
+# Pipeline runtime state (machine-local)
+pipeline.config.json
+.pipeline-fingerprint.json
