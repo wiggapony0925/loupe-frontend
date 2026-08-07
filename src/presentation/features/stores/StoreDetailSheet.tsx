@@ -41,6 +41,7 @@ import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import {
   ArrowUpRight,
+  Eye,
   Globe,
   Heart,
   Info,
@@ -180,6 +181,8 @@ export function StoreDetailSheet({
   const [scrolled, setScrolled] = useState(false);
   // Photo OR map behind the controls — either way they're over imagery.
   const hasPhoto = true;
+  // True when the hero is rendering a map because no photo was published.
+  const heroIsMap = !store?.photo_url || photoFailed;
 
   useEffect(() => {
     setRating(mine?.rating ?? 0);
@@ -614,23 +617,45 @@ export function StoreDetailSheet({
 
             <View style={[styles.mapCard, { backgroundColor: p.bg.elevated }]}>
               {Maps && store ? (
-                <Maps.default
-                  style={styles.mapThumb}
-                  pointerEvents="none"
-                  initialRegion={{
-                    latitude: store.lat,
-                    longitude: store.lng,
-                    latitudeDelta: 0.012,
-                    longitudeDelta: 0.012,
-                  }}
-                  scrollEnabled={false}
-                  zoomEnabled={false}
-                >
-                  <Maps.Marker
-                    coordinate={{ latitude: store.lat, longitude: store.lng }}
-                    pinColor={p.accent.rose}
-                  />
-                </Maps.default>
+                <View>
+                  <Maps.default
+                    style={styles.mapThumb}
+                    pointerEvents="none"
+                    // The hero already shows the standard map when no photo
+                    // was published — so show the place from ABOVE here
+                    // rather than printing the same picture twice.
+                    mapType={heroIsMap ? "hybrid" : "standard"}
+                    initialRegion={{
+                      latitude: store.lat,
+                      longitude: store.lng,
+                      latitudeDelta: heroIsMap ? 0.004 : 0.012,
+                      longitudeDelta: heroIsMap ? 0.004 : 0.012,
+                    }}
+                    scrollEnabled={false}
+                    zoomEnabled={false}
+                  >
+                    <Maps.Marker
+                      coordinate={{ latitude: store.lat, longitude: store.lng }}
+                      pinColor={p.accent.rose}
+                    />
+                  </Maps.default>
+                  <Pressable
+                    onPress={() =>
+                      void Linking.openURL(
+                        `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${store.lat},${store.lng}`,
+                      )
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel="Open street view for this shop"
+                    style={[
+                      styles.streetBtn,
+                      { backgroundColor: withAlpha("#000000", 0.6) },
+                    ]}
+                  >
+                    <Eye size={13} color="#ffffff" strokeWidth={2.4} />
+                    <Text style={styles.streetBtnText}>Street view</Text>
+                  </Pressable>
+                </View>
               ) : (
                 <View
                   style={[
@@ -1013,6 +1038,18 @@ const styles = StyleSheet.create({
   mapCard: { borderRadius: 10, overflow: "hidden", marginTop: 8 },
   mapThumb: { height: 190, width: "100%" },
   addressBar: { paddingHorizontal: 14, paddingVertical: 14 },
+  streetBtn: {
+    position: "absolute",
+    right: 10,
+    top: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  streetBtnText: { color: "#ffffff", fontSize: 12, fontWeight: "700" },
   address: { fontSize: 16, fontWeight: "600" },
   infoCard: { borderRadius: 10, overflow: "hidden", marginTop: 12 },
   infoHead: { padding: 14, gap: 5 },
