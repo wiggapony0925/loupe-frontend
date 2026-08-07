@@ -43,6 +43,16 @@ interface BottomSheetProps {
   overlay?: boolean;
   /** Overlay-only: keep the sheet at least this tall (e.g. "45%"). */
   minHeight?: ViewStyle["minHeight"];
+  /**
+   * Let the BODY run to the sheet's edges — the header keeps its gutter.
+   *
+   * For sheets whose body is a LIST of rows. The sheet's 24pt gutter is
+   * right for prose and forms, but a card row already carries its own
+   * padding, so the two stacked left the rows squeezed into a narrow
+   * column with a thumbnail-sized strip of art. Rows should span the
+   * sheet the way they span a page.
+   */
+  flush?: boolean;
   children: React.ReactNode;
 }
 
@@ -58,6 +68,7 @@ export function BottomSheet({
   compact = false,
   overlay = false,
   minHeight,
+  flush = false,
   children,
 }: BottomSheetProps) {
   const p = useThemedPalette();
@@ -93,7 +104,7 @@ export function BottomSheet({
             flex: sheetFromBottom ? undefined : 1,
             maxHeight: sheetFromBottom ? maxHeight : undefined,
             minHeight: sheetFromBottom && !compact ? minHeight : undefined,
-            paddingHorizontal: spacing.xl,
+            paddingHorizontal: flush ? 0 : spacing.xl,
             paddingBottom: spacing.xl,
             backgroundColor: p.bg.base,
             borderTopLeftRadius: sheetFromBottom ? radius.xl : 0,
@@ -114,6 +125,9 @@ export function BottomSheet({
               alignItems: "flex-start",
               paddingTop: spacing.lg,
               paddingBottom: spacing.md,
+              // In flush mode the shell has no gutter, so the header
+              // carries its own — the body is what should reach the edge.
+              paddingHorizontal: flush ? spacing.xl : 0,
             }}
           >
             <View style={{ flex: 1, minWidth: 0, gap: 4, paddingRight: spacing.sm }}>

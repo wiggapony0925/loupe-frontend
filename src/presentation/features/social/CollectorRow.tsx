@@ -75,9 +75,18 @@ export function CollectorRow({
           ) : null}
         </View>
         <Text numberOfLines={1} style={[styles.meta, { color: p.ink.dim }]}>
-          {user.display_name?.trim() ? `@${user.username}` : null}
-          {user.display_name?.trim() && user.location ? " · " : null}
-          {user.location ?? null}
+          {/* Collection size sits in the meta line: on a card app, "124
+              cards" is the most useful thing to know about a stranger, and
+              it was the one thing this row never said. */}
+          {[
+            user.display_name?.trim() ? `@${user.username}` : null,
+            user.card_count > 0
+              ? `${user.card_count.toLocaleString()} ${user.card_count === 1 ? "card" : "cards"}`
+              : null,
+            user.location,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </Text>
       </View>
 

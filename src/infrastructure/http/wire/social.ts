@@ -36,6 +36,10 @@ export interface SocialUserCardWire {
   is_private: boolean;
   is_pro: boolean;
   relationship: SocialRelationship;
+  /** How many cards they own — 0 for private accounts you can't see. */
+  card_count: number;
+  /** Art for their best few cards; empty when private or nothing owned. */
+  preview_image_urls: string[];
 }
 
 /** A collector I follow who owns a given card (card-detail friends strip). */
@@ -95,6 +99,10 @@ export interface SocialCollectionItemWire {
   condition: string | null;
   estimated_value_usd: string | null;
   graded_at: string;
+  /** 14-point price trend for the row's sparkline (flat when unknown). */
+  spark_points: number[];
+  /** Percent change across those points — colours the delta. */
+  spark_delta_pct: number | null;
 }
 
 /** One of the collector's CURATED collections (binders/decks). */

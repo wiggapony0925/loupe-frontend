@@ -129,6 +129,24 @@ export function CollectionGrid({
 
   const columns = vaultGridColumns(width);
   const rows = useMemo(() => chunkRows(cards, columns), [cards, columns]);
+  // The row trend travels next to the domain shape, not inside it:
+  // CollectionCard is the vault's type and the vault sources its sparklines
+  // from a separate endpoint, so widening it here would put a field on the
+  // vault that the vault doesn't fill.
+  const trend = useMemo(
+    () =>
+      new Map(
+        items.map((i) => [
+          i.id,
+          {
+            spark: i.spark_points?.length ? i.spark_points : null,
+            deltaPct: i.spark_delta_pct ?? null,
+          },
+        ]),
+      ),
+    [items],
+  );
+
   const filtering = q.trim().length > 0 || set != null;
 
   if (items.length === 0) return null;
@@ -271,6 +289,8 @@ export function CollectionGrid({
                   : null
               }
               meta={String(card.set) || null}
+              spark={trend.get(card.id)?.spark ?? null}
+              deltaPct={trend.get(card.id)?.deltaPct ?? null}
               priceUsd={card.estimatedValueUsd || null}
               priceLabel="Value"
               onPress={() => router.push(routes.card(card.cardId))}

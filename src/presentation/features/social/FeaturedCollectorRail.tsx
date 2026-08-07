@@ -1,17 +1,29 @@
 /**
  * FeaturedCollectorRail — the App-Store-Shop moment of the Community page.
  *
- * Suggested collectors as an edge-to-edge horizontal rail of cards (house
- * standing rule: every swipe surface bleeds past the page gutter), each a
- * round face first — avatar with the PRO mint ring, name, handle, and a
- * state-aware follow pill. Faces sell a social surface the way card art
- * sells a shelf; a vertical list of the same people reads as admin.
+ *   ┌──────────────────┐
+ *   │ ▨  ▨  ▨          │ ← their three best cards
+ *   │ ⬤ Name           │ ← face overlapping the art
+ *   │ @handle · 124    │
+ *   │ [   Follow   ]   │
+ *   └──────────────────┘
+ *
+ * Edge-to-edge rail (house standing rule: every swipe surface bleeds past
+ * the page gutter).
+ *
+ * The CARDS are the point. This was a face, a handle and a Follow button —
+ * on an app about trading cards, a directory that never showed a single card
+ * gave you no reason to tap anyone. Now the collection leads and the person
+ * identifies it, which is also the order collectors think in. Art comes from
+ * the server's peek (their most valuable cards); collectors with no art fall
+ * back to the face alone rather than an empty frame.
  *
  * Cards never vanish on follow (the mutation patches caches), so tapping
  * Follow flips the pill in place — the rail stays stable under the thumb.
  */
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import type { SocialUserCardWire } from "@/infrastructure/http";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
@@ -45,6 +57,7 @@ export function FeaturedCollectorRail({
       {users.map((u) => {
         const engaged =
           u.relationship === "following" || u.relationship === "requested";
+        const art = u.preview_image_urls ?? [];
         return (
           <Pressable
             key={u.user_id}
@@ -60,27 +73,58 @@ export function FeaturedCollectorRail({
               },
             ]}
           >
-            <SocialAvatar
-              handle={u.username}
-              name={u.display_name}
-              url={u.avatar_url}
-              size={68}
-              isPro={u.is_pro}
-            />
-            <Text
-              numberOfLines={1}
-              style={[styles.name, { color: p.ink.default }]}
-            >
-              {u.display_name?.trim() || `@${u.username}`}
-            </Text>
-            <Text numberOfLines={1} style={[styles.meta, { color: p.ink.dim }]}>
-              {[
-                u.display_name?.trim() ? `@${u.username}` : null,
-                u.location,
-              ]
-                .filter(Boolean)
-                .join(" · ") || " "}
-            </Text>
+            {/* Their collection, first. */}
+            <View style={[styles.art, { backgroundColor: p.bg.sunken }]}>
+              {art.length > 0 ? (
+                art.map((uri: string, i: number) => (
+                  <Image
+                    key={`${u.user_id}-${i}`}
+                    source={{ uri }}
+                    style={styles.artCard}
+                    contentFit="cover"
+                    transition={160}
+                    recyclingKey={`${u.user_id}-${i}`}
+                    accessibilityIgnoresInvertColors
+                  />
+                ))
+              ) : (
+                <Text style={[styles.artEmpty, { color: p.ink.dim }]}>
+                  No cards yet
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.identity}>
+              <SocialAvatar
+                handle={u.username}
+                name={u.display_name}
+                url={u.avatar_url}
+                size={44}
+                isPro={u.is_pro}
+              />
+              <View style={styles.who}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.name, { color: p.ink.default }]}
+                >
+                  {u.display_name?.trim() || `@${u.username}`}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.meta, { color: p.ink.dim }]}
+                >
+                  {[
+                    u.display_name?.trim() ? `@${u.username}` : null,
+                    u.card_count > 0
+                      ? `${u.card_count.toLocaleString()} ${u.card_count === 1 ? "card" : "cards"}`
+                      : null,
+                    u.location,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || " "}
+                </Text>
+              </View>
+            </View>
 
             <Pressable
               onPress={() => {
@@ -123,22 +167,33 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    width: 156,
-    alignItems: "center",
-    gap: 6,
+    width: 208,
+    gap: 10,
     borderWidth: 1,
     borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    padding: 12,
   },
-  name: { fontSize: 13.5, fontWeight: "700", letterSpacing: -0.2, marginTop: 2 },
+  // The art strip: three cards at trading-card ratio, side by side.
+  art: {
+    flexDirection: "row",
+    gap: 6,
+    height: 92,
+    borderRadius: 12,
+    padding: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  artCard: { flex: 1, height: "100%", borderRadius: 6 },
+  artEmpty: { fontSize: 11.5, fontWeight: "600" },
+  identity: { flexDirection: "row", alignItems: "center", gap: 9 },
+  who: { flex: 1, minWidth: 0, gap: 1 },
+  name: { fontSize: 13.5, fontWeight: "700", letterSpacing: -0.2 },
   meta: { fontSize: 11.5 },
   pill: {
-    marginTop: 6,
     borderRadius: 999,
-    width: 96,
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   pillText: { fontSize: 12.5, fontWeight: "800" },
 });

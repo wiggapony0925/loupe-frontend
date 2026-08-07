@@ -66,6 +66,7 @@ export function CollectorListSheet({
 
   return (
     <BottomSheet
+      flush
       visible={visible}
       onClose={onClose}
       title={title}
@@ -173,7 +174,9 @@ const styles = StyleSheet.create({
   skeletonBar: { height: 10, borderRadius: 5 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   empty: { fontSize: 13, textAlign: "center" },
-  list: { paddingHorizontal: 16, paddingBottom: 16 },
+  // The sheet runs edge-to-edge, so the list supplies the page gutter
+  // itself — 20 matches every other list surface in the app.
+  list: { paddingHorizontal: 20, paddingBottom: 16 },
   remove: {
     borderWidth: 1,
     borderRadius: 16,

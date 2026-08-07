@@ -5,9 +5,14 @@
  *   1. Claim a handle — nothing else works until this exists.
  *   2. Search — pinned under the title; you came looking for someone.
  *   3. Follow requests — one line each, decide without leaving the list.
- *   4. Featured collectors — faces on a rail; the browse moment.
- *   5. More collectors — the directory.
+ *   4. Collections worth a look — a rail of CARD ART, not faces: this is a
+ *      trading-card app, and a directory that showed only avatars gave no
+ *      reason to tap anyone. The collection leads, the person identifies it.
+ *   5. More collectors — the directory, each row saying how much they own.
  *   6. In real life — the card-shop map; community isn't only online.
+ *
+ * Every shelf carries a one-line subtitle. A column of bare uppercase labels
+ * made the reader infer why each list was there.
  *
  * While focused, the island navbar morphs into the community rail
  * (People · Home · My profile) — see CommunityIsland.
@@ -183,7 +188,11 @@ export default function CommunityScreen() {
                       trailing slot. A second line of wide Accept/Decline
                       bars made three requests fill the screen. */}
                   {requests.data && requests.data.length > 0 ? (
-                    <Section title="Follow requests" count={requests.data.length}>
+                    <Section
+                      title="Follow requests"
+                      subtitle="They want to see your collection."
+                      count={requests.data.length}
+                    >
                       {requests.data.map((r) => (
                         <CollectorRow
                           key={r.id}
@@ -230,7 +239,10 @@ export default function CommunityScreen() {
 
                   {/* Faces first: featured collectors as an App-Store-style
                       rail of cards, the directory as rows beneath. */}
-                  <Section title="Featured collectors">
+                  <Section
+                    title="Collections worth a look"
+                    subtitle="The most-followed vaults on Loupe."
+                  >
                     {discover.isLoading ? (
                       <View style={styles.loading}>
                         <ActivityIndicator color={p.ink.dim} />
@@ -250,7 +262,10 @@ export default function CommunityScreen() {
                   </Section>
 
                   {(discover.data?.more.length ?? 0) > 0 ? (
-                    <Section title="More collectors">
+                    <Section
+                      title="More collectors"
+                      subtitle="Everyone else building a collection."
+                    >
                       {discover.data!.more.map((u) => (
                         <CollectorRow
                           key={u.user_id}
@@ -265,7 +280,10 @@ export default function CommunityScreen() {
 
                   {/* The community isn't only online — hand off to the map
                       of physical card shops. */}
-                  <Section title="In real life">
+                  <Section
+                    title="In real life"
+                    subtitle="Collecting isn't only online."
+                  >
                     <Pressable
                       onPress={() => router.push("/stores")}
                       accessibilityRole="button"
@@ -309,10 +327,14 @@ export default function CommunityScreen() {
 
 function Section({
   title,
+  subtitle,
   count,
   children,
 }: {
   title: string;
+  /** One line on what this shelf is. A page of bare uppercase labels makes
+   *  the reader work out why each list exists; saying so is cheaper. */
+  subtitle?: string;
   count?: number;
   children: React.ReactNode;
 }) {
@@ -333,6 +355,9 @@ function Section({
           </View>
         ) : null}
       </View>
+      {subtitle ? (
+        <Text style={[styles.sectionSub, { color: p.ink.dim }]}>{subtitle}</Text>
+      ) : null}
       {children}
     </View>
   );
@@ -354,7 +379,8 @@ const styles = StyleSheet.create({
   headAvatar: { borderWidth: 2, borderRadius: 999, padding: 2 },
   title: { fontSize: 28, fontWeight: "800", letterSpacing: -0.9 },
   sub: { fontSize: 13.5 },
-  section: { marginTop: 22, gap: 2 },
+  // A shelf breathes: label, its one-line reason, then the content.
+  section: { marginTop: 26, gap: 2 },
   sectionHead: {
     flexDirection: "row",
     alignItems: "center",
@@ -362,6 +388,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
+  sectionSub: { fontSize: 12.5, marginBottom: 10, marginTop: 1 },
   badge: {
     minWidth: 18,
     paddingHorizontal: 5,

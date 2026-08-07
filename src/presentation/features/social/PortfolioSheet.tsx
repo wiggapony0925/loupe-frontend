@@ -58,6 +58,7 @@ export function PortfolioSheet({
 
   return (
     <BottomSheet
+      flush
       visible={collectionId != null}
       onClose={onClose}
       title={binder?.name ?? "Collection"}
@@ -95,7 +96,11 @@ export function PortfolioSheet({
             <FlatList
               data={binder?.items ?? []}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}
+              // Edge-to-edge sheet: the rows carry the page gutter, so a
+              // card row here is exactly as wide as one in the vault. The
+              // sheet's own 24 plus the list's 16 had squeezed them into a
+              // narrow column.
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 12 }}
               ListEmptyComponent={
                 <Text style={[styles.empty, { color: p.ink.dim }]}>
                   Nothing in this collection yet.
@@ -121,6 +126,8 @@ export function PortfolioSheet({
                     meta={[item.card_set_name, item.card_number && `#${item.card_number}`]
                       .filter(Boolean)
                       .join(" · ") || null}
+                    spark={item.spark_points ?? null}
+                    deltaPct={item.spark_delta_pct ?? null}
                     priceUsd={
                       item.estimated_value_usd != null
                         ? Number(item.estimated_value_usd)
@@ -141,7 +148,7 @@ export function PortfolioSheet({
 const styles = StyleSheet.create({
   center: { paddingVertical: 48, alignItems: "center" },
   empty: { textAlign: "center", paddingVertical: 40, fontSize: 13 },
-  skeletons: { gap: 4, paddingTop: 6 },
+  skeletons: { gap: 4, paddingTop: 6, paddingHorizontal: 20 },
   skeletonRow: {
     flexDirection: "row",
     alignItems: "center",
