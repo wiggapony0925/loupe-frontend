@@ -34,6 +34,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -147,10 +148,15 @@ export default function StoresScreen() {
 
   // Arm "Search this area" once the viewport drifts ~3 km from what we
   // searched — Resy's model: the map is free to roam, searching is a verb.
+  const drift =
+    effectiveCenter && viewRegion ? kmBetween(effectiveCenter, viewRegion) : 0;
   const searchArmed =
+    filter !== "saved" &&
     effectiveCenter != null &&
     viewRegion != null &&
-    kmBetween(effectiveCenter, viewRegion) > 3;
+    // 1.2 km: at 3 km you could pan a whole neighbourhood and never be
+    // offered the search. Also offer it whenever the area came back empty.
+    (drift > 1.2 || (rows.length === 0 && !stores.isFetching));
 
   const focusStore = useCallback(
     (store: NearbyStoreWire, index: number, fromMap: boolean) => {
@@ -357,8 +363,9 @@ export default function StoresScreen() {
             {stores.isFetching ? (
               <ActivityIndicator size="small" color={p.bg.base} />
             ) : null}
+            <Search size={14} color={p.bg.base} strokeWidth={2.8} />
             <Text style={[styles.searchHereText, { color: p.bg.base }]}>
-              Search this area
+              {stores.isFetching ? "Searching…" : "Search this area"}
             </Text>
           </Pressable>
         ) : (
@@ -520,11 +527,34 @@ function StoreCard({
         },
       ]}
     >
-      <View style={[styles.artBlock, { backgroundColor: withAlpha(tint, 0.16) }]}>
-        <Store size={30} color={tint} strokeWidth={1.8} />
-        <Text style={[styles.artInitial, { color: withAlpha(tint, 0.55) }]}>
-          {store.name.charAt(0).toUpperCase()}
-        </Text>
+      <View style={[styles.artBlock, { backgroundColor: p.bg.sunken }]}>
+        {store.photo_url ? (
+          <Image
+            source={{ uri: store.photo_url }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={140}
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <>
+            {/* Designed placeholder: a tinted disc with the shop's initial
+                on a neutral surface. A flat colour block read as broken. */}
+            <View
+              style={[styles.artDisc, { backgroundColor: withAlpha(tint, 0.16) }]}
+            >
+              <Text style={[styles.artLetter, { color: tint }]}>
+                {store.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.artCaption}>
+              <Store size={12} color={p.ink.dim} strokeWidth={2.2} />
+              <Text style={[styles.artCaptionText, { color: p.ink.dim }]}>
+                {store.category}
+              </Text>
+            </View>
+          </>
+        )}
         <View
           style={[
             styles.distanceBadge,
@@ -775,14 +805,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 2,
   },
-  artInitial: {
-    position: "absolute",
-    right: 14,
-    bottom: 2,
-    fontSize: 64,
-    fontWeight: "900",
-    opacity: 0.5,
+  artDisc: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: "center",
+    justifyContent: "center",
   },
+  artLetter: { fontSize: 24, fontWeight: "900", letterSpacing: -0.5 },
+  artCaption: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8 },
+  artCaptionText: { fontSize: 11.5, fontWeight: "600" },
   distanceBadge: {
     position: "absolute",
     top: 10,
