@@ -110,6 +110,24 @@ fi
 
 [ -d "$ROOT/ios/Pods" ] || { say "Installing pods"; (cd ios && pod install); }
 
+# ---------------------------------------------------- OTA channel guard
+# A local build gets its update channel from app.json's
+# updates.requestHeaders — `eas build` injects it from eas.json, and this
+# script never runs EAS, so nothing else supplies it.
+#
+# Without it the binary asks the update server for a manifest with no
+# `expo-channel-name` header and gets HTTP 400 back, so it silently NEVER
+# receives an OTA update. Build 243 shipped that way and every `eas update`
+# published against it went nowhere. Fail loudly here instead.
+CHANNEL=$(/usr/libexec/PlistBuddy -c "Print :EXUpdatesRequestHeaders:expo-channel-name" \
+  "$ROOT/ios/Loupe/Supporting/Expo.plist" 2>/dev/null || true)
+if [ -z "$CHANNEL" ]; then
+  die "No OTA channel baked into Expo.plist. Add
+    \"updates\": { \"requestHeaders\": { \"expo-channel-name\": \"production\" } }
+  to app.json, or this build can never receive an update."
+fi
+say "OTA channel: $CHANNEL"
+
 # ----------------------------------------------------------------- archive
 ARCHIVE="$ROOT/build/Loupe.xcarchive"
 rm -rf "$ARCHIVE"
