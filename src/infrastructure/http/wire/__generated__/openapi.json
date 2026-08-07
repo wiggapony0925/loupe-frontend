@@ -6761,6 +6761,33 @@
             ],
             "title": "Phone"
           },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "review_count": {
+            "default": 0,
+            "title": "Review Count",
+            "type": "integer"
+          },
           "website": {
             "anyOf": [
               {
@@ -10847,6 +10874,135 @@
           "username"
         ],
         "title": "SocialUserCard",
+        "type": "object"
+      },
+      "StoreDetailRead": {
+        "description": "``GET /v1/public/stores/{store_id}`` \u2014 one shop, fully dressed.",
+        "properties": {
+          "reviews": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/StoreReviewRead"
+            },
+            "title": "Reviews",
+            "type": "array"
+          },
+          "store": {
+            "$ref": "#/components/schemas/NearbyStore"
+          }
+        },
+        "required": [
+          "store"
+        ],
+        "title": "StoreDetailRead",
+        "type": "object"
+      },
+      "StoreReviewRead": {
+        "description": "One collector's review of a shop.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_mine": {
+            "default": false,
+            "title": "Is Mine",
+            "type": "boolean"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "integer"
+          },
+          "store_id": {
+            "title": "Store Id",
+            "type": "string"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id",
+          "store_id",
+          "rating",
+          "created_at"
+        ],
+        "title": "StoreReviewRead",
+        "type": "object"
+      },
+      "StoreReviewUpsert": {
+        "description": "Body for ``PUT /v1/social/stores/{store_id}/review``.",
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "rating": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rating",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rating"
+        ],
+        "title": "StoreReviewUpsert",
         "type": "object"
       },
       "SubscriptionCancelRequest": {
@@ -22208,6 +22364,150 @@
           }
         },
         "summary": "Card & game shops near a point (server-ranked, cached)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/stores/{store_id}": {
+      "get": {
+        "description": "404 when we've never seen the store (its area was never searched).",
+        "operationId": "store_detail_v1_public_stores__store_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "store_id",
+            "required": true,
+            "schema": {
+              "title": "Store Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreDetailRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One shop: details, photo, and community reviews",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/stores/{store_id}/review": {
+      "delete": {
+        "operationId": "delete_store_review_v1_public_stores__store_id__review_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "store_id",
+            "required": true,
+            "schema": {
+              "title": "Store Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete my review of a shop",
+        "tags": [
+          "public"
+        ]
+      },
+      "put": {
+        "description": "One review per collector per store \u2014 posting again edits yours.",
+        "operationId": "upsert_store_review_v1_public_stores__store_id__review_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "store_id",
+            "required": true,
+            "schema": {
+              "title": "Store Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreReviewUpsert"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreReviewRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Write or update my review of a shop",
         "tags": [
           "public"
         ]

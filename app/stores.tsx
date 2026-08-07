@@ -45,10 +45,12 @@ import {
   Navigation,
   Phone,
   Search,
+  Star,
   Store,
 } from "lucide-react-native";
 import { useNearbyStores } from "@/application/queries/stores/useNearbyStores";
 import { useUserLocation } from "@/application/location/useUserLocation";
+import { StoreDetailSheet } from "@/presentation/features/stores/StoreDetailSheet";
 import type { NearbyStoreWire } from "@/infrastructure/http";
 import { useTheme } from "@/presentation/theme";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
@@ -111,6 +113,8 @@ export default function StoresScreen() {
   const effectiveCenter = center ?? location.coords;
   const stores = useNearbyStores(effectiveCenter, 15);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Which shop's detail sheet is open (tap a card to open it).
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const mapRef = useRef<InstanceType<MapsModule["default"]> | null>(null);
@@ -435,13 +439,25 @@ export default function StoresScreen() {
                 <StoreCard
                   store={item}
                   selected={item.id === selectedId}
-                  onPress={() => focusStore(item, index, false)}
+                  onPress={() => {
+                    // First tap focuses the pin; tapping the focused card
+                    // opens its page — Resy's exact interaction.
+                    if (item.id === selectedId) setDetailId(item.id);
+                    else focusStore(item, index, false);
+                  }}
                 />
               )}
             />
           )}
         </SafeAreaView>
       </View>
+
+      {/* The shop's page: photo, rating, actions, community reviews. */}
+      <StoreDetailSheet
+        storeId={detailId}
+        fallback={rows.find((s) => s.id === detailId) ?? null}
+        onClose={() => setDetailId(null)}
+      />
     </View>
   );
 }
@@ -499,6 +515,17 @@ function StoreCard({
         <Text numberOfLines={1} style={[styles.cardName, { color: p.ink.default }]}>
           {store.name}
         </Text>
+        {store.rating != null ? (
+          <View style={styles.cardRating}>
+            <Star size={12} color={p.accent.amber} fill={p.accent.amber} strokeWidth={2} />
+            <Text style={[styles.cardRatingText, { color: p.ink.default }]}>
+              {store.rating.toFixed(1)}
+            </Text>
+            <Text style={[styles.cardMeta, { color: p.ink.dim }]}>
+              ({store.review_count})
+            </Text>
+          </View>
+        ) : null}
         <Text
           numberOfLines={1}
           style={[
@@ -723,6 +750,8 @@ const styles = StyleSheet.create({
   cardBody: { padding: 14, paddingTop: 11, gap: 3 },
   cardName: { fontSize: 18, fontWeight: "800", letterSpacing: -0.45 },
   cardMeta: { fontSize: 12 },
+  cardRating: { flexDirection: "row", alignItems: "center", gap: 4 },
+  cardRatingText: { fontSize: 12.5, fontWeight: "800" },
   cardActions: { flexDirection: "row", gap: 8, marginTop: 9 },
   action: {
     flexDirection: "row",

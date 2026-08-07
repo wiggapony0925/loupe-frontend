@@ -6,10 +6,19 @@
  * day-long cache, so refetching as the user pans is cheap; we still round
  * the key client-side so tiny GPS jitter reuses the same query cache row.
  */
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
-import type { NearbyStoresWire } from "@/infrastructure/http";
+import type {
+  NearbyStoresWire,
+  StoreDetailWire,
+  StoreReviewWire,
+} from "@/infrastructure/http";
 import { queryKeys } from "../queryKeys";
 
 export function useNearbyStores(
@@ -31,5 +40,46 @@ export function useNearbyStores(
     // the drawer never blanks mid-search.
     gcTime: 30 * 60_000,
     placeholderData: keepPreviousData,
+  });
+}
+
+/** One shop with its photo and community reviews. */
+export function useStoreDetail(storeId: string | null) {
+  return useQuery<StoreDetailWire>({
+    queryKey: queryKeys.stores.detail(storeId ?? ""),
+    queryFn: () =>
+      apiFetch<StoreDetailWire>(ENDPOINTS.publicCatalog.storeDetail(storeId as string)),
+    enabled: !!storeId,
+    staleTime: 60_000,
+  });
+}
+
+/** Write or edit MY review of a shop (one per collector per store). */
+export function useUpsertStoreReview() {
+  const qc = useQueryClient();
+  return useMutation<
+    StoreReviewWire,
+    Error,
+    { storeId: string; rating: number; body?: string | null }
+  >({
+    mutationFn: ({ storeId, rating, body }) =>
+      apiFetch<StoreReviewWire>(ENDPOINTS.publicCatalog.storeReview(storeId), {
+        method: "PUT",
+        json: { rating, body: body ?? null },
+      }),
+    // The rating changes both the detail sheet AND the map card's ★.
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.stores.all }),
+  });
+}
+
+/** Remove my review. */
+export function useDeleteStoreReview() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, { storeId: string }>({
+    mutationFn: ({ storeId }) =>
+      apiFetch<void>(ENDPOINTS.publicCatalog.storeReview(storeId), {
+        method: "DELETE",
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.stores.all }),
   });
 }

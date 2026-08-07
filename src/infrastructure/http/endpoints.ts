@@ -102,6 +102,12 @@ export const ENDPOINTS = {
     carouselRail: `${V1}/public/carousels/rail`,
     /** Card & game shops near a point — server-ranked, kv-cached, no auth. */
     storesNearby: `${V1}/public/stores/nearby`,
+    /** One shop: details, photo, community reviews. */
+    storeDetail: (storeId: string) =>
+      `${V1}/public/stores/${encodeURIComponent(storeId)}`,
+    /** My review of a shop (PUT to write/edit, DELETE to remove). */
+    storeReview: (storeId: string) =>
+      `${V1}/public/stores/${encodeURIComponent(storeId)}/review`,
   },
   me: {
     root: `${V1}/me`,

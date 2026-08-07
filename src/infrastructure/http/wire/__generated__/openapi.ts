@@ -3468,6 +3468,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/stores/{store_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One shop: details, photo, and community reviews
+         * @description 404 when we've never seen the store (its area was never searched).
+         */
+        get: operations["store_detail_v1_public_stores__store_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/stores/{store_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Write or update my review of a shop
+         * @description One review per collector per store — posting again edits yours.
+         */
+        put: operations["upsert_store_review_v1_public_stores__store_id__review_put"];
+        post?: never;
+        /** Delete my review of a shop */
+        delete: operations["delete_store_review_v1_public_stores__store_id__review_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/trending": {
         parameters: {
             query?: never;
@@ -7087,6 +7128,15 @@ export interface components {
             opening_hours?: string | null;
             /** Phone */
             phone?: string | null;
+            /** Photo Url */
+            photo_url?: string | null;
+            /** Rating */
+            rating?: number | null;
+            /**
+             * Review Count
+             * @default 0
+             */
+            review_count: number;
             /** Website */
             website?: string | null;
         };
@@ -8715,6 +8765,61 @@ export interface components {
             user_id: string;
             /** Username */
             username: string;
+        };
+        /**
+         * StoreDetailRead
+         * @description ``GET /v1/public/stores/{store_id}`` — one shop, fully dressed.
+         */
+        StoreDetailRead: {
+            /**
+             * Reviews
+             * @default []
+             */
+            reviews: components["schemas"]["StoreReviewRead"][];
+            store: components["schemas"]["NearbyStore"];
+        };
+        /**
+         * StoreReviewRead
+         * @description One collector's review of a shop.
+         */
+        StoreReviewRead: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Body */
+            body?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Is Mine
+             * @default false
+             */
+            is_mine: boolean;
+            /** Rating */
+            rating: number;
+            /** Store Id */
+            store_id: string;
+            /** Username */
+            username?: string | null;
+        };
+        /**
+         * StoreReviewUpsert
+         * @description Body for ``PUT /v1/social/stores/{store_id}/review``.
+         */
+        StoreReviewUpsert: {
+            /** Body */
+            body?: string | null;
+            /** Rating */
+            rating: number;
         };
         /**
          * SubscriptionCancelRequest
@@ -15326,6 +15431,101 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["NearbyStoresRead"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    store_detail_v1_public_stores__store_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                store_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreDetailRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upsert_store_review_v1_public_stores__store_id__review_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                store_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreReviewUpsert"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreReviewRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_store_review_v1_public_stores__store_id__review_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                store_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
