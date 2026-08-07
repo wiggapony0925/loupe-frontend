@@ -55,6 +55,8 @@ import {
   X,
 } from "lucide-react-native";
 import { Share } from "react-native";
+import { router } from "expo-router";
+import { routes } from "@/shared/routes";
 import {
   useDeleteStoreReview,
   useStoreDetail,
@@ -837,7 +839,19 @@ export function StoreDetailSheet({
                 No reviews yet. Tell other collectors what this shop is like.
               </Text>
             ) : (
-              reviews.map((r) => <ReviewRow key={r.id} review={r} />)
+              reviews.map((r) => (
+                <ReviewRow
+                  key={r.id}
+                  review={r}
+                  onOpenProfile={(handle) => {
+                    // Close first: the sheet is a native modal, and pushing
+                    // a route underneath it would leave the profile buried.
+                    Haptics.selectionAsync().catch(() => {});
+                    onClose();
+                    router.push(routes.collector(handle));
+                  }}
+                />
+              ))
             )}
           </View>
         </ScrollView>
@@ -880,8 +894,16 @@ function LinkRow({
   );
 }
 
-function ReviewRow({ review }: { review: StoreReviewWire }) {
+function ReviewRow({
+  review,
+  onOpenProfile,
+}: {
+  review: StoreReviewWire;
+  onOpenProfile: (handle: string) => void;
+}) {
   const p = useThemedPalette();
+  // Deactivated authors keep their review but have no profile to open.
+  const handle = review.username;
   const when = new Date(review.created_at).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -889,21 +911,35 @@ function ReviewRow({ review }: { review: StoreReviewWire }) {
   });
   return (
     <View style={[styles.review, { borderTopColor: p.line.default }]}>
-      <SocialAvatar
-        handle={review.username ?? "collector"}
-        name={review.display_name}
-        url={review.avatar_url}
-        size={34}
-      />
+      <Pressable
+        onPress={() => handle && onOpenProfile(handle)}
+        disabled={!handle}
+        hitSlop={6}
+        accessibilityRole={handle ? "button" : "image"}
+        accessibilityLabel={handle ? `Open @${handle}'s profile` : undefined}
+      >
+        <SocialAvatar
+          handle={handle ?? "collector"}
+          name={review.display_name}
+          url={review.avatar_url}
+          size={34}
+        />
+      </Pressable>
       <View style={{ flex: 1, gap: 3 }}>
-        <View style={styles.inlineRow}>
+        <Pressable
+          onPress={() => handle && onOpenProfile(handle)}
+          disabled={!handle}
+          accessibilityRole={handle ? "button" : "text"}
+          accessibilityLabel={handle ? `Open @${handle}'s profile` : undefined}
+          style={styles.inlineRow}
+        >
           <Text numberOfLines={1} style={[styles.reviewWho, { color: p.ink.default }]}>
-            {review.display_name?.trim() || `@${review.username ?? "collector"}`}
+            {review.display_name?.trim() || `@${handle ?? "collector"}`}
           </Text>
           {review.is_mine ? (
             <Text style={[styles.youTag, { color: p.accent.mint }]}>You</Text>
           ) : null}
-        </View>
+        </Pressable>
         <View style={styles.inlineRow}>
           <Stars value={review.rating} size={11} />
           <Text style={[styles.reviewDate, { color: p.ink.dim }]}>{when}</Text>
