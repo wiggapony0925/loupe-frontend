@@ -32,6 +32,8 @@ interface ShelfTile {
   /** Cover fallback tint (portfolio color, else accent). */
   tint?: string | null;
   icon: "folder" | "layers" | "box";
+  /** Value badge over the art (showcase shelves only). */
+  badge?: string | null;
   /** Tap-through (portfolio tiles open their card list). */
   onPress?: () => void;
 }
@@ -78,7 +80,7 @@ function ShowcaseShelf({ label, tiles }: { label: string; tiles: ShelfTile[] }) 
               ]}
             >
               <View
-                style={[styles.showcaseArt, { backgroundColor: withAlpha(tint, 0.09) }]}
+                style={[styles.showcaseArt, { backgroundColor: withAlpha(tint, 0.12) }]}
               >
                 {t.cover ? (
                   <Image
@@ -91,6 +93,16 @@ function ShowcaseShelf({ label, tiles }: { label: string; tiles: ShelfTile[] }) 
                 ) : (
                   <Icon size={26} color={tint} strokeWidth={2} />
                 )}
+                {t.badge ? (
+                  <View
+                    style={[
+                      styles.showcaseBadge,
+                      { backgroundColor: withAlpha("#000000", 0.5) },
+                    ]}
+                  >
+                    <Text style={styles.showcaseBadgeText}>{t.badge}</Text>
+                  </View>
+                ) : null}
               </View>
               <View style={styles.showcaseMeta}>
                 <Text
@@ -196,12 +208,8 @@ export function PortfolioShelf({
   const tiles: ShelfTile[] = portfolios.map((c) => ({
     key: c.id,
     name: c.name,
-    sub: [
-      `${c.count} ${c.count === 1 ? "card" : "cards"}`,
-      money(c.estimated_value_usd),
-    ]
-      .filter(Boolean)
-      .join(" · "),
+    sub: `${c.count} ${c.count === 1 ? "card" : "cards"}`,
+    badge: money(c.estimated_value_usd),
     cover: c.cover_image_url,
     tint: c.color,
     icon: "folder",
@@ -227,13 +235,8 @@ export function SealedShelf({
   const tiles: ShelfTile[] = sealed.map((s) => ({
     key: s.product_id,
     name: s.name,
-    sub: [
-      s.quantity > 1 ? `x${s.quantity}` : null,
-      money(s.estimated_value_usd),
-      s.set_name,
-    ]
-      .filter(Boolean)
-      .join(" · "),
+    sub: [s.set_name, money(s.estimated_value_usd)].filter(Boolean).join(" · "),
+    badge: s.quantity > 1 ? `x${s.quantity}` : null,
     cover: s.image_url,
     icon: "box",
   }));
@@ -313,19 +316,28 @@ const styles = StyleSheet.create({
   name: { fontSize: 12.5, fontWeight: "700", letterSpacing: -0.2 },
   sub: { fontSize: 11 },
   showcase: {
-    width: 168,
+    width: 158,
     borderWidth: 1,
     borderRadius: 18,
     overflow: "hidden",
   },
   // The cover as a product shot: full card, contained, breathing room.
   showcaseArt: {
-    height: 128,
+    height: 140,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 10,
   },
-  showcaseImage: { width: "78%", height: "100%" },
-  showcaseMeta: { paddingHorizontal: 12, paddingVertical: 10, gap: 2 },
-  showcaseName: { fontSize: 13.5, fontWeight: "800", letterSpacing: -0.3 },
+  showcaseImage: { width: "72%", height: "100%" },
+  showcaseBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  showcaseBadgeText: { color: "#ffffff", fontSize: 11, fontWeight: "800" },
+  showcaseMeta: { paddingHorizontal: 11, paddingVertical: 9, gap: 1 },
+  showcaseName: { fontSize: 13, fontWeight: "800", letterSpacing: -0.3 },
 });

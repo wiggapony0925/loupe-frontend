@@ -386,14 +386,12 @@ export default function CollectorProfileScreen() {
 
                 {/* Curated collections first — the thing collectors mean by
                     "my collections" — then sealed, then set context. */}
+                {/* Curated first, then the set context they sit in, then
+                    the CARDS themselves as the page's centre of gravity,
+                    with sealed product closing it out. */}
                 <PortfolioShelf
                   portfolios={collection.data?.portfolios ?? []}
                   onTilePress={(id) => setOpenPortfolioId(id)}
-                />
-                <SealedShelf
-                  sealed={collection.data?.sealed ?? []}
-                  totalCount={collection.data?.sealed_count}
-                  totalValue={collection.data?.sealed_value_usd}
                 />
                 <CollectionSetsRail
                   sets={collection.data?.sets ?? []}
@@ -412,6 +410,11 @@ export default function CollectorProfileScreen() {
                     />
                   </View>
                 ) : null}
+                <SealedShelf
+                  sealed={collection.data?.sealed ?? []}
+                  totalCount={collection.data?.sealed_count}
+                  totalValue={collection.data?.sealed_value_usd}
+                />
               </View>
             )}
           </ScrollView>
