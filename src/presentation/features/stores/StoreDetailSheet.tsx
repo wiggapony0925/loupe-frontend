@@ -185,6 +185,8 @@ export function StoreDetailSheet({
   const hasPhoto = true;
   // True when the hero is rendering a map because no photo was published.
   const heroIsMap = !store?.photo_url || photoFailed;
+  // The server's week runs Monday-first; JS getDay() is Sunday-first.
+  const todayIndex = (new Date().getDay() + 6) % 7;
 
   useEffect(() => {
     setRating(mine?.rating ?? 0);
@@ -583,29 +585,83 @@ export function StoreDetailSheet({
               </Pressable>
             </View>
 
-            {/* Resy's ⓘ availability banner → our data-provenance note. */}
-            <View
-              style={[
-                styles.banner,
-                { borderColor: p.line.default, backgroundColor: p.bg.elevated },
-              ]}
-            >
-              <Info size={15} color={p.ink.dim} strokeWidth={2.2} />
-              <Text style={[styles.bannerText, { color: p.ink.muted }]}>
-                {store?.opening_hours ? (
-                  <>
-                    Hours: <Text style={{ fontWeight: "700" }}>{store.opening_hours}</Text>
-                  </>
-                ) : (
-                  <>
-                    Hours aren&apos;t listed for this shop.{" "}
-                    <Text style={{ fontWeight: "700" }}>
-                      Call ahead before travelling.
-                    </Text>
-                  </>
-                )}
-              </Text>
-            </View>
+            {/* HOURS — a week you can read, not the raw OSM expression.
+                "Mo-Th 11:00-21:00; Fr-Sa 11:00-22:00; PH off" told a customer
+                nothing at a glance; seven rows answer "are they open today". */}
+            {store?.hours ? (
+              <View
+                style={[
+                  styles.hours,
+                  { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+                ]}
+              >
+                {store.hours.days.map((d, i) => {
+                  const today = i === todayIndex;
+                  const label = store.hours!.always_open
+                    ? "Open 24 hours"
+                    : d.ranges.length > 0
+                      ? d.ranges.join(", ")
+                      : d.unknown
+                        ? "—"
+                        : "Closed";
+                  return (
+                    <View key={d.short} style={styles.hoursRow}>
+                      <Text
+                        style={[
+                          styles.hoursDay,
+                          {
+                            color: today ? p.ink.default : p.ink.muted,
+                            fontWeight: today ? "800" : "600",
+                          },
+                        ]}
+                      >
+                        {d.short}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.hoursValue,
+                          {
+                            // A day we were never told about is dimmed, not
+                            // called "Closed" — that would send someone on a
+                            // wasted trip.
+                            color: d.unknown
+                              ? p.ink.dim
+                              : d.ranges.length === 0
+                                ? p.ink.dim
+                                : today
+                                  ? p.ink.default
+                                  : p.ink.muted,
+                            fontWeight: today ? "800" : "500",
+                          },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </View>
+                  );
+                })}
+                {store.hours.notes.map((n) => (
+                  <Text key={n} style={[styles.hoursNote, { color: p.ink.dim }]}>
+                    {n}
+                  </Text>
+                ))}
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.banner,
+                  { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+                ]}
+              >
+                <Info size={15} color={p.ink.dim} strokeWidth={2.2} />
+                <Text style={[styles.bannerText, { color: p.ink.muted }]}>
+                  Hours aren&apos;t listed for this shop.{" "}
+                  <Text style={{ fontWeight: "700" }}>
+                    Call ahead before travelling.
+                  </Text>
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* ── About + map card (Resy screen 2) ── */}
@@ -1051,6 +1107,18 @@ const styles = StyleSheet.create({
   },
   slotLabel: { fontSize: 16, fontWeight: "700", letterSpacing: -0.2 },
   slotSub: { fontSize: 10.5, fontWeight: "600", letterSpacing: 0.8 },
+  // The week table: one row per day, today emphasised.
+  hours: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 6,
+  },
+  hoursRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  hoursDay: { fontSize: 13, width: 42 },
+  hoursValue: { fontSize: 13, flex: 1, textAlign: "right", fontVariant: ["tabular-nums"] },
+  hoursNote: { fontSize: 12, marginTop: 4, fontStyle: "italic" },
   banner: {
     flexDirection: "row",
     gap: 9,

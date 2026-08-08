@@ -14,6 +14,8 @@ export interface NearbyStoreWire {
   website: string | null;
   phone: string | null;
   opening_hours: string | null;
+  /** The same hours as an ordered Monday-first week, parsed server-side. */
+  hours: OpeningHoursWeekWire | null;
   /** Photo the shop publishes (OSM image tag, else its site's og:image). */
   photo_url: string | null;
   /** Community rating over Loupe reviews (null until someone rates). */
@@ -54,4 +56,22 @@ export interface NearbyStoresWire {
   stores: NearbyStoreWire[];
   /** `live` | `cached` | `unavailable` (upstream down → empty list). */
   source: "live" | "cached" | "unavailable";
+}
+
+/** One row of a store's week. */
+export interface OpeningHoursDayWire {
+  day: string;
+  short: string;
+  /** Time spans exactly as the source wrote them. Empty = closed, unless
+   *  `unknown`, which means the data never said. */
+  ranges: string[];
+  unknown: boolean;
+}
+
+export interface OpeningHoursWeekWire {
+  days: OpeningHoursDayWire[];
+  always_open: boolean;
+  /** Holiday qualifiers and anything the parser couldn't structure. */
+  notes: string[];
+  raw: string | null;
 }

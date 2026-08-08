@@ -44,7 +44,14 @@ export function FeaturedCollectorRail({
   pending?: boolean;
 }) {
   const p = useThemedPalette();
-  if (users.length === 0) return null;
+  // A card that IS art has nothing to show for a collector with none, and
+  // "No cards yet" in a frame only advertises the emptiness. They still
+  // appear in the rows below, where a face and a handle are the point.
+  //
+  // (This fix was lost once already: the rail was deleted and later restored
+  // from the commit BEFORE the deletion, which predated the fix.)
+  const showable = users.filter((u) => (u.preview_image_urls?.length ?? 0) > 0);
+  if (showable.length === 0) return null;
 
   return (
     <ScrollView
@@ -54,7 +61,7 @@ export function FeaturedCollectorRail({
       style={styles.bleed}
       contentContainerStyle={styles.rail}
     >
-      {users.map((u) => {
+      {showable.map((u) => {
         const engaged =
           u.relationship === "following" || u.relationship === "requested";
         const art = u.preview_image_urls ?? [];
@@ -87,11 +94,7 @@ export function FeaturedCollectorRail({
                     accessibilityIgnoresInvertColors
                   />
                 ))
-              ) : (
-                <Text style={[styles.artEmpty, { color: p.ink.dim }]}>
-                  No cards yet
-                </Text>
-              )}
+              ) : null}
             </View>
 
             <View style={styles.identity}>

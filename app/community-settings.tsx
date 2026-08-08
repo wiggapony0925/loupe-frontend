@@ -180,6 +180,11 @@ export default function CommunitySettingsScreen() {
           setLocation(saved.location ?? "");
           setIsPrivate(saved.is_private);
           setSavedAt(Date.now());
+          // Saving is the end of the task: go look at the result. Staying on
+          // the form made a successful save feel like nothing happened.
+          // Claiming a handle for the FIRST time stays put, because the rest
+          // of the form (photo, bio, privacy) is the natural next step.
+          if (profile) router.replace(routes.myProfile());
         },
         onError: (e) => setError(e.message),
       },
