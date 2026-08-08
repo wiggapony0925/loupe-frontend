@@ -5,10 +5,10 @@
  *   1. Claim a handle — nothing else works until this exists.
  *   2. Search — pinned under the title; you came looking for someone.
  *   3. Follow requests — one line each, decide without leaving the list.
- *   4. Collections worth a look — a rail of CARD ART, not faces: this is a
- *      trading-card app, and a directory that showed only avatars gave no
- *      reason to tap anyone. The collection leads, the person identifies it.
- *   5. More collectors — the directory, each row saying how much they own.
+ *   4. Featured collectors — a rail of BIG card art, not faces: this is a
+ *      trading-card app, and a directory of avatars gave no reason to tap
+ *      anyone. One card per tile, large enough to recognise.
+ *   5. Collectors to follow — the directory, each row saying how much they own.
  *   6. In real life — the card-shop map; community isn't only online.
  *
  * Every shelf carries a one-line subtitle. A column of bare uppercase labels
@@ -35,16 +35,11 @@ import { Check, ChevronRight, MapPin, Search, Share2, X } from "lucide-react-nat
 import * as Haptics from "expo-haptics";
 import { CollectorRow } from "@/presentation/features/social/CollectorRow";
 import { ClaimUsernameCard } from "@/presentation/features/social/ClaimUsernameCard";
-import {
-  ExploreGrid,
-  ExploreGridSkeleton,
-} from "@/presentation/features/social/ExploreGrid";
 import { FeaturedCollectorRail } from "@/presentation/features/social/FeaturedCollectorRail";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import {
   useCollectorSearch,
   useDiscoverCollectors,
-  useExploreCards,
   useFollowCollector,
   useFollowRequests,
   useRespondToRequest,
@@ -68,7 +63,6 @@ export default function CommunityScreen() {
   const requests = useFollowRequests();
   // Composed + ranked server-side; featured/more arrive disjoint.
   const discover = useDiscoverCollectors(claimed);
-  const explore = useExploreCards(claimed);
   const search = useCollectorSearch(q);
   const follow = useFollowCollector();
   const respond = useRespondToRequest();
@@ -84,7 +78,6 @@ export default function CommunityScreen() {
     Promise.all([
       me.refetch(),
       discover.refetch(),
-      explore.refetch(),
       requests.refetch(),
     ]),
   );
@@ -286,9 +279,7 @@ export default function CommunityScreen() {
                   ) : null}
 
                   {/* Featured collectors — operator-curated when an admin
-                      has set a list, ranked otherwise. Kept ABOVE Explore:
-                      these are people worth following, and the grid below
-                      is browsing. */}
+                      has set a list, ranked otherwise. */}
                   {(discover.data?.featured.length ?? 0) > 0 ? (
                     <Section
                       title="Featured collectors"
@@ -303,32 +294,7 @@ export default function CommunityScreen() {
                     </Section>
                   ) : null}
 
-                  {/* EXPLORE — the page's centre of gravity. Card art from
-                      public collections as a full-bleed mosaic. A directory
-                      of avatars answered "who is here" on an app about card
-                      art; this answers "what is here". Collectors with no
-                      cards are simply absent, which is why the old empty
-                      "No cards yet" frame is gone. */}
-                  {explore.isLoading ? (
-                    <View style={styles.exploreBleed}>
-                      <ExploreGridSkeleton />
-                    </View>
-                  ) : (explore.data?.cards.length ?? 0) > 0 ? (
-                    <Section
-                      title="Explore"
-                      subtitle="Cards from collections across Loupe."
-                    >
-                      <View style={styles.exploreBleed}>
-                        <ExploreGrid
-                          cards={explore.data!.cards}
-                          onOpenCard={(c) => router.push(routes.card(c.card_id))}
-                        />
-                      </View>
-                    </Section>
-                  ) : null}
-
-                  {/* People, after the cards — the directory is now support
-                      for the grid rather than the whole page. */}
+                  {/* Everyone else. */}
                   {people.length > 0 ? (
                     <Section
                       title="Collectors to follow"
@@ -457,8 +423,6 @@ const styles = StyleSheet.create({
   sub: { fontSize: 13.5 },
   // A shelf breathes: label, its one-line reason, then the content.
   section: { marginTop: 26, gap: 2 },
-  // The mosaic is full-bleed — Instagram's grid touches both edges.
-  exploreBleed: { marginHorizontal: -20 },
   sectionHead: {
     flexDirection: "row",
     alignItems: "center",

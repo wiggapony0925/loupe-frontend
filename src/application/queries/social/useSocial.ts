@@ -31,7 +31,6 @@ import type {
   SocialProfileViewWire,
   SocialProfileWire,
   SocialUserCardWire,
-  ExploreReadWire,
 } from "@/infrastructure/http";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { queryKeys } from "../queryKeys";
@@ -57,20 +56,6 @@ export function useDiscoverCollectors(
     queryKey: queryKeys.social.discover(),
     queryFn: () => apiFetch<DiscoverWire>(ENDPOINTS.social.discover),
     enabled: isAuthenticated && enabled,
-    staleTime: 5 * 60_000,
-  });
-}
-
-/** The Explore mosaic — card art from public collections, ranked AND
- *  band-assigned server-side so every client draws the same grid. */
-export function useExploreCards(enabled = true): UseQueryResult<ExploreReadWire> {
-  const { isAuthenticated } = useAuth();
-  return useQuery<ExploreReadWire>({
-    queryKey: queryKeys.social.explore(),
-    queryFn: () => apiFetch<ExploreReadWire>(ENDPOINTS.social.explore),
-    enabled: isAuthenticated && enabled,
-    // The grid is a browse surface, not a live feed — a few minutes of
-    // staleness is invisible and saves a query on every tab visit.
     staleTime: 5 * 60_000,
   });
 }

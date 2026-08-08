@@ -80,41 +80,31 @@ export function FeaturedCollectorRail({
               },
             ]}
           >
-            {/* Their best card large, the next two stacked beside it. Three
-                equal thumbnails made every tile read as a filmstrip and left
-                the art too small to recognise — which is the only reason to
-                look at a collector you don't know. */}
+            {/* ONE card, BIG. This is a trading-card app: a collector's
+                best card at a size you can actually read it is the entire
+                pitch. Three thumbnails in a strip made every tile a
+                filmstrip of unrecognisable squares. */}
             <View style={styles.art}>
               <Image
                 source={{ uri: art[0] }}
-                style={styles.artHero}
+                style={StyleSheet.absoluteFill}
                 contentFit="cover"
-                transition={160}
-                recyclingKey={`${u.user_id}-0`}
+                transition={180}
+                recyclingKey={`${u.user_id}-hero`}
                 accessibilityIgnoresInvertColors
               />
-              <View style={styles.artStack}>
-                {[1, 2].map((i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.artSmall,
-                      { backgroundColor: withAlpha(p.ink.default, 0.06) },
-                    ]}
-                  >
-                    {art[i] ? (
-                      <Image
-                        source={{ uri: art[i] }}
-                        style={StyleSheet.absoluteFill}
-                        contentFit="cover"
-                        transition={160}
-                        recyclingKey={`${u.user_id}-${i}`}
-                        accessibilityIgnoresInvertColors
-                      />
-                    ) : null}
-                  </View>
-                ))}
-              </View>
+              {art.length > 1 ? (
+                <View
+                  style={[
+                    styles.more,
+                    { backgroundColor: withAlpha("#000000", 0.55) },
+                  ]}
+                >
+                  <Text style={styles.moreText}>
+                    +{Math.max(0, u.card_count - 1).toLocaleString()}
+                  </Text>
+                </View>
+              ) : null}
             </View>
 
             <View style={styles.identity}>
@@ -190,17 +180,29 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    width: 232,
-    gap: 11,
+    width: 210,
+    gap: 10,
     borderWidth: 1,
     borderRadius: 18,
-    padding: 11,
+    padding: 10,
   },
-  // One card at trading-card ratio, two stacked beside it.
-  art: { flexDirection: "row", gap: 5, height: 132 },
-  artHero: { flex: 1.6, borderRadius: 9, overflow: "hidden" },
-  artStack: { flex: 1, gap: 5 },
-  artSmall: { flex: 1, borderRadius: 7, overflow: "hidden" },
+  // A real card, near its own 5:7 portrait ratio, big enough to recognise
+  // across a room. This is the tile's whole job.
+  art: {
+    height: 250,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "rgba(127,127,127,0.10)",
+  },
+  more: {
+    position: "absolute",
+    right: 8,
+    bottom: 8,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  moreText: { color: "#ffffff", fontSize: 11.5, fontWeight: "800" },
   identity: { flexDirection: "row", alignItems: "center", gap: 9 },
   who: { flex: 1, minWidth: 0, gap: 1 },
   name: { fontSize: 14, fontWeight: "700", letterSpacing: -0.2 },
