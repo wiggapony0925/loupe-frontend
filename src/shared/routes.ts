@@ -33,7 +33,12 @@ export const routes = {
   statements: () => "/statements" as const,
   notifications: () => "/notifications" as const,
   sealed: () => "/sealed" as const,
-  sealedDetail: (productId: string) => `/sealed/${productId}` as const,
+  /** Sealed ids can be composite ("pokemontcg:sv1-booster-box"), so this
+   *  encodes like every other builder — it was the one that did not. */
+  sealedDetail: (productId: string) => `/sealed/${enc(productId)}`,
+  /** Terms / privacy. In the app these render natively; on web they are the
+   *  same documents the marketing site serves. */
+  legal: (doc: "terms" | "privacy") => `/legal/${doc}` as const,
   /** Deep link to the standalone price-alert list. */
   watchlist: () => "/watchlist" as const,
   /** Community — follows, collector profiles, shared vaults. NATIVE (the

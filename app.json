@@ -95,6 +95,11 @@
         "projectId": "86107c1a-082a-47d9-ba76-0aaaafe52090"
       }
     },
-    "owner": "jfmcapitalgroup"
+    "owner": "jfmcapitalgroup",
+    "backgroundColor": "#121214",
+    "splash": {
+      "backgroundColor": "#121214",
+      "resizeMode": "contain"
+    }
   }
 }

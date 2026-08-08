@@ -8,12 +8,13 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useThemedPalette } from "@/presentation/theme/tokens";
+import { routes } from "@/shared/routes";
 
 function LegalLink({ doc, label }: { doc: "terms" | "privacy"; label: string }) {
   const p = useThemedPalette();
   return (
     <Pressable
-      onPress={() => router.push(`/legal/${doc}`)}
+      onPress={() => router.push(routes.legal(doc))}
       hitSlop={10}
       accessibilityRole="link"
       accessibilityLabel={label}
