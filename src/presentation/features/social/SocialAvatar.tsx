@@ -14,18 +14,32 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
-import { config } from "@/shared/config";
+import { getApiBaseUrl } from "@/infrastructure/http/client";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /**
  * The backend hands avatar URLs RELATIVE (`/v1/social/avatar/…`) because the
  * web tier proxies /v1 — but React Native's Image needs an absolute URL and
  * fails silently on a bare path, which made every uploaded picture invisible
- * on mobile while "working" everywhere else. Resolve against the API origin.
+ * on mobile while "working" everywhere else.
+ *
+ * Resolved against `getApiBaseUrl()` — the base the HTTP client is actually
+ * using — and NOT `config.apiUrl`. Those differ in the case that produced
+ * "the photo applies, then reverts to the blank avatar seconds later":
+ *
+ *   • client.ts hardens its base: env var, else in dev localhost, else a
+ *     hardcoded production URL. So API calls work in a release build even
+ *     when EXPO_PUBLIC_API_URL wasn't baked in.
+ *   • config.apiUrl had no such fallback and became `http://localhost:8000`.
+ *
+ * So the app worked everywhere except here: the upload succeeded, the screen
+ * swapped the local preview for the server URL, that URL pointed at
+ * localhost, the load failed, and SocialAvatar fell back to the monogram.
+ * getApiBaseUrl() also tracks the runtime sticky-switch to the fallback base.
  */
-function absolutize(url: string | null | undefined): string | null {
+export function absolutize(url: string | null | undefined): string | null {
   if (!url) return null;
-  return url.startsWith("/") ? `${config.apiUrl}${url}` : url;
+  return url.startsWith("/") ? `${getApiBaseUrl()}${url}` : url;
 }
 
 export interface SocialAvatarProps {

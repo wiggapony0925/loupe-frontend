@@ -9,7 +9,17 @@
 const env = (process.env ?? {}) as Record<string, string | undefined>;
 
 export const config = {
-  apiUrl: env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000",
+  // Mirrors the hardening in infrastructure/http/client.ts. Falling back to
+  // localhost in a RELEASE build points every consumer at a port nothing is
+  // listening on — that is what broke avatar images on TestFlight while the
+  // rest of the app (which uses the client's own hardened base) worked fine.
+  // Prefer getApiBaseUrl() for anything that fetches; this is for config
+  // display and derived URLs.
+  apiUrl:
+    env.EXPO_PUBLIC_API_URL ??
+    (typeof __DEV__ !== "undefined" && __DEV__
+      ? "http://localhost:8000"
+      : "https://loupe-api-wrrcqaayra-uc.a.run.app"),
   wsUrl:
     env.EXPO_PUBLIC_WS_URL ??
     (env.EXPO_PUBLIC_API_URL
