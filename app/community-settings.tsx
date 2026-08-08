@@ -26,7 +26,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Camera, Check, ChevronLeft, ChevronRight, LogOut } from "lucide-react-native";
+import {
+  Camera,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  MapPin,
+  X,
+} from "lucide-react-native";
 import {
   useDeactivateCommunity,
   useSocialMe,
@@ -35,6 +43,7 @@ import {
 } from "@/application/queries/social/useSocial";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { usePlaceSearch } from "@/application/queries/stores/useNearbyStores";
 import { routes } from "@/shared/routes";
 
 const USERNAME_RE = /^[A-Za-z0-9][A-Za-z0-9._]{2,29}$/;
@@ -46,7 +55,11 @@ export default function CommunitySettingsScreen() {
 
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
+  // `location` is the CHOSEN value (what gets saved); `locationQuery` is
+  // what's in the box. They diverge only while picking.
   const [location, setLocation] = useState("");
+  const [locationQuery, setLocationQuery] = useState("");
+  const [pickingPlace, setPickingPlace] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Freshly picked photo, shown instantly while (and after) it uploads.
@@ -54,6 +67,14 @@ export default function CommunitySettingsScreen() {
   // like nothing happened. Cleared once the SERVER's URL changes, below.
   const [pickedUri, setPickedUri] = useState<string | null>(null);
   const [photoSaved, setPhotoSaved] = useState(false);
+  // A failed upload has to SAY so and offer a retry. Previously it reverted
+  // the image and wrote one line of error text, which reads as "nothing
+  // happened" — indistinguishable from the picture simply not saving.
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [lastPicked, setLastPicked] = useState<{
+    uri: string;
+    mimeType: string;
+  } | null>(null);
   const [armedLeave, setArmedLeave] = useState(false);
   const [seeded, setSeeded] = useState(false);
   // Timestamp of the last successful save — drives the confirmation. A save
@@ -68,6 +89,7 @@ export default function CommunitySettingsScreen() {
       setUsername(profile?.username ?? "");
       setBio(profile?.bio ?? "");
       setLocation(profile?.location ?? "");
+      setLocationQuery(profile?.location ?? "");
       setIsPrivate(profile?.is_private ?? false);
       setSeeded(true);
     }
@@ -86,6 +108,10 @@ export default function CommunitySettingsScreen() {
       setPickedUri(null);
     }
   }, [serverAvatar]);
+
+  // Debounce is unnecessary: results are cached for a day, so backspacing
+  // through a query re-reads the cache instead of re-querying upstream.
+  const places = usePlaceSearch(pickingPlace ? locationQuery : "");
 
   const save = useUpsertProfile();
   const upload = useUploadAvatar();
@@ -117,6 +143,8 @@ export default function CommunitySettingsScreen() {
       // a successful change look like nothing happened.
       setPickedUri(asset.uri);
       setPhotoSaved(false);
+      setPhotoError(null);
+      setLastPicked({ uri: asset.uri, mimeType: asset.mimeType ?? "image/jpeg" });
       upload.mutate(
         { uri: asset.uri, mimeType: asset.mimeType ?? "image/jpeg" },
         {
@@ -125,11 +153,14 @@ export default function CommunitySettingsScreen() {
               Haptics.NotificationFeedbackType.Success,
             ).catch(() => {});
             setError(null);
+            setPhotoError(null);
             setPhotoSaved(true);
           },
           onError: (e) => {
-            setPickedUri(null);
-            setError(`Couldn't upload the photo: ${e.message}. Try again.`);
+            // Keep the picked image on screen so the failure is clearly
+            // about SAVING, not about the pick. Reverting to the old avatar
+            // made a failed upload look like nothing happened at all.
+            setPhotoError(e.message || "The upload failed.");
           },
         },
       );
@@ -178,6 +209,8 @@ export default function CommunitySettingsScreen() {
           setUsername(saved.username);
           setBio(saved.bio ?? "");
           setLocation(saved.location ?? "");
+          setLocationQuery(saved.location ?? "");
+          setPickingPlace(false);
           setIsPrivate(saved.is_private);
           setSavedAt(Date.now());
           // Saving is the end of the task: go look at the result. Staying on
@@ -278,6 +311,41 @@ export default function CommunitySettingsScreen() {
 
         {/* The photo saves itself the moment it's picked — say so, or a
             successful change looks like nothing happened. */}
+        {photoError ? (
+          <View className="px-5 pt-3" style={{ gap: 8 }}>
+            <Text
+              className="text-[13px] font-semibold"
+              style={{ color: p.accent.rose }}
+            >
+              Couldn&apos;t save your photo: {photoError}
+            </Text>
+            <Pressable
+              onPress={() => {
+                if (!lastPicked) return;
+                setPhotoError(null);
+                upload.mutate(lastPicked, {
+                  onSuccess: () => {
+                    setPhotoSaved(true);
+                    setPhotoError(null);
+                  },
+                  onError: (e) => setPhotoError(e.message || "The upload failed."),
+                });
+              }}
+              disabled={!lastPicked || upload.isPending}
+              accessibilityRole="button"
+              className="self-start rounded-full px-4 py-2"
+              style={{ backgroundColor: withAlpha(p.accent.rose, 0.14) }}
+            >
+              <Text
+                className="text-[13px] font-extrabold"
+                style={{ color: p.accent.rose }}
+              >
+                {upload.isPending ? "Retrying…" : "Try again"}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {photoSaved ? (
           <Text
             className="px-5 pb-2 text-[12px] font-semibold"
@@ -328,15 +396,83 @@ export default function CommunitySettingsScreen() {
                   style={{ minHeight: 44, textAlignVertical: "top" }}
                 />
               </FieldRow>
+              {/* PICK a place, don't type one. Free text let profiles say
+                  "whatberel" — useless for grouping and impossible to trust.
+                  The stored value is the server's own label, so the same city
+                  reads identically everywhere. */}
               <FieldRow label="Location">
                 <TextInput
-                  value={location}
-                  onChangeText={setLocation}
-                  placeholder="City, Region (optional)"
+                  value={locationQuery}
+                  onChangeText={(t) => {
+                    setLocationQuery(t);
+                    setPickingPlace(true);
+                  }}
+                  placeholder="Start typing a city (optional)"
                   placeholderTextColor={p.ink.muted}
+                  autoCorrect={false}
                   className="text-[15px] text-ink"
                 />
+                {location.length > 0 && !pickingPlace ? (
+                  <Pressable
+                    onPress={() => {
+                      setLocation("");
+                      setLocationQuery("");
+                    }}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear location"
+                  >
+                    <X size={16} color={p.ink.dim} />
+                  </Pressable>
+                ) : null}
               </FieldRow>
+
+              {pickingPlace && locationQuery.trim().length >= 2 ? (
+                <View className="border-b border-line">
+                  {places.isFetching && (places.data?.places.length ?? 0) === 0 ? (
+                    <Text
+                      className="px-5 py-3 text-[13px]"
+                      style={{ color: p.ink.dim }}
+                    >
+                      Searching…
+                    </Text>
+                  ) : (places.data?.places.length ?? 0) === 0 ? (
+                    <Text
+                      className="px-5 py-3 text-[13px]"
+                      style={{ color: p.ink.dim }}
+                    >
+                      {places.data?.degraded
+                        ? "Couldn't reach the place list — your text will be saved as typed."
+                        : `No places match “${locationQuery.trim()}”.`}
+                    </Text>
+                  ) : (
+                    places.data!.places.map((place) => (
+                      <Pressable
+                        key={place.label}
+                        onPress={() => {
+                          Haptics.selectionAsync().catch(() => {});
+                          setLocation(place.label);
+                          setLocationQuery(place.label);
+                          setPickingPlace(false);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={place.label}
+                        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                      >
+                        <View className="flex-row items-center gap-2.5 px-5 py-3">
+                          <MapPin size={14} color={p.ink.dim} strokeWidth={2.2} />
+                          <Text
+                            numberOfLines={1}
+                            className="flex-1 text-[15px] text-ink"
+                          >
+                            {place.label}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    ))
+                  )}
+                </View>
+              ) : null}
 
               {/* Privacy toggle. */}
               <View className="flex-row items-center gap-3 border-b border-line px-5 py-5">

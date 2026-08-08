@@ -979,6 +979,126 @@ export interface paths {
         patch: operations["update_job_v1_admin_jobs__job_id__patch"];
         trace?: never;
     };
+    "/v1/admin/legal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Legal corpus — checked-in file + live operator overrides */
+        get: operations["legal_overview_v1_admin_legal_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/legal/entity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update the shared entity block (company, jurisdiction, contacts) */
+        put: operations["update_entity_v1_admin_legal_entity_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/legal/preview/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Render one document exactly as a reader would see it */
+        get: operations["legal_preview_v1_admin_legal_preview__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/legal/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard every operator edit — back to the checked-in corpus */
+        post: operations["reset_all_v1_admin_legal_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/legal/unresolved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Placeholders used in the copy but missing from the entity block */
+        get: operations["legal_unresolved_v1_admin_legal_unresolved_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/legal/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Publish an edited (or new) legal document */
+        put: operations["put_document_v1_admin_legal__slug__put"];
+        post?: never;
+        /** Retire a document (file documents are tombstoned, restorable) */
+        delete: operations["remove_document_v1_admin_legal__slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/legal/{slug}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a document to its checked-in text */
+        post: operations["reset_document_v1_admin_legal__slug__reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/metrics": {
         parameters: {
             query?: never;
@@ -1253,6 +1373,50 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/social/featured": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The curated Community rail */
+        get: operations["get_featured_v1_admin_social_featured_get"];
+        /** Replace the curated rail (order is preserved) */
+        put: operations["put_featured_v1_admin_social_featured_put"];
+        /**
+         * Feature one collector
+         * @description Rejects a handle that doesn't exist — a tag that can never render is
+         *     worse than an error at the moment of typing.
+         */
+        post: operations["post_featured_v1_admin_social_featured_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/social/featured/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove one collector from the rail (the tag's ×)
+         * @description Idempotent: removing a handle that isn't featured is a no-op, so a
+         *     double-tap on the × can't 404.
+         */
+        delete: operations["delete_featured_v1_admin_social_featured__username__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3396,6 +3560,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/legal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every published legal document (index) */
+        get: operations["legal_index_v1_public_legal_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/legal/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One legal document, rendered */
+        get: operations["legal_document_v1_public_legal__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/places/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cities, regions and countries matching a query
+         * @description Empty list for a too-short query; ``degraded`` when the gazetteer is
+         *     unreachable, so the client can fall back to free text instead of
+         *     blocking a profile save.
+         */
+        get: operations["search_places_v1_public_places_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/search": {
         parameters: {
             query?: never;
@@ -4550,6 +4770,69 @@ export interface components {
             games: components["schemas"]["GameCarouselSummary"][];
             /** Recipes */
             recipes: components["schemas"]["AdminRecipe"][];
+        };
+        /**
+         * AdminLegalDocument
+         * @description A merged document annotated for the portal (raw, NOT interpolated).
+         */
+        AdminLegalDocument: {
+            /**
+             * Edited
+             * @default false
+             */
+            edited: boolean;
+            /** Effective */
+            effective: string;
+            /**
+             * Lead
+             * @default
+             */
+            lead: string;
+            /**
+             * Origin
+             * @default file
+             */
+            origin: string;
+            /**
+             * Removed
+             * @default false
+             */
+            removed: boolean;
+            /** Sections */
+            sections?: components["schemas"]["LegalSection"][];
+            /** Slug */
+            slug: string;
+            /** Summary */
+            summary?: string[];
+            /** Title */
+            title: string;
+            /** Updated */
+            updated: string;
+        };
+        /**
+         * AdminLegalView
+         * @description Everything `/admin/legal` renders in one call.
+         */
+        AdminLegalView: {
+            /**
+             * Dirty
+             * @default false
+             */
+            dirty: boolean;
+            /** Documents */
+            documents: components["schemas"]["AdminLegalDocument"][];
+            /** Entity */
+            entity: {
+                [key: string]: string;
+            };
+            /** Fileentity */
+            fileEntity: {
+                [key: string]: string;
+            };
+            /** Updatedat */
+            updatedAt?: string | null;
+            /** Updatedby */
+            updatedBy?: string | null;
         };
         /**
          * AdminMetrics
@@ -6225,6 +6508,42 @@ export interface components {
             /** Label */
             label?: string | null;
         };
+        /** FeaturedAdd */
+        FeaturedAdd: {
+            /** Username */
+            username: string;
+        };
+        /** FeaturedSet */
+        FeaturedSet: {
+            /** Usernames */
+            usernames?: string[];
+        };
+        /**
+         * FeaturedView
+         * @description The curated rail as the portal needs to render it.
+         */
+        FeaturedView: {
+            /**
+             * Collectors
+             * @default []
+             */
+            collectors: components["schemas"]["SocialUserCard"][];
+            /**
+             * Max Featured
+             * @default 20
+             */
+            max_featured: number;
+            /**
+             * Unresolved
+             * @default []
+             */
+            unresolved: string[];
+            /**
+             * Usernames
+             * @default []
+             */
+            usernames: string[];
+        };
         /**
          * FollowRequestRead
          * @description One pending incoming follow request (the requester's card).
@@ -6293,6 +6612,11 @@ export interface components {
             copies: number;
             /** Display Name */
             display_name?: string | null;
+            /**
+             * Is Admin
+             * @default false
+             */
+            is_admin: boolean;
             /**
              * Is Private
              * @default false
@@ -7104,6 +7428,99 @@ export interface components {
          */
         JobStatusEnum: "draft" | "open" | "closed";
         /**
+         * LegalDocument
+         * @description A whole document — the unit an operator edits and a client renders.
+         */
+        LegalDocument: {
+            /** Effective */
+            effective: string;
+            /**
+             * Lead
+             * @default
+             */
+            lead: string;
+            /** Sections */
+            sections?: components["schemas"]["LegalSection"][];
+            /** Slug */
+            slug: string;
+            /** Summary */
+            summary?: string[];
+            /** Title */
+            title: string;
+            /** Updated */
+            updated: string;
+        };
+        /**
+         * LegalDocumentRead
+         * @description A published document with every ``{{placeholder}}`` already resolved.
+         */
+        LegalDocumentRead: {
+            /** Effective */
+            effective: string;
+            /**
+             * Lead
+             * @default
+             */
+            lead: string;
+            /**
+             * Markdown
+             * @default
+             */
+            markdown: string;
+            /** Sections */
+            sections?: components["schemas"]["LegalSection"][];
+            /** Slug */
+            slug: string;
+            /** Summary */
+            summary?: string[];
+            /** Title */
+            title: string;
+            /** Updated */
+            updated: string;
+        };
+        /**
+         * LegalEntityUpdate
+         * @description Replace the operator entity patch wholesale.
+         */
+        LegalEntityUpdate: {
+            /** Entity */
+            entity?: {
+                [key: string]: string;
+            };
+        };
+        /** LegalIndex */
+        LegalIndex: {
+            /** Documents */
+            documents: components["schemas"]["LegalIndexEntry"][];
+            /** Updated */
+            updated: string;
+        };
+        /** LegalIndexEntry */
+        LegalIndexEntry: {
+            /** Effective */
+            effective: string;
+            /** Lead */
+            lead: string;
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** Updated */
+            updated: string;
+        };
+        /**
+         * LegalSection
+         * @description One numbered clause. ``body`` is Markdown, rendered by the clients.
+         */
+        LegalSection: {
+            /** Body */
+            body: string;
+            /** Heading */
+            heading: string;
+            /** Id */
+            id: string;
+        };
+        /**
          * LoginResult
          * @description Response for ``POST /v1/auth/login``.
          *
@@ -7230,6 +7647,7 @@ export interface components {
             category: string;
             /** Distance Km */
             distance_km: number;
+            hours?: components["schemas"]["OpeningHoursWeek"] | null;
             /** Id */
             id: string;
             /**
@@ -7352,6 +7770,49 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * OpeningHoursDay
+         * @description One row of the store's week.
+         */
+        OpeningHoursDay: {
+            /** Day */
+            day: string;
+            /**
+             * Ranges
+             * @default []
+             */
+            ranges: string[];
+            /** Short */
+            short: string;
+            /**
+             * Unknown
+             * @default false
+             */
+            unknown: boolean;
+        };
+        /**
+         * OpeningHoursWeek
+         * @description ``opening_hours`` expanded into an ordered Monday-first week.
+         */
+        OpeningHoursWeek: {
+            /**
+             * Always Open
+             * @default false
+             */
+            always_open: boolean;
+            /**
+             * Days
+             * @default []
+             */
+            days: components["schemas"]["OpeningHoursDay"][];
+            /**
+             * Notes
+             * @default []
+             */
+            notes: string[];
+            /** Raw */
+            raw?: string | null;
+        };
         /** Pagination[CardRead] */
         Pagination_CardRead_: {
             /**
@@ -7403,6 +7864,38 @@ export interface components {
              * @default 0
              */
             total: number;
+        };
+        /**
+         * PlaceSuggestion
+         * @description One pickable place.
+         *
+         *     ``label`` is the string the client renders and STORES — formatting is
+         *     server-owned so the same city never reads two ways across surfaces.
+         */
+        PlaceSuggestion: {
+            /** City */
+            city?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Country Code */
+            country_code?: string | null;
+            /** Label */
+            label: string;
+            /** Region */
+            region?: string | null;
+        };
+        /** PlaceSuggestions */
+        PlaceSuggestions: {
+            /**
+             * Degraded
+             * @default false
+             */
+            degraded: boolean;
+            /**
+             * Places
+             * @default []
+             */
+            places: components["schemas"]["PlaceSuggestion"][];
         };
         /**
          * PlanConfigRead
@@ -8884,6 +9377,11 @@ export interface components {
             card_count: number;
             /** Display Name */
             display_name?: string | null;
+            /**
+             * Is Admin
+             * @default false
+             */
+            is_admin: boolean;
             /**
              * Is Private
              * @default false
@@ -11369,6 +11867,227 @@ export interface operations {
             };
         };
     };
+    legal_overview_v1_admin_legal_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLegalView"];
+                };
+            };
+        };
+    };
+    update_entity_v1_admin_legal_entity_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalEntityUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLegalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    legal_preview_v1_admin_legal_preview__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalDocumentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_all_v1_admin_legal_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLegalView"];
+                };
+            };
+        };
+    };
+    legal_unresolved_v1_admin_legal_unresolved_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
+    put_document_v1_admin_legal__slug__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalDocument"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLegalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_document_v1_admin_legal__slug__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLegalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_document_v1_admin_legal__slug__reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLegalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_metrics_v1_admin_metrics_get: {
         parameters: {
             query?: never;
@@ -11770,6 +12489,123 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ScannerTrend"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_featured_v1_admin_social_featured_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeaturedView"];
+                };
+            };
+        };
+    };
+    put_featured_v1_admin_social_featured_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeaturedSet"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeaturedView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_featured_v1_admin_social_featured_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeaturedAdd"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeaturedView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_featured_v1_admin_social_featured__username__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeaturedView"];
                 };
             };
             /** @description Validation Error */
@@ -15490,6 +16326,88 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    legal_index_v1_public_legal_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalIndex"];
+                };
+            };
+        };
+    };
+    legal_document_v1_public_legal__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalDocumentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_places_v1_public_places_search_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceSuggestions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

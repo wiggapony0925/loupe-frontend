@@ -28,7 +28,7 @@ import * as Haptics from "expo-haptics";
 import type { SocialUserCardWire } from "@/infrastructure/http";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import { followLabel } from "@/presentation/features/social/socialLabels";
-import { useThemedPalette } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 const PAGE_PADDING = 20;
 
@@ -80,21 +80,41 @@ export function FeaturedCollectorRail({
               },
             ]}
           >
-            {/* Their collection, first. */}
-            <View style={[styles.art, { backgroundColor: p.bg.sunken }]}>
-              {art.length > 0 ? (
-                art.map((uri: string, i: number) => (
-                  <Image
-                    key={`${u.user_id}-${i}`}
-                    source={{ uri }}
-                    style={styles.artCard}
-                    contentFit="cover"
-                    transition={160}
-                    recyclingKey={`${u.user_id}-${i}`}
-                    accessibilityIgnoresInvertColors
-                  />
-                ))
-              ) : null}
+            {/* Their best card large, the next two stacked beside it. Three
+                equal thumbnails made every tile read as a filmstrip and left
+                the art too small to recognise — which is the only reason to
+                look at a collector you don't know. */}
+            <View style={styles.art}>
+              <Image
+                source={{ uri: art[0] }}
+                style={styles.artHero}
+                contentFit="cover"
+                transition={160}
+                recyclingKey={`${u.user_id}-0`}
+                accessibilityIgnoresInvertColors
+              />
+              <View style={styles.artStack}>
+                {[1, 2].map((i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.artSmall,
+                      { backgroundColor: withAlpha(p.ink.default, 0.06) },
+                    ]}
+                  >
+                    {art[i] ? (
+                      <Image
+                        source={{ uri: art[i] }}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                        transition={160}
+                        recyclingKey={`${u.user_id}-${i}`}
+                        accessibilityIgnoresInvertColors
+                      />
+                    ) : null}
+                  </View>
+                ))}
+              </View>
             </View>
 
             <View style={styles.identity}>
@@ -127,34 +147,34 @@ export function FeaturedCollectorRail({
                     .join(" · ") || " "}
                 </Text>
               </View>
-            </View>
 
-            <Pressable
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                onToggleFollow({ handle: u.username, following: engaged });
-              }}
-              disabled={pending}
-              accessibilityRole="button"
-              accessibilityLabel={`${followLabel(u.relationship)} @${u.username}`}
-              hitSlop={6}
-              style={[
-                styles.pill,
-                engaged
-                  ? { borderWidth: 1, borderColor: p.line.default }
-                  : { backgroundColor: p.accent.mint },
-                pending ? { opacity: 0.5 } : null,
-              ]}
-            >
-              <Text
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  onToggleFollow({ handle: u.username, following: engaged });
+                }}
+                disabled={pending}
+                accessibilityRole="button"
+                accessibilityLabel={`${followLabel(u.relationship)} @${u.username}`}
+                hitSlop={8}
                 style={[
-                  styles.pillText,
-                  { color: engaged ? p.ink.muted : "#06140d" },
+                  styles.pill,
+                  engaged
+                    ? { borderWidth: 1, borderColor: p.line.default }
+                    : { backgroundColor: p.accent.mint },
+                  pending ? { opacity: 0.5 } : null,
                 ]}
               >
-                {followLabel(u.relationship)}
-              </Text>
-            </Pressable>
+                <Text
+                  style={[
+                    styles.pillText,
+                    { color: engaged ? p.ink.muted : "#06140d" },
+                  ]}
+                >
+                  {followLabel(u.relationship)}
+                </Text>
+              </Pressable>
+            </View>
           </Pressable>
         );
       })}
@@ -170,33 +190,29 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    width: 208,
-    gap: 10,
+    width: 232,
+    gap: 11,
     borderWidth: 1,
     borderRadius: 18,
-    padding: 12,
+    padding: 11,
   },
-  // The art strip: three cards at trading-card ratio, side by side.
-  art: {
-    flexDirection: "row",
-    gap: 6,
-    height: 92,
-    borderRadius: 12,
-    padding: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  artCard: { flex: 1, height: "100%", borderRadius: 6 },
-  artEmpty: { fontSize: 11.5, fontWeight: "600" },
+  // One card at trading-card ratio, two stacked beside it.
+  art: { flexDirection: "row", gap: 5, height: 132 },
+  artHero: { flex: 1.6, borderRadius: 9, overflow: "hidden" },
+  artStack: { flex: 1, gap: 5 },
+  artSmall: { flex: 1, borderRadius: 7, overflow: "hidden" },
   identity: { flexDirection: "row", alignItems: "center", gap: 9 },
   who: { flex: 1, minWidth: 0, gap: 1 },
-  name: { fontSize: 13.5, fontWeight: "700", letterSpacing: -0.2 },
+  name: { fontSize: 14, fontWeight: "700", letterSpacing: -0.2 },
   meta: { fontSize: 11.5 },
+  // A quiet outline that sits INSIDE the identity row — the full-width mint
+  // slab was the loudest thing on the page and buried the cards it sat under.
   pill: {
     borderRadius: 999,
     alignItems: "center",
-    paddingVertical: 8,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    height: 32,
   },
   pillText: { fontSize: 12.5, fontWeight: "800" },
 });

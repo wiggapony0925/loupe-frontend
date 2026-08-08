@@ -108,6 +108,7 @@ export const queryKeys = {
     cardOwners: (cardRef: string) => ["social", "card-owners", cardRef] as const,
   },
   stores: {
+    places: (q: string) => ["places", q] as const,
     all: ["stores"] as const,
     nearby: (lat: number, lng: number, radiusKm: number) =>
       ["stores", "nearby", lat, lng, radiusKm] as const,

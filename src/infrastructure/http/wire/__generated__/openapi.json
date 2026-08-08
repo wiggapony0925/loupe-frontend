@@ -292,6 +292,141 @@
         "title": "AdminCarouselsView",
         "type": "object"
       },
+      "AdminLegalDocument": {
+        "description": "A merged document annotated for the portal (raw, NOT interpolated).",
+        "properties": {
+          "edited": {
+            "default": false,
+            "title": "Edited",
+            "type": "boolean"
+          },
+          "effective": {
+            "maxLength": 32,
+            "minLength": 4,
+            "title": "Effective",
+            "type": "string"
+          },
+          "lead": {
+            "default": "",
+            "maxLength": 600,
+            "title": "Lead",
+            "type": "string"
+          },
+          "origin": {
+            "default": "file",
+            "title": "Origin",
+            "type": "string"
+          },
+          "removed": {
+            "default": false,
+            "title": "Removed",
+            "type": "boolean"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/LegalSection"
+            },
+            "maxItems": 80,
+            "title": "Sections",
+            "type": "array"
+          },
+          "slug": {
+            "maxLength": 48,
+            "minLength": 1,
+            "title": "Slug",
+            "type": "string"
+          },
+          "summary": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 12,
+            "title": "Summary",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "updated": {
+            "maxLength": 32,
+            "minLength": 4,
+            "title": "Updated",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "effective",
+          "updated"
+        ],
+        "title": "AdminLegalDocument",
+        "type": "object"
+      },
+      "AdminLegalView": {
+        "description": "Everything `/admin/legal` renders in one call.",
+        "properties": {
+          "dirty": {
+            "default": false,
+            "title": "Dirty",
+            "type": "boolean"
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/AdminLegalDocument"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "entity": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Entity",
+            "type": "object"
+          },
+          "fileEntity": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Fileentity",
+            "type": "object"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "updatedBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedby"
+          }
+        },
+        "required": [
+          "entity",
+          "fileEntity",
+          "documents"
+        ],
+        "title": "AdminLegalView",
+        "type": "object"
+      },
       "AdminMetrics": {
         "description": "At-a-glance portal metrics.",
         "properties": {
@@ -4364,6 +4499,70 @@
         "title": "FeatureFlagUpsert",
         "type": "object"
       },
+      "FeaturedAdd": {
+        "properties": {
+          "username": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username"
+        ],
+        "title": "FeaturedAdd",
+        "type": "object"
+      },
+      "FeaturedSet": {
+        "properties": {
+          "usernames": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Usernames",
+            "type": "array"
+          }
+        },
+        "title": "FeaturedSet",
+        "type": "object"
+      },
+      "FeaturedView": {
+        "description": "The curated rail as the portal needs to render it.",
+        "properties": {
+          "collectors": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SocialUserCard"
+            },
+            "title": "Collectors",
+            "type": "array"
+          },
+          "max_featured": {
+            "default": 20,
+            "title": "Max Featured",
+            "type": "integer"
+          },
+          "unresolved": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Unresolved",
+            "type": "array"
+          },
+          "usernames": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Usernames",
+            "type": "array"
+          }
+        },
+        "title": "FeaturedView",
+        "type": "object"
+      },
       "FollowRequestRead": {
         "description": "One pending incoming follow request (the requester's card).",
         "properties": {
@@ -4487,6 +4686,11 @@
               }
             ],
             "title": "Display Name"
+          },
+          "is_admin": {
+            "default": false,
+            "title": "Is Admin",
+            "type": "boolean"
           },
           "is_private": {
             "default": false,
@@ -6581,6 +6785,227 @@
         "title": "JobStatusEnum",
         "type": "string"
       },
+      "LegalDocument": {
+        "description": "A whole document \u2014 the unit an operator edits and a client renders.",
+        "properties": {
+          "effective": {
+            "maxLength": 32,
+            "minLength": 4,
+            "title": "Effective",
+            "type": "string"
+          },
+          "lead": {
+            "default": "",
+            "maxLength": 600,
+            "title": "Lead",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/LegalSection"
+            },
+            "maxItems": 80,
+            "title": "Sections",
+            "type": "array"
+          },
+          "slug": {
+            "maxLength": 48,
+            "minLength": 1,
+            "title": "Slug",
+            "type": "string"
+          },
+          "summary": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 12,
+            "title": "Summary",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "updated": {
+            "maxLength": 32,
+            "minLength": 4,
+            "title": "Updated",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "effective",
+          "updated"
+        ],
+        "title": "LegalDocument",
+        "type": "object"
+      },
+      "LegalDocumentRead": {
+        "description": "A published document with every ``{{placeholder}}`` already resolved.",
+        "properties": {
+          "effective": {
+            "maxLength": 32,
+            "minLength": 4,
+            "title": "Effective",
+            "type": "string"
+          },
+          "lead": {
+            "default": "",
+            "maxLength": 600,
+            "title": "Lead",
+            "type": "string"
+          },
+          "markdown": {
+            "default": "",
+            "title": "Markdown",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/LegalSection"
+            },
+            "maxItems": 80,
+            "title": "Sections",
+            "type": "array"
+          },
+          "slug": {
+            "maxLength": 48,
+            "minLength": 1,
+            "title": "Slug",
+            "type": "string"
+          },
+          "summary": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 12,
+            "title": "Summary",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "updated": {
+            "maxLength": 32,
+            "minLength": 4,
+            "title": "Updated",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "effective",
+          "updated"
+        ],
+        "title": "LegalDocumentRead",
+        "type": "object"
+      },
+      "LegalEntityUpdate": {
+        "description": "Replace the operator entity patch wholesale.",
+        "properties": {
+          "entity": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Entity",
+            "type": "object"
+          }
+        },
+        "title": "LegalEntityUpdate",
+        "type": "object"
+      },
+      "LegalIndex": {
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/LegalIndexEntry"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "string"
+          }
+        },
+        "required": [
+          "documents",
+          "updated"
+        ],
+        "title": "LegalIndex",
+        "type": "object"
+      },
+      "LegalIndexEntry": {
+        "properties": {
+          "effective": {
+            "title": "Effective",
+            "type": "string"
+          },
+          "lead": {
+            "title": "Lead",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "lead",
+          "effective",
+          "updated"
+        ],
+        "title": "LegalIndexEntry",
+        "type": "object"
+      },
+      "LegalSection": {
+        "description": "One numbered clause. ``body`` is Markdown, rendered by the clients.",
+        "properties": {
+          "body": {
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "heading": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Heading",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 48,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "heading",
+          "body"
+        ],
+        "title": "LegalSection",
+        "type": "object"
+      },
       "LoginResult": {
         "description": "Response for ``POST /v1/auth/login``.\n\nBackward-compatible superset of :class:`TokenPair`: on a normal sign-in the\ntoken fields are populated exactly as before (``mfa_required`` is ``False``).\nWhen the account has two-factor enabled, the tokens are withheld and\n``mfa_required``/``mfa_token`` drive a second step at ``/auth/mfa/verify``.",
         "properties": {
@@ -6797,6 +7222,16 @@
           "distance_km": {
             "title": "Distance Km",
             "type": "number"
+          },
+          "hours": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpeningHoursWeek"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "id": {
             "title": "Id",
@@ -7057,6 +7492,77 @@
         "title": "NotificationRead",
         "type": "object"
       },
+      "OpeningHoursDay": {
+        "description": "One row of the store's week.",
+        "properties": {
+          "day": {
+            "title": "Day",
+            "type": "string"
+          },
+          "ranges": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Ranges",
+            "type": "array"
+          },
+          "short": {
+            "title": "Short",
+            "type": "string"
+          },
+          "unknown": {
+            "default": false,
+            "title": "Unknown",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "day",
+          "short"
+        ],
+        "title": "OpeningHoursDay",
+        "type": "object"
+      },
+      "OpeningHoursWeek": {
+        "description": "``opening_hours`` expanded into an ordered Monday-first week.",
+        "properties": {
+          "always_open": {
+            "default": false,
+            "title": "Always Open",
+            "type": "boolean"
+          },
+          "days": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OpeningHoursDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw"
+          }
+        },
+        "title": "OpeningHoursWeek",
+        "type": "object"
+      },
       "Pagination_CardRead_": {
         "properties": {
           "items": {
@@ -7125,6 +7631,83 @@
           }
         },
         "title": "Pagination[PriceSnapshotRead]",
+        "type": "object"
+      },
+      "PlaceSuggestion": {
+        "description": "One pickable place.\n\n``label`` is the string the client renders and STORES \u2014 formatting is\nserver-owned so the same city never reads two ways across surfaces.",
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "PlaceSuggestion",
+        "type": "object"
+      },
+      "PlaceSuggestions": {
+        "properties": {
+          "degraded": {
+            "default": false,
+            "title": "Degraded",
+            "type": "boolean"
+          },
+          "places": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PlaceSuggestion"
+            },
+            "title": "Places",
+            "type": "array"
+          }
+        },
+        "title": "PlaceSuggestions",
         "type": "object"
       },
       "PlanConfigRead": {
@@ -10956,6 +11539,11 @@
               }
             ],
             "title": "Display Name"
+          },
+          "is_admin": {
+            "default": false,
+            "title": "Is Admin",
+            "type": "boolean"
           },
           "is_private": {
             "default": false,
@@ -15255,6 +15843,330 @@
         ]
       }
     },
+    "/v1/admin/legal": {
+      "get": {
+        "operationId": "legal_overview_v1_admin_legal_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminLegalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Legal corpus \u2014 checked-in file + live operator overrides",
+        "tags": [
+          "admin-legal"
+        ]
+      }
+    },
+    "/v1/admin/legal/entity": {
+      "put": {
+        "operationId": "update_entity_v1_admin_legal_entity_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegalEntityUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminLegalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update the shared entity block (company, jurisdiction, contacts)",
+        "tags": [
+          "admin-legal"
+        ]
+      }
+    },
+    "/v1/admin/legal/preview/{slug}": {
+      "get": {
+        "operationId": "legal_preview_v1_admin_legal_preview__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalDocumentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Render one document exactly as a reader would see it",
+        "tags": [
+          "admin-legal"
+        ]
+      }
+    },
+    "/v1/admin/legal/reset": {
+      "post": {
+        "operationId": "reset_all_v1_admin_legal_reset_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminLegalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Discard every operator edit \u2014 back to the checked-in corpus",
+        "tags": [
+          "admin-legal"
+        ]
+      }
+    },
+    "/v1/admin/legal/unresolved": {
+      "get": {
+        "operationId": "legal_unresolved_v1_admin_legal_unresolved_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Legal Unresolved V1 Admin Legal Unresolved Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Placeholders used in the copy but missing from the entity block",
+        "tags": [
+          "admin-legal"
+        ]
+      }
+    },
+    "/v1/admin/legal/{slug}": {
+      "delete": {
+        "operationId": "remove_document_v1_admin_legal__slug__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminLegalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retire a document (file documents are tombstoned, restorable)",
+        "tags": [
+          "admin-legal"
+        ]
+      },
+      "put": {
+        "operationId": "put_document_v1_admin_legal__slug__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegalDocument"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminLegalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish an edited (or new) legal document",
+        "tags": [
+          "admin-legal"
+        ]
+      }
+    },
+    "/v1/admin/legal/{slug}/reset": {
+      "post": {
+        "operationId": "reset_document_v1_admin_legal__slug__reset_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminLegalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore a document to its checked-in text",
+        "tags": [
+          "admin-legal"
+        ]
+      }
+    },
     "/v1/admin/metrics": {
       "get": {
         "operationId": "get_metrics_v1_admin_metrics_get",
@@ -15988,6 +16900,169 @@
         "summary": "Daily speed + accuracy trend series",
         "tags": [
           "admin-scanner"
+        ]
+      }
+    },
+    "/v1/admin/social/featured": {
+      "get": {
+        "operationId": "get_featured_v1_admin_social_featured_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeaturedView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The curated Community rail",
+        "tags": [
+          "admin-social"
+        ]
+      },
+      "post": {
+        "description": "Rejects a handle that doesn't exist \u2014 a tag that can never render is\nworse than an error at the moment of typing.",
+        "operationId": "post_featured_v1_admin_social_featured_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeaturedAdd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeaturedView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Feature one collector",
+        "tags": [
+          "admin-social"
+        ]
+      },
+      "put": {
+        "operationId": "put_featured_v1_admin_social_featured_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeaturedSet"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeaturedView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace the curated rail (order is preserved)",
+        "tags": [
+          "admin-social"
+        ]
+      }
+    },
+    "/v1/admin/social/featured/{username}": {
+      "delete": {
+        "description": "Idempotent: removing a handle that isn't featured is a no-op, so a\ndouble-tap on the \u00d7 can't 404.",
+        "operationId": "delete_featured_v1_admin_social_featured__username__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeaturedView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove one collector from the rail (the tag's \u00d7)",
+        "tags": [
+          "admin-social"
         ]
       }
     },
@@ -22258,6 +23333,114 @@
           }
         },
         "summary": "Storefront category tags (games + sections; backend-driven)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/legal": {
+      "get": {
+        "operationId": "legal_index_v1_public_legal_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalIndex"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Every published legal document (index)",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/legal/{slug}": {
+      "get": {
+        "operationId": "legal_document_v1_public_legal__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalDocumentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One legal document, rendered",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/public/places/search": {
+      "get": {
+        "description": "Empty list for a too-short query; ``degraded`` when the gazetteer is\nunreachable, so the client can fall back to free text instead of\nblocking a profile save.",
+        "operationId": "search_places_v1_public_places_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 80,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceSuggestions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cities, regions and countries matching a query",
         "tags": [
           "public"
         ]

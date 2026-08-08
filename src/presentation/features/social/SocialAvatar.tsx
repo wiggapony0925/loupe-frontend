@@ -36,6 +36,13 @@ export interface SocialAvatarProps {
   size?: number;
   /** Mint ring for Pro collectors — the only status marker in a list row. */
   isPro?: boolean;
+  /**
+   * Called when the picture URL fails to load. A silent fall back to the
+   * monogram is right in a list, but on the settings screen it is
+   * indistinguishable from "my photo didn't save", so that screen needs to
+   * know the difference.
+   */
+  onLoadFailed?: () => void;
 }
 
 export function SocialAvatar({
@@ -44,6 +51,7 @@ export function SocialAvatar({
   url,
   size = 44,
   isPro = false,
+  onLoadFailed,
 }: SocialAvatarProps) {
   const p = useThemedPalette();
   const [failed, setFailed] = useState(false);
@@ -69,7 +77,10 @@ export function SocialAvatar({
         ]}
         contentFit="cover"
         transition={120}
-        onError={() => setFailed(true)}
+        onError={() => {
+          setFailed(true);
+          onLoadFailed?.();
+        }}
         accessibilityIgnoresInvertColors
       />
     );

@@ -75,3 +75,20 @@ export interface OpeningHoursWeekWire {
   notes: string[];
   raw: string | null;
 }
+
+/** One pickable place. `label` is server-formatted and is what gets STORED,
+ *  so the same city reads identically on every surface. */
+export interface PlaceSuggestionWire {
+  label: string;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+  country_code: string | null;
+}
+
+export interface PlaceSuggestionsWire {
+  places: PlaceSuggestionWire[];
+  /** The gazetteer was unreachable — fall back to accepting free text
+   *  rather than blocking a profile save. */
+  degraded: boolean;
+}

@@ -112,6 +112,8 @@ export const ENDPOINTS = {
     /** Heart a shop (PUT) / remove it (DELETE). */
     storeSave: (storeId: string) =>
       `${V1}/public/stores/${encodeURIComponent(storeId)}/save`,
+    /** City/region/country autocomplete for the profile location. */
+    placeSearch: `${V1}/public/places/search`,
     /** My saved places. */
     storesSaved: `${V1}/public/stores/saved`,
   },

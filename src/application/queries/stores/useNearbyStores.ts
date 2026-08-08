@@ -15,6 +15,7 @@ import {
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import type {
+  PlaceSuggestionsWire,
   NearbyStoresWire,
   SavedStoresWire,
   StoreDetailWire,
@@ -132,5 +133,30 @@ export function useSavedStores(enabled = true) {
     queryFn: () => apiFetch<SavedStoresWire>(ENDPOINTS.publicCatalog.storesSaved),
     enabled: isAuthenticated && enabled,
     staleTime: 60_000,
+  });
+}
+
+/**
+ * City / region / country autocomplete for the profile location field.
+ *
+ * Location used to be a free-text box, so profiles carried "whatberel" —
+ * unusable for grouping or trust, and easy to abuse. This makes it a CHOICE.
+ * The label the server returns is what gets stored, so the same city can't
+ * read two ways across surfaces.
+ */
+export function usePlaceSearch(query: string) {
+  const q = query.trim();
+  return useQuery<PlaceSuggestionsWire>({
+    queryKey: queryKeys.stores.places(q.toLowerCase()),
+    queryFn: () =>
+      apiFetch<PlaceSuggestionsWire>(ENDPOINTS.publicCatalog.placeSearch, {
+        query: { q },
+      }),
+    // Two characters is the server's own floor; below it the answer is empty.
+    enabled: q.length >= 2,
+    // Place names don't move. Caching hard keeps a typeahead off a free
+    // upstream and makes backspacing instant.
+    staleTime: 24 * 60 * 60_000,
+    gcTime: 24 * 60 * 60_000,
   });
 }

@@ -36,7 +36,6 @@ import * as Haptics from "expo-haptics";
 import { CollectorRow } from "@/presentation/features/social/CollectorRow";
 import { ClaimUsernameCard } from "@/presentation/features/social/ClaimUsernameCard";
 import {
-  ExploreEmpty,
   ExploreGrid,
   ExploreGridSkeleton,
 } from "@/presentation/features/social/ExploreGrid";
@@ -310,18 +309,23 @@ export default function CommunityScreen() {
                       art; this answers "what is here". Collectors with no
                       cards are simply absent, which is why the old empty
                       "No cards yet" frame is gone. */}
-                  <View style={styles.exploreBleed}>
-                    {explore.isLoading ? (
+                  {explore.isLoading ? (
+                    <View style={styles.exploreBleed}>
                       <ExploreGridSkeleton />
-                    ) : (explore.data?.cards.length ?? 0) === 0 ? (
-                      <ExploreEmpty label="Nothing to explore yet. Follow a collector to get started." />
-                    ) : (
-                      <ExploreGrid
-                        cards={explore.data!.cards}
-                        onOpenCard={(c) => router.push(routes.card(c.card_id))}
-                      />
-                    )}
-                  </View>
+                    </View>
+                  ) : (explore.data?.cards.length ?? 0) > 0 ? (
+                    <Section
+                      title="Explore"
+                      subtitle="Cards from collections across Loupe."
+                    >
+                      <View style={styles.exploreBleed}>
+                        <ExploreGrid
+                          cards={explore.data!.cards}
+                          onOpenCard={(c) => router.push(routes.card(c.card_id))}
+                        />
+                      </View>
+                    </Section>
+                  ) : null}
 
                   {/* People, after the cards — the directory is now support
                       for the grid rather than the whole page. */}
@@ -454,7 +458,7 @@ const styles = StyleSheet.create({
   // A shelf breathes: label, its one-line reason, then the content.
   section: { marginTop: 26, gap: 2 },
   // The mosaic is full-bleed — Instagram's grid touches both edges.
-  exploreBleed: { marginHorizontal: -20, marginTop: 22 },
+  exploreBleed: { marginHorizontal: -20 },
   sectionHead: {
     flexDirection: "row",
     alignItems: "center",

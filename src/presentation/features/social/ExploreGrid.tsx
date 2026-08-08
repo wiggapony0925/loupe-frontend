@@ -25,7 +25,7 @@ import {
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import type { ExploreCardWire } from "@/infrastructure/http";
-import { useThemedPalette } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { mosaicBands } from "./exploreMosaic";
 
 /** Hairline seam between tiles — Instagram's grid is nearly gapless. */
@@ -60,7 +60,7 @@ export function ExploreGrid({
       accessibilityRole="button"
       accessibilityLabel={`${card.card_name ?? "Card"}, owned by @${card.username}`}
       style={({ pressed }) => [
-        { width: w, height: h, backgroundColor: p.bg.elevated },
+        { width: w, height: h, backgroundColor: withAlpha(p.ink.default, 0.06) },
         pressed ? { opacity: 0.72 } : null,
       ]}
     >
@@ -119,7 +119,14 @@ export function ExploreGridSkeleton() {
           {[0, 1, 2].map((c) => (
             <View
               key={c}
-              style={{ width: unit, height: cell, backgroundColor: p.bg.elevated }}
+              style={{
+                width: unit,
+                height: cell,
+                // NOT bg.elevated: in light mode that is #ffffff on a #f7f7f8
+                // page — an invisible block that reads as a 300pt hole rather
+                // than as loading. A tinted ink wash works on both themes.
+                backgroundColor: withAlpha(p.ink.default, 0.07),
+              }}
             />
           ))}
         </View>
