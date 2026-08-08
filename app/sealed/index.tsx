@@ -32,6 +32,7 @@ import { useMoney } from "@/presentation/components/Price";
 import { CardImage } from "@/presentation/components/CardImage";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { Skeleton } from "@/presentation/components/Skeleton";
+import { usePullToRefresh } from "@/presentation/hooks/usePullToRefresh";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 const PRODUCT_LABEL: Record<SealedProductType, string> = {
@@ -154,6 +155,8 @@ export default function MySealedScreen() {
   const p = useThemedPalette();
   const router = useRouter();
   const holdings = useMySealedHoldings({});
+
+  const { refreshing, onRefresh } = usePullToRefresh(() => holdings.refetch());
   const deleteMut = useDeleteSealedHolding();
 
   const onDelete = useCallback(
@@ -265,8 +268,8 @@ export default function MySealedScreen() {
         }}
         refreshControl={
           <RefreshControl
-            refreshing={holdings.isFetching && !holdings.isLoading}
-            onRefresh={() => void holdings.refetch()}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             tintColor={p.ink.muted}
           />
         }

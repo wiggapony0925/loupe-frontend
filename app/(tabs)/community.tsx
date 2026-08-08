@@ -53,6 +53,7 @@ import {
 } from "@/application/queries/social/useSocial";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { config } from "@/shared/config";
+import { usePullToRefresh } from "@/presentation/hooks/usePullToRefresh";
 import { routes } from "@/shared/routes";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
@@ -80,6 +81,15 @@ export default function CommunityScreen() {
   // arrive disjoint from the server, so no de-duplication is needed here.
   const people = discover.data?.more ?? [];
 
+  const { refreshing, onRefresh } = usePullToRefresh(() =>
+    Promise.all([
+      me.refetch(),
+      discover.refetch(),
+      explore.refetch(),
+      requests.refetch(),
+    ]),
+  );
+
   const openProfile = (handle: string) => router.push(routes.collector(handle));
 
   /** Hand out my profile link — the growth loop this page exists for. */
@@ -102,13 +112,8 @@ export default function CommunityScreen() {
           keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
-              refreshing={me.isRefetching || explore.isRefetching}
-              onRefresh={() => {
-                void me.refetch();
-                void discover.refetch();
-                void explore.refetch();
-                void requests.refetch();
-              }}
+              refreshing={refreshing}
+              onRefresh={onRefresh}
               tintColor={p.ink.dim}
             />
           }

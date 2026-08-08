@@ -27,6 +27,7 @@ import { CardImage } from "@/presentation/components/CardImage";
 import { useMoney } from "@/presentation/components/Price";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { Skeleton } from "@/presentation/components/Skeleton";
+import { usePullToRefresh } from "@/presentation/hooks/usePullToRefresh";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
@@ -222,6 +223,10 @@ export function WatchingList({ showHeader = true }: WatchingListProps) {
   const alerts = usePriceAlerts({});
   const deleteMut = useDeletePriceAlert();
   const watchlist = useWatchlist();
+
+  const { refreshing, onRefresh } = usePullToRefresh(() =>
+    Promise.all([alerts.refetch(), watchlist.refetch()]),
+  );
   const unpinMut = useRemoveFromWatchlist();
   const pinned = watchlist.data ?? [];
 
@@ -287,14 +292,8 @@ export function WatchingList({ showHeader = true }: WatchingListProps) {
         }
         refreshControl={
           <RefreshControl
-            refreshing={
-              (alerts.isFetching && !alerts.isLoading) ||
-              (watchlist.isFetching && !watchlist.isLoading)
-            }
-            onRefresh={() => {
-              void alerts.refetch();
-              void watchlist.refetch();
-            }}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             tintColor={p.ink.muted}
           />
         }

@@ -72,6 +72,7 @@ import {
   formatStat,
   pluralize,
 } from "@/presentation/features/social/socialLabels";
+import { usePullToRefresh } from "@/presentation/hooks/usePullToRefresh";
 import { config } from "@/shared/config";
 import { routes } from "@/shared/routes";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
@@ -106,6 +107,10 @@ export default function CollectorProfileScreen() {
   const following = useFollowing(handle, listKind === "following");
   const removeFollower = useRemoveFollower(isSelf ? handle : null);
   const activeList = listKind === "followers" ? followers : following;
+
+  const { refreshing, onRefresh } = usePullToRefresh(() =>
+    Promise.all([profile.refetch(), collection.refetch()]),
+  );
 
   const gate = data
     ? collectionGateReason({
@@ -232,11 +237,8 @@ export default function CollectorProfileScreen() {
             contentContainerStyle={styles.content}
             refreshControl={
               <RefreshControl
-                refreshing={profile.isRefetching}
-                onRefresh={() => {
-                  void profile.refetch();
-                  void collection.refetch();
-                }}
+                refreshing={refreshing}
+                onRefresh={onRefresh}
                 tintColor={p.ink.dim}
               />
             }

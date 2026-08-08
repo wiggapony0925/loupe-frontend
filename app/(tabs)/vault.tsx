@@ -72,6 +72,7 @@ import { invalidateHoldingCaches } from "@/application/queries/invalidateHolding
 import { useMoney } from "@/presentation/components/Price";
 import { COPY } from "@/shared/copy";
 import { queryKeys } from "@/application/queries/queryKeys";
+import { usePullToRefresh } from "@/presentation/hooks/usePullToRefresh";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 type ViewMode = "list" | "grid";
@@ -112,7 +113,6 @@ export default function VaultScreen() {
   const {
     cards,
     isLoading,
-    isFetching,
     isError,
     refetch,
     copiesByCardId,
@@ -269,9 +269,11 @@ export default function VaultScreen() {
     };
   }, [sealedHoldings.data]);
 
-  const onRefresh = useCallback(() => {
-    invalidateHoldingCaches(qc);
-  }, [qc]);
+  // Manual-only: bound to `isFetching`, this spun on every focus refetch
+  // and pushed the header down (see usePullToRefresh).
+  const { refreshing, onRefresh } = usePullToRefresh(
+    useCallback(() => invalidateHoldingCaches(qc), [qc]),
+  );
 
   // Constant gutter — never changes with viewMode, so the header
   // doesn't shift when the user toggles list↔grid.
@@ -316,7 +318,7 @@ export default function VaultScreen() {
         }
         refreshControl={
           <RefreshControl
-            refreshing={isFetching}
+            refreshing={refreshing}
             onRefresh={selectionMode ? () => {} : onRefresh}
             enabled={!selectionMode}
             tintColor={p.accent.mint}
