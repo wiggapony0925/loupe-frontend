@@ -49,7 +49,8 @@ export function StoryCommentsSheet({
   const remove = useDeleteStoryComment();
   const [draft, setDraft] = useState("");
 
-  const rows = thread.data ?? [];
+  // Wire data: a comment without its author would throw on every field below.
+  const rows = (thread.data ?? []).filter((row) => row?.author?.username != null);
 
   const submit = () => {
     const body = draft.trim();

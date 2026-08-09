@@ -53,6 +53,9 @@ function PostCardImpl({
 }: PostCardProps) {
   const p = useThemedPalette();
   const author = post.author;
+  // Wire data: a post row without its author can't be rendered honestly —
+  // skip it rather than throw. (Everything on the card hangs off the author.)
+  if (!author) return null;
   const isSelf = author.relationship === "self";
   const isFollowing =
     author.relationship === "following" || author.relationship === "requested";
@@ -160,7 +163,7 @@ function PostCardImpl({
       </View>
 
       {/* ── Media ── */}
-      {post.media.length > 0 ? (
+      {(post.media?.length ?? 0) > 0 ? (
         <View style={styles.mediaWrap}>
           <PostMedia
             media={post.media}
@@ -298,7 +301,7 @@ export const PostCard = memo(PostCardImpl, (prev, next) => {
     a.viewer_has_liked === b.viewer_has_liked &&
     a.like_count === b.like_count &&
     a.comment_count === b.comment_count &&
-    a.author.relationship === b.author.relationship
+    a.author?.relationship === b.author?.relationship
   );
 });
 

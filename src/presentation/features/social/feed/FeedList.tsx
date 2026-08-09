@@ -72,7 +72,7 @@ export function FeedList({
       setReporting({
         type: "post",
         id: post.id,
-        label: `@${post.author.username}'s post`,
+        label: `@${post.author?.username ?? "a collector"}'s post`,
       }),
     onDelete: (post) => remove.mutate({ postId: post.id }),
   });
@@ -81,7 +81,7 @@ export function FeedList({
     <>
       <FlatList
         data={posts}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => item.id ?? `row-${index}`}
         ListHeaderComponent={header}
         contentContainerStyle={{ paddingBottom: bottomInset }}
         keyboardShouldPersistTaps="handled"
@@ -112,6 +112,18 @@ export function FeedList({
           query.isLoading ? (
             <View style={styles.state}>
               <ActivityIndicator color={p.ink.dim} />
+            </View>
+          ) : query.isError ? (
+            // An unreachable backend used to render as "Your feed is
+            // quiet" — a misdiagnosis that sent people hunting for
+            // collectors to follow instead of retrying.
+            <View style={styles.state}>
+              <Text style={[styles.emptyTitle, { color: p.ink.default }]}>
+                Couldn't load the feed
+              </Text>
+              <Text style={[styles.emptyBody, { color: p.ink.dim }]}>
+                Something went wrong on our side. Pull down to try again.
+              </Text>
             </View>
           ) : (
             <View style={styles.state}>

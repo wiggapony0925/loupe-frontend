@@ -1,45 +1,48 @@
 /**
- * AppSwitcher — the rail that moves between Loupe and Loupe Community.
+ * AppSwitcher — the control that moves between Loupe and Loupe Community.
  *
- * Modelled on Uber's top rail (Uber · Eats · Courier · Shops), because it
- * solves the same problem: two products that share an account and a bottom
- * bar, where the bottom bar is already full of the CURRENT product's own
- * destinations. Hanging Community off an icon in the header made it feel
- * like a page inside the wallet app rather than a place you go.
+ * A floating segmented capsule (iOS segmented control × Material 3
+ * "connected button group"), replacing the emoji-glyph underline rail that
+ * read as a plain hyperlink row. The two lanes are two PRODUCTS sharing an
+ * account, so the control has to look deliberate: one capsule, two
+ * segments, and a mint thumb that slides — the same active-state language
+ * as the island dial at the bottom of the screen.
  *
- * Why a rail and not a tab: switching here changes what the whole bottom
- * bar means. Tabs promise siblings — the same shell with different content —
- * and these two have different shells, different navbars and different
- * accent behaviour. The rail sits ABOVE the shell to say so.
+ * Motion, all of it driven by shared values (no entering/exiting layout
+ * animations — those run through the snapshot machinery that has burned us
+ * at tab-switch time before):
  *
- * The active lane is drawn with a moving underline rather than a
- * per-lane border, so the mark slides between lanes instead of blinking
- * on and off.
+ *   • The thumb SLIDES between lanes on a snappy spring and morphs to the
+ *     destination segment's width. Measured, not computed — label widths
+ *     differ per platform font metrics, so any guess is wrong somewhere.
+ *   • The incoming lane's icon gives a small pop (0.8 → 1 spring) the
+ *     moment it becomes active. Enough to feel alive, small enough to
+ *     stay out of the way.
+ *   • Press-in squishes the segment to 97% and settles back on release —
+ *     the standard iOS "this is a button" acknowledgement.
+ *   • Every spring honors the system Reduce Motion setting.
  *
- * Sized like a UTILITY row, not a masthead. The first cut used 21pt labels
- * above the brand row, which read as a second header shouting over the
- * first — the same product name twice in two sizes. It now sits UNDER the
- * navbar at caption size with a hairline beneath, the way Uber's rail sits
- * quietly above its search bar: present when you want to switch, invisible
- * when you don't.
+ * The first thumb placement never animates: the underline's slide-in on
+ * mount read as the page still loading, and the capsule inherits the rule.
  */
-import React, { useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
   type LayoutChangeEvent,
 } from "react-native";
 import Animated, {
+  ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
+  withSpring,
 } from "react-native-reanimated";
 import { router, usePathname } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useThemedPalette } from "@/presentation/theme/tokens";
+import { Search, Users, type LucideIcon } from "lucide-react-native";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
 export type Lane = "loupe" | "community";
@@ -47,10 +50,9 @@ export type Lane = "loupe" | "community";
 interface LaneSpec {
   key: Lane;
   label: string;
-  /** The glyph. Emoji, matching the reference rail — a monochrome icon set
-   *  at this size reads as a toolbar, and this is meant to read as a
-   *  choice between two products. */
-  glyph: string;
+  /** Proper vector glyph — the emoji it replaces rendered at whatever
+   *  weight the OS felt like and matched nothing else in the app. */
+  Icon: LucideIcon;
   go: () => void;
 }
 
@@ -58,109 +60,222 @@ const LANES: LaneSpec[] = [
   {
     key: "loupe",
     label: "Loupe",
-    glyph: "🔍",
+    Icon: Search,
     go: () => router.navigate(routes.home()),
   },
   {
     key: "community",
     label: "Community",
-    glyph: "👥",
+    Icon: Users,
     go: () => router.navigate(routes.community()),
   },
 ];
 
-export function AppSwitcher({ active }: { active: Lane }) {
+/** One spring for every move the capsule makes, so slide, pop and squish
+ *  feel like the same material. Snappy but never overshooting the pill. */
+const SPRING = {
+  damping: 20,
+  stiffness: 320,
+  mass: 0.65,
+  reduceMotion: ReduceMotion.System,
+} as const;
+
+/**
+ * Whether ANY switcher instance has placed its thumb this JS session.
+ *
+ * Each screen mounts its own capsule, so without shared memory a freshly
+ * mounted instance would render with the thumb already parked and the
+ * slide would only ever play on the OUTGOING screen — mostly hidden under
+ * the navigator's transition. Once something has been on screen, a NEW
+ * instance mounting means a navigation arrival, and with exactly two lanes
+ * "where the thumb came from" is simply the other lane. (A third lane
+ * would need this to become a real last-lane record.) Module scope on
+ * purpose: presentation continuity, not app state.
+ */
+let everPlaced = false;
+
+export function AppSwitcher({ active }: { active?: Lane }) {
   const p = useThemedPalette();
-  // Where the underline sits and how wide it is. Measured rather than
-  // computed: the labels are different lengths and the font metrics differ
-  // per platform, so any guess is wrong on one of them.
+  // The active lane comes from the PATHNAME, not from a per-screen prop.
+  // Both screens keep their switcher mounted (tabs don't unmount), so a
+  // static prop meant no instance ever saw the lane CHANGE — and the thumb
+  // never actually slid. Deriving it from the route makes every switch
+  // animate on whichever instance is on screen, and the two instances can
+  // never disagree with the route. The prop remains as an override for
+  // tests and previews.
+  const fromPath = useActiveLane();
+  const lane = active ?? fromPath;
+  // Thumb position + width in the capsule's coordinate space. Measured from
+  // each segment's onLayout because font metrics differ per platform.
   const x = useSharedValue(0);
   const w = useSharedValue(0);
+  const placed = useRef(false);
   const measured = useRef<Record<string, { x: number; width: number }>>({});
+
+  const placeThumb = useCallback(
+    (key: Lane, animated: boolean) => {
+      const l = measured.current[key];
+      if (!l) return;
+      if (animated) {
+        x.value = withSpring(l.x, SPRING);
+        w.value = withSpring(l.width, SPRING);
+      } else {
+        x.value = l.x;
+        w.value = l.width;
+      }
+    },
+    [x, w],
+  );
 
   const onLaneLayout = (key: Lane) => (event: LayoutChangeEvent) => {
     const { x: lx, width } = event.nativeEvent.layout;
     measured.current[key] = { x: lx, width };
-    if (key === active) {
-      // The FIRST measurement must not animate — the underline would slide
-      // in from zero on every mount, which reads as the page loading.
-      const first = w.value === 0;
-      const inset = 4;
-      if (first) {
-        x.value = lx + inset;
-        w.value = Math.max(0, width - inset * 2);
-      } else {
-        x.value = withTiming(lx + inset, { duration: 220 });
-        w.value = withTiming(Math.max(0, width - inset * 2), { duration: 220 });
-      }
+    if (placed.current) return;
+    const active = measured.current[lane];
+    if (!active) return;
+    // A mount while the app is already running is a navigation ARRIVAL:
+    // seed the thumb at the other lane and spring it home, so the incoming
+    // screen plays the slide. A cold start snaps — a thumb sliding in on
+    // first mount reads as the page loading, not as a control at rest.
+    const other = LANES.find((l) => l.key !== lane)?.key;
+    const from = everPlaced && other ? measured.current[other] : null;
+    if (from) {
+      x.value = from.x;
+      w.value = from.width;
+      x.value = withSpring(active.x, SPRING);
+      w.value = withSpring(active.width, SPRING);
+      placed.current = true;
+      everPlaced = true;
+    } else if (key === lane) {
+      placeThumb(key, false);
+      placed.current = true;
+      everPlaced = true;
     }
   };
 
-  const underline = useAnimatedStyle(() => ({
+  // Re-run the slide when the active lane changes after mount (the layout
+  // handler only fires on size changes, not on re-renders).
+  useEffect(() => {
+    if (placed.current) placeThumb(lane, true);
+  }, [lane, placeThumb]);
+
+  const thumbStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: x.value }],
     width: w.value,
   }));
 
   return (
-    <View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        // Bleeds past the gutter so a third lane would sit half-visible at
-        // the edge and read as scrollable — the standing rule for every
-        // horizontal surface in the app.
-        contentContainerStyle={styles.row}
+    <View style={styles.wrap}>
+      <View
+        accessibilityRole="tablist"
+        style={[
+          styles.capsule,
+          {
+            backgroundColor: p.bg.elevated,
+            borderColor: p.line.default,
+          },
+        ]}
       >
-        {LANES.map((lane) => {
-          const on = lane.key === active;
-          return (
-            <Pressable
-              key={lane.key}
-              onLayout={onLaneLayout(lane.key)}
-              onPress={() => {
-                if (on) return;
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
-                  () => {},
-                );
-                lane.go();
-              }}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: on }}
-              accessibilityLabel={
-                lane.key === "community" ? "Loupe Community" : "Loupe"
-              }
-              style={({ pressed }) => [styles.lane, pressed && { opacity: 0.6 }]}
-            >
-              <Text style={styles.glyph}>{lane.glyph}</Text>
-              <Text
-                style={[
-                  styles.label,
-                  { color: on ? p.ink.default : p.ink.dim },
-                  on && styles.labelOn,
-                ]}
-              >
-                {lane.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-
         <Animated.View
-          style={[
-            styles.underline,
-            { backgroundColor: p.ink.default },
-            underline,
-          ]}
           pointerEvents="none"
+          style={[
+            styles.thumb,
+            {
+              backgroundColor: withAlpha(p.accent.mint, 0.16),
+              borderColor: withAlpha(p.accent.mint, 0.45),
+            },
+            thumbStyle,
+          ]}
         />
-      </ScrollView>
-      <View style={[styles.hairline, { backgroundColor: p.line.default }]} />
+        {LANES.map((spec) => (
+          <LaneButton
+            key={spec.key}
+            lane={spec}
+            on={spec.key === lane}
+            onLayout={onLaneLayout(spec.key)}
+            palette={p}
+          />
+        ))}
+      </View>
     </View>
   );
 }
 
+/** One segment: icon + label, with the press squish and the activation pop. */
+function LaneButton({
+  lane,
+  on,
+  onLayout,
+  palette: p,
+}: {
+  lane: LaneSpec;
+  on: boolean;
+  onLayout: (event: LayoutChangeEvent) => void;
+  palette: ReturnType<typeof useThemedPalette>;
+}) {
+  const { Icon } = lane;
+  const press = useSharedValue(1);
+  const pop = useSharedValue(1);
+  const wasOn = useRef(on);
+
+  // Pop the icon when this lane BECOMES active — not on mount, or both
+  // icons bounce on first render.
+  useEffect(() => {
+    if (on && !wasOn.current) {
+      pop.value = 0.8;
+      pop.value = withSpring(1, { ...SPRING, damping: 14 });
+    }
+    wasOn.current = on;
+  }, [on, pop]);
+
+  const squish = useAnimatedStyle(() => ({
+    transform: [{ scale: press.value }],
+  }));
+  const popStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pop.value }],
+  }));
+
+  const tint = on ? p.accent.mint : p.ink.dim;
+
+  return (
+    <Pressable
+      onLayout={onLayout}
+      onPressIn={() => {
+        press.value = withSpring(0.96, SPRING);
+      }}
+      onPressOut={() => {
+        press.value = withSpring(1, SPRING);
+      }}
+      onPress={() => {
+        if (on) return;
+        Haptics.selectionAsync().catch(() => {});
+        lane.go();
+      }}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: on }}
+      accessibilityLabel={lane.key === "community" ? "Loupe Community" : "Loupe"}
+      style={styles.lane}
+    >
+      <Animated.View style={[styles.laneInner, squish]}>
+        <Animated.View style={popStyle}>
+          <Icon size={14} color={tint} strokeWidth={on ? 2.6 : 2.1} />
+        </Animated.View>
+        <Text
+          style={[
+            styles.label,
+            { color: on ? p.ink.default : p.ink.dim },
+            on && styles.labelOn,
+          ]}
+        >
+          {lane.label}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 /**
- * The wordmark under the rail.
+ * The wordmark beside the brand mark.
  *
  * "Loupe" everywhere, "Loupe **Community**" in the community lane with the
  * second word in the app's green. One component so the two spellings can't
@@ -179,32 +294,39 @@ export function AppWordmark({ lane }: { lane: Lane }) {
 }
 
 const styles = StyleSheet.create({
-  row: {
+  wrap: {
+    // 20 = the screens' shared gutter, so the capsule's edge sits flush
+    // with the brand mark above it.
+    paddingHorizontal: 20,
+    paddingTop: 2,
+    paddingBottom: 10,
+    flexDirection: "row",
+  },
+  capsule: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 3,
   },
-  lane: {
+  thumb: {
+    position: "absolute",
+    top: 3,
+    bottom: 3,
+    left: 0,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  lane: { borderRadius: 999 },
+  laneInner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 4,
-    paddingTop: 4,
-    // Room for the underline to sit under the text without touching it.
-    paddingBottom: 9,
+    gap: 6,
+    paddingHorizontal: 13,
+    height: 30,
   },
-  glyph: { fontSize: 12 },
   label: { fontSize: 13, fontWeight: "600", letterSpacing: -0.1 },
   labelOn: { fontWeight: "800" },
-  underline: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    height: 2,
-    borderRadius: 2,
-  },
-  hairline: { height: StyleSheet.hairlineWidth },
   wordmark: { fontSize: 17, fontWeight: "700", letterSpacing: -0.3 },
 });
 

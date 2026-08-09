@@ -350,6 +350,9 @@ export interface StoryTrayEntryWire {
   has_unseen: boolean;
   latest_at: string;
   preview_url: string | null;
+  /** What preview_url points at. Optional — older backends don't send it,
+   *  and an absent value is treated as "image". */
+  kind?: "image" | "video" | string;
 }
 
 export interface StoryTrayWire {

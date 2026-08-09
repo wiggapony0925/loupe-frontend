@@ -284,7 +284,7 @@ export default function CommunityScreen() {
 
                   {/* Featured collectors — operator-curated when an admin
                       has set a list, ranked otherwise. */}
-                  {(discover.data?.featured.length ?? 0) > 0 ? (
+                  {(discover.data?.featured?.length ?? 0) > 0 ? (
                     <Section
                       title="Featured collectors"
                       subtitle="Vaults worth following."
@@ -302,7 +302,7 @@ export default function CommunityScreen() {
                       "three people you follow also follow them". Ranked by
                       that count server-side, and empty until you follow
                       someone — which is why it sits below Featured. */}
-                  {(discover.data?.followed_by_friends.length ?? 0) > 0 ? (
+                  {(discover.data?.followed_by_friends?.length ?? 0) > 0 ? (
                     <Section
                       title="Followed by people you follow"
                       subtitle="Your corner of the hobby, one step out."

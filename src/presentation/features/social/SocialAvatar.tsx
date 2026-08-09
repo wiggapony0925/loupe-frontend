@@ -38,7 +38,9 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
  * getApiBaseUrl() also tracks the runtime sticky-switch to the fallback base.
  */
 export function absolutize(url: string | null | undefined): string | null {
-  if (!url) return null;
+  // The type says string, but this is wire data — a non-string here must
+  // degrade to the monogram, not throw mid-render.
+  if (!url || typeof url !== "string") return null;
   return url.startsWith("/") ? `${getApiBaseUrl()}${url}` : url;
 }
 
@@ -73,7 +75,12 @@ export function SocialAvatar({
   const tint = p.ink.muted;
   const ring = isPro ? { borderWidth: 2, borderColor: p.accent.mint } : null;
   const resolved = absolutize(url);
-  const initial = (name?.trim() || handle).charAt(0).toUpperCase();
+  // Wire data again: `handle` is typed required, but a profile row missing
+  // its username reached this exact line and killed the whole app — this
+  // renders on the island navbar, OUTSIDE the community CrashGuard.
+  const nameStr = typeof name === "string" ? name.trim() : "";
+  const handleStr = typeof handle === "string" ? handle : "";
+  const initial = ((nameStr || handleStr).charAt(0) || "•").toUpperCase();
 
   // A failed load must not poison the component forever: when the URL
   // changes (a fresh upload bumps ?v=N), try the image again.

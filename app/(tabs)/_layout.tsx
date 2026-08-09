@@ -41,11 +41,11 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { useSettings } from "@/application/stores/settingsStore";
 import { routes } from "@/shared/routes";
 import { IslandNavPill } from "@/presentation/navigation/IslandNavPill";
+import { islandShellLayout } from "@/presentation/navigation/islandNavMotion";
 import {
-  islandContentIn,
-  islandContentOut,
-  islandShellLayout,
-} from "@/presentation/navigation/islandNavMotion";
+  IslandFaceBoundary,
+  IslandFaceSwap,
+} from "@/presentation/navigation/IslandFaceSwap";
 import {
   useActiveIsland,
   type IslandPresentation,
@@ -287,8 +287,12 @@ function tabItem(
 /**
  * Persistent glass pill — shell never fades; only inner content crossfades
  * when a contextual face (vault multi-select, community rail, …) replaces
- * the tab dial. Keying the inner view by the face's `key` re-runs the same
- * morph for EVERY state change, so new modes inherit the animation for free.
+ * the tab dial. The swap runs through IslandFaceSwap: shared-value fades
+ * with the outgoing face unmounted only AFTER its fade — never through
+ * entering/exiting snapshots, which crashed at tab-switch time when the
+ * outgoing subtree held a live GestureDetector. The boundary keeps a
+ * render error inside a face from taking down the whole app: it degrades
+ * to the tab dial, which every face sits beside anyway.
  */
 function LoupeFloatingIsland({
   bottomInset,
@@ -313,14 +317,11 @@ function LoupeFloatingIsland({
     >
       <Animated.View layout={islandShellLayout} style={{ position: "relative" }}>
         <IslandNavPill>
-          <Animated.View
-            key={island?.key ?? "tab-dial"}
-            entering={islandContentIn}
-            exiting={islandContentOut}
-            style={{ flexDirection: "row", alignItems: "center" }}
-          >
-            {island ? <island.Content /> : tabDial}
-          </Animated.View>
+          <IslandFaceBoundary fallback={tabDial ?? null}>
+            <IslandFaceSwap faceKey={island?.key ?? "tab-dial"}>
+              {island ? <island.Content /> : tabDial}
+            </IslandFaceSwap>
+          </IslandFaceBoundary>
         </IslandNavPill>
         {Badge ? <Badge /> : null}
       </Animated.View>
