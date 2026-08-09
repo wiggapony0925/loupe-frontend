@@ -105,6 +105,16 @@ export const queryKeys = {
     followers: (handle: string) => ["social", "followers", handle] as const,
     following: (handle: string) => ["social", "following", handle] as const,
     cardOwners: (cardRef: string) => ["social", "card-owners", cardRef] as const,
+    // ── The feed ──
+    feed: (tab: string) => ["social", "feed", tab] as const,
+    userPosts: (handle: string) => ["social", "user-posts", handle] as const,
+    hashtagPosts: (tag: string) => ["social", "hashtag-posts", tag] as const,
+    trendingHashtags: () => ["social", "trending-hashtags"] as const,
+    searchAll: (q: string) => ["social", "search-all", q] as const,
+    post: (id: string) => ["social", "post", id] as const,
+    comments: (postId: string) => ["social", "comments", postId] as const,
+    replies: (commentId: string) => ["social", "replies", commentId] as const,
+    reportReasons: () => ["social", "report-reasons"] as const,
   },
   stores: {
     places: (q: string) => ["places", q] as const,

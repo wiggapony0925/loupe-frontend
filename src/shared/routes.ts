@@ -41,10 +41,18 @@ export const routes = {
   legal: (doc: "terms" | "privacy") => `/legal/${doc}` as const,
   /** Deep link to the standalone price-alert list. */
   watchlist: () => "/watchlist" as const,
-  /** Community — follows, collector profiles, shared vaults. NATIVE (the
+  /** Community — the FEED (Following · For You · Your Posts). NATIVE (the
    *  WebView embed it replaced couldn't show the tab bar). Lives in the tab
    *  group so the bottom bar stays on screen. */
   community: () => "/community" as const,
+  /** Discovery: featured collectors, people to follow, requests, shops. */
+  communityPeople: () => "/community/people" as const,
+  /** Write a post. */
+  communityCompose: () => "/community/compose" as const,
+  /** One post — the permalink a notification opens. */
+  communityPost: (id: string) => `/community/p/${enc(id)}`,
+  /** Every post carrying a tag. */
+  communityTag: (tag: string) => `/community/tag/${enc(tag)}`,
   /** A collector's profile. */
   collector: (handle: string) => `/u/${enc(handle)}`,
   /** My own profile — the same screen, resolved from my claimed handle. */

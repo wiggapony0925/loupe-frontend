@@ -2132,6 +2132,48 @@
         "title": "BlogStatusEnum",
         "type": "string"
       },
+      "Body_create_post_v1_social_posts_post": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 2200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Caption. #tags and @mentions in this text are indexed on write.",
+            "title": "Body"
+          },
+          "card_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional catalog card this post showcases.",
+            "title": "Card Id"
+          },
+          "images": {
+            "default": [],
+            "description": "Up to 4 JPEG/PNG/WebP images, 12 MB each.",
+            "items": {
+              "contentMediaType": "application/octet-stream",
+              "type": "string"
+            },
+            "title": "Images",
+            "type": "array"
+          }
+        },
+        "title": "Body_create_post_v1_social_posts_post",
+        "type": "object"
+      },
       "Body_identify_card_v1_cards_identify_post": {
         "properties": {
           "image": {
@@ -3512,6 +3554,141 @@
         "title": "ColumnInfo",
         "type": "object"
       },
+      "CommentCreate": {
+        "description": "Body for ``POST /v1/social/posts/{id}/comments``.",
+        "properties": {
+          "body": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "CommentCreate",
+        "type": "object"
+      },
+      "CommentRead": {
+        "description": "One comment, or one reply (``parent_id`` set).",
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/PostAuthor"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "can_delete": {
+            "default": false,
+            "title": "Can Delete",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "like_count": {
+            "default": 0,
+            "title": "Like Count",
+            "type": "integer"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "post_id": {
+            "format": "uuid",
+            "title": "Post Id",
+            "type": "string"
+          },
+          "replies": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CommentRead"
+            },
+            "title": "Replies",
+            "type": "array"
+          },
+          "reply_count": {
+            "default": 0,
+            "title": "Reply Count",
+            "type": "integer"
+          },
+          "viewer_has_liked": {
+            "default": false,
+            "title": "Viewer Has Liked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "post_id",
+          "author",
+          "body",
+          "created_at"
+        ],
+        "title": "CommentRead",
+        "type": "object"
+      },
+      "CommentThreadRead": {
+        "description": "``GET /v1/social/posts/{id}/comments`` \u2014 top-level comments, oldest\nfirst (a conversation reads down, unlike a feed).",
+        "properties": {
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CommentRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "CommentThreadRead",
+        "type": "object"
+      },
       "DatabaseOverview": {
         "properties": {
           "dialect": {
@@ -4563,6 +4740,32 @@
         "title": "FeaturedView",
         "type": "object"
       },
+      "FeedRead": {
+        "description": "A page of posts. ``next_cursor`` is opaque \u2014 pass it back verbatim.\n\nCursors rather than offsets: a feed gains rows at the top while it's\nbeing read, and offset paging responds to that by showing page 2's first\npost twice. The token encodes the position, so a page is stable no\nmatter what arrives above it.",
+        "properties": {
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PostRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "title": "FeedRead",
+        "type": "object"
+      },
       "FollowRequestRead": {
         "description": "One pending incoming follow request (the requester's card).",
         "properties": {
@@ -5606,6 +5809,25 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HashtagRead": {
+        "description": "One tag chip.",
+        "properties": {
+          "post_count": {
+            "default": 0,
+            "title": "Post Count",
+            "type": "integer"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag"
+        ],
+        "title": "HashtagRead",
         "type": "object"
       },
       "HealthCheck": {
@@ -7201,6 +7423,173 @@
         "title": "MfaVerifyRequest",
         "type": "object"
       },
+      "ModerationCaseRead": {
+        "description": "One row in the review queue.",
+        "properties": {
+          "author_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Id"
+          },
+          "author_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Username"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reason_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Label"
+          },
+          "reporter_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporter Username"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "target_type": {
+            "title": "Target Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "target_type",
+          "target_id",
+          "source",
+          "status",
+          "created_at"
+        ],
+        "title": "ModerationCaseRead",
+        "type": "object"
+      },
+      "ModerationQueueRead": {
+        "properties": {
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ModerationCaseRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "open_count": {
+            "default": 0,
+            "title": "Open Count",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "ModerationQueueRead",
+        "type": "object"
+      },
       "NearbyStore": {
         "description": "One physical shop near the caller. Positions are WGS84.",
         "properties": {
@@ -7932,6 +8321,295 @@
           }
         },
         "title": "PlanLimits",
+        "type": "object"
+      },
+      "PostAuthor": {
+        "description": "Who wrote a post or comment.\n\nDeliberately leaner than :class:`SocialUserCard`: a feed page shows 20\nauthors and a card would drag a collection-peek query along with each\none. Everything a byline draws is here and nothing else.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "is_admin": {
+            "default": false,
+            "title": "Is Admin",
+            "type": "boolean"
+          },
+          "is_pro": {
+            "default": false,
+            "title": "Is Pro",
+            "type": "boolean"
+          },
+          "relationship": {
+            "default": "none",
+            "enum": [
+              "self",
+              "following",
+              "requested",
+              "none"
+            ],
+            "title": "Relationship",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username"
+        ],
+        "title": "PostAuthor",
+        "type": "object"
+      },
+      "PostCardRef": {
+        "description": "The catalog card a post showcases \u2014 what makes this a collector's\nfeed rather than a photo app. Enough to draw a tappable chip.\n\nCarries NO price on purpose. A feed row is a snapshot of a moment and\nwould go stale in place, while the card page it links to holds the\nauthoritative, grade-aware number; a second figure drifting beside it\nwould only ever be a source of \"which one is right?\".",
+        "properties": {
+          "card_id": {
+            "format": "uuid",
+            "title": "Card Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "set_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Name"
+          },
+          "tcg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tcg"
+          }
+        },
+        "required": [
+          "card_id"
+        ],
+        "title": "PostCardRef",
+        "type": "object"
+      },
+      "PostLikeRead": {
+        "description": "New like state + the fresh total, so the client never guesses.",
+        "properties": {
+          "like_count": {
+            "default": 0,
+            "title": "Like Count",
+            "type": "integer"
+          },
+          "liked": {
+            "title": "Liked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "liked"
+        ],
+        "title": "PostLikeRead",
+        "type": "object"
+      },
+      "PostMediaRead": {
+        "description": "One image in a post's carousel.",
+        "properties": {
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "position": {
+            "default": 0,
+            "title": "Position",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "id",
+          "url"
+        ],
+        "title": "PostMediaRead",
+        "type": "object"
+      },
+      "PostRead": {
+        "description": "One post as the viewer sees it.",
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/PostAuthor"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "can_delete": {
+            "default": false,
+            "title": "Can Delete",
+            "type": "boolean"
+          },
+          "card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PostCardRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "comment_count": {
+            "default": 0,
+            "title": "Comment Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "hashtags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Hashtags",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "like_count": {
+            "default": 0,
+            "title": "Like Count",
+            "type": "integer"
+          },
+          "media": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PostMediaRead"
+            },
+            "title": "Media",
+            "type": "array"
+          },
+          "mentions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Mentions",
+            "type": "array"
+          },
+          "viewer_has_liked": {
+            "default": false,
+            "title": "Viewer Has Liked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "author",
+          "created_at"
+        ],
+        "title": "PostRead",
         "type": "object"
       },
       "PresignedUpload": {
@@ -8732,6 +9410,49 @@
           "subtitle"
         ],
         "title": "RegistryRecipe",
+        "type": "object"
+      },
+      "ReportCreate": {
+        "description": "Body for ``POST /v1/social/reports``.",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "maxLength": 32,
+            "title": "Reason",
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "target_type": {
+            "enum": [
+              "post",
+              "comment",
+              "profile"
+            ],
+            "title": "Target Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_type",
+          "target_id",
+          "reason"
+        ],
+        "title": "ReportCreate",
         "type": "object"
       },
       "ReportDownloadResponse": {
@@ -11508,6 +12229,29 @@
           "tcg"
         ],
         "title": "SocialSealedItem",
+        "type": "object"
+      },
+      "SocialSearchRead": {
+        "description": "``GET /v1/social/search/all`` \u2014 one query, both kinds of result.\n\nComposed server-side so the search bar's ranking (which handles beat\nwhich tags) is one decision in one place rather than two lists the\nclients have to interleave themselves.",
+        "properties": {
+          "hashtags": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/HashtagRead"
+            },
+            "title": "Hashtags",
+            "type": "array"
+          },
+          "users": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SocialUserCard"
+            },
+            "title": "Users",
+            "type": "array"
+          }
+        },
+        "title": "SocialSearchRead",
         "type": "object"
       },
       "SocialUserCard": {
@@ -17061,6 +17805,140 @@
           }
         ],
         "summary": "Remove one collector from the rail (the tag's \u00d7)",
+        "tags": [
+          "admin-social"
+        ]
+      }
+    },
+    "/v1/admin/social/moderation": {
+      "get": {
+        "description": "One list for both sources. A moderator asks \"what needs me\", not\n\"which system noticed\".",
+        "operationId": "moderation_queue_v1_admin_social_moderation_get",
+        "parameters": [
+          {
+            "description": "`open`, `dismissed` or `removed`.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "description": "`open`, `dismissed` or `removed`.",
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationQueueRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The review queue (auto-flags + user reports, worst first)",
+        "tags": [
+          "admin-social"
+        ]
+      }
+    },
+    "/v1/admin/social/moderation/{case_id}/resolve": {
+      "post": {
+        "description": "Resolving one case answers every other open case about the same\nthing \u2014 nine duplicate reports left open is how a queue becomes noise.",
+        "operationId": "resolve_case_v1_admin_social_moderation__case_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "`dismiss` or `remove`.",
+            "in": "query",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "description": "`dismiss` or `remove`.",
+              "title": "Action",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationCaseRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Dismiss a case, or remove what it points at",
         "tags": [
           "admin-social"
         ]
@@ -25657,6 +26535,212 @@
         ]
       }
     },
+    "/v1/social/comments/{comment_id}": {
+      "delete": {
+        "operationId": "delete_comment_v1_social_comments__comment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete a comment",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
+    "/v1/social/comments/{comment_id}/like": {
+      "delete": {
+        "operationId": "unlike_comment_v1_social_comments__comment_id__like_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostLikeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unlike a comment",
+        "tags": [
+          "social-feed"
+        ]
+      },
+      "post": {
+        "operationId": "like_comment_v1_social_comments__comment_id__like_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostLikeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Like a comment",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
+    "/v1/social/comments/{comment_id}/replies": {
+      "get": {
+        "operationId": "list_replies_v1_social_comments__comment_id__replies_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentThreadRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The rest of a comment's replies",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
     "/v1/social/discover": {
       "get": {
         "description": "Ranked and split by the backend \u2014 `featured` and `more` are disjoint;\nclients render them verbatim (no slicing, no dedupe, no ordering).",
@@ -25708,6 +26792,216 @@
         "summary": "The Community browse grid \u2014 card art from public collections",
         "tags": [
           "social"
+        ]
+      }
+    },
+    "/v1/social/feed": {
+      "get": {
+        "description": "What each tab MEANS is decided here, not in the clients.",
+        "operationId": "get_feed_v1_social_feed_get",
+        "parameters": [
+          {
+            "description": "`following` \u2014 people you follow, plus your own posts, newest first. `foryou` \u2014 recent posts ranked by engagement, decayed by age, excluding your own. `mine` \u2014 just your posts.",
+            "in": "query",
+            "name": "tab",
+            "required": false,
+            "schema": {
+              "default": "following",
+              "description": "`following` \u2014 people you follow, plus your own posts, newest first. `foryou` \u2014 recent posts ranked by engagement, decayed by age, excluding your own. `mine` \u2014 just your posts.",
+              "title": "Tab",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque; pass back verbatim.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque; pass back verbatim.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The community feed (following \u00b7 for you \u00b7 mine)",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
+    "/v1/social/hashtags/trending": {
+      "get": {
+        "operationId": "trending_hashtags_v1_social_hashtags_trending_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 30,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HashtagRead"
+                  },
+                  "title": "Response Trending Hashtags V1 Social Hashtags Trending Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Trending tags (the chip row)",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
+    "/v1/social/hashtags/{tag}/posts": {
+      "get": {
+        "operationId": "hashtag_posts_v1_social_hashtags__tag__posts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tag",
+            "required": true,
+            "schema": {
+              "title": "Tag",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Posts carrying a tag",
+        "tags": [
+          "social-feed"
         ]
       }
     },
@@ -25887,6 +27181,476 @@
         ]
       }
     },
+    "/v1/social/posts": {
+      "post": {
+        "description": "Multipart, so text and photos arrive in ONE request \u2014 a two-step\n\"create then attach\" leaves a half-made post behind whenever the second\ncall fails.",
+        "operationId": "create_post_v1_social_posts_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_post_v1_social_posts_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish a post",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
+    "/v1/social/posts/media/{media_id}": {
+      "get": {
+        "description": "Public like the avatar endpoint: an ``<img>`` tag carries no auth on\nany of our clients. The URL is unguessable, and the *post* around it\nstays behind the privacy gate.",
+        "operationId": "get_post_media_v1_social_posts_media__media_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "media_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Media Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post image bytes",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
+    "/v1/social/posts/{post_id}": {
+      "delete": {
+        "operationId": "delete_post_v1_social_posts__post_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete a post",
+        "tags": [
+          "social-feed"
+        ]
+      },
+      "get": {
+        "operationId": "get_post_v1_social_posts__post_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One post",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
+    "/v1/social/posts/{post_id}/comments": {
+      "get": {
+        "description": "Top-level comments oldest first, each carrying its first two replies.",
+        "operationId": "list_comments_v1_social_posts__post_id__comments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentThreadRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "A post's comment thread",
+        "tags": [
+          "social-feed"
+        ]
+      },
+      "post": {
+        "operationId": "add_comment_v1_social_posts__post_id__comments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Comment on a post (or reply to a comment)",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
+    "/v1/social/posts/{post_id}/like": {
+      "delete": {
+        "operationId": "unlike_post_v1_social_posts__post_id__like_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostLikeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unlike a post",
+        "tags": [
+          "social-feed"
+        ]
+      },
+      "post": {
+        "operationId": "like_post_v1_social_posts__post_id__like_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostLikeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Like a post",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
+    "/v1/social/report-reasons": {
+      "get": {
+        "description": "Server-owned so both clients offer the SAME closed list \u2014 a reason\none client can send and the other can't is a reason nobody counts.",
+        "operationId": "report_reasons_v1_social_report_reasons_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Report Reasons V1 Social Report Reasons Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The reasons a report can carry",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
+    "/v1/social/reports": {
+      "post": {
+        "description": "Reporting the same thing twice is idempotent, not a second vote.",
+        "operationId": "create_report_v1_social_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationCaseRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Report a post, comment or profile",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
     "/v1/social/requests": {
       "get": {
         "operationId": "list_requests_v1_social_requests_get",
@@ -26061,6 +27825,68 @@
         "summary": "Find collectors by handle or name",
         "tags": [
           "social"
+        ]
+      }
+    },
+    "/v1/social/search/all": {
+      "get": {
+        "description": "One request behind the feed's search bar. Composing both halves here\nkeeps their relative ranking a single decision rather than something\neach client re-invents.",
+        "operationId": "search_all_v1_social_search_all_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 60,
+              "minLength": 2,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 25,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialSearchRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search users AND hashtags in one call",
+        "tags": [
+          "social-feed"
         ]
       }
     },
@@ -26644,6 +28470,81 @@
         "summary": "Appreciate a collector's collection",
         "tags": [
           "social"
+        ]
+      }
+    },
+    "/v1/social/users/{username}/posts": {
+      "get": {
+        "operationId": "get_user_posts_v1_social_users__username__posts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "A collector's posts (privacy-gated)",
+        "tags": [
+          "social-feed"
         ]
       }
     },

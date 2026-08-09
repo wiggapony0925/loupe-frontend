@@ -4,7 +4,11 @@
  * The tab dial morphs into a purpose-built rail (same crossfade as vault
  * multi-select — the shared island motion runs off the face's key):
  *
- *   [People] · [Home, mint center] · [My profile]
+ *   [Feed] · [People] · [Home, mint center] · [Alerts] · [My profile]
+ *
+ * Five slots, symmetric around the center FAB, and they are the community
+ * micro-app's whole map: the stream, the directory, the way out, the inbox,
+ * and you. Anything not reachable from here needs a reason.
  *
  * It renders through the SHARED IslandDial, so the island's signature
  * press-and-drag page switching works here exactly like it does on the main
@@ -17,8 +21,9 @@ import React from "react";
 import { Pressable, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useIsFocused } from "@react-navigation/native";
-import { Home, UserRound, Users } from "lucide-react-native";
+import { Bell, Home, Newspaper, UserRound, Users } from "lucide-react-native";
 import { router, usePathname } from "expo-router";
+import { useUnreadNotificationCount } from "@/application/notifications/useNotificationFeed";
 import { useSocialMe } from "@/application/queries/social/useSocial";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import {
@@ -38,6 +43,7 @@ function CommunityIslandContent() {
   const me = useSocialMe();
   const profile = me.data?.profile ?? null;
   const pathname = usePathname();
+  const unread = useUnreadNotificationCount();
 
   // Which slot is "here": the people list on /community, my own profile on
   // /u/@me (or my claimed handle). On someone else's profile neither is
@@ -51,17 +57,29 @@ function CommunityIslandContent() {
       handle === "me" ||
       handle === profile?.username?.toLowerCase());
   const activeKey =
-    pathname === "/community" ? "people" : isMyHandle ? "profile" : null;
+    pathname === "/community"
+      ? "feed"
+      : pathname.startsWith("/community/people")
+        ? "people"
+        : pathname === "/notifications"
+          ? "alerts"
+          : isMyHandle
+            ? "profile"
+            : null;
 
   const commit = (key: string) => {
-    if (key === "people") {
-      // Idempotent — a commit from a drilled-in profile lands on the list.
+    if (key === "feed") {
+      // Idempotent — a commit from a drilled-in page lands on the stream.
       router.navigate(routes.community());
+    } else if (key === "people") {
+      router.navigate(routes.communityPeople());
+    } else if (key === "alerts") {
+      router.push(routes.notifications());
     } else if (key === "profile") {
       if (profile) {
         router.push(routes.myProfile());
       } else {
-        // No handle yet — the claim card is front and center on Community.
+        // No handle yet — the claim card is front and center on the feed.
         router.navigate(routes.community());
       }
     }
@@ -69,8 +87,19 @@ function CommunityIslandContent() {
 
   const items: DialItem[] = [
     {
+      key: "feed",
+      label: "Feed — posts from collectors you follow",
+      render: (active) => (
+        <Newspaper
+          size={20}
+          color={active ? p.accent.mint : p.ink.dim}
+          strokeWidth={active ? 2.5 : 2}
+        />
+      ),
+    },
+    {
       key: "people",
-      label: "Community — find and follow collectors",
+      label: "Collectors — find and follow people",
       render: (active) => (
         <Users
           size={20}
@@ -86,6 +115,32 @@ function CommunityIslandContent() {
       selectable: false,
       width: 60,
       render: () => <HomeFab palette={p} />,
+    },
+    {
+      key: "alerts",
+      label: unread > 0 ? `Notifications, ${unread} unread` : "Notifications",
+      render: (active) => (
+        <View>
+          <Bell
+            size={20}
+            color={active ? p.accent.mint : p.ink.dim}
+            strokeWidth={active ? 2.5 : 2}
+          />
+          {unread > 0 ? (
+            <View
+              style={{
+                position: "absolute",
+                top: -2,
+                right: -3,
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: p.accent.rose,
+              }}
+            />
+          ) : null}
+        </View>
+      ),
     },
     {
       key: "profile",

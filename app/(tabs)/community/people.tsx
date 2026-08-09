@@ -1,7 +1,11 @@
 /**
- * Community — native.
+ * Community · People — the collector directory.
  *
- * Restructured around what a user actually does here, in order:
+ * This WAS the Community home. The feed took that slot (a social product's
+ * home is the stream), and finding a specific person moved here — reachable
+ * from the feed's search bar and from the island navbar's people slot.
+ *
+ * Structured around what a user actually does here, in order:
  *   1. Claim a handle — nothing else works until this exists.
  *   2. Search — pinned under the title; you came looking for someone.
  *   3. Follow requests — one line each, decide without leaving the list.
@@ -15,7 +19,7 @@
  * made the reader infer why each list was there.
  *
  * While focused, the island navbar morphs into the community rail
- * (People · Home · My profile) — see CommunityIsland.
+ * (Feed · People · Home · My profile) — see CommunityIsland.
  */
 import React, { useState } from "react";
 import {
@@ -114,7 +118,7 @@ export default function CommunityScreen() {
               profile), the same anatomy as the Settings hero. */}
           <View style={styles.head}>
             <View style={styles.headText}>
-              <Text style={[styles.title, { color: p.ink.default }]}>Community</Text>
+              <Text style={[styles.title, { color: p.ink.default }]}>Collectors</Text>
               <Text style={[styles.sub, { color: p.ink.muted }]}>
                 Follow collectors and see what they own.
               </Text>

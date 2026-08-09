@@ -62,6 +62,27 @@ export const ENDPOINTS = {
       `${V1}/social/me/followers/${encodeURIComponent(handle)}`,
     cardOwners: (cardRef: string) =>
       `${V1}/social/cards/${encodeURIComponent(cardRef)}/owners`,
+    // ── The feed ──
+    feed: `${V1}/social/feed`,
+    /** Users AND hashtags in one call, ranked together server-side. */
+    searchAll: `${V1}/social/search/all`,
+    posts: `${V1}/social/posts`,
+    post: (id: string) => `${V1}/social/posts/${encodeURIComponent(id)}`,
+    postLike: (id: string) => `${V1}/social/posts/${encodeURIComponent(id)}/like`,
+    postComments: (id: string) =>
+      `${V1}/social/posts/${encodeURIComponent(id)}/comments`,
+    comment: (id: string) => `${V1}/social/comments/${encodeURIComponent(id)}`,
+    commentLike: (id: string) =>
+      `${V1}/social/comments/${encodeURIComponent(id)}/like`,
+    commentReplies: (id: string) =>
+      `${V1}/social/comments/${encodeURIComponent(id)}/replies`,
+    userPosts: (handle: string) =>
+      `${V1}/social/users/${encodeURIComponent(handle)}/posts`,
+    trendingHashtags: `${V1}/social/hashtags/trending`,
+    hashtagPosts: (tag: string) =>
+      `${V1}/social/hashtags/${encodeURIComponent(tag)}/posts`,
+    reports: `${V1}/social/reports`,
+    reportReasons: `${V1}/social/report-reasons`,
   },
   auth: {
     register: `${V1}/auth/register`,

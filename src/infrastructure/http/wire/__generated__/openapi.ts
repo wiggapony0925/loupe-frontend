@@ -1422,6 +1422,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/social/moderation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The review queue (auto-flags + user reports, worst first)
+         * @description One list for both sources. A moderator asks "what needs me", not
+         *     "which system noticed".
+         */
+        get: operations["moderation_queue_v1_admin_social_moderation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/social/moderation/{case_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss a case, or remove what it points at
+         * @description Resolving one case answers every other open case about the same
+         *     thing — nine duplicate reports left open is how a queue becomes noise.
+         */
+        post: operations["resolve_case_v1_admin_social_moderation__case_id__resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/users": {
         parameters: {
             query?: never;
@@ -4246,6 +4288,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/social/comments/{comment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a comment */
+        delete: operations["delete_comment_v1_social_comments__comment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/comments/{comment_id}/like": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Like a comment */
+        post: operations["like_comment_v1_social_comments__comment_id__like_post"];
+        /** Unlike a comment */
+        delete: operations["unlike_comment_v1_social_comments__comment_id__like_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/comments/{comment_id}/replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The rest of a comment's replies */
+        get: operations["list_replies_v1_social_comments__comment_id__replies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/social/discover": {
         parameters: {
             query?: never;
@@ -4280,6 +4374,60 @@ export interface paths {
          *     so every client draws the same mosaic.
          */
         get: operations["explore_cards_v1_social_explore_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The community feed (following · for you · mine)
+         * @description What each tab MEANS is decided here, not in the clients.
+         */
+        get: operations["get_feed_v1_social_feed_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/hashtags/trending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Trending tags (the chip row) */
+        get: operations["trending_hashtags_v1_social_hashtags_trending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/hashtags/{tag}/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Posts carrying a tag */
+        get: operations["hashtag_posts_v1_social_hashtags__tag__posts_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4352,6 +4500,148 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/social/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish a post
+         * @description Multipart, so text and photos arrive in ONE request — a two-step
+         *     "create then attach" leaves a half-made post behind whenever the second
+         *     call fails.
+         */
+        post: operations["create_post_v1_social_posts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/posts/media/{media_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Post image bytes
+         * @description Public like the avatar endpoint: an ``<img>`` tag carries no auth on
+         *     any of our clients. The URL is unguessable, and the *post* around it
+         *     stays behind the privacy gate.
+         */
+        get: operations["get_post_media_v1_social_posts_media__media_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/posts/{post_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One post */
+        get: operations["get_post_v1_social_posts__post_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete a post */
+        delete: operations["delete_post_v1_social_posts__post_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/posts/{post_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A post's comment thread
+         * @description Top-level comments oldest first, each carrying its first two replies.
+         */
+        get: operations["list_comments_v1_social_posts__post_id__comments_get"];
+        put?: never;
+        /** Comment on a post (or reply to a comment) */
+        post: operations["add_comment_v1_social_posts__post_id__comments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/posts/{post_id}/like": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Like a post */
+        post: operations["like_post_v1_social_posts__post_id__like_post"];
+        /** Unlike a post */
+        delete: operations["unlike_post_v1_social_posts__post_id__like_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/report-reasons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The reasons a report can carry
+         * @description Server-owned so both clients offer the SAME closed list — a reason
+         *     one client can send and the other can't is a reason nobody counts.
+         */
+        get: operations["report_reasons_v1_social_report_reasons_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report a post, comment or profile
+         * @description Reporting the same thing twice is idempotent, not a second vote.
+         */
+        post: operations["create_report_v1_social_reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/social/requests": {
         parameters: {
             query?: never;
@@ -4412,6 +4702,28 @@ export interface paths {
         };
         /** Find collectors by handle or name */
         get: operations["search_users_v1_social_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/search/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search users AND hashtags in one call
+         * @description One request behind the feed's search bar. Composing both halves here
+         *     keeps their relative ranking a single decision rather than something
+         *     each client re-invents.
+         */
+        get: operations["search_all_v1_social_search_all_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4553,6 +4865,23 @@ export interface paths {
         post: operations["like_user_v1_social_users__username__like_post"];
         /** Withdraw a like */
         delete: operations["unlike_user_v1_social_users__username__like_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/users/{username}/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A collector's posts (privacy-gated) */
+        get: operations["get_user_posts_v1_social_users__username__posts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -5593,6 +5922,25 @@ export interface components {
          * @enum {string}
          */
         BlogStatusEnum: "draft" | "published";
+        /** Body_create_post_v1_social_posts_post */
+        Body_create_post_v1_social_posts_post: {
+            /**
+             * Body
+             * @description Caption. #tags and @mentions in this text are indexed on write.
+             */
+            body?: string | null;
+            /**
+             * Card Id
+             * @description Optional catalog card this post showcases.
+             */
+            card_id?: string | null;
+            /**
+             * Images
+             * @description Up to 4 JPEG/PNG/WebP images, 12 MB each.
+             * @default []
+             */
+            images: string[];
+        };
         /** Body_identify_card_v1_cards_identify_post */
         Body_identify_card_v1_cards_identify_post: {
             /**
@@ -6104,6 +6452,86 @@ export interface components {
             /** Type */
             type: string;
         };
+        /**
+         * CommentCreate
+         * @description Body for ``POST /v1/social/posts/{id}/comments``.
+         */
+        CommentCreate: {
+            /** Body */
+            body: string;
+            /** Parent Id */
+            parent_id?: string | null;
+        };
+        /**
+         * CommentRead
+         * @description One comment, or one reply (``parent_id`` set).
+         */
+        CommentRead: {
+            author: components["schemas"]["PostAuthor"];
+            /** Body */
+            body: string;
+            /**
+             * Can Delete
+             * @default false
+             */
+            can_delete: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Like Count
+             * @default 0
+             */
+            like_count: number;
+            /** Parent Id */
+            parent_id?: string | null;
+            /**
+             * Post Id
+             * Format: uuid
+             */
+            post_id: string;
+            /**
+             * Replies
+             * @default []
+             */
+            replies: components["schemas"]["CommentRead"][];
+            /**
+             * Reply Count
+             * @default 0
+             */
+            reply_count: number;
+            /**
+             * Viewer Has Liked
+             * @default false
+             */
+            viewer_has_liked: boolean;
+        };
+        /**
+         * CommentThreadRead
+         * @description ``GET /v1/social/posts/{id}/comments`` — top-level comments, oldest
+         *     first (a conversation reads down, unlike a feed).
+         */
+        CommentThreadRead: {
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["CommentRead"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
         /** DatabaseOverview */
         DatabaseOverview: {
             /** Dialect */
@@ -6545,6 +6973,24 @@ export interface components {
             usernames: string[];
         };
         /**
+         * FeedRead
+         * @description A page of posts. ``next_cursor`` is opaque — pass it back verbatim.
+         *
+         *     Cursors rather than offsets: a feed gains rows at the top while it's
+         *     being read, and offset paging responds to that by showing page 2's first
+         *     post twice. The token encodes the position, so a page is stable no
+         *     matter what arrives above it.
+         */
+        FeedRead: {
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["PostRead"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /**
          * FollowRequestRead
          * @description One pending incoming follow request (the requester's card).
          */
@@ -6917,6 +7363,19 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HashtagRead
+         * @description One tag chip.
+         */
+        HashtagRead: {
+            /**
+             * Post Count
+             * @default 0
+             */
+            post_count: number;
+            /** Tag */
+            tag: string;
         };
         /**
          * HealthCheck
@@ -7637,6 +8096,69 @@ export interface components {
             mfa_token: string;
         };
         /**
+         * ModerationCaseRead
+         * @description One row in the review queue.
+         */
+        ModerationCaseRead: {
+            /** Author Id */
+            author_id?: string | null;
+            /** Author Username */
+            author_username?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Detail */
+            detail?: string | null;
+            /** Excerpt */
+            excerpt?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Reason */
+            reason?: string | null;
+            /** Reason Label */
+            reason_label?: string | null;
+            /** Reporter Username */
+            reporter_username?: string | null;
+            /** Resolved At */
+            resolved_at?: string | null;
+            /** Score */
+            score?: number | null;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+            /**
+             * Target Id
+             * Format: uuid
+             */
+            target_id: string;
+            /** Target Type */
+            target_type: string;
+        };
+        /** ModerationQueueRead */
+        ModerationQueueRead: {
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["ModerationCaseRead"][];
+            /**
+             * Open Count
+             * @default 0
+             */
+            open_count: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /**
          * NearbyStore
          * @description One physical shop near the caller. Positions are WGS84.
          */
@@ -7993,6 +8515,160 @@ export interface components {
             max_cards?: number | null;
         };
         /**
+         * PostAuthor
+         * @description Who wrote a post or comment.
+         *
+         *     Deliberately leaner than :class:`SocialUserCard`: a feed page shows 20
+         *     authors and a card would drag a collection-peek query along with each
+         *     one. Everything a byline draws is here and nothing else.
+         */
+        PostAuthor: {
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Is Admin
+             * @default false
+             */
+            is_admin: boolean;
+            /**
+             * Is Pro
+             * @default false
+             */
+            is_pro: boolean;
+            /**
+             * Relationship
+             * @default none
+             * @enum {string}
+             */
+            relationship: "self" | "following" | "requested" | "none";
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Username */
+            username: string;
+        };
+        /**
+         * PostCardRef
+         * @description The catalog card a post showcases — what makes this a collector's
+         *     feed rather than a photo app. Enough to draw a tappable chip.
+         *
+         *     Carries NO price on purpose. A feed row is a snapshot of a moment and
+         *     would go stale in place, while the card page it links to holds the
+         *     authoritative, grade-aware number; a second figure drifting beside it
+         *     would only ever be a source of "which one is right?".
+         */
+        PostCardRef: {
+            /**
+             * Card Id
+             * Format: uuid
+             */
+            card_id: string;
+            /** Image Url */
+            image_url?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Number */
+            number?: string | null;
+            /** Set Name */
+            set_name?: string | null;
+            /** Tcg */
+            tcg?: string | null;
+        };
+        /**
+         * PostLikeRead
+         * @description New like state + the fresh total, so the client never guesses.
+         */
+        PostLikeRead: {
+            /**
+             * Like Count
+             * @default 0
+             */
+            like_count: number;
+            /** Liked */
+            liked: boolean;
+        };
+        /**
+         * PostMediaRead
+         * @description One image in a post's carousel.
+         */
+        PostMediaRead: {
+            /** Height */
+            height?: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Position
+             * @default 0
+             */
+            position: number;
+            /** Url */
+            url: string;
+            /** Width */
+            width?: number | null;
+        };
+        /**
+         * PostRead
+         * @description One post as the viewer sees it.
+         */
+        PostRead: {
+            author: components["schemas"]["PostAuthor"];
+            /** Body */
+            body?: string | null;
+            /**
+             * Can Delete
+             * @default false
+             */
+            can_delete: boolean;
+            card?: components["schemas"]["PostCardRef"] | null;
+            /**
+             * Comment Count
+             * @default 0
+             */
+            comment_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Hashtags
+             * @default []
+             */
+            hashtags: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Like Count
+             * @default 0
+             */
+            like_count: number;
+            /**
+             * Media
+             * @default []
+             */
+            media: components["schemas"]["PostMediaRead"][];
+            /**
+             * Mentions
+             * @default []
+             */
+            mentions: string[];
+            /**
+             * Viewer Has Liked
+             * @default false
+             */
+            viewer_has_liked: boolean;
+        };
+        /**
          * PresignedUpload
          * @description A single presigned PUT URL the client uses to upload one angle.
          */
@@ -8274,6 +8950,26 @@ export interface components {
             subtitle: string;
             /** Title */
             title: string;
+        };
+        /**
+         * ReportCreate
+         * @description Body for ``POST /v1/social/reports``.
+         */
+        ReportCreate: {
+            /** Note */
+            note?: string | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Target Id
+             * Format: uuid
+             */
+            target_id: string;
+            /**
+             * Target Type
+             * @enum {string}
+             */
+            target_type: "post" | "comment" | "profile";
         };
         /**
          * ReportDownloadResponse
@@ -9362,6 +10058,26 @@ export interface components {
             set_name?: string | null;
             /** Tcg */
             tcg: string;
+        };
+        /**
+         * SocialSearchRead
+         * @description ``GET /v1/social/search/all`` — one query, both kinds of result.
+         *
+         *     Composed server-side so the search bar's ranking (which handles beat
+         *     which tags) is one decision in one place rather than two lists the
+         *     clients have to interleave themselves.
+         */
+        SocialSearchRead: {
+            /**
+             * Hashtags
+             * @default []
+             */
+            hashtags: components["schemas"]["HashtagRead"][];
+            /**
+             * Users
+             * @default []
+             */
+            users: components["schemas"]["SocialUserCard"][];
         };
         /**
          * SocialUserCard
@@ -12606,6 +13322,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FeaturedView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    moderation_queue_v1_admin_social_moderation_get: {
+        parameters: {
+            query?: {
+                /** @description `open`, `dismissed` or `removed`. */
+                status?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationQueueRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_case_v1_admin_social_moderation__case_id__resolve_post: {
+        parameters: {
+            query: {
+                /** @description `dismiss` or `remove`. */
+                action: string;
+            };
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationCaseRead"];
                 };
             };
             /** @description Validation Error */
@@ -17722,6 +18506,131 @@ export interface operations {
             };
         };
     };
+    delete_comment_v1_social_comments__comment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    like_comment_v1_social_comments__comment_id__like_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostLikeRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlike_comment_v1_social_comments__comment_id__like_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostLikeRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_replies_v1_social_comments__comment_id__replies_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentThreadRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     discover_collectors_v1_social_discover_get: {
         parameters: {
             query?: never;
@@ -17758,6 +18667,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExploreRead"];
+                };
+            };
+        };
+    };
+    get_feed_v1_social_feed_get: {
+        parameters: {
+            query?: {
+                /** @description `following` — people you follow, plus your own posts, newest first. `foryou` — recent posts ranked by engagement, decayed by age, excluding your own. `mine` — just your posts. */
+                tab?: string;
+                /** @description Opaque; pass back verbatim. */
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trending_hashtags_v1_social_hashtags_trending_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HashtagRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hashtag_posts_v1_social_hashtags__tag__posts_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                tag: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -17895,6 +18904,314 @@ export interface operations {
             };
         };
     };
+    create_post_v1_social_posts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_create_post_v1_social_posts_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_post_media_v1_social_posts_media__media_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_post_v1_social_posts__post_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_post_v1_social_posts__post_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_comments_v1_social_posts__post_id__comments_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentThreadRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_comment_v1_social_posts__post_id__comments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    like_post_v1_social_posts__post_id__like_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostLikeRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlike_post_v1_social_posts__post_id__like_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostLikeRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_reasons_v1_social_report_reasons_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    create_report_v1_social_reports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationCaseRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_requests_v1_social_requests_get: {
         parameters: {
             query?: never;
@@ -17992,6 +19309,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialUserCard"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_all_v1_social_search_all_get: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialSearchRead"];
                 };
             };
             /** @description Validation Error */
@@ -18315,6 +19664,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProfileLikeRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_posts_v1_social_users__username__posts_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedRead"];
                 };
             };
             /** @description Validation Error */

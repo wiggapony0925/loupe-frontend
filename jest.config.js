@@ -84,6 +84,10 @@ module.exports = {
       modulePathIgnorePatterns: ignoreWorktrees,
       testMatch: [
         "<rootDir>/src/presentation/**/__tests__/**/*.test.tsx",
+        // Application-layer hooks whose tests need a React tree (a
+        // QueryClientProvider wrapper is JSX, so they can't live in the
+        // plain-node `domain` project even though the code under test is).
+        "<rootDir>/src/application/**/__tests__/**/*.test.tsx",
         "<rootDir>/app/**/__tests__/**/*.test.tsx",
       ],
       transformIgnorePatterns: [

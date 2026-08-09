@@ -196,3 +196,113 @@ export interface ExploreCardWire {
 export interface ExploreReadWire {
   cards: ExploreCardWire[];
 }
+
+// ── The feed ──
+
+/** Which feed tab. The backend owns what each one MEANS — see
+ *  `app/social/services/posts.py`. Clients ask and render. */
+export type FeedTab = "following" | "foryou" | "mine";
+
+/** A byline. Deliberately leaner than {@link SocialUserCardWire} — a feed
+ *  page shows twenty of these and a full card would drag a collection
+ *  lookup along with each one. */
+export interface PostAuthorWire {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  /** Gold PRO chip. */
+  is_pro: boolean;
+  /** Loupe staff — drives the blue verified tick. */
+  is_admin: boolean;
+  relationship: SocialRelationship;
+}
+
+export interface PostMediaWire {
+  id: string;
+  url: string;
+  position: number;
+  /** Intrinsic size when the server could read it. Reserve this aspect
+   *  ratio BEFORE the image loads or every post pops the layout. */
+  width: number | null;
+  height: number | null;
+}
+
+/** The catalog card a post showcases. Carries no price on purpose — the
+ *  card page holds the authoritative, grade-aware number. */
+export interface PostCardRefWire {
+  card_id: string;
+  name: string | null;
+  image_url: string | null;
+  set_name: string | null;
+  number: string | null;
+  tcg: string | null;
+}
+
+export interface PostWire {
+  id: string;
+  author: PostAuthorWire;
+  body: string | null;
+  media: PostMediaWire[];
+  card: PostCardRefWire | null;
+  created_at: string;
+  like_count: number;
+  comment_count: number;
+  viewer_has_liked: boolean;
+  /** Lowercase, no '#'. Match against the caption to highlight them. */
+  hashtags: string[];
+  /** Handles in the caption that resolve to real accounts — link only these. */
+  mentions: string[];
+  can_delete: boolean;
+}
+
+/** A page of posts. `next_cursor` is opaque: pass it back verbatim. */
+export interface FeedWire {
+  items: PostWire[];
+  next_cursor: string | null;
+}
+
+export interface CommentWire {
+  id: string;
+  post_id: string;
+  parent_id: string | null;
+  author: PostAuthorWire;
+  body: string;
+  created_at: string;
+  like_count: number;
+  viewer_has_liked: boolean;
+  /** Replies under this top-level comment. Always 0 on a reply. */
+  reply_count: number;
+  /** The first couple of replies, inlined by the server. */
+  replies: CommentWire[];
+  can_delete: boolean;
+}
+
+export interface CommentThreadWire {
+  items: CommentWire[];
+  next_cursor: string | null;
+  /** Every comment including replies — the number under the bubble. */
+  total: number;
+}
+
+export interface HashtagWire {
+  tag: string;
+  post_count: number;
+}
+
+/** One query, both kinds of result — ranked together server-side. */
+export interface SocialSearchWire {
+  users: SocialUserCardWire[];
+  hashtags: HashtagWire[];
+}
+
+// ── Safety ──
+
+/** What a report can say. The list itself comes from the server
+ *  (`/social/report-reasons`) so both clients offer the same options. */
+export interface ReportCreateWire {
+  target_type: "post" | "comment" | "profile";
+  target_id: string;
+  reason: string;
+  note?: string | null;
+}

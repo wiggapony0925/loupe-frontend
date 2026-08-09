@@ -74,6 +74,28 @@ function toFeedItem(n: ServerNotification): FeedItem {
   };
 }
 
+/**
+ * The badge count on its own — a tiny query, so a surface that only wants a
+ * dot (the feed's bell, the home tab) never pays for a page of rows it will
+ * not render. Shares its cache key with the inbox, so marking everything
+ * read clears both at once.
+ */
+function useUnreadCountQuery() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ["notifications", "unread"],
+    queryFn: () =>
+      apiFetch<{ unread: number }>(ENDPOINTS.notifications.unreadCount),
+    enabled: isAuthenticated,
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Just the number — for a bell that shows a dot and nothing else. */
+export function useUnreadNotificationCount(): number {
+  return useUnreadCountQuery().data?.unread ?? 0;
+}
+
 export function useNotificationFeed(): {
   feed: FeedItem[];
   unread: number;
@@ -104,15 +126,7 @@ export function useNotificationFeed(): {
     staleTime: 60 * 1000,
   });
 
-  // The badge is its own tiny query so the home tab can show a count without
-  // paying for a page of rows it never renders.
-  const countQ = useQuery({
-    queryKey: ["notifications", "unread"],
-    queryFn: () =>
-      apiFetch<{ unread: number }>(ENDPOINTS.notifications.unreadCount),
-    enabled: isAuthenticated,
-    staleTime: 60 * 1000,
-  });
+  const countQ = useUnreadCountQuery();
 
   const markAll = useMutation({
     mutationFn: () =>
