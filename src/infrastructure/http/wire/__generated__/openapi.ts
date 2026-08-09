@@ -4453,7 +4453,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Posts carrying a tag */
+        /**
+         * Posts carrying a tag
+         * @description Defaults to `top`: arriving on #pokemon and seeing whatever was
+         *     posted ninety seconds ago tells you nothing about the tag.
+         */
         get: operations["hashtag_posts_v1_social_hashtags__tag__posts_get"];
         put?: never;
         post?: never;
@@ -18800,6 +18804,8 @@ export interface operations {
     hashtag_posts_v1_social_hashtags__tag__posts_get: {
         parameters: {
             query?: {
+                /** @description `top` — most engaged first (the tag page's default). `recent` — newest first. */
+                sort?: string;
                 cursor?: string | null;
                 limit?: number;
             };

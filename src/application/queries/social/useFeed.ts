@@ -104,16 +104,19 @@ export function useUserPosts(
   );
 }
 
-/** Every post carrying a tag. */
+/** Every post carrying a tag. `sort` is the tag page's Top ⇄ Recent
+ *  switch; what each ORDER means is the server's decision. */
 export function useHashtagPosts(
   tag: string | null,
+  sort: "top" | "recent" = "top",
 ): UseInfiniteQueryResult<InfiniteData<FeedWire>> {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery(
     infiniteFeed(
       ENDPOINTS.social.hashtagPosts(tag ?? ""),
-      queryKeys.social.hashtagPosts(tag ?? ""),
+      queryKeys.social.hashtagPosts(`${tag ?? ""}:${sort}`),
       isAuthenticated && !!tag,
+      { sort },
     ),
   );
 }

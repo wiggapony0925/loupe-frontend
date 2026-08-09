@@ -1,29 +1,27 @@
 /**
  * ProfilePosts — a collector's posts, on their profile.
  *
- * Rendered as a plain mapped list rather than a FlatList: this lives inside
- * the profile's ScrollView, and nesting a VirtualizedList in a ScrollView
- * breaks measurement (RN warns about exactly this). A profile's post count
- * is bounded by a "Load more" button, so the list stays short by
- * construction and virtualisation buys nothing.
+ * A GRID, the same `PostGrid` a hashtag page uses. A profile is a browsing
+ * surface — you're scanning someone's work, not reading it in order — and
+ * the grid shows fifteen posts per screen where stacked cards showed four.
+ * Tapping a tile opens the post, where the caption and comments live.
  *
- * Everything else — the card chrome, likes, comments, the lightbox, the ⋯
- * menu — is the SAME components the feed uses. A post has to look and
- * behave identically wherever you meet it.
+ * Reusing the grid rather than writing a second one is the point: a tile
+ * has to look and behave the same wherever you meet it, and a spacing fix
+ * lands in both places at once.
+ *
+ * Plain View, not a FlatList: this lives inside the profile's ScrollView,
+ * and nesting a VirtualizedList there breaks measurement (RN warns about
+ * exactly this). Paging is a "Load more" button, so the list stays short
+ * by construction and virtualisation buys nothing.
  */
-import React, { useState } from "react";
+import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-import type { PostWire } from "@/infrastructure/http";
-import {
-  feedPosts,
-  useLikePost,
-  useUserPosts,
-} from "@/application/queries/social/useFeed";
+import { router } from "expo-router";
+import { feedPosts, useUserPosts } from "@/application/queries/social/useFeed";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-import { CommentsSheet } from "./CommentsSheet";
-import { ImageLightbox } from "./ImageLightbox";
-import { PostCard } from "./PostCard";
-import { ReportSheet, type ReportTarget } from "./ReportSheet";
+import { routes } from "@/shared/routes";
+import { PostGrid } from "./PostGrid";
 
 export function ProfilePosts({
   handle,
@@ -37,107 +35,59 @@ export function ProfilePosts({
 }) {
   const p = useThemedPalette();
   const posts = useUserPosts(handle);
-  const like = useLikePost();
-
-  const [openPost, setOpenPost] = useState<PostWire | null>(null);
-  const [reporting, setReporting] = useState<ReportTarget | null>(null);
-  const [viewing, setViewing] = useState<{
-    media: PostWire["media"];
-    index: number;
-  } | null>(null);
-
   const rows = feedPosts(posts.data);
 
-  if (posts.isLoading) {
-    return (
-      <View style={styles.state}>
-        <ActivityIndicator color={p.ink.dim} />
-      </View>
-    );
-  }
-
-  if (rows.length === 0) {
-    return (
-      <View style={styles.state}>
-        <Text style={[styles.emptyTitle, { color: p.ink.default }]}>
-          {isSelf ? "You haven't posted yet" : "No posts yet"}
-        </Text>
-        <Text style={[styles.emptyBody, { color: p.ink.dim }]}>
-          {isSelf
-            ? "Show off a pull, a grail, or a whole binder."
-            : "When they post, it'll show up here."}
-        </Text>
-        {isSelf && onCompose ? (
-          <Pressable
-            onPress={onCompose}
-            accessibilityRole="button"
-            style={[styles.cta, { backgroundColor: p.accent.mint }]}
-          >
-            <Text style={styles.ctaText}>Create a post</Text>
-          </Pressable>
-        ) : null}
-      </View>
-    );
-  }
-
   return (
-    <View>
-      {rows.map((post) => (
-        <PostCard
-          key={post.id}
-          post={post}
-          onToggleLike={like.mutate}
-          onOpenComments={setOpenPost}
-          onOpenMedia={(target, index) =>
-            setViewing({ media: target.media, index })
-          }
-          // No Follow button here: you're already on their profile, where
-          // the header's own follow control is the one that matters.
-          onToggleFollow={undefined}
-          onMore={
-            isSelf
-              ? undefined
-              : (target) =>
-                  setReporting({
-                    type: "post",
-                    id: target.id,
-                    label: `@${target.author.username}'s post`,
-                  })
-          }
-        />
-      ))}
-
-      {posts.hasNextPage ? (
-        <Pressable
-          onPress={() => void posts.fetchNextPage()}
-          disabled={posts.isFetchingNextPage}
-          accessibilityRole="button"
-          style={[
-            styles.more,
-            {
-              borderColor: p.line.default,
-              backgroundColor: withAlpha(p.ink.default, 0.03),
-            },
-          ]}
-        >
-          {posts.isFetchingNextPage ? (
-            <ActivityIndicator size="small" color={p.ink.dim} />
-          ) : (
-            <Text style={[styles.moreText, { color: p.ink.muted }]}>
-              Load more posts
-            </Text>
-          )}
-        </Pressable>
-      ) : null}
-
-      <CommentsSheet post={openPost} onClose={() => setOpenPost(null)} />
-      <ReportSheet target={reporting} onClose={() => setReporting(null)} />
-      <ImageLightbox
-        media={viewing?.media ?? null}
-        initialIndex={viewing?.index ?? 0}
-        onClose={() => setViewing(null)}
-      />
-    </View>
+    <PostGrid
+      posts={rows}
+      loading={posts.isLoading}
+      onOpen={(post) => router.push(routes.communityPost(post.id))}
+      footer={
+        posts.hasNextPage ? (
+          <Pressable
+            onPress={() => void posts.fetchNextPage()}
+            disabled={posts.isFetchingNextPage}
+            accessibilityRole="button"
+            style={[
+              styles.more,
+              {
+                borderColor: p.line.default,
+                backgroundColor: withAlpha(p.ink.default, 0.03),
+              },
+            ]}
+          >
+            {posts.isFetchingNextPage ? (
+              <ActivityIndicator size="small" color={p.ink.dim} />
+            ) : (
+              <Text style={[styles.moreText, { color: p.ink.muted }]}>
+                Load more posts
+              </Text>
+            )}
+          </Pressable>
+        ) : null
+      }
+      empty={
+        <View style={styles.state}>
+          <Text style={[styles.emptyTitle, { color: p.ink.default }]}>
+            {isSelf ? "You haven't posted yet" : "No posts yet"}
+          </Text>
+          <Text style={[styles.emptyBody, { color: p.ink.dim }]}>
+            {isSelf
+              ? "Show off a pull, a grail, or a whole binder."
+              : "When they post, it'll show up here."}
+          </Text>
+          {isSelf && onCompose ? (
+            <Pressable
+              onPress={onCompose}
+              accessibilityRole="button"
+              style={[styles.cta, { backgroundColor: p.accent.mint }]}
+            >
+              <Text style={styles.ctaText}>Create a post</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      }
+    />
   );
 }
 

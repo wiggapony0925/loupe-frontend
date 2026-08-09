@@ -27000,6 +27000,7 @@
     },
     "/v1/social/hashtags/{tag}/posts": {
       "get": {
+        "description": "Defaults to `top`: arriving on #pokemon and seeing whatever was\nposted ninety seconds ago tells you nothing about the tag.",
         "operationId": "hashtag_posts_v1_social_hashtags__tag__posts_get",
         "parameters": [
           {
@@ -27008,6 +27009,18 @@
             "required": true,
             "schema": {
               "title": "Tag",
+              "type": "string"
+            }
+          },
+          {
+            "description": "`top` \u2014 most engaged first (the tag page's default). `recent` \u2014 newest first.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "top",
+              "description": "`top` \u2014 most engaged first (the tag page's default). `recent` \u2014 newest first.",
+              "title": "Sort",
               "type": "string"
             }
           },
