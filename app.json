@@ -60,8 +60,9 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Loupe needs camera access to capture cards for forensic grading.",
-          "recordAudioAndroid": false
+          "cameraPermission": "Loupe needs camera access to scan cards and record stories.",
+          "microphonePermission": "Loupe uses the microphone when you record a video story.",
+          "recordAudioAndroid": true
         }
       ],
       [
