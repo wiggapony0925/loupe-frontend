@@ -34,6 +34,8 @@ export interface PostCardProps {
   post: PostWire;
   onToggleLike: (next: { postId: string; liked: boolean }) => void;
   onOpenComments: (post: PostWire) => void;
+  /** Single tap on the media — opens the full-screen viewer. */
+  onOpenMedia?: (post: PostWire, index: number) => void;
   onToggleFollow?: (next: { handle: string; following: boolean }) => void;
   onMore?: (post: PostWire) => void;
   /** Horizontal padding of the surrounding list, so media can bleed out. */
@@ -44,6 +46,7 @@ function PostCardImpl({
   post,
   onToggleLike,
   onOpenComments,
+  onOpenMedia,
   onToggleFollow,
   onMore,
   gutter = 20,
@@ -158,7 +161,13 @@ function PostCardImpl({
         <View style={styles.mediaWrap}>
           <PostMedia
             media={post.media}
-            onPress={() => onOpenComments(post)}
+            onPress={(index) => onOpenMedia?.(post, index)}
+            // Only ever likes — see PostMedia. Already-liked stays liked.
+            onDoubleTapLike={() => {
+              if (!post.viewer_has_liked) {
+                onToggleLike({ postId: post.id, liked: false });
+              }
+            }}
           />
         </View>
       ) : null}

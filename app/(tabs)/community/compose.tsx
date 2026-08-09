@@ -28,8 +28,9 @@ import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ImagePlus, Layers, X } from "lucide-react-native";
+import { ImagePlus, Layers, ShieldAlert, X } from "lucide-react-native";
 import { useCreatePost } from "@/application/queries/social/useFeed";
+import { useModeratedSubmit } from "@/presentation/features/social/feed/useModeratedSubmit";
 import { useSocialMe } from "@/application/queries/social/useSocial";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import {
@@ -52,6 +53,10 @@ export default function ComposeScreen() {
   const p = useThemedPalette();
   const me = useSocialMe();
   const create = useCreatePost();
+  // Every publish surface answers a refusal the same way — see the hook.
+  const { submit, refusal, dismiss, pending } = useModeratedSubmit(create, {
+    onDone: () => router.back(),
+  });
 
   const [body, setBody] = useState("");
   const [images, setImages] = useState<Draft[]>([]);
@@ -60,8 +65,7 @@ export default function ComposeScreen() {
 
   const remaining = MAX_BODY - body.length;
   const canPost =
-    (body.trim().length > 0 || images.length > 0 || card !== null) &&
-    !create.isPending;
+    (body.trim().length > 0 || images.length > 0 || card !== null) && !pending;
 
   const pick = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -93,14 +97,7 @@ export default function ComposeScreen() {
   const publish = () => {
     if (!canPost) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    create.mutate(
-      { body: body.trim() || undefined, images, cardId: card?.cardId },
-      {
-        onSuccess: () => router.back(),
-        onError: (error) =>
-          Alert.alert("Couldn't post", error.message || "Please try again."),
-      },
-    );
+    submit({ body: body.trim() || undefined, images, cardId: card?.cardId });
   };
 
   return (
@@ -130,7 +127,7 @@ export default function ComposeScreen() {
               },
             ]}
           >
-            {create.isPending ? (
+            {pending ? (
               <ActivityIndicator size="small" color="#06140d" />
             ) : (
               <Text
@@ -153,6 +150,25 @@ export default function ComposeScreen() {
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
           >
+            {refusal ? (
+              // The draft is deliberately untouched — most refusals are one
+              // word away from fine, and wiping what someone wrote is punitive.
+              <View
+                style={[
+                  styles.refusal,
+                  {
+                    borderColor: withAlpha(p.accent.rose, 0.4),
+                    backgroundColor: withAlpha(p.accent.rose, 0.1),
+                  },
+                ]}
+              >
+                <ShieldAlert size={17} color={p.accent.rose} strokeWidth={2.2} />
+                <Text style={[styles.refusalText, { color: p.ink.default }]}>
+                  {refusal}
+                </Text>
+              </View>
+            ) : null}
+
             <View style={styles.writer}>
               {me.data?.profile ? (
                 <SocialAvatar
@@ -163,7 +179,11 @@ export default function ComposeScreen() {
               ) : null}
               <TextInput
                 value={body}
-                onChangeText={(next) => setBody(next.slice(0, MAX_BODY))}
+                onChangeText={(next) => {
+                  setBody(next.slice(0, MAX_BODY));
+                  // Editing is the user answering the refusal — clear it.
+                  if (refusal) dismiss();
+                }}
                 placeholder="What did you pull? Use #tags and @mentions."
                 placeholderTextColor={p.ink.dim}
                 multiline
@@ -335,6 +355,15 @@ const styles = StyleSheet.create({
   postText: { fontSize: 14, fontWeight: "800" },
   content: { padding: 20, gap: 16 },
   writer: { flexDirection: "row", gap: 12 },
+  refusal: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+  },
+  refusalText: { flex: 1, fontSize: 13.5, lineHeight: 19 },
   input: { flex: 1, fontSize: 16, lineHeight: 22, minHeight: 120, paddingTop: 8 },
   thumbs: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   thumb: { width: 96, height: 120, borderRadius: 12, overflow: "visible" },

@@ -27,6 +27,7 @@ import {
 import { useFollowCollector } from "@/application/queries/social/useSocial";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import { CommentsSheet } from "./CommentsSheet";
+import { ImageLightbox } from "./ImageLightbox";
 import { PostCard } from "./PostCard";
 import { ReportSheet, type ReportTarget } from "./ReportSheet";
 
@@ -52,6 +53,10 @@ export function FeedList({
   const p = useThemedPalette();
   const [openPost, setOpenPost] = useState<PostWire | null>(null);
   const [reporting, setReporting] = useState<ReportTarget | null>(null);
+  const [viewing, setViewing] = useState<{
+    media: PostWire["media"];
+    index: number;
+  } | null>(null);
 
   const like = useLikePost();
   const follow = useFollowCollector();
@@ -112,6 +117,7 @@ export function FeedList({
             post={item}
             onToggleLike={like.mutate}
             onOpenComments={setOpenPost}
+            onOpenMedia={(post, index) => setViewing({ media: post.media, index })}
             onToggleFollow={follow.mutate}
             onMore={onMore}
           />
@@ -156,6 +162,11 @@ export function FeedList({
       />
       <CommentsSheet post={openPost} onClose={() => setOpenPost(null)} />
       <ReportSheet target={reporting} onClose={() => setReporting(null)} />
+      <ImageLightbox
+        media={viewing?.media ?? null}
+        initialIndex={viewing?.index ?? 0}
+        onClose={() => setViewing(null)}
+      />
     </>
   );
 }

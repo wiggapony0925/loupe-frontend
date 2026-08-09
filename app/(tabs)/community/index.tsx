@@ -10,7 +10,7 @@
  * Layout, top to bottom:
  *
  *   search + bell + compose   pinned; the page's three verbs
- *   Following · For You · Your Posts
+ *   Following · For You
  *   #chips                    (For You only — discovery needs an entry point)
  *   posts                     the river
  *
@@ -115,16 +115,12 @@ export default function CommunityFeedScreen() {
             emptyTitle={
               tab === "following"
                 ? "Your feed is quiet"
-                : tab === "mine"
-                  ? "You haven't posted yet"
-                  : "Nothing to discover yet"
+                : "Nothing to discover yet"
             }
             emptyBody={
               tab === "following"
                 ? "Follow some collectors and their posts land here."
-                : tab === "mine"
-                  ? "Show off a pull, a grail, or a whole binder."
-                  : "Be the first to post something."
+                : "Be the first to post something."
             }
             emptyAction={
               <Pressable

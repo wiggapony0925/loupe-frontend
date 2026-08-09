@@ -23,7 +23,7 @@
  * tap on another collector land on the same screen — one layout to keep
  * right, and your own profile always looks the way others see it.
  */
-import React from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -49,6 +49,7 @@ import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { ProfileStats } from "@/presentation/features/social/ProfileStats";
 import { CollectionGrid } from "@/presentation/features/social/CollectionGrid";
+import { ProfilePosts } from "@/presentation/features/social/feed/ProfilePosts";
 import {
   CollectionSetsRail,
   PortfolioShelf,
@@ -94,6 +95,11 @@ export default function CollectorProfileScreen() {
   const data = profile.data;
   const isSelf = data?.relationship === "self";
   const collection = useCollectorCollection(handle, !!data?.can_view_collection);
+  // Collection ⇄ Posts. Two different questions about the same person —
+  // "what do they own" and "what have they said" — so they get a switch
+  // rather than one endless page. Defaults to the collection: on a card
+  // app that is what someone came to see.
+  const [tab, setTab] = useState<"collection" | "posts">("collection");
 
   // Viewing a profile IS the community state — keep the community island
   // (People · Home · My profile) on screen here, same as the Community tab.
@@ -386,7 +392,62 @@ export default function CollectorProfileScreen() {
               </Text>
             ) : null}
 
-            {gate ? (
+            {/* Collection ⇄ Posts */}
+            {data?.can_view_collection ? (
+              <View style={[styles.tabs, { borderBottomColor: p.line.default }]}>
+                {(
+                  [
+                    ["collection", "Collection"],
+                    ["posts", "Posts"],
+                  ] as const
+                ).map(([key, label]) => {
+                  const active = tab === key;
+                  return (
+                    <Pressable
+                      key={key}
+                      onPress={() => {
+                        if (active) return;
+                        Haptics.selectionAsync().catch(() => {});
+                        setTab(key);
+                      }}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: active }}
+                      style={styles.tab}
+                    >
+                      <Text
+                        style={[
+                          styles.tabLabel,
+                          {
+                            color: active ? p.ink.default : p.ink.dim,
+                            fontWeight: active ? "800" : "600",
+                          },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                      <View
+                        style={[
+                          styles.tabRule,
+                          {
+                            backgroundColor: active
+                              ? p.accent.mint
+                              : "transparent",
+                          },
+                        ]}
+                      />
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            {tab === "posts" ? (
+              <ProfilePosts
+                handle={handle as string}
+                isSelf={isSelf}
+                onCompose={() => router.push(routes.communityCompose())}
+              />
+            ) : gate ? (
               <View style={styles.gate}>
                 <Text style={[styles.gateTitle, { color: p.ink.default }]}>
                   {gate.title}
@@ -695,6 +756,20 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   shelf: { gap: 10 },
   // A sentence, not a panel — "this vault is private" isn't an error.
+  tabs: {
+    flexDirection: "row",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginTop: 18,
+    marginBottom: 4,
+  },
+  tab: { flex: 1, alignItems: "center", gap: 8, paddingTop: 4 },
+  tabLabel: { fontSize: 15, letterSpacing: -0.2 },
+  tabRule: {
+    height: 2.5,
+    alignSelf: "stretch",
+    marginHorizontal: 22,
+    borderRadius: 2,
+  },
   gate: { paddingVertical: 20, gap: 4, alignItems: "center" },
   gateTitle: { fontSize: 15, fontWeight: "700" },
   gateBody: { fontSize: 13, textAlign: "center" },

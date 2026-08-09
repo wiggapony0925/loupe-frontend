@@ -1,5 +1,5 @@
 /**
- * FeedTabs — Following · For You · Your Posts.
+ * FeedTabs — Following · For You.
  *
  * An underline that slides, not a segmented pill: the tabs sit directly over
  * a scrolling river of content, and a filled control there reads as a
@@ -15,10 +15,13 @@ import * as Haptics from "expo-haptics";
 import type { FeedTab } from "@/infrastructure/http";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 
+/** Two, not three. "Your Posts" moved to your PROFILE, where the rest of
+ *  your stuff already lives — a feed is for other people's posts, and a tab
+ *  showing only your own was a filter pretending to be a feed. The `mine`
+ *  tab still exists on the API; the profile grid is what reads it now. */
 export const FEED_TABS: { key: FeedTab; label: string }[] = [
   { key: "following", label: "Following" },
   { key: "foryou", label: "For You" },
-  { key: "mine", label: "Your Posts" },
 ];
 
 export function FeedTabs({
