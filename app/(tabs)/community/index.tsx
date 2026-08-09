@@ -49,6 +49,7 @@ import { FeedTabs } from "@/presentation/features/social/feed/FeedTabs";
 import { HashtagChips } from "@/presentation/features/social/feed/HashtagChips";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { useScreenTransition } from "@/presentation/navigation/screenMotion";
+import { useHomeOnReentry } from "@/presentation/navigation/useHomeOnReentry";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
@@ -56,6 +57,10 @@ const GUTTER = 20;
 
 export default function CommunityFeedScreen() {
   const p = useThemedPalette();
+  // Leaving the tab unwinds the community stack, so arriving here always
+  // means arriving at the feed — never on a profile or permalink left over
+  // from last time. See the hook for why it hangs off blur, not focus.
+  useHomeOnReentry();
   const [tab, setTab] = useState<FeedTab>("following");
   const [q, setQ] = useState("");
 

@@ -3753,6 +3753,14 @@
             "title": "Featured",
             "type": "array"
           },
+          "followed_by_friends": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SocialUserCard"
+            },
+            "title": "Followed By Friends",
+            "type": "array"
+          },
           "more": {
             "default": [],
             "items": {
@@ -7751,6 +7759,45 @@
         "title": "NearbyStoresRead",
         "type": "object"
       },
+      "NotificationCategoryRead": {
+        "description": "One tab of the inbox filter strip, as the server defines it.",
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "icon": {
+            "title": "Icon",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "tone": {
+            "title": "Tone",
+            "type": "string"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "description",
+          "icon",
+          "tone",
+          "unread"
+        ],
+        "title": "NotificationCategoryRead",
+        "type": "object"
+      },
       "NotificationPage": {
         "description": "A page of the inbox plus the badge count.\n\n``unread`` is the total across the whole inbox, not this page \u2014 the badge\nmust not change just because the user scrolled.",
         "properties": {
@@ -7879,6 +7926,28 @@
           "created_at"
         ],
         "title": "NotificationRead",
+        "type": "object"
+      },
+      "NotificationSummaryRead": {
+        "description": "Everything needed to draw the inbox header in one request.",
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationCategoryRead"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread",
+          "categories"
+        ],
+        "title": "NotificationSummaryRead",
         "type": "object"
       },
       "OpeningHoursDay": {
@@ -12852,6 +12921,22 @@
             "default": false,
             "title": "Is Admin",
             "type": "boolean"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "phone_verified": {
+            "default": false,
+            "title": "Phone Verified",
+            "type": "boolean"
           }
         },
         "required": [
@@ -13021,6 +13106,18 @@
               }
             ],
             "title": "Display Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
           }
         },
         "title": "UserUpdate",
@@ -23444,6 +23541,33 @@
           }
         ],
         "summary": "Mark notifications read",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/v1/me/notifications/summary": {
+      "get": {
+        "description": "Per-category unread counts *and* the category catalogue itself.\n\nClients render the filter strip straight from `categories` \u2014 order,\nlabels and icons included \u2014 so adding a category is a backend change.",
+        "operationId": "get_summary_v1_me_notifications_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSummaryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inbox header: per-category unread counts",
         "tags": [
           "notifications"
         ]

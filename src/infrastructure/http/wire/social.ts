@@ -128,6 +128,9 @@ export interface SocialCollectionSetWire {
 /** The Community page's people shelves, composed and ranked server-side. */
 export interface DiscoverWire {
   featured: SocialUserCardWire[];
+  /** People followed by people you follow, ranked by how many of your
+   *  friends follow them. Empty until you follow someone. */
+  followed_by_friends: SocialUserCardWire[];
   more: SocialUserCardWire[];
 }
 

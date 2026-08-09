@@ -7,7 +7,7 @@
  * (no mocks, no fabricated values).
  */
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -27,22 +27,39 @@ import {
 import { routes } from "@/shared/routes";
 import { type Palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { WatchingList } from "@/presentation/features/watchlist/WatchingList";
-import { useNotificationFeed } from "@/application/notifications/useNotificationFeed";
+import {
+  useNotificationCategories,
+  useNotificationFeed,
+} from "@/application/notifications/useNotificationFeed";
+import type { NotificationCategoryTab } from "@/application/notifications/useNotificationFeed";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { useScreenTransition } from "@/presentation/navigation/screenMotion";
 import type { FeedItem } from "@/application/notifications/notificationFeed";
 
-type Category = "all" | "market" | "news" | "social" | "billing" | "system";
+/** `"all"`, or any category key the server sends. Deliberately open: the
+ *  catalogue lives on the backend, so a closed union here would mean a new
+ *  category could not appear without shipping an app. */
+type Category = "all" | (string & {});
+
+interface CategoryVisual {
+  Icon: LucideIcon;
+  tint: keyof Palette["accent"];
+  label: string;
+}
 type Tab = "inbox" | "watching";
 
 
 
 
 
-const CATEGORY_META: Record<
-  Exclude<Category, "all">,
-  { Icon: LucideIcon; tint: keyof Palette["accent"]; label: string }
-> = {
+/** Icon + tint per STORED category. The labels and ordering come from the
+ *  server; this table is only the visual vocabulary, which is per-platform
+ *  by nature (a lucide component can't travel over JSON). Keyed by the
+ *  literal five so `.system` is a guaranteed fallback, not a lookup that
+ *  might miss. */
+const CATEGORY_META: {
+  system: CategoryVisual;
+} & Record<string, CategoryVisual | undefined> = {
   market: { Icon: TrendingUp, tint: "blue", label: "Market" },
   news: { Icon: Sparkles, tint: "mint", label: "News" },
   social: { Icon: Users, tint: "purple", label: "Community" },
@@ -50,13 +67,8 @@ const CATEGORY_META: Record<
   system: { Icon: Bell, tint: "amber", label: "System" },
 };
 
-const FILTERS: { key: Category; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "market", label: "Market" },
-  { key: "news", label: "News" },
-  { key: "social", label: "Community" },
-  { key: "system", label: "System" },
-];
+/** The one tab the server does NOT send: "no filter". */
+const ALL_TAB = { key: "all", label: "All", unread: 0 } as const;
 
 export default function NotificationsScreen() {
   const p = useThemedPalette();
@@ -86,7 +98,10 @@ export default function NotificationsScreen() {
     loadMore,
     isLoading,
     isLoadingMore,
-  } = useNotificationFeed();
+  } = useNotificationFeed(filter === "all" ? undefined : filter);
+  // Which tabs exist, what they are called, and how many are waiting in
+  // each — all from the server, so this strip never drifts from web.
+  const { categories } = useNotificationCategories();
 
   // Opening the inbox IS reading it. Anything else leaves a badge the user has
   // to dismiss by hand, which is a chore nobody asked for.
@@ -102,12 +117,6 @@ export default function NotificationsScreen() {
       markAllRead();
     }
   }, [feed.length, markAllRead]);
-
-  const visible = useMemo(
-    () => (filter === "all" ? feed : feed.filter((n) => n.category === filter)),
-    [feed, filter],
-  );
-
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
@@ -164,21 +173,28 @@ export default function NotificationsScreen() {
         >
           {/* Category filter strip — visible even in the empty state so users
               understand the eventual shape of the feed. */}
-          <FilterStrip value={filter} onChange={setFilter} />
+          <FilterStrip
+            value={filter}
+            onChange={setFilter}
+            categories={categories}
+          />
 
           <Animated.View style={swap}>
-          {visible.length === 0 ? (
+          {feed.length === 0 ? (
             <EmptyState
               filter={filter}
+              filterLabel={
+                categories.find((c) => c.key === filter)?.label ?? "matching"
+              }
               hasUnread={unreadCount > 0}
               isLoading={isLoading}
             />
           ) : (
             <>
-              <Feed items={visible} />
-              {/* Only offer more when the SERVER has more. Filtering is
-                  client-side over what's loaded, so a filtered view can look
-                  short while the inbox behind it is long. */}
+              <Feed items={feed} />
+              {/* The server filters, so "has more" is the truth about THIS
+                  tab — not about an inbox we would have to keep paging
+                  through to find the next matching row. */}
               {hasMore ? (
                 <LoadMore onPress={loadMore} busy={isLoadingMore} />
               ) : null}
@@ -296,11 +312,25 @@ function Header({
 function FilterStrip({
   value,
   onChange,
+  categories,
 }: {
   value: Category;
   onChange: (v: Category) => void;
+  categories: NotificationCategoryTab[];
 }) {
   const p = useThemedPalette();
+  // "All" is ours; everything after it is whatever the server says exists.
+  // Before the summary lands we render "All" alone rather than a guess —
+  // a strip that changes labels under the user's thumb is worse than one
+  // that arrives a beat late.
+  const tabs = [
+    ALL_TAB,
+    ...categories.map((c) => ({
+      key: c.key,
+      label: c.label,
+      unread: c.unread,
+    })),
+  ];
 
   return (
     <ScrollView
@@ -308,7 +338,7 @@ function FilterStrip({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 4 }}
     >
-      {FILTERS.map((f) => {
+      {tabs.map((f) => {
         const active = value === f.key;
         return (
           <Pressable
@@ -329,16 +359,43 @@ function FilterStrip({
               opacity: pressed ? 0.7 : 1,
             })}
           >
-            <Text
-              style={{
-                color: active ? p.accent.mint : p.ink.muted,
-                fontSize: 12,
-                fontWeight: "700",
-                letterSpacing: 0.4,
-              }}
-            >
-              {f.label}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text
+                style={{
+                  color: active ? p.accent.mint : p.ink.muted,
+                  fontSize: 12,
+                  fontWeight: "700",
+                  letterSpacing: 0.4,
+                }}
+              >
+                {f.label}
+              </Text>
+              {f.unread > 0 ? (
+                <View
+                  style={{
+                    minWidth: 16,
+                    paddingHorizontal: 4,
+                    height: 16,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: active
+                      ? p.accent.mint
+                      : withAlpha(p.ink.dim, 0.16),
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: active ? p.bg.base : p.ink.muted,
+                      fontSize: 10,
+                      fontWeight: "800",
+                    }}
+                  >
+                    {f.unread > 99 ? "99+" : f.unread}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           </Pressable>
         );
       })}
@@ -350,10 +407,12 @@ function FilterStrip({
 
 function EmptyState({
   filter,
+  filterLabel,
   hasUnread,
   isLoading = false,
 }: {
   filter: Category;
+  filterLabel: string;
   hasUnread: boolean;
   isLoading?: boolean;
 }) {
@@ -367,7 +426,7 @@ function EmptyState({
       ? hasUnread
         ? "Nothing else right now"
         : "You're all caught up"
-      : `No ${FILTERS.find((f) => f.key === filter)?.label.toLowerCase()} alerts yet`;
+      : `No ${filterLabel.toLowerCase()} notifications yet`;
 
   return (
     <View className="mt-4 px-5">
@@ -441,7 +500,9 @@ function NotificationRow({
   isLast: boolean;
 }) {
   const p = useThemedPalette();
-  const meta = CATEGORY_META[item.category];
+  // An unrecognised category still renders — a notification we can't
+  // classify is still one the user was meant to see.
+  const meta = CATEGORY_META[item.category] ?? CATEGORY_META.system;
   const tint = p.accent[meta.tint];
   // A price-alert notification deep-links to the card it fired on.
   const onPress = item.href

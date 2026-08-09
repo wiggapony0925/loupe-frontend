@@ -3314,6 +3314,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/notifications/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Inbox header: per-category unread counts
+         * @description Per-category unread counts *and* the category catalogue itself.
+         *
+         *     Clients render the filter strip straight from `categories` — order,
+         *     labels and icons included — so adding a category is a backend change.
+         */
+        get: operations["get_summary_v1_me_notifications_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/notifications/unread-count": {
         parameters: {
             query?: never;
@@ -6600,6 +6623,11 @@ export interface components {
              */
             featured: components["schemas"]["SocialUserCard"][];
             /**
+             * Followed By Friends
+             * @default []
+             */
+            followed_by_friends: components["schemas"]["SocialUserCard"][];
+            /**
              * More
              * @default []
              */
@@ -8250,6 +8278,24 @@ export interface components {
             stores: components["schemas"]["NearbyStore"][];
         };
         /**
+         * NotificationCategoryRead
+         * @description One tab of the inbox filter strip, as the server defines it.
+         */
+        NotificationCategoryRead: {
+            /** Description */
+            description: string;
+            /** Icon */
+            icon: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Tone */
+            tone: string;
+            /** Unread */
+            unread: number;
+        };
+        /**
          * NotificationPage
          * @description A page of the inbox plus the badge count.
          *
@@ -8322,6 +8368,16 @@ export interface components {
             read_at?: string | null;
             /** Title */
             title: string;
+        };
+        /**
+         * NotificationSummaryRead
+         * @description Everything needed to draw the inbox header in one request.
+         */
+        NotificationSummaryRead: {
+            /** Categories */
+            categories: components["schemas"]["NotificationCategoryRead"][];
+            /** Unread */
+            unread: number;
         };
         /**
          * OpeningHoursDay
@@ -10422,6 +10478,13 @@ export interface components {
              * @default false
              */
             is_admin: boolean;
+            /** Phone */
+            phone?: string | null;
+            /**
+             * Phone Verified
+             * @default false
+             */
+            phone_verified: boolean;
         };
         /**
          * UserSettingsRead
@@ -10485,6 +10548,8 @@ export interface components {
             avatar_url?: string | null;
             /** Display Name */
             display_name?: string | null;
+            /** Phone */
+            phone?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -16681,6 +16746,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_summary_v1_me_notifications_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSummaryRead"];
                 };
             };
         };

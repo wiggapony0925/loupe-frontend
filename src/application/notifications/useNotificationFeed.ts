@@ -9,8 +9,11 @@
  * user had nowhere to go.
  *
  * The backend now owns the inbox, so this hook is a thin reader over
- * `/v1/me/notifications`. The exported shape is unchanged on purpose: the
- * screen and the home-tab badge keep working without edits.
+ * `/v1/me/notifications` — including *which categories exist*, which is why
+ * `useNotificationCategories` fetches the filter strip rather than
+ * hardcoding it. Four kinds of thing reach a user (community activity,
+ * price alerts, news, and messages from the Loupe team); when a fifth
+ * ships, the strip grows without an app release.
  */
 import { useCallback, useMemo } from "react";
 import {
@@ -47,6 +50,16 @@ interface ServerNotification {
 }
 
 const PAGE_SIZE = 25;
+
+/** One tab of the filter strip, exactly as the server defines it. */
+export interface NotificationCategoryTab {
+  key: string;
+  label: string;
+  description: string;
+  icon: string;
+  tone: string;
+  unread: number;
+}
 
 /** Categories the server may send. Anything unrecognised renders as system
  *  rather than being dropped — a notification we can't classify is still one
@@ -96,7 +109,34 @@ export function useUnreadNotificationCount(): number {
   return useUnreadCountQuery().data?.unread ?? 0;
 }
 
-export function useNotificationFeed(): {
+/**
+ * The filter strip: the categories that exist, in display order, each with
+ * its own unread count. One request — the alternative is a count query per
+ * tab plus one for the total, refetched on every focus.
+ */
+export function useNotificationCategories(): {
+  categories: NotificationCategoryTab[];
+  unread: number;
+  isLoading: boolean;
+} {
+  const { isAuthenticated } = useAuth();
+  const q = useQuery({
+    queryKey: ["notifications", "summary"],
+    queryFn: () =>
+      apiFetch<{ unread: number; categories: NotificationCategoryTab[] }>(
+        ENDPOINTS.notifications.summary,
+      ),
+    enabled: isAuthenticated,
+    staleTime: 60 * 1000,
+  });
+  return {
+    categories: q.data?.categories ?? [],
+    unread: q.data?.unread ?? 0,
+    isLoading: q.isLoading,
+  };
+}
+
+export function useNotificationFeed(category?: string): {
   feed: FeedItem[];
   unread: number;
   markAllRead: () => void;
@@ -110,12 +150,21 @@ export function useNotificationFeed(): {
   const qc = useQueryClient();
   const { isAuthenticated } = useAuth();
 
+  // The category is part of the KEY and part of the QUERY. Filtering the
+  // loaded pages on the device instead looks identical on a short inbox and
+  // is wrong on a long one: "Price alerts" would show only the alerts that
+  // happened to be in the 25 rows already fetched, and paging further would
+  // fetch 25 more of *everything* to find a couple more matches.
   const listQ = useInfiniteQuery({
-    queryKey: ["notifications", "list"],
+    queryKey: ["notifications", "list", category ?? "all"],
     initialPageParam: 1,
     queryFn: ({ pageParam }) =>
       apiFetch<NotificationPage>(ENDPOINTS.notifications.list, {
-        query: { page: pageParam, page_size: PAGE_SIZE },
+        query: {
+          page: pageParam,
+          page_size: PAGE_SIZE,
+          ...(category ? { category } : {}),
+        },
       }),
     getNextPageParam: (last) =>
       last && last.page * last.page_size < last.total ? last.page + 1 : undefined,
@@ -152,8 +201,9 @@ export function useNotificationFeed(): {
 
   // Prefer the list's count when we have it (it's computed in the same
   // transaction as the page); fall back to the standalone badge query.
-  const unread =
-    listQ.data?.pages?.[0]?.unread ?? countQ.data?.unread ?? 0;
+  // Both are whole-inbox numbers even on a filtered page — the badge counts
+  // what is waiting, not what the current tab happens to show.
+  const unread = listQ.data?.pages?.[0]?.unread ?? countQ.data?.unread ?? 0;
 
   const markAllRead = useCallback(() => {
     if (unread > 0) markAll.mutate();

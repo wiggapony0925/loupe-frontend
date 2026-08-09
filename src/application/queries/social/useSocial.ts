@@ -47,7 +47,10 @@ export function useSocialMe(): UseQueryResult<SocialMeWire> {
 }
 
 /** The Community page's shelves, composed and RANKED by the backend —
- *  `featured` and `more` arrive disjoint and ordered; render verbatim. */
+ *  `featured`, `followed_by_friends` and `more` arrive disjoint and
+ *  ordered; render verbatim. Nothing here re-sorts or de-dupes: the
+ *  disjointness is a server contract, and re-deriving it on three clients
+ *  is how they drift. */
 export function useDiscoverCollectors(
   enabled = true,
 ): UseQueryResult<DiscoverWire> {
@@ -211,6 +214,8 @@ export function useFollowCollector() {
           d
             ? {
                 featured: flip(d.featured) ?? d.featured,
+                followed_by_friends:
+                  flip(d.followed_by_friends) ?? d.followed_by_friends,
                 more: flip(d.more) ?? d.more,
               }
             : d,

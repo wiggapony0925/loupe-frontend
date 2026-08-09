@@ -401,30 +401,55 @@ export default function CommunitySettingsScreen() {
                   The stored value is the server's own label, so the same city
                   reads identically everywhere. */}
               <FieldRow label="Location">
-                <TextInput
-                  value={locationQuery}
-                  onChangeText={(t) => {
-                    setLocationQuery(t);
-                    setPickingPlace(true);
-                  }}
-                  placeholder="Start typing a city (optional)"
-                  placeholderTextColor={p.ink.muted}
-                  autoCorrect={false}
-                  className="text-[15px] text-ink"
-                />
                 {location.length > 0 && !pickingPlace ? (
-                  <Pressable
-                    onPress={() => {
-                      setLocation("");
-                      setLocationQuery("");
+                  /* A CHOSEN place is a chip, not text with a button under
+                     it. FieldRow stacks its children, so the old clear-X
+                     rendered on its own line below the value — reading as a
+                     second field rather than as part of this one. */
+                  <View className="flex-row">
+                    <View
+                      className="max-w-full flex-row items-center gap-1.5 self-start rounded-full py-1.5 pl-2.5 pr-1.5"
+                      style={{ backgroundColor: withAlpha(p.accent.mint, 0.14) }}
+                    >
+                      <MapPin size={13} color={p.accent.mint} />
+                      <Text
+                        numberOfLines={1}
+                        className="shrink text-[14px] font-semibold"
+                        style={{ color: p.accent.mint }}
+                      >
+                        {location}
+                      </Text>
+                      <Pressable
+                        onPress={() => {
+                          Haptics.selectionAsync().catch(() => {});
+                          setLocation("");
+                          setLocationQuery("");
+                          setPickingPlace(false);
+                        }}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel="Clear location"
+                        className="h-[18px] w-[18px] items-center justify-center rounded-full"
+                        style={{ backgroundColor: withAlpha(p.accent.mint, 0.2) }}
+                      >
+                        <X size={11} color={p.accent.mint} strokeWidth={2.75} />
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : (
+                  <TextInput
+                    value={locationQuery}
+                    onChangeText={(t) => {
+                      setLocationQuery(t);
+                      setPickingPlace(true);
                     }}
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel="Clear location"
-                  >
-                    <X size={16} color={p.ink.dim} />
-                  </Pressable>
-                ) : null}
+                    placeholder="Start typing a city (optional)"
+                    placeholderTextColor={p.ink.muted}
+                    autoCorrect={false}
+                    autoFocus={pickingPlace && locationQuery.length === 0}
+                    className="text-[15px] text-ink"
+                  />
+                )}
               </FieldRow>
 
               {pickingPlace && locationQuery.trim().length >= 2 ? (

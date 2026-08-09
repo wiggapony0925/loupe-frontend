@@ -24,6 +24,7 @@ export const ENDPOINTS = {
   notifications: {
     list: `${V1}/me/notifications`,
     unreadCount: `${V1}/me/notifications/unread-count`,
+    summary: `${V1}/me/notifications/summary`,
     read: `${V1}/me/notifications/read`,
   },
   /** Public blog. Feeds the notification inbox so a new article reaches the
