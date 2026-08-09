@@ -2162,7 +2162,7 @@
           },
           "images": {
             "default": [],
-            "description": "Up to 4 JPEG/PNG/WebP images, 12 MB each.",
+            "description": "Up to 4 slides. JPEG/PNG/WebP up to 12 MB, or MP4/QuickTime video up to 120 MB.",
             "items": {
               "contentMediaType": "application/octet-stream",
               "type": "string"
@@ -2172,6 +2172,46 @@
           }
         },
         "title": "Body_create_post_v1_social_posts_post",
+        "type": "object"
+      },
+      "Body_create_story_v1_social_stories_post": {
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 280,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional text.",
+            "title": "Caption"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Video length in ms. Ignored for stills.",
+            "title": "Duration Ms"
+          },
+          "media": {
+            "contentMediaType": "application/octet-stream",
+            "description": "One JPEG/PNG/WebP image or MP4/QuickTime video.",
+            "title": "Media",
+            "type": "string"
+          }
+        },
+        "required": [
+          "media"
+        ],
+        "title": "Body_create_story_v1_social_stories_post",
         "type": "object"
       },
       "Body_identify_card_v1_cards_identify_post": {
@@ -8563,8 +8603,13 @@
         "type": "object"
       },
       "PostMediaRead": {
-        "description": "One image in a post's carousel.",
+        "description": "One slide in a post's carousel \u2014 a photo or a video.",
         "properties": {
+          "content_type": {
+            "default": "image/jpeg",
+            "title": "Content Type",
+            "type": "string"
+          },
           "height": {
             "anyOf": [
               {
@@ -8579,6 +8624,11 @@
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "image",
+            "title": "Kind",
             "type": "string"
           },
           "position": {
@@ -12596,6 +12646,256 @@
           "is_saved"
         ],
         "title": "StoreSaveRead",
+        "type": "object"
+      },
+      "StoryCommentCreate": {
+        "properties": {
+          "body": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "StoryCommentCreate",
+        "type": "object"
+      },
+      "StoryCommentRead": {
+        "description": "One comment under a story.\n\nA comment, not a DM \u2014 see :class:`app.social.models.SocialStoryComment`.",
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/PostAuthor"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "can_delete": {
+            "default": false,
+            "title": "Can Delete",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "story_id": {
+            "format": "uuid",
+            "title": "Story Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "story_id",
+          "author",
+          "body",
+          "created_at"
+        ],
+        "title": "StoryCommentRead",
+        "type": "object"
+      },
+      "StoryRead": {
+        "description": "One story card.",
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/PostAuthor"
+          },
+          "can_delete": {
+            "default": false,
+            "title": "Can Delete",
+            "type": "boolean"
+          },
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "comment_count": {
+            "default": 0,
+            "title": "Comment Count",
+            "type": "integer"
+          },
+          "content_type": {
+            "default": "image/jpeg",
+            "title": "Content Type",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "image",
+            "title": "Kind",
+            "type": "string"
+          },
+          "seen": {
+            "default": false,
+            "title": "Seen",
+            "type": "boolean"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "view_count": {
+            "default": 0,
+            "title": "View Count",
+            "type": "integer"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "id",
+          "author",
+          "url",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "StoryRead",
+        "type": "object"
+      },
+      "StoryTrayEntry": {
+        "description": "One avatar in the tray above the feed.\n\nComposed server-side \u2014 order, unseen state and the preview frame all\ncome from here, so the row can't be assembled differently on two\nclients and disagree about whose ring is lit.",
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/PostAuthor"
+          },
+          "has_unseen": {
+            "title": "Has Unseen",
+            "type": "boolean"
+          },
+          "latest_at": {
+            "format": "date-time",
+            "title": "Latest At",
+            "type": "string"
+          },
+          "preview_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Url"
+          },
+          "story_count": {
+            "title": "Story Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "author",
+          "story_count",
+          "has_unseen",
+          "latest_at"
+        ],
+        "title": "StoryTrayEntry",
+        "type": "object"
+      },
+      "StoryTrayRead": {
+        "description": "The whole tray. `mine` is separated because it renders as the\n\"Your story\" plus-button slot rather than as another avatar.",
+        "properties": {
+          "entries": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/StoryTrayEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "mine": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StoryTrayEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "StoryTrayRead",
+        "type": "object"
+      },
+      "StoryViewerRead": {
+        "description": "A person who opened your story. Author-only.",
+        "properties": {
+          "viewed_at": {
+            "format": "date-time",
+            "title": "Viewed At",
+            "type": "string"
+          },
+          "viewer": {
+            "$ref": "#/components/schemas/PostAuthor"
+          }
+        },
+        "required": [
+          "viewer",
+          "viewed_at"
+        ],
+        "title": "StoryViewerRead",
         "type": "object"
       },
       "SubscriptionCancelRequest": {
@@ -28239,6 +28539,487 @@
         "summary": "Search users AND hashtags in one call",
         "tags": [
           "social-feed"
+        ]
+      }
+    },
+    "/v1/social/stories": {
+      "post": {
+        "description": "Multipart, so the caption and the file arrive together \u2014 a two-step\n\"create then attach\" leaves a story with no media whenever the second\ncall fails, and this one expires before anyone could fix it.",
+        "operationId": "create_story_v1_social_stories_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_story_v1_social_stories_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post a story",
+        "tags": [
+          "social:stories"
+        ]
+      }
+    },
+    "/v1/social/stories/archive": {
+      "get": {
+        "description": "Your own stories, including expired ones, newest first.\n\nThe only read in the module that ignores `expires_at` \u2014 and it is\nscoped to the caller, so an expired story only ever comes back to the\nperson who posted it.",
+        "operationId": "story_archive_v1_social_stories_archive_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StoryRead"
+                  },
+                  "title": "Response Story Archive V1 Social Stories Archive Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Your expired stories",
+        "tags": [
+          "social:stories"
+        ]
+      }
+    },
+    "/v1/social/stories/comments/{comment_id}": {
+      "delete": {
+        "description": "Its author, the story's author, or staff.",
+        "operationId": "delete_story_comment_v1_social_stories_comments__comment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete a story comment",
+        "tags": [
+          "social:stories"
+        ]
+      }
+    },
+    "/v1/social/stories/media/{story_id}": {
+      "get": {
+        "description": "Public like the avatar and post-image endpoints: an ``<img>`` or a\nnative player carries no auth on any of our clients. The URL is\nunguessable, and the story AROUND it \u2014 who posted it, its comments,\nwhether it still counts as live \u2014 stays behind the privacy gate.\n\nServed even after expiry, deliberately: the author's archive renders\nfrom these bytes, and a 404 the moment the clock ticks over would break\nthe one screen that is supposed to outlive the story.",
+        "operationId": "get_story_media_v1_social_stories_media__story_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "story_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Story Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Story media bytes",
+        "tags": [
+          "social:stories"
+        ]
+      }
+    },
+    "/v1/social/stories/tray": {
+      "get": {
+        "description": "The row of avatars above the feed, composed and ORDERED server-side \u2014\nunseen first, then by recency. Clients render it verbatim.",
+        "operationId": "story_tray_v1_social_stories_tray_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryTrayRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Story tray",
+        "tags": [
+          "social:stories"
+        ]
+      }
+    },
+    "/v1/social/stories/{handle}": {
+      "get": {
+        "description": "Oldest first \u2014 the order they're tapped through is the order they\nwere told in.",
+        "operationId": "stories_for_v1_social_stories__handle__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "schema": {
+              "title": "Handle",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StoryRead"
+                  },
+                  "title": "Response Stories For V1 Social Stories  Handle  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One collector's live stories",
+        "tags": [
+          "social:stories"
+        ]
+      }
+    },
+    "/v1/social/stories/{story_id}": {
+      "delete": {
+        "operationId": "delete_story_v1_social_stories__story_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "story_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Story Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete a story",
+        "tags": [
+          "social:stories"
+        ]
+      }
+    },
+    "/v1/social/stories/{story_id}/comments": {
+      "get": {
+        "operationId": "story_comments_v1_social_stories__story_id__comments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "story_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Story Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StoryCommentRead"
+                  },
+                  "title": "Response Story Comments V1 Social Stories  Story Id  Comments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "A story's comments",
+        "tags": [
+          "social:stories"
+        ]
+      },
+      "post": {
+        "description": "A comment, visible to everyone who can see the story \u2014 not a DM.\nSee ``SocialStoryComment`` for why.",
+        "operationId": "add_story_comment_v1_social_stories__story_id__comments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "story_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Story Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoryCommentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryCommentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Comment on a story",
+        "tags": [
+          "social:stories"
+        ]
+      }
+    },
+    "/v1/social/stories/{story_id}/view": {
+      "post": {
+        "description": "Idempotent \u2014 re-watching doesn't inflate the count, and your own\nview is never recorded.",
+        "operationId": "mark_seen_v1_social_stories__story_id__view_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "story_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Story Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark a story seen",
+        "tags": [
+          "social:stories"
+        ]
+      }
+    },
+    "/v1/social/stories/{story_id}/viewers": {
+      "get": {
+        "description": "Author only. Nobody sees who watched someone else's story.",
+        "operationId": "story_viewers_v1_social_stories__story_id__viewers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "story_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Story Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StoryViewerRead"
+                  },
+                  "title": "Response Story Viewers V1 Social Stories  Story Id  Viewers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Who saw your story",
+        "tags": [
+          "social:stories"
         ]
       }
     },

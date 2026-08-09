@@ -47,6 +47,8 @@ import { CollectorRow } from "@/presentation/features/social/CollectorRow";
 import { FeedList } from "@/presentation/features/social/feed/FeedList";
 import { FeedTabs } from "@/presentation/features/social/feed/FeedTabs";
 import { HashtagChips } from "@/presentation/features/social/feed/HashtagChips";
+import { StoryTray } from "@/presentation/features/social/stories/StoryTray";
+import { StoryViewer } from "@/presentation/features/social/stories/StoryViewer";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { useScreenTransition } from "@/presentation/navigation/screenMotion";
 import { useHomeOnReentry } from "@/presentation/navigation/useHomeOnReentry";
@@ -62,6 +64,9 @@ export default function CommunityFeedScreen() {
   // from last time. See the hook for why it hangs off blur, not focus.
   useHomeOnReentry();
   const [tab, setTab] = useState<FeedTab>("following");
+  // Whose reel is open, or null. A handle rather than a story id: the
+  // viewer pages through everything that person has up.
+  const [watching, setWatching] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
   useCommunityIslandPresence();
@@ -116,6 +121,14 @@ export default function CommunityFeedScreen() {
             query={feed}
             header={
               <View>
+                {/* The tray sits ABOVE the tabs, not inside one of them:
+                    stories are the same set of people whichever feed you
+                    are reading, and a row that vanished on switching tabs
+                    would read as stories disappearing. */}
+                <StoryTray
+                  onOpen={setWatching}
+                  onCompose={() => router.push(routes.communityStory())}
+                />
                 <FeedTabs value={tab} onChange={setTab} />
                 {tab === "foryou" ? (
                   <View style={{ paddingHorizontal: GUTTER }}>
@@ -155,6 +168,8 @@ export default function CommunityFeedScreen() {
           </Animated.View>
         )}
       </SafeAreaView>
+
+      <StoryViewer handle={watching} onClose={() => setWatching(null)} />
     </View>
   );
 }

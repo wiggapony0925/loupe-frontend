@@ -49,6 +49,8 @@ export const routes = {
   communityPeople: () => "/community/people" as const,
   /** Write a post. */
   communityCompose: () => "/community/compose" as const,
+  /** Record and post a story (camera → review → share). */
+  communityStory: () => "/community/story" as const,
   /** One post — the permalink a notification opens. */
   communityPost: (id: string) => `/community/p/${enc(id)}`,
   /** Every post carrying a tag. */
@@ -62,6 +64,8 @@ export const routes = {
   /** Your private account details (name, email, phone) — not the public
    *  profile, which is `communitySettings`. */
   account: () => "/account" as const,
+  /** Your own stories, including expired ones. Private to you. */
+  storyArchive: () => "/story-archive" as const,
   card: (id: string) => `/card/${enc(id)}`,
   /** Sets explorer (browse the set catalog → a set's cards), bundled in-app. */
   sets: () => "/sets" as const,

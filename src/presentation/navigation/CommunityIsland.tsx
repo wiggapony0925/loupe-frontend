@@ -21,7 +21,7 @@ import React from "react";
 import { Pressable, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useIsFocused } from "@react-navigation/native";
-import { Bell, Home, Newspaper, UserRound, Users } from "lucide-react-native";
+import { Bell, Camera, Newspaper, UserRound, Users } from "lucide-react-native";
 import { router, usePathname } from "expo-router";
 import { useUnreadNotificationCount } from "@/application/notifications/useNotificationFeed";
 import { useSocialMe } from "@/application/queries/social/useSocial";
@@ -110,11 +110,11 @@ function CommunityIslandContent() {
     },
     {
       // Center FAB slot — self-handled (own press feedback), out of the drag.
-      key: "home",
-      label: "Back to the main app",
+      key: "story",
+      label: "Add to your story",
       selectable: false,
       width: 60,
-      render: () => <HomeFab palette={p} />,
+      render: () => <StoryFab palette={p} />,
     },
     {
       key: "alerts",
@@ -167,16 +167,31 @@ function CommunityIslandContent() {
   return <IslandDial items={items} activeKey={activeKey} onCommit={commit} />;
 }
 
-/** The raised mint Home button — the community face's counterpart to Scan. */
-function HomeFab({ palette: p }: { palette: ReturnType<typeof useThemedPalette> }) {
+/**
+ * The raised mint CAMERA button — the community face's counterpart to Scan.
+ *
+ * This slot used to be Home. Inside a social micro-app the centre button is
+ * the one you press to CREATE, not the one you press to leave: Instagram,
+ * TikTok and Snapchat all put the camera there, and every other tab already
+ * navigates, so spending the most reachable target on "go back to the rest
+ * of the app" wasted it. The way out is still the tab bar and the back
+ * gesture, which is where people look for it anyway.
+ *
+ * Long press goes home, so the old habit isn't simply taken away.
+ */
+function StoryFab({ palette: p }: { palette: ReturnType<typeof useThemedPalette> }) {
   return (
     <Pressable
       onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+        router.push(routes.communityStory());
+      }}
+      onLongPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         router.navigate(routes.home());
       }}
       accessibilityRole="button"
-      accessibilityLabel="Back to the main app"
+      accessibilityLabel="Add to your story. Long press to leave Community."
       style={{
         width: 60,
         height: DIAL_HEIGHT,
@@ -200,7 +215,7 @@ function HomeFab({ palette: p }: { palette: ReturnType<typeof useThemedPalette> 
             transform: [{ scale: pressed ? 0.94 : 1 }],
           }}
         >
-          <Home size={22} color="#06140d" strokeWidth={2.4} />
+          <Camera size={22} color="#06140d" strokeWidth={2.4} />
         </View>
       )}
     </Pressable>

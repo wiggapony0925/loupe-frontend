@@ -229,6 +229,9 @@ export interface PostMediaWire {
    *  ratio BEFORE the image loads or every post pops the layout. */
   width: number | null;
   height: number | null;
+  /** "image" or "video". Sent as a KIND so no client sniffs the MIME type. */
+  kind: "image" | "video";
+  content_type: string;
 }
 
 /** The catalog card a post showcases. Carries no price on purpose — the
@@ -312,4 +315,59 @@ export interface ReportCreateWire {
   target_id: string;
   reason: string;
   note?: string | null;
+}
+
+// ── Stories ───────────────────────────────────────────────────────────
+
+/** One story card. Expires 24h after `created_at` — the server filters on
+ *  that, so a client never has to decide whether something is still live. */
+export interface StoryWire {
+  id: string;
+  author: PostAuthorWire;
+  url: string;
+  /** "image" or "video". Sent as a KIND so no client sniffs the MIME type. */
+  kind: "image" | "video";
+  content_type: string;
+  width: number | null;
+  height: number | null;
+  /** Video length. Null for a still, which uses the client's fixed dwell. */
+  duration_ms: number | null;
+  caption: string | null;
+  created_at: string;
+  expires_at: string;
+  /** Whether YOU have opened it — drives the ring. */
+  seen: boolean;
+  /** Author only; 0 for everyone else. */
+  view_count: number;
+  comment_count: number;
+  can_delete: boolean;
+}
+
+/** One avatar in the tray. Composed and ordered server-side. */
+export interface StoryTrayEntryWire {
+  author: PostAuthorWire;
+  story_count: number;
+  has_unseen: boolean;
+  latest_at: string;
+  preview_url: string | null;
+}
+
+export interface StoryTrayWire {
+  /** Your own — rendered as the "Your story" plus slot, not a queue item. */
+  mine: StoryTrayEntryWire | null;
+  entries: StoryTrayEntryWire[];
+}
+
+export interface StoryCommentWire {
+  id: string;
+  story_id: string;
+  author: PostAuthorWire;
+  body: string;
+  created_at: string;
+  can_delete: boolean;
+}
+
+export interface StoryViewerWire {
+  viewer: PostAuthorWire;
+  viewed_at: string;
 }

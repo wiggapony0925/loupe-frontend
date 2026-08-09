@@ -117,6 +117,11 @@ export const queryKeys = {
     reportReasons: () => ["social", "report-reasons"] as const,
     hashtagSuggest: (q: string) => ["social", "hashtag-suggest", q] as const,
     hashtagRecent: () => ["social", "hashtag-recent"] as const,
+    storyTray: () => ["social", "story-tray"] as const,
+    stories: (handle: string) => ["social", "stories", handle] as const,
+    storyArchive: () => ["social", "story-archive"] as const,
+    storyComments: (id: string) => ["social", "story-comments", id] as const,
+    storyViewers: (id: string) => ["social", "story-viewers", id] as const,
   },
   stores: {
     places: (q: string) => ["places", q] as const,

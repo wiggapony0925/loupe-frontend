@@ -25,10 +25,11 @@
  * 1.91:1 — Instagram's bounds — cropped to fill.
  */
 import React, { useState } from "react";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
+import { useVideoPlayer, VideoView } from "expo-video";
 import * as Haptics from "expo-haptics";
-import { Heart } from "lucide-react-native";
+import { Heart, Play, Volume2, VolumeX } from "lucide-react-native";
 import { Gesture, GestureDetector, ScrollView } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -190,6 +191,9 @@ function Slide({
   width: number;
   height: number;
 }) {
+  if (item.kind === "video") {
+    return <VideoSlide item={item} width={width} height={height} />;
+  }
   return (
     <Image
       source={{ uri: absolutize(item.url) ?? undefined }}
@@ -201,7 +205,105 @@ function Slide({
   );
 }
 
+/**
+ * A video slide.
+ *
+ * **Muted, looping, tap to unmute** — the feed convention, and the reason
+ * for it is that a scrolling feed that suddenly makes noise is the fastest
+ * way to make someone close an app in public. Playback is manual (tap the
+ * poster) rather than autoplay: autoplay needs viewport tracking to stop
+ * four clips decoding at once off-screen, and that is a bigger change than
+ * this slice.
+ *
+ * Its own component so `useVideoPlayer` is only created for slides that
+ * actually are video — hooks can't be conditional, and hoisting it into
+ * `Slide` would spin up a player for every photo in the feed.
+ */
+function VideoSlide({
+  item,
+  width,
+  height,
+}: {
+  item: PostMediaWire;
+  width: number;
+  height: number;
+}) {
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const player = useVideoPlayer(absolutize(item.url) ?? "", (instance) => {
+    instance.loop = true;
+    instance.muted = true;
+  });
+
+  return (
+    <Pressable
+      onPress={() => {
+        if (!playing) {
+          setPlaying(true);
+          player.play();
+          return;
+        }
+        // Once it's running, a tap is the mute toggle.
+        const next = !muted;
+        setMuted(next);
+        player.muted = next;
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={
+        playing ? (muted ? "Unmute video" : "Mute video") : "Play video"
+      }
+      style={{ width, height }}
+    >
+      <VideoView
+        style={{ width, height }}
+        player={player}
+        contentFit="cover"
+        nativeControls={false}
+      />
+      {!playing ? (
+        <View style={styles.playOverlay} pointerEvents="none">
+          <View style={styles.playBadge}>
+            <Play size={26} color="#fff" fill="#fff" />
+          </View>
+        </View>
+      ) : (
+        <View style={styles.muteBadge} pointerEvents="none">
+          {muted ? (
+            <VolumeX size={14} color="#fff" />
+          ) : (
+            <Volume2 size={14} color="#fff" />
+          )}
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playBadge: {
+    width: 62,
+    height: 62,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 31,
+    backgroundColor: "rgba(0,0,0,0.42)",
+  },
+  muteBadge: {
+    position: "absolute",
+    right: 12,
+    bottom: 12,
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 14,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
   burst: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",

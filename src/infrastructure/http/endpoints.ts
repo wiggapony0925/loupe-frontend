@@ -81,6 +81,21 @@ export const ENDPOINTS = {
       `${V1}/social/users/${encodeURIComponent(handle)}/posts`,
     trendingHashtags: `${V1}/social/hashtags/trending`,
     /** Tag autocomplete while typing a `#` (empty q → trending). */
+    /** Stories — 24h photo/video. `tray` is composed server-side. */
+    stories: `${V1}/social/stories`,
+    storyTray: `${V1}/social/stories/tray`,
+    storyArchive: `${V1}/social/stories/archive`,
+    storiesFor: (handle: string) =>
+      `${V1}/social/stories/${encodeURIComponent(handle)}`,
+    story: (id: string) => `${V1}/social/stories/${encodeURIComponent(id)}`,
+    storyView: (id: string) =>
+      `${V1}/social/stories/${encodeURIComponent(id)}/view`,
+    storyViewers: (id: string) =>
+      `${V1}/social/stories/${encodeURIComponent(id)}/viewers`,
+    storyComments: (id: string) =>
+      `${V1}/social/stories/${encodeURIComponent(id)}/comments`,
+    storyComment: (id: string) =>
+      `${V1}/social/stories/comments/${encodeURIComponent(id)}`,
     hashtagRecent: `${V1}/social/hashtags/recent`,
     hashtagSuggest: `${V1}/social/hashtags/suggest`,
     hashtagPosts: (tag: string) =>

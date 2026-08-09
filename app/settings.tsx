@@ -16,6 +16,7 @@ import {
   FileText,
   Github,
   Info,
+  History,
   KeyRound,
   UserCog,
   LifeBuoy,
@@ -342,6 +343,14 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
               </View>
             }
             onPress={() => router.push("/community")}
+          />
+          <Row
+            icon={History}
+            iconTint={p.accent.mint}
+            label="Story archive"
+            description="Every story you've posted — kept after it expires"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => router.push(routes.storyArchive())}
           />
           <Row
             icon={MapPin}

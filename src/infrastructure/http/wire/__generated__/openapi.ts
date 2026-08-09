@@ -4813,6 +4813,221 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/social/stories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post a story
+         * @description Multipart, so the caption and the file arrive together — a two-step
+         *     "create then attach" leaves a story with no media whenever the second
+         *     call fails, and this one expires before anyone could fix it.
+         */
+        post: operations["create_story_v1_social_stories_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/stories/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your expired stories
+         * @description Your own stories, including expired ones, newest first.
+         *
+         *     The only read in the module that ignores `expires_at` — and it is
+         *     scoped to the caller, so an expired story only ever comes back to the
+         *     person who posted it.
+         */
+        get: operations["story_archive_v1_social_stories_archive_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/stories/comments/{comment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a story comment
+         * @description Its author, the story's author, or staff.
+         */
+        delete: operations["delete_story_comment_v1_social_stories_comments__comment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/stories/media/{story_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Story media bytes
+         * @description Public like the avatar and post-image endpoints: an ``<img>`` or a
+         *     native player carries no auth on any of our clients. The URL is
+         *     unguessable, and the story AROUND it — who posted it, its comments,
+         *     whether it still counts as live — stays behind the privacy gate.
+         *
+         *     Served even after expiry, deliberately: the author's archive renders
+         *     from these bytes, and a 404 the moment the clock ticks over would break
+         *     the one screen that is supposed to outlive the story.
+         */
+        get: operations["get_story_media_v1_social_stories_media__story_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/stories/tray": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Story tray
+         * @description The row of avatars above the feed, composed and ORDERED server-side —
+         *     unseen first, then by recency. Clients render it verbatim.
+         */
+        get: operations["story_tray_v1_social_stories_tray_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/stories/{handle}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One collector's live stories
+         * @description Oldest first — the order they're tapped through is the order they
+         *     were told in.
+         */
+        get: operations["stories_for_v1_social_stories__handle__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/stories/{story_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a story */
+        delete: operations["delete_story_v1_social_stories__story_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/stories/{story_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A story's comments */
+        get: operations["story_comments_v1_social_stories__story_id__comments_get"];
+        put?: never;
+        /**
+         * Comment on a story
+         * @description A comment, visible to everyone who can see the story — not a DM.
+         *     See ``SocialStoryComment`` for why.
+         */
+        post: operations["add_story_comment_v1_social_stories__story_id__comments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/stories/{story_id}/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark a story seen
+         * @description Idempotent — re-watching doesn't inflate the count, and your own
+         *     view is never recorded.
+         */
+        post: operations["mark_seen_v1_social_stories__story_id__view_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/social/stories/{story_id}/viewers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who saw your story
+         * @description Author only. Nobody sees who watched someone else's story.
+         */
+        get: operations["story_viewers_v1_social_stories__story_id__viewers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/social/suggested": {
         parameters: {
             query?: never;
@@ -6017,10 +6232,28 @@ export interface components {
             card_id?: string | null;
             /**
              * Images
-             * @description Up to 4 JPEG/PNG/WebP images, 12 MB each.
+             * @description Up to 4 slides. JPEG/PNG/WebP up to 12 MB, or MP4/QuickTime video up to 120 MB.
              * @default []
              */
             images: string[];
+        };
+        /** Body_create_story_v1_social_stories_post */
+        Body_create_story_v1_social_stories_post: {
+            /**
+             * Caption
+             * @description Optional text.
+             */
+            caption?: string | null;
+            /**
+             * Duration Ms
+             * @description Video length in ms. Ignored for stills.
+             */
+            duration_ms?: number | null;
+            /**
+             * Media
+             * @description One JPEG/PNG/WebP image or MP4/QuickTime video.
+             */
+            media: string;
         };
         /** Body_identify_card_v1_cards_identify_post */
         Body_identify_card_v1_cards_identify_post: {
@@ -8715,9 +8948,14 @@ export interface components {
         };
         /**
          * PostMediaRead
-         * @description One image in a post's carousel.
+         * @description One slide in a post's carousel — a photo or a video.
          */
         PostMediaRead: {
+            /**
+             * Content Type
+             * @default image/jpeg
+             */
+            content_type: string;
             /** Height */
             height?: number | null;
             /**
@@ -8725,6 +8963,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Kind
+             * @default image
+             */
+            kind: string;
             /**
              * Position
              * @default 0
@@ -10322,6 +10565,151 @@ export interface components {
             is_saved: boolean;
             /** Store Id */
             store_id: string;
+        };
+        /** StoryCommentCreate */
+        StoryCommentCreate: {
+            /** Body */
+            body: string;
+        };
+        /**
+         * StoryCommentRead
+         * @description One comment under a story.
+         *
+         *     A comment, not a DM — see :class:`app.social.models.SocialStoryComment`.
+         */
+        StoryCommentRead: {
+            author: components["schemas"]["PostAuthor"];
+            /** Body */
+            body: string;
+            /**
+             * Can Delete
+             * @default false
+             */
+            can_delete: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Story Id
+             * Format: uuid
+             */
+            story_id: string;
+        };
+        /**
+         * StoryRead
+         * @description One story card.
+         */
+        StoryRead: {
+            author: components["schemas"]["PostAuthor"];
+            /**
+             * Can Delete
+             * @default false
+             */
+            can_delete: boolean;
+            /** Caption */
+            caption?: string | null;
+            /**
+             * Comment Count
+             * @default 0
+             */
+            comment_count: number;
+            /**
+             * Content Type
+             * @default image/jpeg
+             */
+            content_type: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Height */
+            height?: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @default image
+             */
+            kind: string;
+            /**
+             * Seen
+             * @default false
+             */
+            seen: boolean;
+            /** Url */
+            url: string;
+            /**
+             * View Count
+             * @default 0
+             */
+            view_count: number;
+            /** Width */
+            width?: number | null;
+        };
+        /**
+         * StoryTrayEntry
+         * @description One avatar in the tray above the feed.
+         *
+         *     Composed server-side — order, unseen state and the preview frame all
+         *     come from here, so the row can't be assembled differently on two
+         *     clients and disagree about whose ring is lit.
+         */
+        StoryTrayEntry: {
+            author: components["schemas"]["PostAuthor"];
+            /** Has Unseen */
+            has_unseen: boolean;
+            /**
+             * Latest At
+             * Format: date-time
+             */
+            latest_at: string;
+            /** Preview Url */
+            preview_url?: string | null;
+            /** Story Count */
+            story_count: number;
+        };
+        /**
+         * StoryTrayRead
+         * @description The whole tray. `mine` is separated because it renders as the
+         *     "Your story" plus-button slot rather than as another avatar.
+         */
+        StoryTrayRead: {
+            /**
+             * Entries
+             * @default []
+             */
+            entries: components["schemas"]["StoryTrayEntry"][];
+            mine?: components["schemas"]["StoryTrayEntry"] | null;
+        };
+        /**
+         * StoryViewerRead
+         * @description A person who opened your story. Author-only.
+         */
+        StoryViewerRead: {
+            /**
+             * Viewed At
+             * Format: date-time
+             */
+            viewed_at: string;
+            viewer: components["schemas"]["PostAuthor"];
         };
         /**
          * SubscriptionCancelRequest
@@ -19600,6 +19988,323 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialSearchRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_story_v1_social_stories_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_create_story_v1_social_stories_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    story_archive_v1_social_stories_archive_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryRead"][];
+                };
+            };
+        };
+    };
+    delete_story_comment_v1_social_stories_comments__comment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_story_media_v1_social_stories_media__story_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                story_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    story_tray_v1_social_stories_tray_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryTrayRead"];
+                };
+            };
+        };
+    };
+    stories_for_v1_social_stories__handle__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_story_v1_social_stories__story_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                story_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    story_comments_v1_social_stories__story_id__comments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                story_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryCommentRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_story_comment_v1_social_stories__story_id__comments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                story_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoryCommentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryCommentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_seen_v1_social_stories__story_id__view_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                story_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    story_viewers_v1_social_stories__story_id__viewers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                story_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryViewerRead"][];
                 };
             };
             /** @description Validation Error */
