@@ -13,8 +13,9 @@
 
 import React from "react";
 import { Modal, Platform, Pressable, Text, View, type ViewStyle } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
+import { useKeyboardHeight } from "@/presentation/hooks/useKeyboardHeight";
 import { radius, spacing, useThemedPalette } from "@/presentation/theme/tokens";
 
 interface BottomSheetProps {
@@ -53,6 +54,17 @@ interface BottomSheetProps {
    * sheet the way they span a page.
    */
   flush?: boolean;
+  /**
+   * Lift the sheet's contents clear of the keyboard, and hold it at full
+   * height while the keyboard is up.
+   *
+   * For sheets whose last child is a text input (comments, the composer).
+   * Without it the input sits behind the keyboard: the sheet is pinned to
+   * the bottom of the screen, and that is exactly where the keyboard
+   * appears. `KeyboardAvoidingView` is the usual answer and it does not
+   * work reliably inside a `Modal` — see `useKeyboardHeight`.
+   */
+  avoidKeyboard?: boolean;
   children: React.ReactNode;
 }
 
@@ -69,9 +81,19 @@ export function BottomSheet({
   overlay = false,
   minHeight,
   flush = false,
+  avoidKeyboard = false,
   children,
 }: BottomSheetProps) {
   const p = useThemedPalette();
+  const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
+  // The sheet already reserves the home-indicator inset; the keyboard covers
+  // it, so only the difference is new space to make. Without the subtraction
+  // the input floats a thumb's width above the keys.
+  const keyboardLift =
+    avoidKeyboard && keyboardHeight > 0
+      ? Math.max(0, keyboardHeight - insets.bottom)
+      : 0;
   // Compact confirms and overlay popovers present from the bottom; only
   // full-page sheets use the native iOS pageSheet.
   const sheetFromBottom = Platform.OS !== "ios" || compact || overlay;
@@ -103,9 +125,17 @@ export function BottomSheet({
           style={{
             flex: sheetFromBottom ? undefined : 1,
             maxHeight: sheetFromBottom ? maxHeight : undefined,
-            minHeight: sheetFromBottom && !compact ? minHeight : undefined,
+            // Typing pins the sheet OPEN at its full height. A sheet that
+            // stays at its resting height while the keyboard eats the
+            // bottom half leaves a letterbox of content between the two.
+            minHeight:
+              keyboardLift > 0
+                ? maxHeight
+                : sheetFromBottom && !compact
+                  ? minHeight
+                  : undefined,
             paddingHorizontal: flush ? 0 : spacing.xl,
-            paddingBottom: spacing.xl,
+            paddingBottom: spacing.xl + keyboardLift,
             backgroundColor: p.bg.base,
             borderTopLeftRadius: sheetFromBottom ? radius.xl : 0,
             borderTopRightRadius: sheetFromBottom ? radius.xl : 0,

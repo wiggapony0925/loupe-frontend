@@ -108,6 +108,9 @@ function PostCardImpl({
           </View>
           <Text numberOfLines={1} style={[styles.meta, { color: p.ink.dim }]}>
             @{author.username} · {relativeTime(post.created_at)}
+            {/* Comments underneath may be answering words that are no
+                longer there. Saying so is the honest thing. */}
+            {post.edited_at ? " · edited" : ""}
           </Text>
         </Pressable>
 

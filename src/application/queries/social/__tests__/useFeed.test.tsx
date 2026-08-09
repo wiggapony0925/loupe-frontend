@@ -46,7 +46,9 @@ function post(over: Partial<PostWire> = {}): PostWire {
     viewer_has_liked: false,
     hashtags: [],
     mentions: [],
+    edited_at: null,
     can_delete: false,
+    can_edit: false,
     ...over,
   };
 }

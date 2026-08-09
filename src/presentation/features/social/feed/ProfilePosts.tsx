@@ -41,6 +41,8 @@ export function ProfilePosts({
     <PostGrid
       posts={rows}
       loading={posts.isLoading}
+      // A profile grid is someone's work, not a leaderboard — see PostGrid.
+      showStats={false}
       onOpen={(post) => router.push(routes.communityPost(post.id))}
       footer={
         posts.hasNextPage ? (

@@ -7,10 +7,9 @@
  * tapped it. Callers pass a query result and a header, and get scrolling,
  * paging, pull-to-refresh, the comments sheet, likes, follows and delete.
  */
-import React, { useCallback, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -29,6 +28,8 @@ import { useThemedPalette } from "@/presentation/theme/tokens";
 import { CommentsSheet } from "./CommentsSheet";
 import { ImageLightbox } from "./ImageLightbox";
 import { PostCard } from "./PostCard";
+import { EditPostSheet } from "./EditPostSheet";
+import { usePostOptions } from "./usePostOptions";
 import { ReportSheet, type ReportTarget } from "./ReportSheet";
 
 export interface FeedListProps {
@@ -53,6 +54,7 @@ export function FeedList({
   const p = useThemedPalette();
   const [openPost, setOpenPost] = useState<PostWire | null>(null);
   const [reporting, setReporting] = useState<ReportTarget | null>(null);
+  const [editing, setEditing] = useState<PostWire | null>(null);
   const [viewing, setViewing] = useState<{
     media: PostWire["media"];
     index: number;
@@ -64,45 +66,16 @@ export function FeedList({
 
   const posts = feedPosts(query.data);
 
-  /**
-   * The ⋯ menu. What it offers depends on whose post it is: your own can be
-   * deleted, someone else's can be reported. Staff see both — they can
-   * remove anything, and should still be able to file a case for the record.
-   */
-  const onMore = useCallback(
-    (post: PostWire) => {
-      const mine = post.author.relationship === "self";
-      const options: { text: string; style?: "cancel" | "destructive"; onPress?: () => void }[] =
-        [];
-
-      if (!mine) {
-        options.push({
-          text: "Report post",
-          onPress: () =>
-            setReporting({
-              type: "post",
-              id: post.id,
-              label: `@${post.author.username}'s post`,
-            }),
-        });
-      }
-      if (post.can_delete) {
-        options.push({
-          text: "Delete post",
-          style: "destructive",
-          // The app's standing rule is "tap = do it, no confirm popups", but
-          // deleting is irreversible and destroys other people's replies —
-          // the one place a confirm earns its keep, and this sheet IS it.
-          onPress: () => remove.mutate({ postId: post.id }),
-        });
-      }
-      if (options.length === 0) return;
-      options.push({ text: "Cancel", style: "cancel" });
-
-      Alert.alert("Post options", undefined, options);
-    },
-    [remove],
-  );
+  const onMore = usePostOptions({
+    onEdit: setEditing,
+    onReport: (post) =>
+      setReporting({
+        type: "post",
+        id: post.id,
+        label: `@${post.author.username}'s post`,
+      }),
+    onDelete: (post) => remove.mutate({ postId: post.id }),
+  });
 
   return (
     <>
@@ -162,6 +135,8 @@ export function FeedList({
       />
       <CommentsSheet post={openPost} onClose={() => setOpenPost(null)} />
       <ReportSheet target={reporting} onClose={() => setReporting(null)} />
+
+      <EditPostSheet post={editing} onClose={() => setEditing(null)} />
       <ImageLightbox
         media={viewing?.media ?? null}
         initialIndex={viewing?.index ?? 0}

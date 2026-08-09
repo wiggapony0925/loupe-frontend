@@ -59,6 +59,9 @@ export const routes = {
   myProfile: () => "/u/@me" as const,
   /** Community settings — username, bio, photo, privacy, deactivate. */
   communitySettings: () => "/community-settings" as const,
+  /** Your private account details (name, email, phone) — not the public
+   *  profile, which is `communitySettings`. */
+  account: () => "/account" as const,
   card: (id: string) => `/card/${enc(id)}`,
   /** Sets explorer (browse the set catalog → a set's cards), bundled in-app. */
   sets: () => "/sets" as const,

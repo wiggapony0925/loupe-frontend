@@ -256,7 +256,11 @@ export interface PostWire {
   hashtags: string[];
   /** Handles in the caption that resolve to real accounts — link only these. */
   mentions: string[];
+  /** When the caption was last rewritten, or null. Render "· edited". */
+  edited_at: string | null;
   can_delete: boolean;
+  /** Author only. Staff can remove a post but never rewrite one. */
+  can_edit: boolean;
 }
 
 /** A page of posts. `next_cursor` is opaque: pass it back verbatim. */

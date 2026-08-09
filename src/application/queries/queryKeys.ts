@@ -116,6 +116,7 @@ export const queryKeys = {
     replies: (commentId: string) => ["social", "replies", commentId] as const,
     reportReasons: () => ["social", "report-reasons"] as const,
     hashtagSuggest: (q: string) => ["social", "hashtag-suggest", q] as const,
+    hashtagRecent: () => ["social", "hashtag-recent"] as const,
   },
   stores: {
     places: (q: string) => ["places", q] as const,

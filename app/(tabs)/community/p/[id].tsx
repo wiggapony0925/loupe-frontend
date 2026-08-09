@@ -23,7 +23,14 @@ import {
   usePost,
 } from "@/application/queries/social/useFeed";
 import { useFollowCollector } from "@/application/queries/social/useSocial";
+import type { PostWire } from "@/infrastructure/http/wire/social";
 import { CommentsSheet } from "@/presentation/features/social/feed/CommentsSheet";
+import { EditPostSheet } from "@/presentation/features/social/feed/EditPostSheet";
+import {
+  ReportSheet,
+  type ReportTarget,
+} from "@/presentation/features/social/feed/ReportSheet";
+import { usePostOptions } from "@/presentation/features/social/feed/usePostOptions";
 import { PostCard } from "@/presentation/features/social/feed/PostCard";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { useThemedPalette } from "@/presentation/theme/tokens";
@@ -40,6 +47,22 @@ export default function PostScreen() {
   const like = useLikePost();
   const follow = useFollowCollector();
   const remove = useDeletePost();
+  const [editing, setEditing] = useState<PostWire | null>(null);
+  const [reporting, setReporting] = useState<ReportTarget | null>(null);
+
+  // The same menu the feed shows. This page used to wire ⋯ straight to
+  // delete, so one tap on "Post options" destroyed your own post.
+  const onMore = usePostOptions({
+    onEdit: setEditing,
+    onReport: (target) =>
+      setReporting({
+        type: "post",
+        id: target.id,
+        label: `@${target.author.username}'s post`,
+      }),
+    onDelete: (target) =>
+      remove.mutate({ postId: target.id }, { onSuccess: () => router.back() }),
+  });
 
   // `?comments=1` is what a "someone commented" notification links to.
   useEffect(() => {
@@ -70,15 +93,7 @@ export default function PostScreen() {
               onToggleLike={like.mutate}
               onOpenComments={() => setCommentsOpen(true)}
               onToggleFollow={follow.mutate}
-              onMore={
-                post.data.can_delete
-                  ? (target) =>
-                      remove.mutate(
-                        { postId: target.id },
-                        { onSuccess: () => router.back() },
-                      )
-                  : undefined
-              }
+              onMore={onMore}
             />
           ) : (
             <View style={styles.missing}>
@@ -98,6 +113,9 @@ export default function PostScreen() {
         post={commentsOpen ? (post.data ?? null) : null}
         onClose={() => setCommentsOpen(false)}
       />
+
+      <EditPostSheet post={editing} onClose={() => setEditing(null)} />
+      <ReportSheet target={reporting} onClose={() => setReporting(null)} />
     </View>
   );
 }

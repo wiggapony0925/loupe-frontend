@@ -30,6 +30,10 @@ export const MeResponseSchema = z.object({
   avatar_url: z.string().nullable(),
   created_at: isoDate,
   is_admin: z.boolean().optional(),
+  /** MASKED by the server ("+1 ••• ••• 0123"). Never the raw number, and
+   *  never present on anyone else's payload. */
+  phone: z.string().nullable().optional(),
+  phone_verified: z.boolean().optional(),
 });
 export type MeResponseValidated = z.infer<typeof MeResponseSchema>;
 

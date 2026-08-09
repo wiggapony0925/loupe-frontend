@@ -87,6 +87,7 @@ export { useHomeFeed } from "./analytics/useHomeFeed";
 
 // auth
 export { useMe } from "./auth/useMe";
+export { useUpdateProfile } from "./auth/useUpdateProfile";
 export {
   useEntitlements,
   useBillingConfig,

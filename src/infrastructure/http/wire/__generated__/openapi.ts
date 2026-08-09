@@ -4425,6 +4425,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/social/hashtags/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tags you have used before
+         * @description The composer's suggestion row: your own tags first, trending after.
+         */
+        get: operations["recent_hashtags_v1_social_hashtags_recent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/social/hashtags/suggest": {
         parameters: {
             query?: never;
@@ -4613,7 +4633,14 @@ export interface paths {
         delete: operations["delete_post_v1_social_posts__post_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Edit a post's caption
+         * @description Rewrite the caption. Author only, re-moderated, tags re-indexed.
+         *
+         *     JSON rather than multipart because photos are deliberately immutable:
+         *     a post's images are what people liked and commented on.
+         */
+        patch: operations["edit_post_v1_social_posts__post_id__patch"];
         trace?: never;
     };
     "/v1/social/posts/{post_id}/comments": {
@@ -8666,6 +8693,14 @@ export interface components {
             tcg?: string | null;
         };
         /**
+         * PostEdit
+         * @description A caption rewrite. Images are not editable — see `edit_post`.
+         */
+        PostEdit: {
+            /** Body */
+            body?: string | null;
+        };
+        /**
          * PostLikeRead
          * @description New like state + the fresh total, so the client never guesses.
          */
@@ -8713,6 +8748,11 @@ export interface components {
              * @default false
              */
             can_delete: boolean;
+            /**
+             * Can Edit
+             * @default false
+             */
+            can_edit: boolean;
             card?: components["schemas"]["PostCardRef"] | null;
             /**
              * Comment Count
@@ -8724,6 +8764,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Edited At */
+            edited_at?: string | null;
             /**
              * Hashtags
              * @default []
@@ -18822,6 +18864,37 @@ export interface operations {
             };
         };
     };
+    recent_hashtags_v1_social_hashtags_recent_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HashtagRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     suggest_hashtags_v1_social_hashtags_suggest_get: {
         parameters: {
             query?: {
@@ -19165,6 +19238,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_post_v1_social_posts__post_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostRead"];
+                };
             };
             /** @description Validation Error */
             422: {

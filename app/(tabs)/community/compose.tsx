@@ -10,7 +10,7 @@
  * two-step "create then attach" would leave a captionless post behind every
  * time the upload failed.
  */
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,7 +20,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { Image } from "expo-image";
@@ -37,12 +36,7 @@ import {
   CardPickerSheet,
   type PickedCard,
 } from "@/presentation/features/social/feed/CardPickerSheet";
-import {
-  HashtagSuggestions,
-  activeHashtag,
-  completeHashtag,
-} from "@/presentation/features/social/feed/HashtagSuggestions";
-import { PostCaption } from "@/presentation/features/social/feed/PostCaption";
+import { CaptionInput } from "@/presentation/features/social/feed/CaptionInput";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /** Matches the server's cap (`MAX_POST_BODY`). */
@@ -68,14 +62,6 @@ export default function ComposeScreen() {
   const [images, setImages] = useState<Draft[]>([]);
   const [card, setCard] = useState<PickedCard | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  // Where the caret is, so we know which `#word` is being typed.
-  const [caret, setCaret] = useState(0);
-  const inputRef = useRef<TextInput>(null);
-
-  // Null unless the caret sits inside a `#tag`; "" the instant `#` is typed
-  // (which is when a suggestion helps most — see HashtagSuggestions).
-  const typingTag = activeHashtag(body, caret);
-
   const remaining = MAX_BODY - body.length;
   const canPost =
     (body.trim().length > 0 || images.length > 0 || card !== null) && !pending;
@@ -190,53 +176,18 @@ export default function ComposeScreen() {
                   size={38}
                 />
               ) : null}
-              <TextInput
-                ref={inputRef}
+              <CaptionInput
                 value={body}
-                onSelectionChange={(e) =>
-                  setCaret(e.nativeEvent.selection.end)
-                }
                 onChangeText={(next) => {
                   setBody(next.slice(0, MAX_BODY));
                   // Editing is the user answering the refusal — clear it.
                   if (refusal) dismiss();
                 }}
                 placeholder="What did you pull? Use #tags and @mentions."
-                placeholderTextColor={p.ink.dim}
-                multiline
                 autoFocus
-                style={[styles.input, { color: p.ink.default }]}
-                accessibilityLabel="Post caption"
               />
             </View>
 
-            {/* How it will actually read. A caption's #tags and @mentions
-                only turned green AFTER posting, so nobody could see they'd
-                typed a real tag until it was too late to fix. */}
-            {body.trim().length > 0 ? (
-              <View
-                style={[
-                  styles.preview,
-                  { borderColor: p.line.default, backgroundColor: p.bg.elevated },
-                ]}
-              >
-                <Text style={[styles.previewLabel, { color: p.ink.dim }]}>
-                  PREVIEW
-                </Text>
-                <PostCaption
-                  body={body}
-                  // Everything that LOOKS like a tag is shown as one here —
-                  // the server hasn't indexed it yet, and the point is to
-                  // show what will happen.
-                  hashtags={(body.match(/#([A-Za-z0-9_]{1,64})/g) ?? []).map((t) =>
-                    t.slice(1).toLowerCase(),
-                  )}
-                  mentions={(body.match(/@([A-Za-z0-9][A-Za-z0-9._]{2,29})/g) ?? []).map(
-                    (m) => m.slice(1).toLowerCase(),
-                  )}
-                />
-              </View>
-            ) : null}
 
             {images.length > 0 ? (
               <View style={styles.thumbs}>
@@ -309,15 +260,6 @@ export default function ComposeScreen() {
             ) : null}
           </ScrollView>
 
-          <HashtagSuggestions
-            query={typingTag}
-            onPick={(tag) => {
-              const next = completeHashtag(body, caret, tag);
-              setBody(next.text.slice(0, MAX_BODY));
-              setCaret(next.caret);
-              inputRef.current?.focus();
-            }}
-          />
 
           <View style={[styles.tools, { borderTopColor: p.line.default }]}>
             <Pressable

@@ -17,6 +17,7 @@ import {
   Github,
   Info,
   KeyRound,
+  UserCog,
   LifeBuoy,
   LogOut,
   Mail,
@@ -421,6 +422,14 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         </Section>
 
         <Section title="Security">
+          <Row
+            icon={UserCog}
+            iconTint={p.accent.blue}
+            label="Account details"
+            description="Display name, email, phone number"
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => router.push(routes.account())}
+          />
           <Row
             icon={KeyRound}
             iconTint={p.accent.rose}

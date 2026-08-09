@@ -259,6 +259,34 @@ export function useDeletePost() {
 }
 
 /**
+ * Rewrite a caption.
+ *
+ * Not optimistic, unlike the like button. The server re-moderates the new
+ * text and re-derives the hashtags, so what comes back can differ from what
+ * was typed — a caption that flashes into place and then changes reads as a
+ * glitch. The round trip here is one request on a deliberate action, not on
+ * every tap.
+ */
+export function useEditPost() {
+  const qc = useQueryClient();
+  return useMutation<PostWire, Error, { postId: string; body: string }>({
+    mutationFn: ({ postId, body }) =>
+      apiFetch<PostWire>(ENDPOINTS.social.post(postId), {
+        method: "PATCH",
+        json: { body },
+      }),
+    onSuccess: (updated) => {
+      // The same post can be on screen in two tabs and on a profile.
+      patchFeeds(qc, updated.id, () => updated);
+      void qc.invalidateQueries({ queryKey: ["social", "user-posts"] });
+      void qc.invalidateQueries({ queryKey: ["social", "post", updated.id] });
+      // Its tags may have changed, so the pages it belongs to have too.
+      void qc.invalidateQueries({ queryKey: ["social", "hashtag"] });
+    },
+  });
+}
+
+/**
  * Like/unlike, optimistic. The same post can be on screen in two tabs, so
  * the patch is applied to every cached feed by post id, and rolled back on
  * every one of them if the request fails.
@@ -399,6 +427,26 @@ export function useHashtagSuggestions(
       }),
     enabled: isAuthenticated && query !== null,
     staleTime: 60_000,
+  });
+}
+
+/**
+ * Tags this author has used before — the composer's resting suggestion row.
+ *
+ * Server-composed: their own tags first, backfilled with trending so a new
+ * account never sees an empty row. Cached longer than the typeahead because
+ * it only changes when they post.
+ */
+export function useRecentHashtags(enabled = true): UseQueryResult<HashtagWire[]> {
+  const { isAuthenticated } = useAuth();
+  return useQuery<HashtagWire[]>({
+    queryKey: queryKeys.social.hashtagRecent(),
+    queryFn: () =>
+      apiFetch<HashtagWire[]>(ENDPOINTS.social.hashtagRecent, {
+        query: { limit: 12 },
+      }),
+    enabled: isAuthenticated && enabled,
+    staleTime: 5 * 60_000,
   });
 }
 

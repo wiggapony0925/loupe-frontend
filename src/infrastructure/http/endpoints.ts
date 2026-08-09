@@ -81,6 +81,7 @@ export const ENDPOINTS = {
       `${V1}/social/users/${encodeURIComponent(handle)}/posts`,
     trendingHashtags: `${V1}/social/hashtags/trending`,
     /** Tag autocomplete while typing a `#` (empty q → trending). */
+    hashtagRecent: `${V1}/social/hashtags/recent`,
     hashtagSuggest: `${V1}/social/hashtags/suggest`,
     hashtagPosts: (tag: string) =>
       `${V1}/social/hashtags/${encodeURIComponent(tag)}/posts`,

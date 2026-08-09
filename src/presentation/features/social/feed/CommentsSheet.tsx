@@ -20,8 +20,6 @@ import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -114,11 +112,9 @@ export function CommentsSheet({ post, onClose }: CommentsSheetProps) {
       minHeight="72%"
       maxHeight="92%"
       flush
+      avoidKeyboard
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.fill}
-      >
+      <View style={styles.fill}>
         <FlatList
           data={comments}
           keyExtractor={(item) => item.id}
@@ -273,7 +269,7 @@ export function CommentsSheet({ post, onClose }: CommentsSheetProps) {
             )}
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </BottomSheet>
   );
 }

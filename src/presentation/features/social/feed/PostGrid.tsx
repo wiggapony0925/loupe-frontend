@@ -33,7 +33,11 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { formatCount } from "./PostCard";
 
 const COLUMNS = 3;
-const GAP = 1.5;
+//: 2pt with a 3pt radius, rather than Instagram's hairline butt-joint. The
+//: rest of this app is rounded surfaces on a dark ground (see the vault
+//: rows), and a razor-edged mosaic read as imported from somewhere else.
+const GAP = 2;
+const TILE_RADIUS = 3;
 
 export function PostGrid({
   posts,
@@ -41,12 +45,23 @@ export function PostGrid({
   loading,
   footer,
   empty,
+  showStats = true,
 }: {
   posts: PostWire[];
   onOpen: (post: PostWire) => void;
   loading?: boolean;
   footer?: React.ReactNode;
   empty?: React.ReactNode;
+  /**
+   * Burn like/comment counts into every tile.
+   *
+   * True on a tag page, where the grid is RANKED by engagement and the
+   * numbers are the reason a post is near the top. False on a profile,
+   * where they are just a scrim over someone's photographs — nine dark
+   * bars stacked down the screen, none of them answering a question the
+   * viewer asked.
+   */
+  showStats?: boolean;
 }) {
   const p = useThemedPalette();
   const { width } = useWindowDimensions();
@@ -69,6 +84,7 @@ export function PostGrid({
             key={post.id}
             post={post}
             size={size}
+            showStats={showStats}
             onPress={() => onOpen(post)}
           />
         ))}
@@ -81,10 +97,12 @@ export function PostGrid({
 function Tile({
   post,
   size,
+  showStats,
   onPress,
 }: {
   post: PostWire;
   size: number;
+  showStats: boolean;
   onPress: () => void;
 }) {
   const p = useThemedPalette();
@@ -101,7 +119,14 @@ function Tile({
           : `Post by @${post.author.username}`
       }
       style={({ pressed }) => [
-        { width: size, height: size, marginBottom: GAP, opacity: pressed ? 0.8 : 1 },
+        {
+          width: size,
+          height: size,
+          marginBottom: GAP,
+          borderRadius: TILE_RADIUS,
+          overflow: "hidden",
+          opacity: pressed ? 0.8 : 1,
+        },
       ]}
     >
       {photo ? (
@@ -130,14 +155,26 @@ function Tile({
         </View>
       ) : (
         // Text-only. Showing the words is the only honest tile — a grey
-        // placeholder would make the author think their post vanished.
+        // placeholder would make the author think their post vanished — but
+        // as flat grey it read as a loading skeleton. The mint wash and the
+        // quote mark say "this is the post", not "this is missing".
         <View
           style={[
             styles.textTile,
-            { width: size, height: size, backgroundColor: p.bg.elevated },
+            {
+              width: size,
+              height: size,
+              backgroundColor: withAlpha(p.accent.mint, 0.07),
+            },
           ]}
         >
-          <Text numberOfLines={5} style={[styles.textBody, { color: p.ink.muted }]}>
+          <Text style={[styles.quote, { color: withAlpha(p.accent.mint, 0.45) }]}>
+            &ldquo;
+          </Text>
+          <Text
+            numberOfLines={4}
+            style={[styles.textBody, { color: p.ink.default }]}
+          >
             {post.body ?? ""}
           </Text>
         </View>
@@ -150,9 +187,10 @@ function Tile({
         </View>
       ) : null}
 
-      {/* Engagement, revealed on the tile itself. A tag page is ranked by
-          it, so showing it is showing the reader why this is first. */}
-      {post.like_count > 0 || post.comment_count > 0 ? (
+      {/* Engagement, burned into the tile. A tag page is ranked by it, so
+          showing it is showing the reader why this is first. A profile is
+          not, which is why this is opt-in. */}
+      {showStats && (post.like_count > 0 || post.comment_count > 0) ? (
         <View
           style={[styles.stats, { backgroundColor: withAlpha("#000000", 0.42) }]}
           pointerEvents="none"
@@ -184,7 +222,8 @@ const styles = StyleSheet.create({
   artTile: { alignItems: "center", justifyContent: "center", padding: 6 },
   art: { width: "100%", height: "100%" },
   textTile: { padding: 10, justifyContent: "center" },
-  textBody: { fontSize: 11.5, lineHeight: 15 },
+  quote: { fontSize: 26, lineHeight: 26, fontWeight: "800", marginBottom: -4 },
+  textBody: { fontSize: 11.5, lineHeight: 15, fontWeight: "600" },
   stack: {
     position: "absolute",
     top: 6,

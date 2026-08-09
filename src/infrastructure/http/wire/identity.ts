@@ -48,6 +48,19 @@ export interface MeResponse {
   created_at: string;
   /** True when the account is in the admin allowlist — unlocks the portal. */
   is_admin?: boolean;
+  /** MASKED ("+1 ••• ••• 0123") — enough to recognise which line it is,
+   *  not enough to read off a shoulder. The raw number never leaves the
+   *  server, and never appears on another user's payload at all. */
+  phone?: string | null;
+  phone_verified?: boolean;
+}
+
+/** Body for `PATCH /v1/me` — omitted fields are left unchanged. */
+export interface UserProfileUpdate {
+  display_name?: string | null;
+  /** Any shape a person types; the server normalises to E.164. Send null
+   *  to remove it. */
+  phone?: string | null;
 }
 
 // ─── Loupe Pro entitlements + billing ──────────────────────────────────
