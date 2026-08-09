@@ -10,7 +10,7 @@
  * two-step "create then attach" would leave a captionless post behind every
  * time the upload failed.
  */
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -37,6 +37,12 @@ import {
   CardPickerSheet,
   type PickedCard,
 } from "@/presentation/features/social/feed/CardPickerSheet";
+import {
+  HashtagSuggestions,
+  activeHashtag,
+  completeHashtag,
+} from "@/presentation/features/social/feed/HashtagSuggestions";
+import { PostCaption } from "@/presentation/features/social/feed/PostCaption";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /** Matches the server's cap (`MAX_POST_BODY`). */
@@ -62,6 +68,13 @@ export default function ComposeScreen() {
   const [images, setImages] = useState<Draft[]>([]);
   const [card, setCard] = useState<PickedCard | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Where the caret is, so we know which `#word` is being typed.
+  const [caret, setCaret] = useState(0);
+  const inputRef = useRef<TextInput>(null);
+
+  // Null unless the caret sits inside a `#tag`; "" the instant `#` is typed
+  // (which is when a suggestion helps most — see HashtagSuggestions).
+  const typingTag = activeHashtag(body, caret);
 
   const remaining = MAX_BODY - body.length;
   const canPost =
@@ -178,7 +191,11 @@ export default function ComposeScreen() {
                 />
               ) : null}
               <TextInput
+                ref={inputRef}
                 value={body}
+                onSelectionChange={(e) =>
+                  setCaret(e.nativeEvent.selection.end)
+                }
                 onChangeText={(next) => {
                   setBody(next.slice(0, MAX_BODY));
                   // Editing is the user answering the refusal — clear it.
@@ -192,6 +209,34 @@ export default function ComposeScreen() {
                 accessibilityLabel="Post caption"
               />
             </View>
+
+            {/* How it will actually read. A caption's #tags and @mentions
+                only turned green AFTER posting, so nobody could see they'd
+                typed a real tag until it was too late to fix. */}
+            {body.trim().length > 0 ? (
+              <View
+                style={[
+                  styles.preview,
+                  { borderColor: p.line.default, backgroundColor: p.bg.elevated },
+                ]}
+              >
+                <Text style={[styles.previewLabel, { color: p.ink.dim }]}>
+                  PREVIEW
+                </Text>
+                <PostCaption
+                  body={body}
+                  // Everything that LOOKS like a tag is shown as one here —
+                  // the server hasn't indexed it yet, and the point is to
+                  // show what will happen.
+                  hashtags={(body.match(/#([A-Za-z0-9_]{1,64})/g) ?? []).map((t) =>
+                    t.slice(1).toLowerCase(),
+                  )}
+                  mentions={(body.match(/@([A-Za-z0-9][A-Za-z0-9._]{2,29})/g) ?? []).map(
+                    (m) => m.slice(1).toLowerCase(),
+                  )}
+                />
+              </View>
+            ) : null}
 
             {images.length > 0 ? (
               <View style={styles.thumbs}>
@@ -263,6 +308,16 @@ export default function ComposeScreen() {
               </View>
             ) : null}
           </ScrollView>
+
+          <HashtagSuggestions
+            query={typingTag}
+            onPick={(tag) => {
+              const next = completeHashtag(body, caret, tag);
+              setBody(next.text.slice(0, MAX_BODY));
+              setCaret(next.caret);
+              inputRef.current?.focus();
+            }}
+          />
 
           <View style={[styles.tools, { borderTopColor: p.line.default }]}>
             <Pressable
@@ -364,6 +419,8 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   refusalText: { flex: 1, fontSize: 13.5, lineHeight: 19 },
+  preview: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 6 },
+  previewLabel: { fontSize: 10, fontWeight: "800", letterSpacing: 1.4 },
   input: { flex: 1, fontSize: 16, lineHeight: 22, minHeight: 120, paddingTop: 8 },
   thumbs: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   thumb: { width: 96, height: 120, borderRadius: 12, overflow: "visible" },

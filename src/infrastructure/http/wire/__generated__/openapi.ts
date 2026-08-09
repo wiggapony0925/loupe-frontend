@@ -4402,6 +4402,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/social/hashtags/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tag autocomplete for the composer
+         * @description What to offer while someone is typing a `#`.
+         *
+         *     An empty query returns TRENDING rather than nothing: the moment the
+         *     '#' is typed is exactly when a suggestion is most useful, and showing
+         *     an empty list there teaches people the feature doesn't work.
+         *
+         *     REGISTERED BEFORE `/hashtags/{tag}/posts` — FastAPI matches in order,
+         *     so with the parameterised route first "suggest" would be read as a tag.
+         */
+        get: operations["suggest_hashtags_v1_social_hashtags_suggest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/social/hashtags/trending": {
         parameters: {
             query?: never;
@@ -18693,6 +18720,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FeedRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_hashtags_v1_social_hashtags_suggest_get: {
+        parameters: {
+            query?: {
+                /** @description What's been typed after '#'. */
+                q?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HashtagRead"][];
                 };
             };
             /** @description Validation Error */

@@ -376,6 +376,29 @@ export function useLikeComment(postId: string) {
   });
 }
 
+/**
+ * Tag autocomplete for the composer.
+ *
+ * An empty query returns TRENDING rather than nothing — the instant the
+ * '#' is typed is exactly when a suggestion helps most, and an empty list
+ * there teaches people the feature is broken.
+ */
+export function useHashtagSuggestions(
+  query: string | null,
+): UseQueryResult<HashtagWire[]> {
+  const { isAuthenticated } = useAuth();
+  const q = (query ?? "").trim();
+  return useQuery<HashtagWire[]>({
+    queryKey: queryKeys.social.hashtagSuggest(q),
+    queryFn: () =>
+      apiFetch<HashtagWire[]>(ENDPOINTS.social.hashtagSuggest, {
+        query: { q, limit: 8 },
+      }),
+    enabled: isAuthenticated && query !== null,
+    staleTime: 60_000,
+  });
+}
+
 /** The closed list of report reasons, straight from the server. */
 export function useReportReasons(
   enabled = true,

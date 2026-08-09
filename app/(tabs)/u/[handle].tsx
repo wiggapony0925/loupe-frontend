@@ -35,6 +35,7 @@ import {
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronLeft,
@@ -50,6 +51,7 @@ import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityI
 import { ProfileStats } from "@/presentation/features/social/ProfileStats";
 import { CollectionGrid } from "@/presentation/features/social/CollectionGrid";
 import { ProfilePosts } from "@/presentation/features/social/feed/ProfilePosts";
+import { useScreenTransition } from "@/presentation/navigation/screenMotion";
 import {
   CollectionSetsRail,
   PortfolioShelf,
@@ -100,6 +102,7 @@ export default function CollectorProfileScreen() {
   // rather than one endless page. Defaults to the collection: on a card
   // app that is what someone came to see.
   const [tab, setTab] = useState<"collection" | "posts">("collection");
+  const swap = useScreenTransition(tab);
 
   // Viewing a profile IS the community state — keep the community island
   // (People · Home · My profile) on screen here, same as the Community tab.
@@ -441,6 +444,7 @@ export default function CollectorProfileScreen() {
               </View>
             ) : null}
 
+            <Animated.View style={swap}>
             {tab === "posts" ? (
               <ProfilePosts
                 handle={handle as string}
@@ -573,6 +577,7 @@ export default function CollectorProfileScreen() {
                 />
               </View>
             )}
+            </Animated.View>
           </ScrollView>
         )}
       </SafeAreaView>

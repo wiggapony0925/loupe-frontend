@@ -27,6 +27,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Animated from "react-native-reanimated";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Bell, Plus, Search, Users, X } from "lucide-react-native";
@@ -47,6 +48,7 @@ import { FeedList } from "@/presentation/features/social/feed/FeedList";
 import { FeedTabs } from "@/presentation/features/social/feed/FeedTabs";
 import { HashtagChips } from "@/presentation/features/social/feed/HashtagChips";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
+import { useScreenTransition } from "@/presentation/navigation/screenMotion";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
@@ -67,6 +69,8 @@ export default function CommunityFeedScreen() {
   const trending = useTrendingHashtags(claimed && tab === "foryou");
   const search = useSocialSearch(q);
   const follow = useFollowCollector();
+  // Same motion as moving between pages — one definition, see screenMotion.
+  const swap = useScreenTransition(searching ? "search" : tab);
 
   // Nothing below the search bar works without a handle — posting, following
   // and the feed all key off it — so the claim card replaces the page.
@@ -93,13 +97,16 @@ export default function CommunityFeedScreen() {
         <FeedHeader q={q} onChangeQ={setQ} />
 
         {searching ? (
+          <Animated.View style={[styles.safe, swap]}>
           <SearchResults
             query={q}
             results={search}
             onFollow={follow.mutate}
             followPending={follow.isPending}
           />
+          </Animated.View>
         ) : (
+          <Animated.View style={[styles.safe, swap]}>
           <FeedList
             query={feed}
             header={
@@ -140,6 +147,7 @@ export default function CommunityFeedScreen() {
               </Pressable>
             }
           />
+          </Animated.View>
         )}
       </SafeAreaView>
     </View>

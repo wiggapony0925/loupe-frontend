@@ -9,6 +9,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -27,6 +28,8 @@ import { routes } from "@/shared/routes";
 import { type Palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { WatchingList } from "@/presentation/features/watchlist/WatchingList";
 import { useNotificationFeed } from "@/application/notifications/useNotificationFeed";
+import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
+import { useScreenTransition } from "@/presentation/navigation/screenMotion";
 import type { FeedItem } from "@/application/notifications/notificationFeed";
 
 type Category = "all" | "market" | "news" | "social" | "billing" | "system";
@@ -64,6 +67,14 @@ export default function NotificationsScreen() {
   const initialTab: Tab = params.tab === "watching" ? "watching" : "inbox";
   const [tab, setTab] = useState<Tab>(initialTab);
   const [filter, setFilter] = useState<Category>("all");
+
+  // The island navbar stays on screen here (this route lives in the tab
+  // group), so you can drag straight back to the feed instead of being
+  // stranded with a back button.
+  useCommunityIslandPresence();
+  // Inbox ⇄ Watching is a content swap, not a navigation — same motion as
+  // moving between pages, from the one shared definition.
+  const swap = useScreenTransition(`${tab}:${filter}`);
 
   // One shared feed — the same one the navbar bell counts, so the badge and
   // this list can never disagree about what's waiting.
@@ -143,18 +154,19 @@ export default function NotificationsScreen() {
       <TabSegment value={tab} onChange={setTab} />
 
       {tab === "watching" ? (
-        <View style={{ flex: 1 }}>
+        <Animated.View style={[{ flex: 1 }, swap]}>
           <WatchingList showHeader={false} />
-        </View>
+        </Animated.View>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 64 }}
+          contentContainerStyle={{ paddingBottom: 130 }}
           showsVerticalScrollIndicator={false}
         >
           {/* Category filter strip — visible even in the empty state so users
               understand the eventual shape of the feed. */}
           <FilterStrip value={filter} onChange={setFilter} />
 
+          <Animated.View style={swap}>
           {visible.length === 0 ? (
             <EmptyState
               filter={filter}
@@ -172,6 +184,7 @@ export default function NotificationsScreen() {
               ) : null}
             </>
           )}
+          </Animated.View>
         </ScrollView>
       )}
     </SafeAreaView>

@@ -188,6 +188,12 @@ export default function TabsLayout() {
           profile or collection, and switching pages inherits the tabs'
           shift animation instead of a stack push. */}
       <Tabs.Screen name="u/[handle]" options={{ href: null, title: "Collector" }} />
+      {/* Notifications lives in the tab group for the SAME reason Community
+          does: the floating island stays on screen, so the drag-to-switch
+          gesture still works from the inbox instead of stranding you there
+          with only a back button. The route is still `/notifications` —
+          `(tabs)` is a group, so it adds no path segment. */}
+      <Tabs.Screen name="notifications" options={{ href: null, title: "Alerts" }} />
     </Tabs>
   );
 }

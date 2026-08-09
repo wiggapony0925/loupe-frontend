@@ -26876,6 +26876,74 @@
         ]
       }
     },
+    "/v1/social/hashtags/suggest": {
+      "get": {
+        "description": "What to offer while someone is typing a `#`.\n\nAn empty query returns TRENDING rather than nothing: the moment the\n'#' is typed is exactly when a suggestion is most useful, and showing\nan empty list there teaches people the feature doesn't work.\n\nREGISTERED BEFORE `/hashtags/{tag}/posts` \u2014 FastAPI matches in order,\nso with the parameterised route first \"suggest\" would be read as a tag.",
+        "operationId": "suggest_hashtags_v1_social_hashtags_suggest_get",
+        "parameters": [
+          {
+            "description": "What's been typed after '#'.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "What's been typed after '#'.",
+              "maxLength": 64,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HashtagRead"
+                  },
+                  "title": "Response Suggest Hashtags V1 Social Hashtags Suggest Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Tag autocomplete for the composer",
+        "tags": [
+          "social-feed"
+        ]
+      }
+    },
     "/v1/social/hashtags/trending": {
       "get": {
         "operationId": "trending_hashtags_v1_social_hashtags_trending_get",

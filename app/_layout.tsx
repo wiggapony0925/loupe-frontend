@@ -173,10 +173,6 @@ function RootStack() {
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
       <Stack.Screen
-        name="notifications"
-        options={{ presentation: "card", animation: "slide_from_right" }}
-      />
-      <Stack.Screen
         name="watchlist"
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
