@@ -37,7 +37,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { useVideoPlayer, VideoView } from "expo-video";
 import * as Haptics from "expo-haptics";
 import { Eye, MessageCircle, Trash2, X } from "lucide-react-native";
 import type { StoryWire } from "@/infrastructure/http/wire/social";
@@ -47,6 +46,7 @@ import {
   useStories,
 } from "@/application/queries/social/useStories";
 import { absolutize } from "@/presentation/features/social/SocialAvatar";
+import { Video } from "@/presentation/features/social/Video";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import { relativeTime } from "@/shared/format";
 import { StoryCommentsSheet } from "./StoryCommentsSheet";
@@ -158,20 +158,6 @@ function Reel({
     }
   }, [story?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const player = useVideoPlayer(
-    isVideo ? (absolutize(story.url) ?? "") : "",
-    (instance) => {
-      instance.loop = false;
-      instance.muted = false;
-    },
-  );
-
-  useEffect(() => {
-    if (!isVideo) return;
-    if (held) player.pause();
-    else player.play();
-  }, [isVideo, held, player, story?.id]);
-
   if (!story) return null;
 
   const back = () => {
@@ -186,11 +172,12 @@ function Reel({
   return (
     <View style={[styles.root, { width, height }]}>
       {isVideo ? (
-        <VideoView
-          style={StyleSheet.absoluteFill}
-          player={player}
+        <Video
+          uri={absolutize(story.url) ?? ""}
+          loop={false}
+          muted={false}
+          paused={held}
           contentFit="contain"
-          nativeControls={false}
         />
       ) : (
         <Image

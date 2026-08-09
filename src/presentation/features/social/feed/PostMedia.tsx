@@ -27,7 +27,6 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
-import { useVideoPlayer, VideoView } from "expo-video";
 import * as Haptics from "expo-haptics";
 import { Heart, Play, Volume2, VolumeX } from "lucide-react-native";
 import { Gesture, GestureDetector, ScrollView } from "react-native-gesture-handler";
@@ -41,6 +40,7 @@ import Animated, {
 } from "react-native-reanimated";
 import type { PostMediaWire } from "@/infrastructure/http";
 import { absolutize } from "@/presentation/features/social/SocialAvatar";
+import { Video } from "@/presentation/features/social/Video";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 
 /** Instagram's crop bounds: tallest 4:5, widest 1.91:1. */
@@ -76,12 +76,17 @@ export function PostMedia({
   const { width: screenWidth } = useWindowDimensions();
   const [page, setPage] = useState(0);
 
-  // The burst heart. Scale and opacity are driven together so it punches
-  // in, holds for a beat, then leaves.
-  const burst = useSharedValue(0);
+  // The burst heart.
+  //
+  // Scale and opacity are driven SEPARATELY. Sharing one value meant the
+  // heart could only fade by shrinking, so it collapsed away instead of
+  // holding its size and dissolving — and the hold had to be long enough
+  // to read, which is what made it linger.
+  const burstScale = useSharedValue(0.4);
+  const burstOpacity = useSharedValue(0);
   const burstStyle = useAnimatedStyle(() => ({
-    opacity: burst.value,
-    transform: [{ scale: 0.6 + burst.value * 0.6 }],
+    opacity: burstOpacity.value,
+    transform: [{ scale: burstScale.value }],
   }));
 
   const first = media[0];
@@ -99,10 +104,25 @@ export function PostMedia({
     .numberOfTaps(2)
     .maxDuration(260)
     .onEnd(() => {
-      burst.value = withSequence(
-        withSpring(1, { damping: 12, stiffness: 320 }),
-        withTiming(1, { duration: 320 }),
-        withTiming(0, { duration: 220 }),
+      // Instagram's curve and, more importantly, its LENGTH: ~310ms end to
+      // end. Punch in with a little overshoot, hold just long enough to
+      // register, then go.
+      //
+      // The first version ran ~700ms. Past roughly half a second a
+      // confirmation stops reading as feedback and starts reading as an
+      // obstruction sitting on the photo you were trying to look at — you
+      // notice yourself waiting for it, which is the opposite of the point.
+      burstScale.value = 0.4;
+      burstOpacity.value = 1;
+      burstScale.value = withSequence(
+        withSpring(1.08, { damping: 9, stiffness: 520, mass: 0.45 }),
+        withTiming(0.98, { duration: 70 }),
+        withTiming(1.18, { duration: 140 }),
+      );
+      burstOpacity.value = withSequence(
+        withTiming(1, { duration: 70 }),
+        withTiming(1, { duration: 100 }),
+        withTiming(0, { duration: 140 }),
       );
       runOnJS(celebrate)();
     });
@@ -127,7 +147,15 @@ export function PostMedia({
 
   const overlay = (
     <Animated.View style={[styles.burst, burstStyle]} pointerEvents="none">
-      <Heart size={96} color="#fff" fill="#fff" strokeWidth={1.5} />
+      {/* Red, matching the heart in the action row underneath — the two
+          are the same state, and a white burst that resolves into a red
+          button reads as two different things happening. */}
+      <Heart
+        size={92}
+        color={p.accent.rose}
+        fill={p.accent.rose}
+        strokeWidth={1.5}
+      />
     </Animated.View>
   );
 
@@ -230,23 +258,16 @@ function VideoSlide({
 }) {
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
-  const player = useVideoPlayer(absolutize(item.url) ?? "", (instance) => {
-    instance.loop = true;
-    instance.muted = true;
-  });
 
   return (
     <Pressable
       onPress={() => {
         if (!playing) {
           setPlaying(true);
-          player.play();
           return;
         }
         // Once it's running, a tap is the mute toggle.
-        const next = !muted;
-        setMuted(next);
-        player.muted = next;
+        setMuted((m) => !m);
       }}
       accessibilityRole="button"
       accessibilityLabel={
@@ -254,11 +275,13 @@ function VideoSlide({
       }
       style={{ width, height }}
     >
-      <VideoView
+      <Video
+        uri={absolutize(item.url) ?? ""}
         style={{ width, height }}
-        player={player}
+        loop
+        muted={muted}
+        paused={!playing}
         contentFit="cover"
-        nativeControls={false}
       />
       {!playing ? (
         <View style={styles.playOverlay} pointerEvents="none">

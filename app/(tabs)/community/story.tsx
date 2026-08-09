@@ -21,10 +21,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Image } from "expo-image";
-import { useVideoPlayer, VideoView } from "expo-video";
 import * as Haptics from "expo-haptics";
 import { RotateCcw, Send, ShieldAlert } from "lucide-react-native";
 import { usePostStory } from "@/application/queries/social/useStories";
+import { Video } from "@/presentation/features/social/Video";
 import {
   StoryCamera,
   type Capture,
@@ -64,18 +64,6 @@ function Review({
   const [caption, setCaption] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const player = useVideoPlayer(
-    capture.kind === "video" ? capture.uri : "",
-    (instance) => {
-      // Loops, unlike the viewer: this is a check of what you just shot,
-      // and re-tapping play to see it again is friction at exactly the
-      // wrong moment.
-      instance.loop = true;
-      instance.muted = false;
-      instance.play();
-    },
-  );
-
   const publish = () => {
     setError(null);
     Haptics.selectionAsync().catch(() => {});
@@ -99,12 +87,10 @@ function Review({
   return (
     <View style={styles.root}>
       {capture.kind === "video" ? (
-        <VideoView
-          style={StyleSheet.absoluteFill}
-          player={player}
-          contentFit="contain"
-          nativeControls={false}
-        />
+        // Loops, unlike the viewer: this is a check of what you just shot,
+        // and re-tapping play to see it again is friction at exactly the
+        // wrong moment.
+        <Video uri={capture.uri} loop muted={false} contentFit="contain" />
       ) : (
         <Image
           source={{ uri: capture.uri }}

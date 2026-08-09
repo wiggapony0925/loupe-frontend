@@ -3,7 +3,7 @@ import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { ArrowUpRight, Bell, Camera, Settings2, Users } from "lucide-react-native";
+import { ArrowUpRight, Bell, Camera, Users } from "lucide-react-native";
 import { queryKeys } from "@/application/queries/queryKeys";
 import { routes } from "@/shared/routes";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
@@ -23,6 +23,10 @@ import { Skeleton } from "@/presentation/components/Skeleton";
 import { SectionHeader } from "@/presentation/components/SectionHeader";
 import { EmptyState } from "@/presentation/components/EmptyState";
 import { ErrorState } from "@/presentation/components/ErrorState";
+import {
+  AppSwitcher,
+  AppWordmark,
+} from "@/presentation/navigation/AppSwitcher";
 import { LoupeMark } from "@/presentation/brand/LoupeMark";
 import { useHomeFeed, useTopMovers } from "@/application/queries";
 import { useAppConfig } from "@/application/queries/ops/useAppConfig";
@@ -467,13 +471,14 @@ function StaticNavbar() {
   // bell. Counting only alerts meant those shipped to nobody.
   const { unread: alertCount } = useNotificationFeed();
   return (
-    <View className="flex-row items-center justify-between px-5 py-2">
+    <View>
+      <AppSwitcher active="loupe" />
+      <View className="flex-row items-center justify-between px-5 py-2">
       <View className="flex-row items-center gap-2">
         <LoupeMark size={26} />
-        <Text className="text-base font-semibold tracking-tight text-ink">Loupe</Text>
+        <AppWordmark lane="loupe" />
       </View>
       <View className="flex-row items-center gap-2">
-        <ProfileButton />
         <Pressable
           onPress={() => router.push(routes.notifications())}
           hitSlop={8}
@@ -499,16 +504,8 @@ function StaticNavbar() {
             </View>
           ) : null}
         </Pressable>
-        <Pressable
-          onPress={() => router.push(routes.settings())}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Open settings"
-          className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated"
-          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-        >
-          <Settings2 size={16} color={p.ink.muted} />
-        </Pressable>
+        <ProfileButton />
+      </View>
       </View>
     </View>
   );

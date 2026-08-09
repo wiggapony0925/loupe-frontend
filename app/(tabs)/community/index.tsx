@@ -52,6 +52,11 @@ import { StoryViewer } from "@/presentation/features/social/stories/StoryViewer"
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { useScreenTransition } from "@/presentation/navigation/screenMotion";
 import { useHomeOnReentry } from "@/presentation/navigation/useHomeOnReentry";
+import {
+  AppSwitcher,
+  AppWordmark,
+} from "@/presentation/navigation/AppSwitcher";
+import { LoupeMark } from "@/presentation/brand/LoupeMark";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
@@ -186,7 +191,17 @@ function FeedHeader({
   const unread = useUnreadNotificationCount();
 
   return (
-    <View style={styles.header}>
+    <View>
+      {/* The same rail as the wallet side, so switching back is in the
+          place you left it. The wordmark under it is what tells you which
+          product you're in — "Community" in the app's green. */}
+      <AppSwitcher active="community" />
+      <View style={styles.brand}>
+        <LoupeMark size={24} />
+        <AppWordmark lane="community" />
+      </View>
+
+      <View style={styles.header}>
       <View
         style={[
           styles.search,
@@ -246,6 +261,7 @@ function FeedHeader({
       >
         <Plus size={19} color="#06140d" strokeWidth={2.8} />
       </Pressable>
+      </View>
     </View>
   );
 }
@@ -361,6 +377,14 @@ const styles = StyleSheet.create({
   claim: { padding: GUTTER, gap: 16 },
   title: { fontSize: 28, fontWeight: "800", letterSpacing: -0.9 },
   loading: { paddingVertical: 28 },
+  brand: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: GUTTER,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
