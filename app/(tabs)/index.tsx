@@ -425,15 +425,13 @@ export default function CommandCenterScreen() {
 }
 
 /**
- * The navbar identity chip.
+ * The navbar identity chip — your face, opening SETTINGS.
  *
- * Shows your own avatar once you've claimed a handle and opens your profile —
- * the generic people icon that used to sit here went to the collector
- * directory, which is a place to find *other* people, not the place you'd
- * expect your own face to lead.
- *
- * Before a handle exists there is no profile to open, so it falls back to
- * Community, where the claim card is the whole page.
+ * It used to open your community profile (and before a handle existed,
+ * Community itself). Community has its own lane on the rail now, and your
+ * profile lives on the island navbar inside it — so this slot's old jobs
+ * are both better served elsewhere, and an avatar in a header corner is
+ * where every app means "my account". Settings is that.
  */
 function ProfileButton() {
   const p = useThemedPalette();
@@ -442,12 +440,10 @@ function ProfileButton() {
 
   return (
     <Pressable
-      onPress={() =>
-        router.push(profile ? routes.myProfile() : routes.community())
-      }
+      onPress={() => router.push(routes.settings())}
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel={profile ? "Open my profile" : "Open community"}
+      accessibilityLabel="Account and settings"
       className="h-9 w-9 items-center justify-center rounded-full border border-line bg-bg-elevated overflow-hidden"
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
     >
