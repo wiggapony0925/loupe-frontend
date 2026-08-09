@@ -13,8 +13,16 @@
  */
 import React from "react";
 import { Stack } from "expo-router";
+import { CrashGuard } from "@/presentation/components/CrashGuard";
 import { SCREEN_TRANSITION } from "@/presentation/navigation/screenMotion";
 
 export default function CommunityLayout() {
-  return <Stack screenOptions={{ headerShown: false, ...SCREEN_TRANSITION }} />;
+  // The guard is at the STACK root, so a render error anywhere in the
+  // micro-app becomes a screen with the actual message on it instead of a
+  // dead app — in release, an uncaught render throw is fatal and silent.
+  return (
+    <CrashGuard label="Community">
+      <Stack screenOptions={{ headerShown: false, ...SCREEN_TRANSITION }} />
+    </CrashGuard>
+  );
 }

@@ -15,6 +15,13 @@
  * The active lane is drawn with a moving underline rather than a
  * per-lane border, so the mark slides between lanes instead of blinking
  * on and off.
+ *
+ * Sized like a UTILITY row, not a masthead. The first cut used 21pt labels
+ * above the brand row, which read as a second header shouting over the
+ * first — the same product name twice in two sizes. It now sits UNDER the
+ * navbar at caption size with a hairline beneath, the way Uber's rail sits
+ * quietly above its search bar: present when you want to switch, invisible
+ * when you don't.
  */
 import React, { useRef } from "react";
 import {
@@ -174,31 +181,30 @@ export function AppWordmark({ lane }: { lane: Lane }) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingTop: 2,
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 16,
   },
   lane: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
+    gap: 5,
     paddingHorizontal: 4,
-    paddingVertical: 8,
+    paddingTop: 4,
     // Room for the underline to sit under the text without touching it.
-    paddingBottom: 12,
+    paddingBottom: 9,
   },
-  glyph: { fontSize: 21 },
-  label: { fontSize: 21, fontWeight: "600", letterSpacing: -0.4 },
+  glyph: { fontSize: 12 },
+  label: { fontSize: 13, fontWeight: "600", letterSpacing: -0.1 },
   labelOn: { fontWeight: "800" },
   underline: {
     position: "absolute",
     bottom: 0,
     left: 0,
-    height: 2.5,
+    height: 2,
     borderRadius: 2,
   },
-  hairline: { height: StyleSheet.hairlineWidth, opacity: 0.6 },
+  hairline: { height: StyleSheet.hairlineWidth },
   wordmark: { fontSize: 17, fontWeight: "700", letterSpacing: -0.3 },
 });
 

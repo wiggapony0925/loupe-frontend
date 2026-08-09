@@ -34,7 +34,23 @@ import { CameraView, useCameraPermissions, useMicrophonePermissions } from "expo
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { Images, RefreshCw, X, Zap, ZapOff } from "lucide-react-native";
+import { canPlayVideo } from "@/presentation/features/social/Video";
 import { useThemedPalette } from "@/presentation/theme/tokens";
+
+/**
+ * Can THIS binary record video?
+ *
+ * `canPlayVideo` is a proxy, and a deliberate one: the expo-video native
+ * module and the NSMicrophoneUsageDescription string shipped in the same
+ * build (248). On the build before it, opening the camera in video mode is
+ * not a denied permission — iOS KILLS the process the instant the capture
+ * session touches the audio device without that plist string. That is the
+ * "app just crashes" with no error dialog and no JS stack.
+ *
+ * So on older binaries the shutter is photo-only and says so. Delete along
+ * with the guard in videoSupport.ts once 248 is the floor.
+ */
+const VIDEO_CAPABLE = canPlayVideo();
 
 /** Hold past this and it's a recording, not a photo. */
 const HOLD_MS = 260;
@@ -150,6 +166,8 @@ export function StoryCamera({
 
   const onPressIn = () => {
     startedAt.current = Date.now();
+    // Photo-only on binaries without the mic permission — see VIDEO_CAPABLE.
+    if (!VIDEO_CAPABLE) return;
     holdTimer.current = setTimeout(() => {
       holdTimer.current = null;
       void startRecording();
@@ -169,7 +187,7 @@ export function StoryCamera({
 
   const pickFromLibrary = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
+      mediaTypes: VIDEO_CAPABLE ? ["images", "videos"] : ["images"],
       quality: 0.85,
       videoMaxDuration: MAX_SECONDS,
     });
@@ -219,7 +237,7 @@ export function StoryCamera({
         ref={camera}
         style={StyleSheet.absoluteFill}
         facing={facing}
-        mode="video"
+        mode={VIDEO_CAPABLE ? "video" : "picture"}
         enableTorch={torch}
         onCameraReady={() => setReady(true)}
       />
@@ -304,7 +322,11 @@ export function StoryCamera({
         </View>
 
         <Text style={styles.hint} pointerEvents="none">
-          {recording ? "Release to finish" : "Tap for photo · hold for video"}
+          {recording
+            ? "Release to finish"
+            : VIDEO_CAPABLE
+              ? "Tap for photo · hold for video"
+              : "Tap for photo — update Loupe to record video"}
         </Text>
       </SafeAreaView>
     </View>

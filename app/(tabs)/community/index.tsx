@@ -192,14 +192,15 @@ function FeedHeader({
 
   return (
     <View>
-      {/* The same rail as the wallet side, so switching back is in the
-          place you left it. The wordmark under it is what tells you which
-          product you're in — "Community" in the app's green. */}
-      <AppSwitcher active="community" />
+      {/* Brand first, then the rail under it — the same order as the
+          wallet side, so switching back is in the place you left it. The
+          wordmark is what names the product ("Community" in green); the
+          rail is just the way across. */}
       <View style={styles.brand}>
         <LoupeMark size={24} />
         <AppWordmark lane="community" />
       </View>
+      <AppSwitcher active="community" />
 
       <View style={styles.header}>
       <View
@@ -382,14 +383,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     paddingHorizontal: GUTTER,
-    paddingTop: 12,
-    paddingBottom: 10,
+    paddingTop: 6,
+    paddingBottom: 8,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     paddingHorizontal: GUTTER,
+    paddingTop: 12,
     paddingBottom: 12,
   },
   search: {

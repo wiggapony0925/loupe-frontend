@@ -472,7 +472,6 @@ function StaticNavbar() {
   const { unread: alertCount } = useNotificationFeed();
   return (
     <View>
-      <AppSwitcher active="loupe" />
       <View className="flex-row items-center justify-between px-5 py-2">
       <View className="flex-row items-center gap-2">
         <LoupeMark size={26} />
@@ -507,6 +506,9 @@ function StaticNavbar() {
         <ProfileButton />
       </View>
       </View>
+      {/* The product rail, UNDER the navbar — a utility row with its own
+          hairline, not a second masthead over the brand. */}
+      <AppSwitcher active="loupe" />
     </View>
   );
 }
