@@ -48,6 +48,24 @@ const moderatoPkg = path.resolve(__dirname, "vendor/moderato");
 // same exclusion — see `modulePathIgnorePatterns` in jest.config.js.)
 config.resolver.blockList = [/\/\.claude\/worktrees\/.*/];
 
+// moderato's source is ESM: its relative imports carry explicit ".js"
+// suffixes that really point at .ts files. Vite resolves that natively and
+// jest has a moduleNameMapper for it; Metro needs the same courtesy or the
+// release bundle dies with "Unable to resolve module ./useModeratedSubmit.js"
+// (which is exactly how build 249's archive failed).
+const defaultResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  const resolve = defaultResolveRequest ?? context.resolveRequest;
+  if (
+    moduleName.startsWith(".") &&
+    moduleName.endsWith(".js") &&
+    context.originModulePath.includes("/vendor/moderato/")
+  ) {
+    return resolve(context, moduleName.slice(0, -3), platform);
+  }
+  return resolve(context, moduleName, platform);
+};
+
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules ?? {}),
   "@loupe/chart": chartPkg,
