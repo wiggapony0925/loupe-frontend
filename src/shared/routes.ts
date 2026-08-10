@@ -41,6 +41,8 @@ export const routes = {
   legal: (doc: "terms" | "privacy") => `/legal/${doc}` as const,
   /** Deep link to the standalone price-alert list. */
   watchlist: () => "/watchlist" as const,
+  /** The Loupe Map — card shops near me, on a real map. */
+  stores: () => "/stores" as const,
   /** Community — the FEED (Following · For You · Your Posts). NATIVE (the
    *  WebView embed it replaced couldn't show the tab bar). Lives in the tab
    *  group so the bottom bar stays on screen. */

@@ -12,7 +12,7 @@ import { router, usePathname } from "expo-router";
 import { AppSwitcher } from "../AppSwitcher";
 
 jest.mock("expo-router", () => ({
-  router: { navigate: jest.fn() },
+  router: { navigate: jest.fn(), push: jest.fn() },
   usePathname: jest.fn(() => "/"),
 }));
 jest.mock("expo-haptics", () => ({
@@ -22,10 +22,12 @@ jest.mock("expo-haptics", () => ({
 }));
 
 const navigate = router.navigate as unknown as jest.Mock;
+const push = router.push as unknown as jest.Mock;
 const pathname = usePathname as unknown as jest.Mock;
 
 beforeEach(() => {
   navigate.mockClear();
+  push.mockClear();
 });
 
 describe("AppSwitcher", () => {
@@ -60,5 +62,18 @@ describe("AppSwitcher", () => {
     pathname.mockReturnValue("/");
     render(<AppSwitcher active="community" />);
     expect(screen.getByLabelText("Loupe Community")).toBeSelected();
+  });
+
+  it("pushes the Loupe Map from its lane", () => {
+    pathname.mockReturnValue("/");
+    render(<AppSwitcher />);
+    fireEvent.press(screen.getByLabelText("Loupe Map"));
+    expect(push).toHaveBeenCalledWith("/stores");
+  });
+
+  it("marks the Map lane active on the stores page", () => {
+    pathname.mockReturnValue("/stores");
+    render(<AppSwitcher />);
+    expect(screen.getByLabelText("Loupe Map")).toBeSelected();
   });
 });

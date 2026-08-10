@@ -41,11 +41,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { router, usePathname } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Search, Users, type LucideIcon } from "lucide-react-native";
+import { Map as MapIcon, Search, Users, type LucideIcon } from "lucide-react-native";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
-export type Lane = "loupe" | "community";
+export type Lane = "loupe" | "community" | "map";
 
 interface LaneSpec {
   key: Lane;
@@ -69,6 +69,16 @@ const LANES: LaneSpec[] = [
     Icon: Users,
     go: () => router.navigate(routes.community()),
   },
+  {
+    key: "map",
+    label: "Map",
+    Icon: MapIcon,
+    // A PUSH, not a tab move: the Map is a full-bleed screen over the
+    // shell, and back returns to the lane you left. The lane itself
+    // dresses like its siblings — the GREEN lives in the wordmark, which
+    // reads "Loupe Map" on the map page the way Community's does.
+    go: () => router.push(routes.stores()),
+  },
 ];
 
 /** One spring for every move the capsule makes, so slide, pop and squish
@@ -81,18 +91,27 @@ const SPRING = {
 } as const;
 
 /**
- * Whether ANY switcher instance has placed its thumb this JS session.
+ * Cross-instance lane memory.
  *
  * Each screen mounts its own capsule, so without shared memory a freshly
  * mounted instance would render with the thumb already parked and the
  * slide would only ever play on the OUTGOING screen — mostly hidden under
- * the navigator's transition. Once something has been on screen, a NEW
- * instance mounting means a navigation arrival, and with exactly two lanes
- * "where the thumb came from" is simply the other lane. (A third lane
- * would need this to become a real last-lane record.) Module scope on
- * purpose: presentation continuity, not app state.
+ * the navigator's transition. `routeLane` is where the route says the
+ * thumb IS; `cameFrom` is where it was before the last change — captured
+ * at the change itself, so a mounting instance can seed its thumb at the
+ * origin lane and spring home even though every already-mounted instance
+ * has long since caught up. Module scope on purpose: presentation
+ * continuity, not app state.
  */
-let everPlaced = false;
+let routeLane: Lane | null = null;
+let cameFrom: Lane | null = null;
+
+function noteLane(next: Lane): void {
+  if (routeLane !== next) {
+    cameFrom = routeLane;
+    routeLane = next;
+  }
+}
 
 export function AppSwitcher({ active }: { active?: Lane }) {
   const p = useThemedPalette();
@@ -105,6 +124,7 @@ export function AppSwitcher({ active }: { active?: Lane }) {
   // tests and previews.
   const fromPath = useActiveLane();
   const lane = active ?? fromPath;
+  noteLane(lane);
   // Thumb position + width in the capsule's coordinate space. Measured from
   // each segment's onLayout because font metrics differ per platform.
   const x = useSharedValue(0);
@@ -134,22 +154,21 @@ export function AppSwitcher({ active }: { active?: Lane }) {
     const active = measured.current[lane];
     if (!active) return;
     // A mount while the app is already running is a navigation ARRIVAL:
-    // seed the thumb at the other lane and spring it home, so the incoming
-    // screen plays the slide. A cold start snaps — a thumb sliding in on
-    // first mount reads as the page loading, not as a control at rest.
-    const other = LANES.find((l) => l.key !== lane)?.key;
-    const from = everPlaced && other ? measured.current[other] : null;
+    // seed the thumb at the lane the route just LEFT and spring it home,
+    // so the incoming screen plays the slide. A cold start (no previous
+    // lane) snaps — a thumb sliding in on first mount reads as the page
+    // loading, not as a control at rest.
+    const from =
+      cameFrom && cameFrom !== lane ? measured.current[cameFrom] : null;
     if (from) {
       x.value = from.x;
       w.value = from.width;
       x.value = withSpring(active.x, SPRING);
       w.value = withSpring(active.width, SPRING);
       placed.current = true;
-      everPlaced = true;
     } else if (key === lane) {
       placeThumb(key, false);
       placed.current = true;
-      everPlaced = true;
     }
   };
 
@@ -253,7 +272,13 @@ function LaneButton({
       }}
       accessibilityRole="tab"
       accessibilityState={{ selected: on }}
-      accessibilityLabel={lane.key === "community" ? "Loupe Community" : "Loupe"}
+      accessibilityLabel={
+        lane.key === "community"
+          ? "Loupe Community"
+          : lane.key === "map"
+            ? "Loupe Map"
+            : "Loupe"
+      }
       style={styles.lane}
     >
       <Animated.View style={[styles.laneInner, squish]}>
@@ -277,18 +302,18 @@ function LaneButton({
 /**
  * The wordmark beside the brand mark.
  *
- * "Loupe" everywhere, "Loupe **Community**" in the community lane with the
- * second word in the app's green. One component so the two spellings can't
+ * "Loupe" everywhere; "Loupe **Community**" and "Loupe **Map**" carry the
+ * second word in the app's green. One component so the spellings can't
  * drift, and so the green is applied in exactly one place.
  */
 export function AppWordmark({ lane }: { lane: Lane }) {
   const p = useThemedPalette();
+  const suffix =
+    lane === "community" ? " Community" : lane === "map" ? " Map" : null;
   return (
     <Text style={[styles.wordmark, { color: p.ink.default }]} numberOfLines={1}>
       Loupe
-      {lane === "community" ? (
-        <Text style={{ color: p.accent.mint }}> Community</Text>
-      ) : null}
+      {suffix ? <Text style={{ color: p.accent.mint }}>{suffix}</Text> : null}
     </Text>
   );
 }
@@ -335,7 +360,9 @@ export type { LaneSpec };
 
 /** Which lane a path belongs to. Used where the rail can't be told directly. */
 export function laneFor(pathname: string): Lane {
-  return pathname.startsWith("/community") ? "community" : "loupe";
+  if (pathname.startsWith("/community")) return "community";
+  if (pathname.startsWith("/stores")) return "map";
+  return "loupe";
 }
 
 /** Convenience for screens that just want the current lane. */

@@ -1,41 +1,79 @@
 /**
- * StoryCamera — tap for a photo, hold to record. The Instagram gesture.
+ * StoryCamera — the Instagram story camera, in Loupe's hands.
  *
- * One shutter for both because that is the whole trick: nobody wants to
- * pick a mode before they know what they're pointing at. A tap resolves
- * instantly as a still; holding past `HOLD_MS` starts recording and the
- * release stops it, with a ring filling around the button so the length is
- * visible while it happens rather than discovered afterwards.
+ * The anatomy mirrors IG's deliberately, because that is the layout every
+ * thumb already knows: a ROUNDED viewfinder card on black chrome; close
+ * top-left, flash top-center, settings top-right; a tools rail on the
+ * left edge; the big shutter low in the frame; and a black bottom bar
+ * with the gallery on the left, the mode word in the middle and the
+ * camera flip on the right.
+ *
+ * One shutter, two gestures: a tap resolves instantly as a still; holding
+ * past `HOLD_MS` records, with a mint progress ARC drawing around the
+ * button so the length is visible while it happens rather than discovered
+ * afterwards. Hands-free (the rail's one tool — the only IG rail item
+ * Loupe has a real behavior for) turns the shutter into a toggle.
+ *
+ * Zoom, three ways, like the reference:
+ *   • pinch anywhere on the viewfinder;
+ *   • slide UP while holding the shutter (IG's one-handed zoom);
+ *   • .5×/1× lens chips over the shutter when the device carries an
+ *     ultra-wide (iOS exposes lenses by localized name, so the chip
+ *     simply doesn't appear on devices/locales where we can't find it —
+ *     pinch still works everywhere).
+ * Double-tap the viewfinder to flip — same as IG.
+ *
+ * Capture quality is ceilinged, not defaulted: stills at quality 1 on the
+ * sensor's max dimensions, video at 1080p (the server caps stories at
+ * 120 MB / 15 s; 4K would blow the budget for zero visible gain at story
+ * size), front stills mirrored the way every story camera mirrors them,
+ * and the SCREEN flash for front-facing shots.
  *
  * **Why the press handling is hand-rolled.** `onLongPress` fires once, at
  * the threshold, and gives nothing back on release — so it can start a
  * recording but can't stop one. `Pressable`'s in/out events do both, and
  * the timer in between is what distinguishes the two gestures.
- *
- * Video is capped at `MAX_SECONDS` client-side AND server-side. Here it
- * stops the recording (so the file is never bigger than it needs to be);
- * there it refuses anything longer, because a client is not a limit.
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
+  type GestureResponderEvent,
 } from "react-native";
 import Animated, {
+  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { CameraView, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Circle } from "react-native-svg";
+import {
+  CameraView,
+  useCameraPermissions,
+  useMicrophonePermissions,
+} from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
-import { Images, RefreshCw, X, Zap, ZapOff } from "lucide-react-native";
+import { router } from "expo-router";
+import {
+  CircleStop,
+  Images,
+  Settings as SettingsIcon,
+  SwitchCamera,
+  X,
+  Zap,
+  ZapOff,
+} from "lucide-react-native";
 import { canPlayVideo } from "@/presentation/features/social/Video";
 import { useThemedPalette } from "@/presentation/theme/tokens";
+import { routes } from "@/shared/routes";
 
 /**
  * Can THIS binary record video?
@@ -56,6 +94,15 @@ const VIDEO_CAPABLE = canPlayVideo();
 const HOLD_MS = 260;
 /** Matches the server's MAX_STORY_DURATION_MS. */
 const MAX_SECONDS = 15;
+/** Sliding a full thumb-length up while holding reaches max zoom — IG's feel. */
+const SLIDE_ZOOM_RANGE = 300;
+
+/** The progress arc's geometry (radius sized around the 84pt shutter). */
+const ARC_SIZE = 108;
+const ARC_R = 50;
+const ARC_C = 2 * Math.PI * ARC_R;
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export interface Capture {
   uri: string;
@@ -71,6 +118,7 @@ export function StoryCamera({
   onCancel: () => void;
 }) {
   const p = useThemedPalette();
+  const insets = useSafeAreaInsets();
   const camera = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   // Requested separately and NOT required: a story with no sound is still a
@@ -79,17 +127,54 @@ export function StoryCamera({
   const [mic, requestMic] = useMicrophonePermissions();
 
   const [facing, setFacing] = useState<"back" | "front">("back");
-  const [torch, setTorch] = useState(false);
+  const [flashOn, setFlashOn] = useState(false);
+  const [handsFree, setHandsFree] = useState(false);
   const [ready, setReady] = useState(false);
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Zoom is a PROP on CameraView (0..1 of the active lens's range), so it
+  // lives in React state — written through one clamped setter that skips
+  // sub-1% moves to keep pinch from re-rendering the preview every frame.
+  const [zoom, setZoom] = useState(0);
+  const zoomRef = useRef(0);
+  const applyZoom = useCallback((next: number) => {
+    const z = Math.max(0, Math.min(1, next));
+    if (Math.abs(z - zoomRef.current) < 0.01 && z !== 0 && z !== 1) return;
+    zoomRef.current = z;
+    setZoom(z);
+  }, []);
+
+  // The ultra-wide, when the hardware has one. iOS names lenses by their
+  // LOCALIZED name, so this is a best-effort match — a device or locale
+  // where "Ultra Wide" isn't findable just doesn't get the .5× chip.
+  const [ultraWideLens, setUltraWideLens] = useState<string | null>(null);
+  const [lens, setLens] = useState<"wide" | "ultra">("wide");
+  useEffect(() => {
+    if (Platform.OS !== "ios" || !ready || facing !== "back") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const lenses = (await camera.current?.getAvailableLensesAsync()) ?? [];
+        if (cancelled) return;
+        setUltraWideLens(lenses.find((l) => /ultra\s*wide/i.test(l)) ?? null);
+      } catch {
+        setUltraWideLens(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, facing]);
+
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startedAt = useRef(0);
+  const pressStartY = useRef(0);
+  const zoomAtPress = useRef(0);
   // Set the instant a recording begins, so a release that arrives before
   // React has re-rendered still knows to stop it.
   const isRecording = useRef(false);
   const progress = useSharedValue(0);
+  const shutterScale = useSharedValue(1);
 
   useEffect(() => {
     if (!permission?.granted) void requestPermission();
@@ -102,8 +187,12 @@ export function StoryCamera({
     [],
   );
 
-  const ring = useAnimatedStyle(() => ({
-    transform: [{ scale: 0.72 + progress.value * 0.28 }],
+  // IG's recording shutter: the whole button GROWS while the arc draws.
+  const shutterStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: shutterScale.value }],
+  }));
+  const arcProps = useAnimatedProps(() => ({
+    strokeDashoffset: ARC_C * (1 - progress.value),
     opacity: progress.value > 0 ? 1 : 0,
   }));
 
@@ -112,9 +201,10 @@ export function StoryCamera({
     isRecording.current = false;
     setRecording(false);
     progress.value = withTiming(0, { duration: 160 });
+    shutterScale.value = withSpring(1, { damping: 16, stiffness: 260 });
     // The promise returned by recordAsync resolves here — see startRecording.
     camera.current?.stopRecording();
-  }, [progress]);
+  }, [progress, shutterScale]);
 
   const startRecording = useCallback(async () => {
     if (!ready || isRecording.current) return;
@@ -122,9 +212,9 @@ export function StoryCamera({
 
     isRecording.current = true;
     setRecording(true);
-    setTorch((on) => on); // keep whatever the user chose
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     progress.value = withTiming(1, { duration: MAX_SECONDS * 1000 });
+    shutterScale.value = withSpring(1.18, { damping: 14, stiffness: 220 });
 
     const began = Date.now();
     try {
@@ -146,16 +236,19 @@ export function StoryCamera({
       isRecording.current = false;
       setRecording(false);
       progress.value = withTiming(0, { duration: 160 });
+      shutterScale.value = withSpring(1, { damping: 16, stiffness: 260 });
     }
-  }, [ready, mic?.granted, requestMic, onCaptured, progress]);
+  }, [ready, mic?.granted, requestMic, onCaptured, progress, shutterScale]);
 
   const takePhoto = useCallback(async () => {
     if (!ready || busy) return;
     setBusy(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     try {
+      // Quality 1 on the sensor's max dimensions — a story is the one
+      // place people zoom into corners of a card, so the pixels matter.
       const shot = await camera.current?.takePictureAsync({
-        quality: 0.85,
+        quality: 1,
         skipProcessing: false,
       });
       if (shot?.uri) onCaptured({ uri: shot.uri, kind: "image" });
@@ -164,17 +257,44 @@ export function StoryCamera({
     }
   }, [ready, busy, onCaptured]);
 
-  const onPressIn = () => {
-    startedAt.current = Date.now();
+  const flip = useCallback(() => {
+    Haptics.selectionAsync().catch(() => {});
+    setLens("wide");
+    applyZoom(0);
+    setFacing((f) => (f === "back" ? "front" : "back"));
+  }, [applyZoom]);
+
+  const onPressIn = (event: GestureResponderEvent) => {
+    pressStartY.current = event.nativeEvent.pageY;
+    zoomAtPress.current = zoomRef.current;
     // Photo-only on binaries without the mic permission — see VIDEO_CAPABLE.
-    if (!VIDEO_CAPABLE) return;
+    if (!VIDEO_CAPABLE || handsFree) return;
     holdTimer.current = setTimeout(() => {
       holdTimer.current = null;
       void startRecording();
     }, HOLD_MS);
   };
 
+  // IG's one-handed zoom: while holding the shutter, sliding up zooms in.
+  const onShutterTouchMove = (event: GestureResponderEvent) => {
+    if (!isRecording.current) return;
+    const dy = pressStartY.current - event.nativeEvent.pageY;
+    if (dy <= 0) {
+      applyZoom(zoomAtPress.current);
+      return;
+    }
+    applyZoom(zoomAtPress.current + dy / SLIDE_ZOOM_RANGE);
+  };
+
   const onPressOut = () => {
+    if (handsFree && VIDEO_CAPABLE) {
+      // Hands-free: the shutter is a TOGGLE. Quick taps still take photos
+      // via onPress below? No — in hands-free the tap starts/stops the
+      // recording; stills stay one toggle away on the rail.
+      if (isRecording.current) stopRecording();
+      else void startRecording();
+      return;
+    }
     if (holdTimer.current) {
       // Released before the threshold — it was a tap.
       clearTimeout(holdTimer.current);
@@ -188,7 +308,7 @@ export function StoryCamera({
   const pickFromLibrary = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: VIDEO_CAPABLE ? ["images", "videos"] : ["images"],
-      quality: 0.85,
+      quality: 0.9,
       videoMaxDuration: MAX_SECONDS,
     });
     const asset = result.assets?.[0];
@@ -201,6 +321,28 @@ export function StoryCamera({
     }
   };
 
+  // Viewfinder gestures — IG's pair: pinch zooms, double-tap flips. The
+  // detector wraps ONLY the camera card (a stable, never-animated-out
+  // subtree — the island crash taught us where detectors must not live),
+  // and the chrome overlays sit above it so buttons always win the touch.
+  const pinchBase = useRef(0);
+  const pinch = Gesture.Pinch()
+    .runOnJS(true)
+    .onStart(() => {
+      pinchBase.current = zoomRef.current;
+    })
+    .onUpdate((e) => {
+      // scale 1 → no change; 2 → most of the range; <1 zooms out.
+      applyZoom(pinchBase.current + (e.scale - 1) * 0.55);
+    });
+  const doubleTap = Gesture.Tap()
+    .runOnJS(true)
+    .numberOfTaps(2)
+    .onEnd((_e, success) => {
+      if (success) flip();
+    });
+  const viewfinderGesture = Gesture.Simultaneous(pinch, doubleTap);
+
   if (!permission) {
     return (
       <View style={[styles.fill, styles.center, { backgroundColor: "#000" }]}>
@@ -211,7 +353,9 @@ export function StoryCamera({
 
   if (!permission.granted) {
     return (
-      <SafeAreaView style={[styles.fill, styles.center, { backgroundColor: "#000" }]}>
+      <SafeAreaView
+        style={[styles.fill, styles.center, { backgroundColor: "#000" }]}
+      >
         <Text style={styles.denyTitle}>Camera access needed</Text>
         <Text style={styles.denyBody}>
           Loupe needs the camera to record a story. Photos stay on your device
@@ -231,104 +375,227 @@ export function StoryCamera({
     );
   }
 
+  const showLensChips =
+    facing === "back" && ultraWideLens != null && !recording;
+
   return (
     <View style={[styles.fill, { backgroundColor: "#000" }]}>
-      <CameraView
-        ref={camera}
-        style={StyleSheet.absoluteFill}
-        facing={facing}
-        mode={VIDEO_CAPABLE ? "video" : "picture"}
-        enableTorch={torch}
-        onCameraReady={() => setReady(true)}
-      />
+      {/* ── The rounded viewfinder card, IG-style ── */}
+      <View
+        style={[
+          styles.finder,
+          { marginTop: Math.max(insets.top, 12), marginBottom: 96 + insets.bottom },
+        ]}
+      >
+        <GestureDetector gesture={viewfinderGesture}>
+          <View style={styles.fill}>
+            <CameraView
+              ref={camera}
+              style={StyleSheet.absoluteFill}
+              facing={facing}
+              mode={VIDEO_CAPABLE ? "video" : "picture"}
+              zoom={zoom}
+              // Front-facing "flash" is the screen itself — Retina flash on
+              // iOS, CameraX screen flash on Android. Back gets the LED.
+              flash={flashOn ? (facing === "front" ? "screen" : "on") : "off"}
+              // The LED stays lit through a whole recording — a photo
+              // flash can't fire mid-clip.
+              enableTorch={flashOn && recording && facing === "back"}
+              // Story cameras mirror selfies; an un-mirrored selfie reads
+              // as someone else's photo of you.
+              mirror={facing === "front"}
+              videoQuality="1080p"
+              selectedLens={
+                facing === "back" && lens === "ultra" && ultraWideLens
+                  ? ultraWideLens
+                  : undefined
+              }
+              onCameraReady={() => setReady(true)}
+            />
+          </View>
+        </GestureDetector>
 
-      <SafeAreaView style={styles.fill} pointerEvents="box-none">
-        <View style={styles.top}>
-          <Chip onPress={onCancel} label="Close">
-            <X size={21} color="#fff" strokeWidth={2.2} />
-          </Chip>
-          <View style={styles.topRight}>
+        {/* ── Chrome INSIDE the card (buttons sit above the gestures) ── */}
+        <View style={styles.chrome} pointerEvents="box-none">
+          <View style={styles.top}>
+            <Chip onPress={onCancel} label="Close">
+              <X size={22} color="#fff" strokeWidth={2.2} />
+            </Chip>
+            {/* Flash lives top-CENTER — the reference layout. */}
             <Chip
-              onPress={() => setTorch((v) => !v)}
-              label={torch ? "Turn flash off" : "Turn flash on"}
+              onPress={() => setFlashOn((v) => !v)}
+              label={flashOn ? "Turn flash off" : "Turn flash on"}
             >
-              {torch ? (
-                <Zap size={19} color="#ffd60a" fill="#ffd60a" />
+              {flashOn ? (
+                <Zap size={20} color="#ffd60a" fill="#ffd60a" />
               ) : (
-                <ZapOff size={19} color="#fff" />
+                <ZapOff size={20} color="#fff" />
               )}
             </Chip>
             <Chip
-              onPress={() => setFacing((f) => (f === "back" ? "front" : "back"))}
-              label="Flip camera"
+              onPress={() => router.push(routes.communitySettings())}
+              label="Story settings"
             >
-              <RefreshCw size={19} color="#fff" strokeWidth={2.2} />
+              <SettingsIcon size={20} color="#fff" strokeWidth={2.1} />
             </Chip>
           </View>
-        </View>
 
-        <View style={styles.spacer} pointerEvents="none">
+          {/* ── The tools rail, left edge — only tools Loupe really has. ── */}
+          <View style={styles.rail} pointerEvents="box-none">
+            {VIDEO_CAPABLE ? (
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setHandsFree((v) => !v);
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: handsFree }}
+                accessibilityLabel="Hands-free recording"
+                style={styles.railItem}
+              >
+                <CircleStop
+                  size={26}
+                  color={handsFree ? p.accent.mint : "#fff"}
+                  strokeWidth={2}
+                />
+                <Text
+                  style={[
+                    styles.railLabel,
+                    handsFree && { color: p.accent.mint },
+                  ]}
+                >
+                  Hands-free
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+
           {recording ? (
-            <View style={styles.recPill}>
+            <View style={styles.recPill} pointerEvents="none">
               <View style={styles.recDot} />
               <Text style={styles.recText}>REC</Text>
             </View>
           ) : null}
-        </View>
 
-        <View style={styles.bottom}>
-          <Pressable
-            onPress={() => void pickFromLibrary()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Choose from your library"
-            style={styles.libraryButton}
-          >
-            <Images size={22} color="#fff" strokeWidth={2} />
-          </Pressable>
+          {/* ── Lens chips + shutter, low in the frame like IG ── */}
+          <View style={styles.deck} pointerEvents="box-none">
+            {showLensChips ? (
+              <View style={styles.lensRow}>
+                <LensChip
+                  label=".5"
+                  on={lens === "ultra"}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setLens("ultra");
+                    applyZoom(0);
+                  }}
+                />
+                <LensChip
+                  label="1x"
+                  on={lens === "wide"}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setLens("wide");
+                    applyZoom(0);
+                  }}
+                />
+              </View>
+            ) : null}
 
-          <Pressable
-            onPressIn={onPressIn}
-            onPressOut={onPressOut}
-            disabled={!ready}
-            accessibilityRole="button"
-            accessibilityLabel="Tap for a photo, hold to record a video"
-            style={styles.shutterHit}
-          >
-            {/* The fill ring — a recording's length, visible while it
-                happens instead of discovered on playback. */}
-            <Animated.View
-              style={[styles.shutterRing, { borderColor: p.accent.mint }, ring]}
-              pointerEvents="none"
-            />
-            <View
-              style={[
-                styles.shutterOuter,
-                recording && { borderColor: p.accent.mint },
-              ]}
+            <Pressable
+              onPressIn={onPressIn}
+              onPressOut={onPressOut}
+              onTouchMove={onShutterTouchMove}
+              disabled={!ready}
+              accessibilityRole="button"
+              accessibilityLabel={
+                handsFree
+                  ? "Tap to start or stop recording"
+                  : "Tap for a photo, hold to record a video"
+              }
+              style={styles.shutterHit}
             >
-              <View
-                style={[
-                  styles.shutterInner,
-                  recording && styles.shutterInnerRecording,
-                  recording && { backgroundColor: p.accent.mint },
-                ]}
-              />
-            </View>
-          </Pressable>
+              {/* The arc — a recording's length drawn around the button
+                  while it happens instead of discovered on playback. */}
+              <Animated.View
+                style={[StyleSheet.absoluteFill, styles.center]}
+                pointerEvents="none"
+              >
+                <Svg width={ARC_SIZE} height={ARC_SIZE}>
+                  <AnimatedCircle
+                    cx={ARC_SIZE / 2}
+                    cy={ARC_SIZE / 2}
+                    r={ARC_R}
+                    stroke={p.accent.mint}
+                    strokeWidth={5}
+                    strokeLinecap="round"
+                    fill="none"
+                    strokeDasharray={`${ARC_C}`}
+                    animatedProps={arcProps}
+                    // Start the sweep at 12 o'clock.
+                    transform={`rotate(-90 ${ARC_SIZE / 2} ${ARC_SIZE / 2})`}
+                  />
+                </Svg>
+              </Animated.View>
+              <Animated.View style={[styles.center, shutterStyle]}>
+                <View
+                  style={[
+                    styles.shutterOuter,
+                    recording && { borderColor: "rgba(255,255,255,0.5)" },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.shutterInner,
+                      recording && styles.shutterInnerRecording,
+                      recording && { backgroundColor: p.accent.mint },
+                    ]}
+                  />
+                </View>
+              </Animated.View>
+            </Pressable>
 
-          {/* Balances the library button so the shutter is truly centred. */}
-          <View style={styles.libraryButton} />
+            <Text style={styles.hint} pointerEvents="none">
+              {recording
+                ? handsFree
+                  ? "Tap to finish"
+                  : "Release to finish · slide up to zoom"
+                : handsFree
+                  ? "Tap to start recording"
+                  : VIDEO_CAPABLE
+                    ? "Tap for photo · hold for video"
+                    : "Tap for photo — update Loupe to record video"}
+            </Text>
+          </View>
         </View>
+      </View>
 
-        <Text style={styles.hint} pointerEvents="none">
-          {recording
-            ? "Release to finish"
-            : VIDEO_CAPABLE
-              ? "Tap for photo · hold for video"
-              : "Tap for photo — update Loupe to record video"}
+      {/* ── The black bottom bar: gallery · STORY · flip — IG's row ── */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+        <Pressable
+          onPress={() => void pickFromLibrary()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Choose from your library"
+          style={styles.galleryButton}
+        >
+          <Images size={22} color="#fff" strokeWidth={2} />
+        </Pressable>
+
+        <Text style={styles.mode} accessibilityRole="header">
+          STORY
         </Text>
-      </SafeAreaView>
+
+        <Pressable
+          onPress={flip}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Flip camera"
+          style={styles.flipButton}
+        >
+          <SwitchCamera size={24} color="#fff" strokeWidth={2} />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -355,27 +622,68 @@ function Chip({
   );
 }
 
+/** The .5×/1× pill — the native camera's lens toggle, IG-sized. */
+function LensChip({
+  label,
+  on,
+  onPress,
+}: {
+  label: string;
+  on: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityState={{ selected: on }}
+      accessibilityLabel={`${label} zoom`}
+      style={[styles.lensChip, on && styles.lensChipOn]}
+    >
+      <Text style={[styles.lensText, on && styles.lensTextOn]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  center: { alignItems: "center", justifyContent: "center", padding: 32 },
+  center: { alignItems: "center", justifyContent: "center" },
+  finder: {
+    flex: 1,
+    marginHorizontal: 8,
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: "#0b0b0d",
+  },
+  chrome: { ...StyleSheet.absoluteFillObject },
   top: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: 14,
+    paddingTop: 12,
   },
-  topRight: { flexDirection: "row", gap: 10 },
   chip: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
-    backgroundColor: "rgba(0,0,0,0.38)",
+    backgroundColor: "rgba(0,0,0,0.36)",
   },
-  spacer: { flex: 1, alignItems: "center", paddingTop: 14 },
+  rail: {
+    position: "absolute",
+    left: 12,
+    top: "34%",
+    gap: 22,
+  },
+  railItem: { alignItems: "center", gap: 4, width: 74 },
+  railLabel: { color: "#fff", fontSize: 11, fontWeight: "700" },
   recPill: {
+    position: "absolute",
+    top: 66,
+    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
@@ -386,53 +694,93 @@ const styles = StyleSheet.create({
   },
   recDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#ff453a" },
   recText: { color: "#fff", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 },
-  bottom: {
-    flexDirection: "row",
+  deck: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 18,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 34,
-    paddingBottom: 6,
   },
-  libraryButton: {
-    width: 46,
-    height: 46,
+  lensRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 14,
+  },
+  lensChip: {
+    minWidth: 34,
+    height: 34,
+    paddingHorizontal: 8,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.34)",
+    backgroundColor: "rgba(0,0,0,0.42)",
   },
-  shutterHit: { alignItems: "center", justifyContent: "center" },
-  shutterRing: {
-    position: "absolute",
-    width: 104,
-    height: 104,
-    borderRadius: 52,
-    borderWidth: 4,
+  lensChipOn: { backgroundColor: "rgba(0,0,0,0.72)" },
+  lensText: { color: "rgba(255,255,255,0.8)", fontSize: 12, fontWeight: "700" },
+  lensTextOn: { color: "#fff", fontSize: 13 },
+  shutterHit: {
+    width: ARC_SIZE,
+    height: ARC_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
   },
   shutterOuter: {
-    width: 78,
-    height: 78,
+    width: 84,
+    height: 84,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 39,
+    borderRadius: 42,
     borderWidth: 4,
-    borderColor: "rgba(255,255,255,0.9)",
+    borderColor: "rgba(255,255,255,0.92)",
   },
   shutterInner: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: "#fff",
   },
   // Square-ish while recording — the universal "this is running" shutter.
-  shutterInnerRecording: { width: 30, height: 30, borderRadius: 8 },
+  shutterInnerRecording: { width: 30, height: 30, borderRadius: 9 },
   hint: {
     color: "rgba(255,255,255,0.72)",
     fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
     paddingTop: 10,
-    paddingBottom: 4,
+  },
+  bottomBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 96,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 22,
+    paddingTop: 10,
+  },
+  galleryButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
+  mode: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 2.2,
+  },
+  flipButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.14)",
   },
   denyTitle: { color: "#fff", fontSize: 19, fontWeight: "800" },
   denyBody: {

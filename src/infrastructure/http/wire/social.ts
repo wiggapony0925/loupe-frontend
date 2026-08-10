@@ -17,6 +17,8 @@ export interface SocialProfileWire {
   bio: string | null;
   location: string | null;
   is_private: boolean;
+  /** Canonical https URLs keyed by platform (server-normalized). */
+  links?: Record<string, string> | null;
   avatar_url: string | null;
   created_at: string;
 }
@@ -57,6 +59,8 @@ export interface SocialProfileViewWire {
   avatar_url: string | null;
   bio: string | null;
   location: string | null;
+  /** Canonical https URLs keyed by platform (server-normalized). */
+  links?: Record<string, string> | null;
   is_private: boolean;
   is_pro: boolean;
   joined_at: string;
@@ -182,6 +186,9 @@ export interface SocialProfileUpsertWire {
   bio?: string | null;
   location?: string | null;
   is_private?: boolean;
+  /** Omit = leave stored links alone; {} = clear; values may be bare
+   *  handles — the server canonicalises to https URLs. */
+  links?: Record<string, string> | null;
 }
 
 /** One tile in the Community Explore mosaic. */
