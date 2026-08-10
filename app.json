@@ -22,7 +22,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.loupe.client",
-      "buildNumber": "250",
+      "buildNumber": "251",
       "usesAppleSignIn": true,
       "entitlements": {
         "aps-environment": "production"
