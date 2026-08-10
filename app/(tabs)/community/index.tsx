@@ -91,7 +91,9 @@ export default function CommunityFeedScreen() {
   // means arriving at the feed — never on a profile or permalink left over
   // from last time. See the hook for why it hangs off blur, not focus.
   useHomeOnReentry();
-  const [tab, setTab] = useState<FeedTab>("following");
+  // For You first: it's never empty. A new collector opening straight into
+  // an empty Following feed read as the product being dead.
+  const [tab, setTab] = useState<FeedTab>("foryou");
   // Whose reel is open, or null. A handle rather than a story id: the
   // viewer pages through everything that person has up.
   const [watching, setWatching] = useState<string | null>(null);

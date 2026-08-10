@@ -227,24 +227,40 @@ export function useReplies(
 /**
  * Publish a post. React Native's fetch turns a `{ uri, name, type }`
  * FormData part into a real multipart file upload — the same trick the
- * avatar upload uses.
+ * avatar upload uses. Slides can be photos or clips; the server keys its
+ * size ceiling and `kind` off the part's content type, so the type here
+ * has to be honest.
  */
+function slideExtension(type: string): string {
+  if (type.includes("quicktime")) return "mov";
+  if (type.startsWith("video/")) return "mp4";
+  if (type.includes("png")) return "png";
+  if (type.includes("webp")) return "webp";
+  return "jpg";
+}
+
 export function useCreatePost() {
   const qc = useQueryClient();
   return useMutation<
     PostWire,
     Error,
-    { body?: string; cardId?: string; images?: { uri: string; mimeType?: string }[] }
+    {
+      body?: string;
+      cardId?: string;
+      images?: { uri: string; mimeType?: string; kind?: "image" | "video" }[];
+    }
   >({
     mutationFn: ({ body, cardId, images }) => {
       const form = new FormData();
       if (body) form.append("body", body);
       if (cardId) form.append("card_id", cardId);
       (images ?? []).forEach((image, index) => {
-        const type = image.mimeType ?? "image/jpeg";
+        const type =
+          image.mimeType ??
+          (image.kind === "video" ? "video/quicktime" : "image/jpeg");
         form.append("images", {
           uri: image.uri,
-          name: `post-${index}.${type.includes("png") ? "png" : "jpg"}`,
+          name: `post-${index}.${slideExtension(type)}`,
           type,
         } as unknown as Blob);
       });

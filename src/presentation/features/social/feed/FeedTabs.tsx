@@ -1,5 +1,5 @@
 /**
- * FeedTabs — Following · For You.
+ * FeedTabs — For You · Following.
  *
  * An underline that slides, not a segmented pill: the tabs sit directly over
  * a scrolling river of content, and a filled control there reads as a
@@ -18,10 +18,14 @@ import { useThemedPalette } from "@/presentation/theme/tokens";
 /** Two, not three. "Your Posts" moved to your PROFILE, where the rest of
  *  your stuff already lives — a feed is for other people's posts, and a tab
  *  showing only your own was a filter pretending to be a feed. The `mine`
- *  tab still exists on the API; the profile grid is what reads it now. */
+ *  tab still exists on the API; the profile grid is what reads it now.
+ *
+ *  For You leads: it's the tab the app OPENS on, and a fresh account's
+ *  Following feed is empty — leading with the tab that always has
+ *  something is what every feed app converged on. */
 export const FEED_TABS: { key: FeedTab; label: string }[] = [
-  { key: "following", label: "Following" },
   { key: "foryou", label: "For You" },
+  { key: "following", label: "Following" },
 ];
 
 export function FeedTabs({

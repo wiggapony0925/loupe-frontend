@@ -1,10 +1,14 @@
 /**
  * Compose — write a post.
  *
- * The caption is the primary field and gets focus on mount; photos are
+ * The caption is the primary field and gets focus on mount; media is
  * optional. That ordering matters on a card app: plenty of good posts are
  * "does anyone else have this?" with no picture at all, and a composer that
- * opens on a photo picker implies otherwise.
+ * opens on a media picker implies otherwise.
+ *
+ * Slides can be photos OR clips — the picker offers both, and the story
+ * camera hands its capture here (`mediaUri`/`mediaKind` params) when the
+ * shooter chooses "Post" over "Your story", the Instagram fork.
  *
  * Publishing is ONE request (multipart) — see the backend's create_post. A
  * two-step "create then attach" would leave a captionless post behind every
@@ -25,13 +29,14 @@ import {
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ImagePlus, Layers, ShieldAlert, X } from "lucide-react-native";
+import { ImagePlus, Layers, Play, ShieldAlert, X } from "lucide-react-native";
 import { useCreatePost } from "@/application/queries/social/useFeed";
 import { useModeratedSubmit } from "@/presentation/features/social/feed/useModeratedSubmit";
 import { useSocialMe } from "@/application/queries/social/useSocial";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
+import { Video } from "@/presentation/features/social/Video";
 import {
   CardPickerSheet,
   type PickedCard,
@@ -43,23 +48,57 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 const MAX_BODY = 2200;
 /** Matches `post_media.MAX_IMAGES_PER_POST`. */
 const MAX_IMAGES = 4;
+/** Feed clips cap at a minute, Instagram's old rule — long-form belongs
+ *  nowhere near a card feed, and the server's 120 MB ceiling is easy to
+ *  hit past this anyway. */
+const MAX_VIDEO_SECONDS = 60;
 
 interface Draft {
   uri: string;
   mimeType?: string;
+  kind: "image" | "video";
+}
+
+/** Best-effort mime from a file URI, for handoffs that don't carry one. */
+function mimeFromUri(uri: string, kind: "image" | "video"): string {
+  const lower = uri.toLowerCase();
+  if (kind === "video") {
+    return lower.endsWith(".mp4") ? "video/mp4" : "video/quicktime";
+  }
+  return lower.endsWith(".png") ? "image/png" : "image/jpeg";
 }
 
 export default function ComposeScreen() {
   const p = useThemedPalette();
   const me = useSocialMe();
   const create = useCreatePost();
+  // The story camera's handoff: its capture arrives as params when the
+  // shooter picked "Post" at the review step. Read once into initial
+  // state — params persist across re-renders and must not re-seed.
+  const params = useLocalSearchParams<{
+    mediaUri?: string;
+    mediaKind?: string;
+    prefill?: string;
+  }>();
   // Every publish surface answers a refusal the same way — see the hook.
   const { submit, refusal, dismiss, pending } = useModeratedSubmit(create, {
     onDone: () => router.back(),
   });
 
-  const [body, setBody] = useState("");
-  const [images, setImages] = useState<Draft[]>([]);
+  const [body, setBody] = useState(() =>
+    typeof params.prefill === "string" ? params.prefill.slice(0, MAX_BODY) : "",
+  );
+  const [images, setImages] = useState<Draft[]>(() => {
+    if (typeof params.mediaUri !== "string" || !params.mediaUri) return [];
+    const kind = params.mediaKind === "video" ? "video" : "image";
+    return [
+      {
+        uri: params.mediaUri,
+        kind,
+        mimeType: mimeFromUri(params.mediaUri, kind),
+      },
+    ];
+  });
   const [card, setCard] = useState<PickedCard | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const remaining = MAX_BODY - body.length;
@@ -76,21 +115,38 @@ export default function ComposeScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      // Photos AND clips — "i cant upload vidoes" was this one word.
+      mediaTypes: ["images", "videos"],
       allowsMultipleSelection: true,
       selectionLimit: MAX_IMAGES - images.length,
       quality: 0.85,
     });
     if (result.canceled) return;
-    setImages((current) =>
-      [
-        ...current,
-        ...result.assets.map((asset) => ({
-          uri: asset.uri,
-          mimeType: asset.mimeType,
-        })),
-      ].slice(0, MAX_IMAGES),
-    );
+    const drafts: Draft[] = [];
+    for (const asset of result.assets) {
+      const kind = asset.type === "video" ? "video" : "image";
+      // Picker duration is milliseconds. Refuse long clips HERE, where the
+      // fix (trim it) is still possible — the server would only refuse
+      // after the whole file uploaded.
+      if (
+        kind === "video" &&
+        typeof asset.duration === "number" &&
+        asset.duration > MAX_VIDEO_SECONDS * 1000
+      ) {
+        Alert.alert(
+          "Clip too long",
+          `Videos can be up to ${MAX_VIDEO_SECONDS} seconds. Trim it and try again.`,
+        );
+        continue;
+      }
+      drafts.push({
+        uri: asset.uri,
+        mimeType: asset.mimeType ?? mimeFromUri(asset.uri, kind),
+        kind,
+      });
+    }
+    if (drafts.length === 0) return;
+    setImages((current) => [...current, ...drafts].slice(0, MAX_IMAGES));
   };
 
   const publish = () => {
@@ -193,11 +249,29 @@ export default function ComposeScreen() {
               <View style={styles.thumbs}>
                 {images.map((image, index) => (
                   <View key={image.uri} style={styles.thumb}>
-                    <Image
-                      source={{ uri: image.uri }}
-                      style={styles.thumbImage}
-                      contentFit="cover"
-                    />
+                    {image.kind === "video" ? (
+                      // A paused player shows the clip's real first frame —
+                      // no thumbnail pipeline needed. The play glyph marks
+                      // it as a clip, not a photo.
+                      <View style={styles.thumbImage}>
+                        <Video
+                          uri={image.uri}
+                          style={styles.thumbImage}
+                          muted
+                          paused
+                          contentFit="cover"
+                        />
+                        <View style={styles.thumbPlay} pointerEvents="none">
+                          <Play size={16} color="#fff" fill="#fff" />
+                        </View>
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: image.uri }}
+                        style={styles.thumbImage}
+                        contentFit="cover"
+                      />
+                    )}
                     <Pressable
                       onPress={() =>
                         setImages((current) =>
@@ -206,7 +280,7 @@ export default function ComposeScreen() {
                       }
                       hitSlop={6}
                       accessibilityRole="button"
-                      accessibilityLabel={`Remove photo ${index + 1}`}
+                      accessibilityLabel={`Remove slide ${index + 1}`}
                       style={styles.thumbRemove}
                     >
                       <X size={13} color="#fff" strokeWidth={3} />
@@ -267,7 +341,7 @@ export default function ComposeScreen() {
               disabled={images.length >= MAX_IMAGES}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Add photos"
+              accessibilityLabel="Add photos or videos"
               style={styles.tool}
             >
               <ImagePlus
@@ -285,8 +359,8 @@ export default function ComposeScreen() {
                 ]}
               >
                 {images.length > 0
-                  ? `${images.length}/${MAX_IMAGES} photos`
-                  : "Add photos"}
+                  ? `${images.length}/${MAX_IMAGES} slides`
+                  : "Photos & video"}
               </Text>
             </Pressable>
             <Pressable
@@ -366,7 +440,12 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 16, lineHeight: 22, minHeight: 120, paddingTop: 8 },
   thumbs: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   thumb: { width: 96, height: 120, borderRadius: 12, overflow: "visible" },
-  thumbImage: { width: 96, height: 120, borderRadius: 12 },
+  thumbImage: { width: 96, height: 120, borderRadius: 12, overflow: "hidden" },
+  thumbPlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   thumbRemove: {
     position: "absolute",
     top: -6,

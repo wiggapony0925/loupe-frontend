@@ -1,5 +1,5 @@
 /**
- * Record and post a story.
+ * Record and post a story — or fork the capture into a feed post.
  *
  * Two steps in one screen: shoot, then confirm. Splitting them across
  * routes would put a back-navigation between capture and post, and the
@@ -8,6 +8,12 @@
  * The review step is where the caption goes, and it plays the video —
  * seeing the clip before posting it is the entire reason a review step
  * exists. Retake replaces the capture in place rather than navigating.
+ *
+ * The Instagram fork lives here too: "Your story" publishes a 24-hour
+ * story; "Post" carries the exact same capture (and whatever caption was
+ * typed) into the feed composer instead. `replace`, not `push` — back
+ * from the composer must not land on a review screen for media that has
+ * already moved on.
  */
 import React, { useState } from "react";
 import {
@@ -23,8 +29,9 @@ import { router } from "expo-router";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { useIsFocused } from "@react-navigation/native";
-import { RotateCcw, Send, ShieldAlert } from "lucide-react-native";
+import { ImagePlus, RotateCcw, Send, ShieldAlert } from "lucide-react-native";
 import { usePostStory } from "@/application/queries/social/useStories";
+import { routes } from "@/shared/routes";
 import { Video } from "@/presentation/features/social/Video";
 import {
   StoryCamera,
@@ -90,6 +97,21 @@ function Review({
     );
   };
 
+  // The other branch of the fork: same capture, the FEED instead of the
+  // 24-hour tray. The typed caption rides along — retyping it because you
+  // changed which surface it goes to would be pure punishment.
+  const toPost = () => {
+    Haptics.selectionAsync().catch(() => {});
+    router.replace({
+      pathname: routes.communityCompose(),
+      params: {
+        mediaUri: capture.uri,
+        mediaKind: capture.kind,
+        prefill: caption,
+      },
+    });
+  };
+
   return (
     <View style={styles.root}>
       {capture.kind === "video" ? (
@@ -141,8 +163,14 @@ function Review({
             placeholderTextColor="rgba(255,255,255,0.6)"
             multiline
             style={styles.caption}
-            accessibilityLabel="Story caption"
+            accessibilityLabel="Caption"
           />
+        </View>
+
+        {/* The Instagram fork: the capture can become a 24-hour story or a
+            feed post. Story keeps the filled treatment — it's this screen's
+            namesake — and Post is the equal-weight alternative beside it. */}
+        <View style={styles.destinations}>
           <Pressable
             onPress={publish}
             disabled={post.isPending}
@@ -154,10 +182,20 @@ function Review({
               <ActivityIndicator size="small" color="#06140d" />
             ) : (
               <>
-                <Text style={styles.shareText}>Share</Text>
+                <Text style={styles.shareText}>Your story</Text>
                 <Send size={16} color="#06140d" strokeWidth={2.6} />
               </>
             )}
+          </Pressable>
+          <Pressable
+            onPress={toPost}
+            disabled={post.isPending}
+            accessibilityRole="button"
+            accessibilityLabel="Create a post with this instead"
+            style={styles.postDest}
+          >
+            <ImagePlus size={16} color="#fff" strokeWidth={2.4} />
+            <Text style={styles.postDestText}>Post</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -197,6 +235,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
+  destinations: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  postDest: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderRadius: 999,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+  },
+  postDestText: { color: "#fff", fontSize: 15, fontWeight: "800" },
   caption: {
     flex: 1,
     maxHeight: 110,
@@ -209,13 +266,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   share: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 20,
     paddingVertical: 13,
     borderRadius: 999,
-    minWidth: 104,
     justifyContent: "center",
   },
   shareText: { color: "#06140d", fontSize: 15, fontWeight: "800" },
