@@ -37,6 +37,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -126,6 +128,12 @@ export function StoryCamera({
   // blocking the whole screen.
   const [mic, requestMic] = useMicrophonePermissions();
 
+  // The capture mode is STATE, not a constant. A camera parked in "video"
+  // has no ImageCapture use case bound on Android — every shutter tap
+  // silently produced nothing — and on iOS it ceilings stills to the video
+  // pipeline's resolution. So stills happen in "picture" and the hold
+  // switches to "video" for the length of the recording.
+  const [mode, setMode] = useState<"picture" | "video">("picture");
   const [facing, setFacing] = useState<"back" | "front">("back");
   const [flashOn, setFlashOn] = useState(false);
   const [handsFree, setHandsFree] = useState(false);
@@ -177,7 +185,9 @@ export function StoryCamera({
   const shutterScale = useSharedValue(1);
 
   useEffect(() => {
-    if (!permission?.granted) void requestPermission();
+    if (!permission?.granted && permission?.canAskAgain !== false) {
+      void requestPermission();
+    }
   }, [permission?.granted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(
@@ -212,6 +222,12 @@ export function StoryCamera({
 
     isRecording.current = true;
     setRecording(true);
+    // Hand the native session a beat to bind the video use case before
+    // asking it to record — recordAsync on a session still in picture mode
+    // is a rejected promise, not a recording.
+    setMode("video");
+    await new Promise((resolve) => setTimeout(resolve, 140));
+    if (!isRecording.current) return; // released during the swap
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     progress.value = withTiming(1, { duration: MAX_SECONDS * 1000 });
     shutterScale.value = withSpring(1.18, { damping: 14, stiffness: 220 });
@@ -235,6 +251,7 @@ export function StoryCamera({
     } finally {
       isRecording.current = false;
       setRecording(false);
+      setMode("picture");
       progress.value = withTiming(0, { duration: 160 });
       shutterScale.value = withSpring(1, { damping: 16, stiffness: 260 });
     }
@@ -258,6 +275,9 @@ export function StoryCamera({
   }, [ready, busy, onCaptured]);
 
   const flip = useCallback(() => {
+    // Swapping the camera mid-recording tears down the capture session:
+    // the clip is truncated or lost outright.
+    if (isRecording.current) return;
     Haptics.selectionAsync().catch(() => {});
     setLens("wide");
     applyZoom(0);
@@ -288,9 +308,7 @@ export function StoryCamera({
 
   const onPressOut = () => {
     if (handsFree && VIDEO_CAPABLE) {
-      // Hands-free: the shutter is a TOGGLE. Quick taps still take photos
-      // via onPress below? No — in hands-free the tap starts/stops the
-      // recording; stills stay one toggle away on the rail.
+      // Hands-free: the shutter is a TOGGLE — tap to start, tap to stop.
       if (isRecording.current) stopRecording();
       else void startRecording();
       return;
@@ -302,7 +320,14 @@ export function StoryCamera({
       void takePhoto();
       return;
     }
-    stopRecording();
+    if (isRecording.current) {
+      stopRecording();
+      return;
+    }
+    // No timer and nothing recording: the photo-only binary, where
+    // onPressIn never arms a hold. Without this the shutter is DEAD on
+    // build 247 — the exact binary the video guard exists to protect.
+    void takePhoto();
   };
 
   const pickFromLibrary = async () => {
@@ -312,13 +337,23 @@ export function StoryCamera({
       videoMaxDuration: MAX_SECONDS,
     });
     const asset = result.assets?.[0];
-    if (!result.canceled && asset) {
-      onCaptured({
-        uri: asset.uri,
-        kind: asset.type === "video" ? "video" : "image",
-        durationMs: asset.duration ?? undefined,
-      });
+    if (result.canceled || !asset) return;
+    const isVideo = asset.type === "video";
+    // videoMaxDuration only bounds what the picker RECORDS, not what it
+    // lets you choose — an hour-long clip would sail past the shutter's
+    // ceiling and die on the server's 120 MB limit after a long upload.
+    if (isVideo && (asset.duration ?? 0) > MAX_SECONDS * 1000) {
+      Alert.alert(
+        "That clip is too long",
+        `Stories can be up to ${MAX_SECONDS} seconds. Trim it and try again.`,
+      );
+      return;
     }
+    onCaptured({
+      uri: asset.uri,
+      kind: isVideo ? "video" : "image",
+      durationMs: asset.duration ?? undefined,
+    });
   };
 
   // Viewfinder gestures — IG's pair: pinch zooms, double-tap flips. The
@@ -362,11 +397,19 @@ export function StoryCamera({
           until you post.
         </Text>
         <Pressable
-          onPress={() => void requestPermission()}
+          onPress={() => {
+            // iOS only shows the system prompt ONCE. After that the button
+            // is decoration unless it opens Settings, which is the only
+            // place the decision can still be changed.
+            if (permission.canAskAgain) void requestPermission();
+            else void Linking.openSettings();
+          }}
           style={[styles.denyCta, { backgroundColor: p.accent.mint }]}
           accessibilityRole="button"
         >
-          <Text style={styles.denyCtaText}>Allow camera</Text>
+          <Text style={styles.denyCtaText}>
+            {permission.canAskAgain ? "Allow camera" : "Open Settings"}
+          </Text>
         </Pressable>
         <Pressable onPress={onCancel} hitSlop={12} accessibilityRole="button">
           <Text style={styles.denyCancel}>Not now</Text>
@@ -393,7 +436,7 @@ export function StoryCamera({
               ref={camera}
               style={StyleSheet.absoluteFill}
               facing={facing}
-              mode={VIDEO_CAPABLE ? "video" : "picture"}
+              mode={mode}
               zoom={zoom}
               // Front-facing "flash" is the screen itself — Retina flash on
               // iOS, CameraX screen flash on Android. Back gets the LED.
@@ -448,6 +491,9 @@ export function StoryCamera({
                   Haptics.selectionAsync().catch(() => {});
                   setHandsFree((v) => !v);
                 }}
+                // Flipping the shutter's contract mid-recording strands the
+                // user with a running clip and no way the hint describes.
+                disabled={recording}
                 accessibilityRole="button"
                 accessibilityState={{ selected: handsFree }}
                 accessibilityLabel="Hands-free recording"
@@ -506,6 +552,12 @@ export function StoryCamera({
               onPressIn={onPressIn}
               onPressOut={onPressOut}
               onTouchMove={onShutterTouchMove}
+              // The slide-to-zoom gesture travels far outside a 108pt
+              // button, and Pressable ends the press the moment the touch
+              // leaves its rect — which stopped the recording mid-slide.
+              // A generous retention rect keeps the press alive until the
+              // finger actually lifts.
+              pressRetentionOffset={{ top: 600, bottom: 240, left: 240, right: 240 }}
               disabled={!ready}
               accessibilityRole="button"
               accessibilityLabel={
@@ -753,7 +805,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 96,
+    // minHeight, not height: the bar pays the home-indicator inset with
+    // padding, and a FIXED height left that inset as a gap between the
+    // viewfinder and the bar.
+    minHeight: 96,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
