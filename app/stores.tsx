@@ -50,8 +50,6 @@ import {
   Star,
   Store,
 } from "lucide-react-native";
-import { AppWordmark } from "@/presentation/navigation/AppSwitcher";
-import { LoupeMark } from "@/presentation/brand/LoupeMark";
 import {
   useNearbyStores,
   useSavedStores,
@@ -276,20 +274,6 @@ export default function StoresScreen() {
 
       {/* ── Floating search pill + filter chips (the Resy header) ── */}
       <SafeAreaView edges={["top"]} pointerEvents="box-none" style={styles.top}>
-        {/* The logo names the lane: "Loupe Map", Map in the brand green —
-            the same treatment the Community wordmark gets. On a chip, not
-            bare, so it survives whatever the map paints under it. */}
-        <View style={styles.brandRow} pointerEvents="none">
-          <View
-            style={[
-              styles.brandChip,
-              { backgroundColor: p.bg.elevated, borderColor: p.line.default },
-            ]}
-          >
-            <LoupeMark size={20} />
-            <AppWordmark lane="map" />
-          </View>
-        </View>
         <View style={styles.searchRow} pointerEvents="box-none">
           <Pressable
             onPress={() => router.back()}
@@ -774,17 +758,6 @@ function Gate({
 const styles = StyleSheet.create({
   root: { flex: 1 },
   top: { position: "absolute", top: 0, left: 0, right: 0 },
-  brandRow: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 8 },
-  brandChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",

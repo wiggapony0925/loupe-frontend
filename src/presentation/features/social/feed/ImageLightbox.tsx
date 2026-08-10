@@ -1,14 +1,18 @@
 /**
- * ImageLightbox — a post's photos, full screen.
+ * ImageLightbox — a post's media, full screen.
  *
- * Opened by a single tap on feed media. Black backdrop, no chrome but a close
- * button and (for a carousel) dots: the picture is the point, and every
- * pixel of UI on top of it is a pixel of card art you can't see.
+ * Opened from feed media. Black backdrop, no chrome but a close button and
+ * (for a carousel) dots: the picture is the point, and every pixel of UI on
+ * top of it is a pixel of card art you can't see.
  *
  * Pinch to zoom and drag to pan, because the whole reason someone opens a
  * card photo full screen is to look at an edge, a corner or a surface
  * scratch. Swipe down to dismiss, which is the gesture every photo viewer
  * on the platform has trained people to expect.
+ *
+ * Video slides play here too — full screen is where the sound lives (the
+ * feed autoplays muted), and only the CURRENT page plays so a carousel
+ * can't talk over itself from off screen.
  */
 import React, { useState } from "react";
 import {
@@ -20,7 +24,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Image } from "expo-image";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
 import { Gesture, GestureDetector, ScrollView } from "react-native-gesture-handler";
 import Animated, {
@@ -32,6 +36,7 @@ import Animated, {
 } from "react-native-reanimated";
 import type { PostMediaWire } from "@/infrastructure/http";
 import { absolutize } from "@/presentation/features/social/SocialAvatar";
+import { Video } from "@/presentation/features/social/Video";
 
 /** Past this, a downward drag dismisses instead of springing back. */
 const DISMISS_DISTANCE = 130;
@@ -47,6 +52,13 @@ export function ImageLightbox({
   onClose: () => void;
 }) {
   const { width, height } = useWindowDimensions();
+  // The top inset via the HOOK, not <SafeAreaView>: the native safe-area
+  // view can report ZERO inside a Modal (it measures its own window before
+  // attachment), which parked the close button under the Dynamic Island —
+  // unreachable, so the only way out of the viewer was force-quitting. The
+  // hook reads the provider at the app root, whose inset is always the
+  // real one; the floor keeps a sane tap target on inset-less devices.
+  const insets = useSafeAreaInsets();
   const [page, setPage] = useState(initialIndex);
 
   const open = !!media && media.length > 0;
@@ -60,10 +72,13 @@ export function ImageLightbox({
       onRequestClose={onClose}
     >
       <View style={styles.root}>
-        <SafeAreaView edges={["top"]} style={styles.bar} pointerEvents="box-none">
+        <View
+          style={[styles.bar, { paddingTop: Math.max(insets.top, 14) }]}
+          pointerEvents="box-none"
+        >
           <Pressable
             onPress={onClose}
-            hitSlop={12}
+            hitSlop={14}
             accessibilityRole="button"
             accessibilityLabel="Close photo"
             style={styles.close}
@@ -75,7 +90,7 @@ export function ImageLightbox({
               {page + 1} / {media.length}
             </Text>
           ) : null}
-        </SafeAreaView>
+        </View>
 
         {open ? (
           <ScrollView
@@ -87,12 +102,13 @@ export function ImageLightbox({
               setPage(Math.round(e.nativeEvent.contentOffset.x / width))
             }
           >
-            {media.map((item) => (
+            {media.map((item, index) => (
               <ZoomableSlide
                 key={item.id}
                 item={item}
                 width={width}
                 height={height}
+                active={index === page}
                 onDismiss={onClose}
               />
             ))}
@@ -107,11 +123,14 @@ function ZoomableSlide({
   item,
   width,
   height,
+  active,
   onDismiss,
 }: {
   item: PostMediaWire;
   width: number;
   height: number;
+  /** Is this the carousel's current page? Off-page videos stay paused. */
+  active: boolean;
   onDismiss: () => void;
 }) {
   const scale = useSharedValue(1);
@@ -194,16 +213,33 @@ function ZoomableSlide({
     opacity: scale.value > 1 ? 1 : Math.max(0.35, 1 - Math.abs(y.value) / 420),
   }));
 
+  const uri = absolutize(item.url) ?? undefined;
+
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View style={[{ width, height }, styles.slide, style]}>
-        <Image
-          source={{ uri: absolutize(item.url) ?? undefined }}
-          style={{ width, height: height * 0.8 }}
-          contentFit="contain"
-          transition={120}
-          accessibilityIgnoresInvertColors
-        />
+        {item.kind === "video" && uri ? (
+          // Sound ON: expanding a clip is the "let me actually watch this"
+          // gesture, and the feed underneath already covered muted. All the
+          // photo gestures still apply — the player sits inside the same
+          // animated frame.
+          <Video
+            uri={uri}
+            style={{ width, height: height * 0.8 }}
+            loop
+            muted={false}
+            paused={!active}
+            contentFit="contain"
+          />
+        ) : (
+          <Image
+            source={{ uri }}
+            style={{ width, height: height * 0.8 }}
+            contentFit="contain"
+            transition={120}
+            accessibilityIgnoresInvertColors
+          />
+        )}
       </Animated.View>
     </GestureDetector>
   );

@@ -11,7 +11,9 @@
  *
  * **Single tap opens it full screen** — the reason someone taps a card
  * photo is to look at a corner or an edge, and the feed's width can't
- * answer that.
+ * answer that. On a VIDEO slide the tap is the mute toggle instead (clips
+ * autoplay muted in place — see `VideoSlide`), and the expand button in
+ * the corner is what goes full screen.
  *
  * Two other decisions worth naming:
  *
@@ -28,7 +30,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
-import { Heart, Play, Volume2, VolumeX } from "lucide-react-native";
+import { Heart, Maximize2, Play, Volume2, VolumeX } from "lucide-react-native";
 import { Gesture, GestureDetector, ScrollView } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -60,10 +62,17 @@ export interface PostMediaProps {
   /** Total horizontal padding of the surrounding surface, so the carousel
    *  can bleed back out to the full screen width. */
   bleed?: number;
-  /** Single tap — opens the full-screen viewer at this slide. */
+  /** Single tap on a PHOTO — opens the full-screen viewer at this slide.
+   *  (Videos route the tap to the mute toggle; the expand button opens
+   *  the viewer instead.) */
   onPress?: (index: number) => void;
   /** Double tap. Only ever likes; never un-likes. */
   onDoubleTapLike?: () => void;
+  /** Is this post on screen? Drives video autoplay: the feed's viewability
+   *  tracker flips it, so only visible clips decode and play. Defaults to
+   *  true for single-post surfaces (the permalink page has no scroller
+   *  deciding visibility — its one video should just play). */
+  visible?: boolean;
 }
 
 export function PostMedia({
@@ -71,10 +80,14 @@ export function PostMedia({
   bleed = 0,
   onPress,
   onDoubleTapLike,
+  visible = true,
 }: PostMediaProps) {
   const p = useThemedPalette();
   const { width: screenWidth } = useWindowDimensions();
   const [page, setPage] = useState(0);
+  // One mute for the whole post, feed-default muted — a carousel where
+  // slide 2 remembered sound-on while slide 1 was muted would be chaos.
+  const [muted, setMuted] = useState(true);
 
   // The burst heart.
   //
@@ -96,6 +109,8 @@ export function PostMedia({
   // or an unstable prop — and un-memoised gestures were re-attaching native
   // handlers on every `setPage` scroll tick, per RNGH's own warning.
   const pageRef = useRef(0);
+  const mediaRef = useRef(media);
+  mediaRef.current = media;
   const onPressRef = useRef(onPress);
   onPressRef.current = onPress;
   const onDoubleTapLikeRef = useRef(onDoubleTapLike);
@@ -106,7 +121,16 @@ export function PostMedia({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       onDoubleTapLikeRef.current?.();
     };
-    const openViewer = () => {
+    // Kind-aware single tap: a photo opens the viewer; a video toggles its
+    // sound. Routing a video tap into the viewer was why clips could only
+    // be watched full screen — the tap gesture won the race and cancelled
+    // the player's own press handling every time.
+    const tapSlide = () => {
+      const current = mediaRef.current[pageRef.current];
+      if (current?.kind === "video") {
+        setMuted((m) => !m);
+        return;
+      }
       onPressRef.current?.(pageRef.current);
     };
 
@@ -143,7 +167,7 @@ export function PostMedia({
     const singleTap = Gesture.Tap()
       .numberOfTaps(1)
       .onEnd(() => {
-        runOnJS(openViewer)();
+        runOnJS(tapSlide)();
       });
 
     return Gesture.Exclusive(doubleTap, singleTap);
@@ -176,14 +200,40 @@ export function PostMedia({
     </Animated.View>
   );
 
+  // The expand control lives OUTSIDE the GestureDetector subtree: the
+  // detector's tap gesture cancels any Pressable underneath it, so a
+  // button inside would never fire. As a sibling its touches never reach
+  // the media gestures at all.
+  const expand =
+    onPress != null ? (
+      <Pressable
+        onPress={() => onPress(pageRef.current)}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Watch full screen"
+        style={styles.expand}
+      >
+        <Maximize2 size={14} color="#fff" strokeWidth={2.5} />
+      </Pressable>
+    ) : null;
+
   if (media.length === 1) {
     return (
-      <GestureDetector gesture={gesture}>
-        <View style={frame}>
-          <Slide item={first} width={width} height={height} />
-          {overlay}
-        </View>
-      </GestureDetector>
+      <View style={frame}>
+        <GestureDetector gesture={gesture}>
+          <View style={{ width, height }}>
+            <Slide
+              item={first}
+              width={width}
+              height={height}
+              active={visible}
+              muted={muted}
+            />
+            {overlay}
+          </View>
+        </GestureDetector>
+        {first.kind === "video" ? expand : null}
+      </View>
     );
   }
 
@@ -201,8 +251,17 @@ export function PostMedia({
           }}
           scrollEventThrottle={16}
         >
-          {media.map((item) => (
-            <Slide key={item.id} item={item} width={width} height={height} />
+          {media.map((item, index) => (
+            <Slide
+              key={item.id}
+              item={item}
+              width={width}
+              height={height}
+              // Only the page under your thumb plays — its neighbours in
+              // the carousel are loaded but paused.
+              active={visible && index === page}
+              muted={muted}
+            />
           ))}
         </ScrollView>
       </GestureDetector>
@@ -224,6 +283,7 @@ export function PostMedia({
           />
         ))}
       </View>
+      {media[page]?.kind === "video" ? expand : null}
     </View>
   );
 }
@@ -232,13 +292,25 @@ function Slide({
   item,
   width,
   height,
+  active,
+  muted,
 }: {
   item: PostMediaWire;
   width: number;
   height: number;
+  active: boolean;
+  muted: boolean;
 }) {
   if (item.kind === "video") {
-    return <VideoSlide item={item} width={width} height={height} />;
+    return (
+      <VideoSlide
+        item={item}
+        width={width}
+        height={height}
+        active={active}
+        muted={muted}
+      />
+    );
   }
   return (
     <Image
@@ -254,28 +326,31 @@ function Slide({
 /**
  * A video slide.
  *
- * **Muted, looping, tap to unmute** — the feed convention, and the reason
- * for it is that a scrolling feed that suddenly makes noise is the fastest
- * way to make someone close an app in public. Playback is manual (tap the
- * poster) rather than autoplay: autoplay needs viewport tracking to stop
- * four clips decoding at once off-screen, and that is a bigger change than
- * this slice.
+ * **Autoplays muted, looping, in place** — the feed convention. Playback is
+ * driven entirely by `active` (the feed's viewability tracker + carousel
+ * page), so a clip starts the moment it scrolls into view and stops the
+ * moment it leaves — never four clips decoding at once off screen, and
+ * never a feed that makes noise unasked. Taps are handled by the PARENT
+ * media gesture (tap = mute toggle, double tap = like); this component
+ * only renders.
  *
- * Its own component so `useVideoPlayer` is only created for slides that
- * actually are video — hooks can't be conditional, and hoisting it into
- * `Slide` would spin up a player for every photo in the feed.
+ * Its own component so the player is only created for slides that actually
+ * are video — hoisting it into `Slide` would spin one up for every photo
+ * in the feed.
  */
 function VideoSlide({
   item,
   width,
   height,
+  active,
+  muted,
 }: {
   item: PostMediaWire;
   width: number;
   height: number;
+  active: boolean;
+  muted: boolean;
 }) {
-  const [playing, setPlaying] = useState(false);
-  const [muted, setMuted] = useState(true);
   const uri = absolutize(item.url);
 
   // No URL, no player. `useVideoPlayer("")` spins up a native player on a
@@ -285,30 +360,18 @@ function VideoSlide({
   }
 
   return (
-    <Pressable
-      onPress={() => {
-        if (!playing) {
-          setPlaying(true);
-          return;
-        }
-        // Once it's running, a tap is the mute toggle.
-        setMuted((m) => !m);
-      }}
-      accessibilityRole="button"
-      accessibilityLabel={
-        playing ? (muted ? "Unmute video" : "Mute video") : "Play video"
-      }
-      style={{ width, height }}
-    >
+    <View style={{ width, height }}>
       <Video
         uri={uri}
         style={{ width, height }}
         loop
         muted={muted}
-        paused={!playing}
+        paused={!active}
         contentFit="cover"
       />
-      {!playing ? (
+      {!active ? (
+        // Paused = mostly scrolled away (or a carousel neighbour). The
+        // badge marks the frame as a clip, not a broken photo.
         <View style={styles.playOverlay} pointerEvents="none">
           <View style={styles.playBadge}>
             <Play size={26} color="#fff" fill="#fff" />
@@ -323,7 +386,7 @@ function VideoSlide({
           )}
         </View>
       )}
-    </Pressable>
+    </View>
   );
 }
 
@@ -351,6 +414,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 14,
     backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  expand: {
+    position: "absolute",
+    right: 10,
+    top: 10,
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 15,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   burst: {
     ...StyleSheet.absoluteFillObject,

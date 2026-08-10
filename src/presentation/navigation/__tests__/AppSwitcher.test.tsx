@@ -64,11 +64,21 @@ describe("AppSwitcher", () => {
     expect(screen.getByLabelText("Loupe Community")).toBeSelected();
   });
 
-  it("pushes the Loupe Map from its lane", () => {
+  it("opens the Loupe Map via navigate, so it resolves from any lane", () => {
     pathname.mockReturnValue("/");
     render(<AppSwitcher />);
     fireEvent.press(screen.getByLabelText("Loupe Map"));
-    expect(push).toHaveBeenCalledWith("/stores");
+    // navigate, not push: push targets the NEAREST stack, which inside
+    // Community can't resolve /stores — the regression this test pins.
+    expect(navigate).toHaveBeenCalledWith("/stores");
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("reaches the Map from inside Community", () => {
+    pathname.mockReturnValue("/community");
+    render(<AppSwitcher />);
+    fireEvent.press(screen.getByLabelText("Loupe Map"));
+    expect(navigate).toHaveBeenCalledWith("/stores");
   });
 
   it("marks the Map lane active on the stores page", () => {

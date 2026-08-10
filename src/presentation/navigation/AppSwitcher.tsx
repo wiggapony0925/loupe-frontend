@@ -73,11 +73,12 @@ const LANES: LaneSpec[] = [
     key: "map",
     label: "Map",
     Icon: MapIcon,
-    // A PUSH, not a tab move: the Map is a full-bleed screen over the
-    // shell, and back returns to the lane you left. The lane itself
-    // dresses like its siblings — the GREEN lives in the wordmark, which
-    // reads "Loupe Map" on the map page the way Community's does.
-    go: () => router.push(routes.stores()),
+    // `navigate`, NOT `push`: a PUSH action targets the NEAREST stack, and
+    // from inside Community that's the community stack — which has no
+    // /stores route, so the tap died silently there. NAVIGATE bubbles up
+    // to the root stack, which owns the Map, from every lane. Back still
+    // returns to the lane you left.
+    go: () => router.navigate(routes.stores()),
   },
 ];
 

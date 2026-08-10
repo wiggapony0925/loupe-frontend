@@ -28,6 +28,7 @@
  * behind it move together instead of arguing.
  */
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 import {
   Easing,
@@ -48,15 +49,24 @@ export const SCREEN_MOTION_EASING = Easing.out(Easing.cubic);
  * <Stack screenOptions={{ headerShown: false, ...SCREEN_TRANSITION }} />
  * ```
  *
- * `slide_from_right` rather than `fade`: inside a section, a push has a
- * direction, and the back-swipe reads as reversing it. A crossfade makes
- * "deeper" and "back" look identical.
+ * iOS: the SYSTEM push. The previous `slide_from_right` + custom duration
+ * ran as a flat card sliding over a frozen page — no parallax, no depth,
+ * and it read exactly that cheap. `default` hands the transition back to
+ * UINavigationController: the outgoing page slides away underneath with a
+ * dimming layer, the spring curve is Apple's, and the edge back-swipe
+ * tracks the finger natively. You cannot beat it from JS, so don't try.
+ *
+ * Android: the platform default is a crossfade that makes "deeper" and
+ * "back" look identical, so it keeps the directional slide instead.
  */
-export const SCREEN_TRANSITION: NativeStackNavigationOptions = {
-  animation: "slide_from_right",
-  animationDuration: SCREEN_MOTION_MS,
-  gestureEnabled: true,
-};
+export const SCREEN_TRANSITION: NativeStackNavigationOptions =
+  Platform.OS === "ios"
+    ? { animation: "default", gestureEnabled: true }
+    : {
+        animation: "slide_from_right",
+        animationDuration: SCREEN_MOTION_MS,
+        gestureEnabled: true,
+      };
 
 /**
  * Content-swap motion for a view that changes in place.

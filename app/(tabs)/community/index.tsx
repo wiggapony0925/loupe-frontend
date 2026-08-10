@@ -18,7 +18,7 @@
  * and renders the answer, so web and native can never drift on what
  * "Following" means.
  */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -27,10 +27,17 @@ import {
   TextInput,
   View,
 } from "react-native";
-import Animated from "react-native-reanimated";
+import Animated, {
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  type SharedValue,
+} from "react-native-reanimated";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Bell, Plus, Search, Users, X } from "lucide-react-native";
+import * as Haptics from "expo-haptics";
+import { Bell, ChevronUp, Plus, Search, Users, X } from "lucide-react-native";
 import type { FeedTab } from "@/infrastructure/http";
 import {
   useFeed,
@@ -61,6 +68,22 @@ import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
 const GUTTER = 20;
+
+/**
+ * Remembered across visits (module scope, same rule as the switcher's lane
+ * memory): someone who tucked the rail away wants it to STAY away, not to
+ * greet them re-expanded every time the tab remounts. Presentation
+ * continuity, not app state — so not in a store.
+ */
+let railCollapsed = false;
+
+/** The rail's collapse/expand spring — snappy, no visible overshoot. */
+const RAIL_SPRING = {
+  damping: 22,
+  stiffness: 300,
+  mass: 0.7,
+  reduceMotion: ReduceMotion.System,
+} as const;
 
 export default function CommunityFeedScreen() {
   const p = useThemedPalette();
@@ -210,6 +233,22 @@ function FeedHeader({
   const p = useThemedPalette();
   const unread = useUnreadNotificationCount();
 
+  // The switcher rail folds away behind the chevron beside the wordmark —
+  // brand + rail + search stacked three rows deep read as "too much" (the
+  // user's words), and the rail is the one row that's optional once you're
+  // here. The chevron stays in the brand row, so the way back never hides
+  // with the thing it hid. `open` drives the rail's height/fade AND the
+  // chevron's flip, so the two can't drift out of sync.
+  const [collapsed, setCollapsed] = useState(railCollapsed);
+  const open = useSharedValue(collapsed ? 0 : 1);
+  useEffect(() => {
+    open.value = withSpring(collapsed ? 0 : 1, RAIL_SPRING);
+  }, [collapsed, open]);
+
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${(1 - open.value) * 180}deg` }],
+  }));
+
   return (
     <View>
       {/* Brand first, then the rail under it — the same order as the
@@ -219,8 +258,36 @@ function FeedHeader({
       <View style={styles.brand}>
         <LoupeMark size={24} />
         <AppWordmark lane="community" />
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            setCollapsed((c) => {
+              railCollapsed = !c;
+              return !c;
+            });
+          }}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={
+            collapsed ? "Show the app switcher" : "Hide the app switcher"
+          }
+          style={({ pressed }) => [
+            styles.collapse,
+            {
+              borderColor: p.line.default,
+              backgroundColor: p.bg.elevated,
+              opacity: pressed ? 0.6 : 1,
+            },
+          ]}
+        >
+          <Animated.View style={chevronStyle}>
+            <ChevronUp size={13} color={p.ink.dim} strokeWidth={2.8} />
+          </Animated.View>
+        </Pressable>
       </View>
-      <AppSwitcher />
+      <CollapsibleRail open={open}>
+        <AppSwitcher />
+      </CollapsibleRail>
 
       <View style={styles.header}>
       <View
@@ -284,6 +351,51 @@ function FeedHeader({
       </Pressable>
       </View>
     </View>
+  );
+}
+
+/**
+ * Height-collapse driven by a shared value: the content renders at natural
+ * size inside an overflow-hidden frame whose height is `measured × open`,
+ * with a fade and a small upward tuck so it reads as folding under the
+ * brand row rather than being guillotined. Measured, not hardcoded — the
+ * rail's height moves with font settings. Until the first onLayout the
+ * frame stays auto-height (a 0 guess would flash the feed upward on every
+ * mount for users who keep the rail open).
+ */
+function CollapsibleRail({
+  open,
+  children,
+}: {
+  open: SharedValue<number>;
+  children: React.ReactNode;
+}) {
+  const [contentH, setContentH] = useState(0);
+
+  const frameStyle = useAnimatedStyle(() => {
+    const t = Math.min(1, Math.max(0, open.value));
+    if (contentH === 0) {
+      // Unmeasured: natural layout, just honor a collapsed mount's fade.
+      return { opacity: t };
+    }
+    return {
+      height: contentH * t,
+      opacity: t,
+      transform: [{ translateY: (1 - t) * -8 }],
+    };
+  });
+
+  return (
+    <Animated.View style={[styles.rail, frameStyle]}>
+      <View
+        onLayout={(e) => {
+          const h = Math.round(e.nativeEvent.layout.height);
+          if (h > 0 && h !== contentH) setContentH(h);
+        }}
+      >
+        {children}
+      </View>
+    </Animated.View>
   );
 }
 
@@ -409,6 +521,16 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 8,
   },
+  collapse: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    marginLeft: 2,
+  },
+  rail: { overflow: "hidden" },
   header: {
     flexDirection: "row",
     alignItems: "center",

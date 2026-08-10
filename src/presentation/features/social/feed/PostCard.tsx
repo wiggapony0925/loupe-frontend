@@ -40,6 +40,9 @@ export interface PostCardProps {
   onMore?: (post: PostWire) => void;
   /** Horizontal padding of the surrounding list, so media can bleed out. */
   gutter?: number;
+  /** From the list's viewability tracker — drives inline video autoplay.
+   *  Omitted (single-post surfaces) means "on screen". */
+  mediaVisible?: boolean;
 }
 
 function PostCardImpl({
@@ -50,6 +53,7 @@ function PostCardImpl({
   onToggleFollow,
   onMore,
   gutter = 20,
+  mediaVisible,
 }: PostCardProps) {
   const p = useThemedPalette();
   const author = post.author;
@@ -167,6 +171,7 @@ function PostCardImpl({
         <View style={styles.mediaWrap}>
           <PostMedia
             media={post.media}
+            visible={mediaVisible}
             onPress={(index) => onOpenMedia?.(post, index)}
             // Only ever likes — see PostMedia. Already-liked stays liked.
             onDoubleTapLike={() => {
@@ -301,7 +306,10 @@ export const PostCard = memo(PostCardImpl, (prev, next) => {
     a.viewer_has_liked === b.viewer_has_liked &&
     a.like_count === b.like_count &&
     a.comment_count === b.comment_count &&
-    a.author?.relationship === b.author?.relationship
+    a.author?.relationship === b.author?.relationship &&
+    // Visibility only ever changes for posts carrying video (the list
+    // tracks nothing else), so photos keep their full memo win.
+    prev.mediaVisible === next.mediaVisible
   );
 });
 

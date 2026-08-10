@@ -10,7 +10,7 @@ import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { router } from "expo-router";
 import type { HashtagWire } from "@/infrastructure/http";
-import { useThemedPalette } from "@/presentation/theme/tokens";
+import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
 export function HashtagChips({
@@ -43,18 +43,23 @@ export function HashtagChips({
             accessibilityLabel={`#${tag.tag}, ${tag.post_count} posts`}
             style={({ pressed }) => [
               styles.chip,
+              // Loupe-green tags, not neutral chips: gray-on-gray read as
+              // decoration, and nobody knew the row was tappable. The mint
+              // wash is the app's standing "this is an action" treatment
+              // (follow pill, switcher thumb); active stays solid mint.
               {
-                borderColor: active ? p.accent.mint : p.line.default,
-                backgroundColor: active ? p.accent.mint : p.bg.elevated,
+                borderColor: active
+                  ? p.accent.mint
+                  : withAlpha(p.accent.mint, 0.38),
+                backgroundColor: active
+                  ? p.accent.mint
+                  : withAlpha(p.accent.mint, 0.13),
                 opacity: pressed ? 0.7 : 1,
               },
             ]}
           >
             <Text
-              style={[
-                styles.text,
-                { color: active ? "#06140d" : p.ink.default },
-              ]}
+              style={[styles.text, { color: active ? "#06140d" : p.accent.mint }]}
             >
               #{tag.tag}
             </Text>

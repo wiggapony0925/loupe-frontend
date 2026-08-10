@@ -20,6 +20,7 @@ import { useFxRatesSync } from "@/application/queries/market/useFxRates";
 import { usePriceTicks } from "@/application/queries/market/usePriceTicks";
 import { usePushNotifications } from "@/application/hooks/usePushNotifications";
 import { initSentry } from "@/infrastructure/observability/sentry";
+import { SCREEN_TRANSITION } from "@/presentation/navigation/screenMotion";
 
 // Fire Sentry init once at module evaluation. The helper is a graceful
 // no-op when EXPO_PUBLIC_SENTRY_DSN is unset, so dev builds stay zero-config.
@@ -166,19 +167,19 @@ function RootStack() {
       />
       <Stack.Screen
         name="settings"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
         name="change-password"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
         name="watchlist"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
         name="sealed/index"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
         name="sealed/add"
@@ -186,19 +187,19 @@ function RootStack() {
       />
       <Stack.Screen
         name="sealed/[id]"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
         name="support"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
         name="sets/index"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
         name="blog/index"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       {/* Primary push destinations — register them so they use the same
           iOS-standard slide as the rest of the stack instead of the
@@ -206,11 +207,11 @@ function RootStack() {
           in the app and was fading in, which read as a flicker). */}
       <Stack.Screen
         name="card/[id]"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
         name="grade/[id]"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
         name="grade/new"
@@ -218,7 +219,7 @@ function RootStack() {
       />
       <Stack.Screen
         name="grade/playground"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
         name="grade/measure"
@@ -230,11 +231,11 @@ function RootStack() {
       />
       <Stack.Screen
         name="scan/pair"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
         name="admin"
-        options={{ presentation: "card", animation: "slide_from_right" }}
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       {/* Collector profiles live INSIDE the tab group (`(tabs)/u/[handle]`)
           so the island navbar stays on screen — the registration that used

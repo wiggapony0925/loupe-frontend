@@ -7,7 +7,7 @@
  * tapped it. Callers pass a query result and a header, and get scrolling,
  * paging, pull-to-refresh, the comments sheet, likes, follows and delete.
  */
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -15,6 +15,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type ViewToken,
 } from "react-native";
 import type { InfiniteData, UseInfiniteQueryResult } from "@tanstack/react-query";
 import type { FeedWire, PostWire } from "@/infrastructure/http";
@@ -66,6 +67,39 @@ export function FeedList({
 
   const posts = feedPosts(query.data);
 
+  // Which VIDEO posts are on screen — drives inline autoplay. Only posts
+  // that carry a clip are tracked, so scrolling a photo feed never touches
+  // this state and photo cards keep their memo win. The set is rebuilt per
+  // viewability event but returned unchanged when equal, so no-op events
+  // (every scroll tick without a video) cause zero re-renders.
+  const [playingIds, setPlayingIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  // FlatList requires both callbacks to keep one identity for its lifetime
+  // ("changing onViewableItemsChanged on the fly is not supported").
+  const viewability = useRef({
+    viewabilityConfig: { itemVisiblePercentThreshold: 55 },
+    onViewableItemsChanged: ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      setPlayingIds((prev) => {
+        const next = new Set<string>();
+        for (const token of viewableItems) {
+          const post = token.item as PostWire | undefined;
+          if (
+            token.isViewable &&
+            post?.id &&
+            post.media?.some((m) => m.kind === "video")
+          ) {
+            next.add(post.id);
+          }
+        }
+        if (next.size === prev.size && [...next].every((id) => prev.has(id))) {
+          return prev;
+        }
+        return next;
+      });
+    },
+  }).current;
+
   const onMore = usePostOptions({
     onEdit: setEditing,
     onReport: (post) =>
@@ -85,9 +119,12 @@ export function FeedList({
         ListHeaderComponent={header}
         contentContainerStyle={{ paddingBottom: bottomInset }}
         keyboardShouldPersistTaps="handled"
+        viewabilityConfig={viewability.viewabilityConfig}
+        onViewableItemsChanged={viewability.onViewableItemsChanged}
         renderItem={({ item }) => (
           <PostCard
             post={item}
+            mediaVisible={item.id ? playingIds.has(item.id) : false}
             onToggleLike={like.mutate}
             onOpenComments={setOpenPost}
             onOpenMedia={(post, index) => setViewing({ media: post.media, index })}
