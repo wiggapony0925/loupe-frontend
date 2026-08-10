@@ -130,6 +130,18 @@ export function IslandDial({
     setDrag(null);
   }, [activeKey, onCommit, moveHighlightTo, setDrag]);
 
+  // A cancelled gesture (system stole the touch, navigation interrupted)
+  // REVERTS instead of committing — finalize used to re-run the commit,
+  // which both double-fired it after onEnd and treated cancellation as a
+  // selection.
+  const abortDrag = useCallback(() => {
+    if (!dragKeyRef.current) return;
+    if (activeKey && layouts.current[activeKey]) {
+      moveHighlightTo(activeKey);
+    }
+    setDrag(null);
+  }, [activeKey, moveHighlightTo, setDrag]);
+
   // Horizontal drag = the dial. activeOffsetX lets vertical/short touches
   // fall through to the per-item Pressables (plain taps still work).
   const pan = Gesture.Pan()
@@ -138,7 +150,7 @@ export function IslandDial({
     .onBegin((e) => onDragMove(e.x))
     .onUpdate((e) => onDragMove(e.x))
     .onEnd(commitDrag)
-    .onFinalize(commitDrag);
+    .onFinalize(abortDrag);
 
   const highlightStyle = useAnimatedStyle(() => ({
     opacity: highlightReady.value,

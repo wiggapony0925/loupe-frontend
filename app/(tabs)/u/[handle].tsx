@@ -47,6 +47,7 @@ import {
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
+import { SocialLinksRow } from "@/presentation/features/social/SocialLinksRow";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { ProfileStats } from "@/presentation/features/social/ProfileStats";
 import { CollectionGrid } from "@/presentation/features/social/CollectionGrid";
@@ -311,6 +312,9 @@ export default function CollectorProfileScreen() {
                   {data.bio.trim()}
                 </Text>
               ) : null}
+              {/* Where else to find them — the lisacollects pattern: icon +
+                  handle per platform, straight under the bio. */}
+              <SocialLinksRow links={data.links} />
             </View>
 
             {/* The verbs. A stranger gets Follow + the heart; you get Edit +

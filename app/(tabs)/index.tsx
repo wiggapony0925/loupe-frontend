@@ -502,9 +502,10 @@ function StaticNavbar() {
         <ProfileButton />
       </View>
       </View>
-      {/* The product rail, UNDER the navbar — a utility row with its own
-          hairline, not a second masthead over the brand. */}
-      <AppSwitcher active="loupe" />
+      {/* The product switcher, UNDER the navbar — a segmented capsule whose
+          active lane follows the route, so the thumb slides on every
+          switch instead of snapping per screen. */}
+      <AppSwitcher />
     </View>
   );
 }

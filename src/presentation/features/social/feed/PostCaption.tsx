@@ -38,13 +38,32 @@ export function PostCaption({
   onPressPrefix,
 }: PostCaptionProps) {
   const p = useThemedPalette();
-  const tags = useMemo(() => new Set(hashtags.map((t) => t.toLowerCase())), [hashtags]);
+  // Wire data: a post row that arrives without its `hashtags`/`mentions`
+  // arrays (or with a non-string body) must render as plain text, not
+  // throw — every caption in the feed passes through here.
+  const tags = useMemo(
+    () =>
+      new Set(
+        (Array.isArray(hashtags) ? hashtags : [])
+          .filter((t): t is string => typeof t === "string")
+          .map((t) => t.toLowerCase()),
+      ),
+    [hashtags],
+  );
   const handles = useMemo(
-    () => new Set(mentions.map((m) => m.toLowerCase())),
+    () =>
+      new Set(
+        (Array.isArray(mentions) ? mentions : [])
+          .filter((m): m is string => typeof m === "string")
+          .map((m) => m.toLowerCase()),
+      ),
     [mentions],
   );
 
-  const parts = useMemo(() => body.split(TOKEN_RE), [body]);
+  const parts = useMemo(
+    () => (typeof body === "string" ? body : String(body ?? "")).split(TOKEN_RE),
+    [body],
+  );
 
   return (
     <Text

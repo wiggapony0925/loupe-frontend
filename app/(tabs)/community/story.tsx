@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
+import { useIsFocused } from "@react-navigation/native";
 import { RotateCcw, Send, ShieldAlert } from "lucide-react-native";
 import { usePostStory } from "@/application/queries/social/useStories";
 import { Video } from "@/presentation/features/social/Video";
@@ -29,12 +30,17 @@ import {
   StoryCamera,
   type Capture,
 } from "@/presentation/features/social/stories/StoryCamera";
+import { useIslandHiddenWhile } from "@/presentation/navigation/islandNavStore";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 const MAX_CAPTION = 280;
 
 export default function StoryComposerScreen() {
   const [capture, setCapture] = useState<Capture | null>(null);
+  // The island navbar floats over the shutter otherwise. Capture AND
+  // review: the review step is full-bleed media too, and the bar popping
+  // back between the two steps would read as the UI flickering.
+  useIslandHiddenWhile(useIsFocused(), "story-composer");
 
   if (!capture) {
     return (

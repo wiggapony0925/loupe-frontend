@@ -38,6 +38,14 @@ import {
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
+function safeDecode(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
 function CommunityIslandContent() {
   const p = useThemedPalette();
   const me = useSocialMe();
@@ -48,8 +56,11 @@ function CommunityIslandContent() {
   // Which slot is "here": the people list on /community, my own profile on
   // /u/@me (or my claimed handle). On someone else's profile neither is
   // active and the highlight fades — same rule as the tab dial on Community.
+  // decodeURIComponent THROWS on a malformed escape ("%zz", a trailing "%"),
+  // and this island renders outside every CrashGuard — a bad path must cost
+  // us the highlight, not the app.
   const handle = pathname.startsWith("/u/")
-    ? decodeURIComponent(pathname.slice(3)).toLowerCase()
+    ? safeDecode(pathname.slice(3)).toLowerCase()
     : null;
   const isMyHandle =
     handle != null &&

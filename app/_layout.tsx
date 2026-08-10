@@ -236,12 +236,10 @@ function RootStack() {
         name="admin"
         options={{ presentation: "card", animation: "slide_from_right" }}
       />
-      {/* Collector profiles. A drill-down from Community, so it pushes over
-          the tab bar the way every other detail screen does. */}
-      <Stack.Screen
-        name="u/[handle]"
-        options={{ presentation: "card", animation: "slide_from_right" }}
-      />
+      {/* Collector profiles live INSIDE the tab group (`(tabs)/u/[handle]`)
+          so the island navbar stays on screen — the registration that used
+          to sit here pointed at a route that no longer exists at this
+          level, and expo-router was discarding it with a warning. */}
       {/* Unmatched routes. Keeps the stack's default `fade` — a dead link
           shouldn't arrive with the confident slide of a real destination. */}
       <Stack.Screen name="+not-found" />

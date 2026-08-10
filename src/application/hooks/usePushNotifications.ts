@@ -18,6 +18,7 @@ import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import { apiFetch } from "@/infrastructure/http/client";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
+import { resolveNotificationHref } from "@/shared/notificationLinks";
 import { routes } from "@/shared/routes";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 
@@ -93,13 +94,22 @@ export function usePushNotifications(): void {
     };
   }, [userId]);
 
-  // Tapping a notification routes to its subject.
+  // Tapping a notification routes to its subject. Every push carries the
+  // SAME href its inbox row does (they render from one server template),
+  // resolved through the same mapper the inbox uses — so a tap on the
+  // lock screen and a tap on the row land on the same screen. `cardId` is
+  // the legacy price-alert payload, kept for pushes sent by older backends.
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as
-        | { cardId?: string }
+        | { cardId?: string; href?: string }
         | undefined;
-      if (data?.cardId) router.push(routes.card(String(data.cardId)));
+      const target = resolveNotificationHref(data?.href);
+      if (target) {
+        router.push(target as never);
+      } else if (data?.cardId) {
+        router.push(routes.card(String(data.cardId)));
+      }
     });
     return () => sub.remove();
   }, []);

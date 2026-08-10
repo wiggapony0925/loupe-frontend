@@ -195,7 +195,9 @@ export function useNotificationFeed(category?: string): {
   // into the root error boundary and blank the whole app at startup.
   const feed = useMemo(
     () =>
-      (listQ.data?.pages ?? []).flatMap((p) => (p?.items ?? []).map(toFeedItem)),
+      (listQ.data?.pages ?? []).flatMap((p) =>
+        (Array.isArray(p?.items) ? p.items : []).filter(Boolean).map(toFeedItem),
+      ),
     [listQ.data],
   );
 

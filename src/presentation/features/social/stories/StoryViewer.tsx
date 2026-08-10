@@ -124,7 +124,11 @@ function Reel({
 
   const story = cards[Math.min(index, cards.length - 1)];
   const isVideo = story?.kind === "video";
-  const durationMs = isVideo ? (story.duration_ms ?? 8000) : STILL_MS;
+  // `|| 8000` (not ??): the server has accepted duration_ms=0 rows, and a
+  // zero-length story advances before its first frame renders.
+  const durationMs = isVideo
+    ? Math.max(1000, story.duration_ms || 8000)
+    : STILL_MS;
 
   const progress = useSharedValue(0);
 
@@ -140,11 +144,16 @@ function Reel({
   const held = paused || commentsOpen || viewersOpen;
 
   // Restart the bar on every card, and drive it for exactly this card's
-  // length. `runOnJS` hands the finish back to React to advance.
+  // length. `runOnJS` hands the finish back to React to advance. The
+  // cleanup returns from EVERY branch that started (or could resume) an
+  // animation — returning it only from the running branch meant a pause
+  // left no cancel behind, and `advance` could fire into an unmounted reel.
   useEffect(() => {
     if (!story) return;
     progress.value = 0;
-    if (held) return;
+    if (held) {
+      return () => cancelAnimation(progress);
+    }
     progress.value = withTiming(1, { duration: durationMs }, (done) => {
       if (done) runOnJS(advance)();
     });

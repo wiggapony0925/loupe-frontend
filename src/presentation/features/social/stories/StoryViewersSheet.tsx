@@ -25,7 +25,8 @@ export function StoryViewersSheet({
 }) {
   const p = useThemedPalette();
   const viewers = useStoryViewers(story?.id ?? null, Boolean(story));
-  const rows = viewers.data ?? [];
+  // Wire data: a row without its viewer would throw on every field below.
+  const rows = (viewers.data ?? []).filter((row) => row?.viewer?.username != null);
 
   return (
     <BottomSheet

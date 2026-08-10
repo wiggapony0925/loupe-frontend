@@ -39,14 +39,22 @@ export interface IslandPresentation {
 interface IslandNavState {
   /** Registered faces, oldest → newest; the last entry is showing. */
   stack: IslandPresentation[];
+  /** Screens that want NO bar at all (full-bleed surfaces — the story
+   *  camera). Any entry hides the island on every platform. */
+  hiddenBy: string[];
   /** Show a face (replaces a same-key entry, then moves it to the top). */
   present: (p: IslandPresentation) => void;
   /** Remove a face by key (no-op when absent). */
   dismiss: (key: string) => void;
+  /** Request the bar hidden while `key` is on screen. */
+  hide: (key: string) => void;
+  /** Withdraw a hide request (no-op when absent). */
+  unhide: (key: string) => void;
 }
 
 export const useIslandNav = create<IslandNavState>((set) => ({
   stack: [],
+  hiddenBy: [],
   present: (p) =>
     set((s) => ({ stack: [...s.stack.filter((x) => x.key !== p.key), p] })),
   dismiss: (key) =>
@@ -55,11 +63,41 @@ export const useIslandNav = create<IslandNavState>((set) => ({
         ? { stack: s.stack.filter((x) => x.key !== key) }
         : s,
     ),
+  hide: (key) =>
+    set((s) =>
+      s.hiddenBy.includes(key) ? s : { hiddenBy: [...s.hiddenBy, key] },
+    ),
+  unhide: (key) =>
+    set((s) =>
+      s.hiddenBy.includes(key)
+        ? { hiddenBy: s.hiddenBy.filter((k) => k !== key) }
+        : s,
+    ),
 }));
 
 /** The face currently showing, or null → the default tab dial. */
 export function useActiveIsland(): IslandPresentation | null {
   return useIslandNav((s) => s.stack[s.stack.length - 1] ?? null);
+}
+
+/** True while any screen is asking for no bar at all. */
+export function useIsIslandHidden(): boolean {
+  return useIslandNav((s) => s.hiddenBy.length > 0);
+}
+
+/**
+ * Keep the bar hidden exactly while `active` is true — the same contract
+ * as {@link useIslandPresence}, for surfaces that need the WHOLE bottom
+ * edge (a camera viewfinder, not a different toolbar).
+ */
+export function useIslandHiddenWhile(active: boolean, key: string): void {
+  const hide = useIslandNav((s) => s.hide);
+  const unhide = useIslandNav((s) => s.unhide);
+  useEffect(() => {
+    if (!active) return undefined;
+    hide(key);
+    return () => unhide(key);
+  }, [active, key, hide, unhide]);
 }
 
 /**

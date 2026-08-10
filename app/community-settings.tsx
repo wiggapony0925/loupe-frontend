@@ -34,6 +34,7 @@ import {
   LogOut,
   MapPin,
   X,
+  XCircle,
 } from "lucide-react-native";
 import {
   useDeactivateCommunity,
@@ -42,6 +43,7 @@ import {
   useUpsertProfile,
 } from "@/application/queries/social/useSocial";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
+import { SOCIAL_PLATFORMS } from "@/presentation/features/social/socialLinks";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { usePlaceSearch } from "@/application/queries/stores/useNearbyStores";
 import { routes } from "@/shared/routes";
@@ -61,6 +63,9 @@ export default function CommunitySettingsScreen() {
   const [locationQuery, setLocationQuery] = useState("");
   const [pickingPlace, setPickingPlace] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
+  // Per-platform links, exactly as typed — the SERVER canonicalises
+  // (@handle → https URL) on save, and we re-seed from its answer.
+  const [links, setLinks] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   // Freshly picked photo, shown instantly while (and after) it uploads.
   // The just-picked local file, shown instantly so a change doesn't look
@@ -91,6 +96,7 @@ export default function CommunitySettingsScreen() {
       setLocation(profile?.location ?? "");
       setLocationQuery(profile?.location ?? "");
       setIsPrivate(profile?.is_private ?? false);
+      setLinks(profile?.links ?? {});
       setSeeded(true);
     }
   }, [seeded, me.data, profile]);
@@ -177,7 +183,7 @@ export default function CommunitySettingsScreen() {
   useEffect(() => {
     setSavedAt(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username, bio, location, isPrivate]);
+  }, [username, bio, location, isPrivate, links]);
 
   const onSave = () => {
     const handle = username.trim();
@@ -195,6 +201,14 @@ export default function CommunitySettingsScreen() {
         bio: bio.trim() || null,
         location: location.trim() || null,
         is_private: isPrivate,
+        // Explicit replace: blanks drop out, {} clears everything. The
+        // server rejects unknown platforms and junk URLs with a 422 that
+        // lands in the error line below.
+        links: Object.fromEntries(
+          Object.entries(links)
+            .map(([k, v]) => [k, v.trim()])
+            .filter(([, v]) => v !== ""),
+        ),
       },
       {
         onSuccess: (saved) => {
@@ -212,6 +226,7 @@ export default function CommunitySettingsScreen() {
           setLocationQuery(saved.location ?? "");
           setPickingPlace(false);
           setIsPrivate(saved.is_private);
+          setLinks(saved.links ?? {});
           setSavedAt(Date.now());
           // Saving is the end of the task: go look at the result. Staying on
           // the form made a successful save feel like nothing happened.
@@ -523,6 +538,62 @@ export default function CommunitySettingsScreen() {
                   thumbColor="#ffffff"
                 />
               </View>
+
+              {/* ── Social links — the lisacollects pattern. One row per
+                  platform; paste a URL or just type the @handle and the
+                  server canonicalises it. A cleared row removes the link. ── */}
+              <View className="border-b border-line px-5 pb-1 pt-5">
+                <Text className="text-[17px] font-semibold text-ink">
+                  Social links
+                </Text>
+                <Text className="mt-1 pb-2 text-[13px] leading-[18px] text-ink-muted">
+                  Shown on your profile. Type a handle like @{username.trim() || "you"} or
+                  paste a full link.
+                </Text>
+              </View>
+              {SOCIAL_PLATFORMS.map(({ key, label, Icon }) => {
+                const value = links[key] ?? "";
+                return (
+                  <View
+                    key={key}
+                    className="flex-row items-center gap-3 border-b border-line px-5 py-3"
+                  >
+                    <Icon size={17} color={p.ink.dim} strokeWidth={2.1} />
+                    <View className="flex-1">
+                      <Text className="text-[11px] font-semibold uppercase tracking-[1.5px] text-ink-dim">
+                        {label}
+                      </Text>
+                      <TextInput
+                        value={value}
+                        onChangeText={(v) =>
+                          setLinks((prev) => ({ ...prev, [key]: v }))
+                        }
+                        placeholder={
+                          key === "web" ? "https://…" : "@handle or URL"
+                        }
+                        placeholderTextColor={p.ink.dim}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        keyboardType="url"
+                        className="pt-0.5 text-[15px] text-ink"
+                        accessibilityLabel={`${label} link`}
+                      />
+                    </View>
+                    {value ? (
+                      <Pressable
+                        onPress={() =>
+                          setLinks((prev) => ({ ...prev, [key]: "" }))
+                        }
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Clear ${label} link`}
+                      >
+                        <XCircle size={18} color={p.ink.dim} />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                );
+              })}
             </View>
 
             {error ? (
