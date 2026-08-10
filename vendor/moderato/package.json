@@ -1,0 +1,81 @@
+{
+  "name": "moderato",
+  "version": "0.1.0",
+  "description": "Content moderation, in tempo. Wrap inputs, image pickers, and video uploads with allow / review / block screening — OpenAI omni-moderation, your own endpoint, or local rules. Server-authoritative by design.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js",
+      "require": "./dist/react/index.cjs"
+    },
+    "./web": {
+      "types": "./dist/web/index.d.ts",
+      "import": "./dist/web/index.js",
+      "require": "./dist/web/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "react": ["dist/react/index.d.ts"],
+      "web": ["dist/web/index.d.ts"]
+    }
+  },
+  "files": [
+    "dist",
+    "react",
+    "web",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "build": "tsup",
+    "bench": "node bench/run.mjs",
+    "cycle": "node bench/cycle.mjs",
+    "prepublishOnly": "npm test && npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "~19.2.10",
+    "jsdom": "^26.1.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "tsup": "^8.5.0",
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.9"
+  },
+  "keywords": [
+    "moderation",
+    "content-moderation",
+    "trust-and-safety",
+    "openai",
+    "omni-moderation",
+    "react",
+    "image-moderation",
+    "video-moderation",
+    "nsfw",
+    "profanity"
+  ]
+}

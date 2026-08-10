@@ -35,6 +35,12 @@ const marketingPkg = path.resolve(__dirname, "vendor/loupe-marketing");
 // the backend's constraints, so the app, the website, and the API agree on
 // what a valid password is. Re-sync with `npm run sync:auth`.
 const authPkg = path.resolve(__dirname, "vendor/loupe-auth");
+// ── Moderation layer (`moderato`) ──
+// Vendored like the others, but its canonical source is the standalone
+// ../moderato repo (it ships to npm), not ../packages. Only the RN-safe
+// parts are vendored — src/web (DOM wrappers) is dropped by the sync.
+// Re-sync with `npm run sync:moderato`.
+const moderatoPkg = path.resolve(__dirname, "vendor/moderato");
 // Agent worktrees are checked out inside the repo at `.claude/worktrees/<name>`
 // and each carries its own copy of `vendor/loupe-*`. Metro indexes everything
 // under the project root, so leaving them in scope means several packages claim
@@ -50,6 +56,7 @@ config.resolver.extraNodeModules = {
   "@loupe/theme": themePkg,
   "@loupe/marketing": marketingPkg,
   "@loupe/auth": authPkg,
+  moderato: moderatoPkg,
 };
 
 module.exports = withNativeWind(config, { input: "./global.css" });

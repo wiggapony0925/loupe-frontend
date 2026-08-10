@@ -33,6 +33,8 @@
       "@loupe/marketing/*": ["./vendor/loupe-marketing/src/*"],
       "@loupe/auth": ["./vendor/loupe-auth/src"],
       "@loupe/auth/*": ["./vendor/loupe-auth/src/*"],
+      "moderato": ["./vendor/moderato/src"],
+      "moderato/react": ["./vendor/moderato/src/react"],
       "tailwind.config": ["./tailwind.config.js"]
     },
     "types": ["nativewind/types", "node", "jest"]

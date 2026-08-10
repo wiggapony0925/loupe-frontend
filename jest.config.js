@@ -18,6 +18,10 @@ const moduleNameMapper = {
     path.join(__dirname, "src/$1"),
     path.join(__dirname, "$1"),
   ],
+  // moderato's source is ESM (explicit ".js" specifiers that really point
+  // at .ts files). Metro and Vite resolve those natively; jest needs the
+  // suffix stripped so extensionless resolution can find the .ts module.
+  "^(\\.{1,2}/.*)\\.js$": "$1",
   // Vendored shared packages (Metro resolves these via extraNodeModules; jest
   // needs them mapped explicitly so the shared engines are unit-testable).
   "^@loupe/grade$": path.join(__dirname, "vendor/loupe-grade/src/index.ts"),
@@ -29,6 +33,11 @@ const moduleNameMapper = {
     "vendor/loupe-marketing/src/index.ts",
   ),
   "^@loupe/auth$": path.join(__dirname, "vendor/loupe-auth/src/index.ts"),
+  "^moderato$": path.join(__dirname, "vendor/moderato/src/index.ts"),
+  "^moderato/react$": path.join(
+    __dirname,
+    "vendor/moderato/src/react/index.ts",
+  ),
 };
 
 // `babel-preset-expo` rewrites `process.env.EXPO_PUBLIC_*` reads into
