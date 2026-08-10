@@ -18,7 +18,7 @@ const top = () => {
 };
 
 beforeEach(() => {
-  useIslandNav.setState({ stack: [] });
+  useIslandNav.setState({ stack: [], hiddenBy: [] });
 });
 
 test("empty stack means the default tab dial", () => {
@@ -58,4 +58,24 @@ test("dismissing an unknown key is a no-op", () => {
   useIslandNav.getState().present(face("community"));
   useIslandNav.getState().dismiss("nope");
   expect(top()?.key).toBe("community");
+});
+
+test("a hide request hides the bar; withdrawing the last one restores it", () => {
+  const hidden = () => useIslandNav.getState().hiddenBy.length > 0;
+  expect(hidden()).toBe(false);
+  useIslandNav.getState().hide("story-composer");
+  expect(hidden()).toBe(true);
+  // Idempotent — a re-render must not stack duplicate requests.
+  useIslandNav.getState().hide("story-composer");
+  useIslandNav.getState().unhide("story-composer");
+  expect(hidden()).toBe(false);
+});
+
+test("overlapping hide requests only restore when BOTH withdraw", () => {
+  useIslandNav.getState().hide("a");
+  useIslandNav.getState().hide("b");
+  useIslandNav.getState().unhide("a");
+  expect(useIslandNav.getState().hiddenBy).toEqual(["b"]);
+  useIslandNav.getState().unhide("b");
+  expect(useIslandNav.getState().hiddenBy).toEqual([]);
 });

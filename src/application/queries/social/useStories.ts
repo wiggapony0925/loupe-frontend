@@ -178,7 +178,7 @@ export function useMarkStorySeen() {
         const allSeen = (cards ?? []).every((s) => s.seen);
         return {
           ...tray,
-          entries: tray.entries.map((e) =>
+          entries: (tray.entries ?? []).map((e) =>
             e.author.username === handle && allSeen
               ? { ...e, has_unseen: false }
               : e,

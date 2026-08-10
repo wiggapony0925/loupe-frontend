@@ -65,7 +65,8 @@ export function CommentsSheet({ post, onClose }: CommentsSheetProps) {
   const remove = useDeleteComment();
   const like = useLikeComment(postId ?? "");
 
-  const comments = thread.data?.pages.flatMap((page) => page.items) ?? [];
+  // Null-tolerant: a 204/empty page reaches the cache as null (see useFeed).
+  const comments = (thread.data?.pages ?? []).flatMap((page) => page?.items ?? []);
   const total = thread.data?.pages[0]?.total ?? post?.comment_count ?? 0;
 
   const close = useCallback(() => {
@@ -121,7 +122,7 @@ export function CommentsSheet({ post, onClose }: CommentsSheetProps) {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.list}
           ListHeaderComponent={
-            post?.body ? (
+            post?.body && post.author ? (
               <View
                 style={[styles.caption, { borderBottomColor: p.line.default }]}
               >

@@ -43,7 +43,11 @@ export function StoryTray({
   const tray = useStoryTray();
 
   const mine = tray.data?.mine ?? null;
-  const entries = tray.data?.entries ?? [];
+  // Wire data: a tray entry without its author has nothing to render and
+  // would throw on `entry.author.user_id` below.
+  const entries = (tray.data?.entries ?? []).filter(
+    (entry) => entry?.author?.username != null,
+  );
 
   // Before the first load there is nothing honest to show but the compose
   // slot; a row of skeleton rings implies stories that may not exist.
@@ -75,7 +79,15 @@ export function StoryTray({
             ]}
           >
             <Avatar
-              url={mine?.preview_url ?? null}
+              // Same rule as the queue below: never hand a video clip to
+              // an image view.
+              url={
+                mine
+                  ? mine.kind === "video"
+                    ? mine.author.avatar_url
+                    : mine.preview_url
+                  : null
+              }
               fallback={p.bg.elevated}
               border={p.bg.base}
             />
@@ -139,7 +151,14 @@ function TrayCell({
         ]}
       >
         <Avatar
-          url={entry.preview_url}
+          // A video's preview_url is the CLIP, which an image view cannot
+          // decode — that rendered as a blank ring. The author's avatar is
+          // the honest fallback until the backend serves poster frames.
+          url={
+            entry.kind === "video"
+              ? entry.author.avatar_url
+              : entry.preview_url
+          }
           fallback={p.bg.elevated}
           border={p.bg.base}
         />

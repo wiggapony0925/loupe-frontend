@@ -24,7 +24,7 @@
  * three screens on its own. Portrait is capped at 4:5 and landscape at
  * 1.91:1 — Instagram's bounds — cropped to fill.
  */
-import React, { useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
@@ -90,53 +90,70 @@ export function PostMedia({
   }));
 
   const first = media[0];
+
+  // Everything the gesture worklets need, behind stable refs: the gestures
+  // are memoised ONCE (below), so they must never close over a state value
+  // or an unstable prop — and un-memoised gestures were re-attaching native
+  // handlers on every `setPage` scroll tick, per RNGH's own warning.
+  const pageRef = useRef(0);
+  const onPressRef = useRef(onPress);
+  onPressRef.current = onPress;
+  const onDoubleTapLikeRef = useRef(onDoubleTapLike);
+  onDoubleTapLikeRef.current = onDoubleTapLike;
+
+  const gesture = useMemo(() => {
+    const celebrate = () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      onDoubleTapLikeRef.current?.();
+    };
+    const openViewer = () => {
+      onPressRef.current?.(pageRef.current);
+    };
+
+    const doubleTap = Gesture.Tap()
+      .numberOfTaps(2)
+      .maxDuration(260)
+      .onEnd(() => {
+        // Instagram's curve and, more importantly, its LENGTH: ~310ms end to
+        // end. Punch in with a little overshoot, hold just long enough to
+        // register, then go.
+        //
+        // The first version ran ~700ms. Past roughly half a second a
+        // confirmation stops reading as feedback and starts reading as an
+        // obstruction sitting on the photo you were trying to look at — you
+        // notice yourself waiting for it, which is the opposite of the point.
+        burstScale.value = 0.4;
+        burstOpacity.value = 1;
+        burstScale.value = withSequence(
+          withSpring(1.08, { damping: 9, stiffness: 520, mass: 0.45 }),
+          withTiming(0.98, { duration: 70 }),
+          withTiming(1.18, { duration: 140 }),
+        );
+        burstOpacity.value = withSequence(
+          withTiming(1, { duration: 70 }),
+          withTiming(1, { duration: 100 }),
+          withTiming(0, { duration: 140 }),
+        );
+        runOnJS(celebrate)();
+      });
+
+    // Exclusive(a, b) already makes b wait for a to fail — the explicit
+    // requireExternalGestureToFail it used to carry just registered the
+    // same relation twice.
+    const singleTap = Gesture.Tap()
+      .numberOfTaps(1)
+      .onEnd(() => {
+        runOnJS(openViewer)();
+      });
+
+    return Gesture.Exclusive(doubleTap, singleTap);
+    // Shared values are stable for the component's lifetime.
+  }, [burstScale, burstOpacity]);
+
   if (!first) return null;
 
   const width = screenWidth;
   const height = Math.round(width / mediaAspectRatio(media));
-
-  const celebrate = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    onDoubleTapLike?.();
-  };
-
-  const doubleTap = Gesture.Tap()
-    .numberOfTaps(2)
-    .maxDuration(260)
-    .onEnd(() => {
-      // Instagram's curve and, more importantly, its LENGTH: ~310ms end to
-      // end. Punch in with a little overshoot, hold just long enough to
-      // register, then go.
-      //
-      // The first version ran ~700ms. Past roughly half a second a
-      // confirmation stops reading as feedback and starts reading as an
-      // obstruction sitting on the photo you were trying to look at — you
-      // notice yourself waiting for it, which is the opposite of the point.
-      burstScale.value = 0.4;
-      burstOpacity.value = 1;
-      burstScale.value = withSequence(
-        withSpring(1.08, { damping: 9, stiffness: 520, mass: 0.45 }),
-        withTiming(0.98, { duration: 70 }),
-        withTiming(1.18, { duration: 140 }),
-      );
-      burstOpacity.value = withSequence(
-        withTiming(1, { duration: 70 }),
-        withTiming(1, { duration: 100 }),
-        withTiming(0, { duration: 140 }),
-      );
-      runOnJS(celebrate)();
-    });
-
-  const singleTap = Gesture.Tap()
-    .numberOfTaps(1)
-    // Must wait for the double-tap to fail, or every like also opens the
-    // viewer — the bug that makes a double-tap feel like it "did two things".
-    .requireExternalGestureToFail(doubleTap)
-    .onEnd(() => {
-      if (onPress) runOnJS(onPress)(page);
-    });
-
-  const gesture = Gesture.Exclusive(doubleTap, singleTap);
 
   const frame = {
     width,
@@ -179,6 +196,7 @@ export function PostMedia({
           showsHorizontalScrollIndicator={false}
           onScroll={(e) => {
             const next = Math.round(e.nativeEvent.contentOffset.x / width);
+            pageRef.current = next;
             if (next !== page) setPage(next);
           }}
           scrollEventThrottle={16}
@@ -258,6 +276,13 @@ function VideoSlide({
 }) {
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
+  const uri = absolutize(item.url);
+
+  // No URL, no player. `useVideoPlayer("")` spins up a native player on a
+  // nonsense source — render the empty frame instead.
+  if (!uri) {
+    return <View style={{ width, height }} />;
+  }
 
   return (
     <Pressable
@@ -276,7 +301,7 @@ function VideoSlide({
       style={{ width, height }}
     >
       <Video
-        uri={absolutize(item.url) ?? ""}
+        uri={uri}
         style={{ width, height }}
         loop
         muted={muted}

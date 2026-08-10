@@ -44,6 +44,9 @@ export function CommentRow({
   const p = useThemedPalette();
   const [expanded, setExpanded] = useState(false);
   const author = comment.author;
+  // Wire data: a comment without its author has no byline, no avatar and
+  // no profile to open — skip the row rather than throw mid-render.
+  if (!author) return null;
 
   const inlineReplies = comment.replies ?? [];
   const shown = expanded && extraReplies?.length ? extraReplies : inlineReplies;
@@ -139,16 +142,21 @@ export function CommentRow({
         </Pressable>
       </View>
 
-      {shown.map((reply) => (
-        <CommentRow
-          key={reply.id}
-          comment={reply}
-          onToggleLike={onToggleLike}
-          onReply={onReply}
-          onDelete={onDelete}
-          depth={1}
-        />
-      ))}
+      {/* One level only, and only from the top level: a reply that itself
+          carried replies (or a cycle in the data) used to recurse without
+          a floor — a stack overflow no error boundary can catch. */}
+      {depth === 0
+        ? shown.map((reply) => (
+            <CommentRow
+              key={reply.id}
+              comment={reply}
+              onToggleLike={onToggleLike}
+              onReply={onReply}
+              onDelete={onDelete}
+              depth={1}
+            />
+          ))
+        : null}
 
       {hidden > 0 && depth === 0 ? (
         <Pressable

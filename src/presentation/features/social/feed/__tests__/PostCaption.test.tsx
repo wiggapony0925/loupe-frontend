@@ -55,4 +55,18 @@ describe("PostCaption", () => {
     );
     expect(screen.getByText(/jeffcollects/)).toBeTruthy();
   });
+
+  it("renders wire data that arrives without its arrays", () => {
+    // A caption row missing `hashtags`/`mentions` (or with a null body)
+    // must degrade to plain text — this exact shape used to throw
+    // mid-render and take the Community tab down with it.
+    render(
+      <PostCaption
+        body="just text #tag"
+        hashtags={undefined as unknown as string[]}
+        mentions={undefined as unknown as string[]}
+      />,
+    );
+    expect(screen.getByText(/just text/)).toBeTruthy();
+  });
 });

@@ -51,6 +51,7 @@
     "sync:moderato": "rm -rf vendor/moderato/src && cp -R ../moderato/src vendor/moderato/src && rm -rf vendor/moderato/src/web && cp ../moderato/package.json vendor/moderato/package.json",
     "storybook:dev": "storybook dev -p 7007",
     "build:ios": "./scripts/build-ios-local.sh",
+    "archive:xcode": "./scripts/prepare-xcode-archive.sh",
     "clean:ios": "rm -rf ios/build build ~/Library/Developer/Xcode/DerivedData/*",
     "pipeline": "node scripts/pipeline.mjs",
     "pipeline:check": "node scripts/pipeline.mjs check",

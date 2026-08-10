@@ -89,7 +89,10 @@ export default function CommunityFeedScreen() {
 
   // Nothing below the search bar works without a handle — posting, following
   // and the feed all key off it — so the claim card replaces the page.
-  if (me.isLoading || !claimed) {
+  // An ERROR is neither loading nor "no handle": telling a registered
+  // collector to claim a username because /social/me 500'd sent people in
+  // circles, so a failed load says what actually happened and offers retry.
+  if (me.isLoading || me.isError || !claimed) {
     return (
       <View style={[styles.root, { backgroundColor: p.bg.base }]}>
         <SafeAreaView edges={["top"]} style={styles.safe}>
@@ -97,6 +100,23 @@ export default function CommunityFeedScreen() {
             <Text style={[styles.title, { color: p.ink.default }]}>Community</Text>
             {me.isLoading ? (
               <ActivityIndicator color={p.ink.dim} style={styles.loading} />
+            ) : me.isError ? (
+              <View style={styles.meError}>
+                <Text style={[styles.meErrorTitle, { color: p.ink.default }]}>
+                  Community didn't load
+                </Text>
+                <Text style={[styles.meErrorBody, { color: p.ink.dim }]}>
+                  We couldn't reach your profile. Check your connection and
+                  try again.
+                </Text>
+                <Pressable
+                  onPress={() => void me.refetch()}
+                  accessibilityRole="button"
+                  style={[styles.cta, { backgroundColor: p.accent.mint }]}
+                >
+                  <Text style={styles.ctaText}>Try again</Text>
+                </Pressable>
+              </View>
             ) : (
               <ClaimUsernameCard />
             )}
@@ -200,7 +220,7 @@ function FeedHeader({
         <LoupeMark size={24} />
         <AppWordmark lane="community" />
       </View>
-      <AppSwitcher active="community" />
+      <AppSwitcher />
 
       <View style={styles.header}>
       <View
@@ -283,8 +303,8 @@ function SearchResults({
   const data = results.data;
   const empty =
     !results.isLoading &&
-    (data?.users.length ?? 0) === 0 &&
-    (data?.hashtags.length ?? 0) === 0;
+    (data?.users?.length ?? 0) === 0 &&
+    (data?.hashtags?.length ?? 0) === 0;
 
   return (
     <View style={styles.results}>
@@ -308,12 +328,12 @@ function SearchResults({
         </View>
       ) : (
         <>
-          {(data?.users.length ?? 0) > 0 ? (
+          {(data?.users?.length ?? 0) > 0 ? (
             <>
               <Text style={[styles.resultsLabel, { color: p.ink.dim }]}>
                 COLLECTORS
               </Text>
-              {data!.users.map((user) => (
+              {(data?.users ?? []).map((user) => (
                 <CollectorRow
                   key={user.user_id}
                   user={user}
@@ -325,7 +345,7 @@ function SearchResults({
             </>
           ) : null}
 
-          {(data?.hashtags.length ?? 0) > 0 ? (
+          {(data?.hashtags?.length ?? 0) > 0 ? (
             <>
               <Text
                 style={[
@@ -335,12 +355,12 @@ function SearchResults({
               >
                 HASHTAGS
               </Text>
-              {data!.hashtags.map((tag) => (
+              {(data?.hashtags ?? []).map((tag) => (
                 <Pressable
                   key={tag.tag}
                   onPress={() => router.push(routes.communityTag(tag.tag))}
                   accessibilityRole="button"
-                  accessibilityLabel={`#${tag.tag}, ${tag.post_count} posts`}
+                  accessibilityLabel={`#${tag.tag}, ${tag.post_count ?? 0} posts`}
                   style={styles.tagRow}
                 >
                   <View
@@ -358,7 +378,7 @@ function SearchResults({
                       #{tag.tag}
                     </Text>
                     <Text style={[styles.tagMeta, { color: p.ink.dim }]}>
-                      {tag.post_count.toLocaleString()}{" "}
+                      {(tag.post_count ?? 0).toLocaleString()}{" "}
                       {tag.post_count === 1 ? "post" : "posts"}
                     </Text>
                   </View>
@@ -376,6 +396,9 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1 },
   claim: { padding: GUTTER, gap: 16 },
+  meError: { alignItems: "flex-start", gap: 8 },
+  meErrorTitle: { fontSize: 16, fontWeight: "800", letterSpacing: -0.3 },
+  meErrorBody: { fontSize: 13.5, lineHeight: 19 },
   title: { fontSize: 28, fontWeight: "800", letterSpacing: -0.9 },
   loading: { paddingVertical: 28 },
   brand: {

@@ -14,7 +14,7 @@ import { useThemedPalette } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
 export function HashtagChips({
-  tags,
+  tags = [],
   gutter = 20,
   activeTag,
 }: {

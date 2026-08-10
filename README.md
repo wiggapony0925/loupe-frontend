@@ -30,16 +30,53 @@ Release builds happen **on this Mac**, not on EAS. The EAS workflows in
 `.eas/workflows/` used to fire on every push to `main`, which billed a full
 native build per commit; they are now `workflow_dispatch` only.
 
+There are two paths to the same binary. Pick by where you want to be standing
+when it fails.
+
+### Headless — script hands you an `.ipa`
+
 ```bash
 npm run build:ios
 ```
 
-That runs [`scripts/build-ios-local.sh`](scripts/build-ios-local.sh): preflight →
-increment `ios.buildNumber` → prebuild → archive → export to `build/ipa/Loupe.ipa`.
-Upload the `.ipa` with **Transporter.app** (Apple ID `ninjeff06@gmail.com`).
+[`scripts/build-ios-local.sh`](scripts/build-ios-local.sh): preflight →
+increment `ios.buildNumber` → prebuild → archive → export to
+`build/ipa/Loupe.ipa`. Upload the `.ipa` with **Transporter.app** (Apple ID
+`ninjeff06@gmail.com`).
 
-Flags: `--clean` regenerates `ios/` from scratch, `--no-bump` reuses the current
-build number after a failed attempt.
+### Xcode — archive and upload from the Organizer
+
+```bash
+npm run archive:xcode
+```
+
+[`scripts/prepare-xcode-archive.sh`](scripts/prepare-xcode-archive.sh) does
+everything Xcode can't, then opens `ios/Loupe.xcworkspace`. In Xcode: set the
+destination to **Any iOS Device (arm64)** (Archive is greyed out on a
+simulator), then **Product ▸ Archive ▸ Distribute App ▸ TestFlight & App
+Store**.
+
+Use this when you want to watch the build, or when Distribute's validation
+report is the thing you're after.
+
+**What the script does that Xcode won't**, each of which ships a broken build
+if skipped:
+
+1. The `eas-build-pre-install` hook. The set-logo registry is generated code —
+   without it the app builds and every set logo is missing.
+2. The production env block from `eas.json`. Xcode's bundle phase runs Metro
+   with no knowledge of `eas.json`, and `EXPO_PUBLIC_*` values are **inlined at
+   bundle time**; `config.googleIosClientId` falls back to `""`, so Google
+   sign-in ships silently broken. Written to `.env.production`, which
+   `@expo/env` loads only under `NODE_ENV=production` — release bundles, never
+   `expo start`. Gitignored.
+3. The build number. App Store Connect rejects a repeat *after* the upload.
+4. `expo prebuild` + `pod install`. A stale `ios/` archives the last prebuild's
+   native config — wrong `Info.plist` strings, wrong OTA channel.
+
+Flags (both scripts): `--clean` regenerates `ios/` from scratch, `--no-bump`
+reuses the current build number after a failed attempt. `archive:xcode` also
+takes `--no-open` to prepare without launching Xcode.
 
 Things worth knowing:
 

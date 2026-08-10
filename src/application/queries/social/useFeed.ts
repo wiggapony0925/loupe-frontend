@@ -37,12 +37,26 @@ import type {
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { queryKeys } from "../queryKeys";
 
-/** Flatten an infinite feed's pages into the list a FlatList renders. */
+/** Flatten an infinite feed's pages into the list a FlatList renders.
+ *  Null-tolerant end to end: a 204 (empty feed) reaches the cache as a
+ *  `null` page — see `emptyFeedPage` — and a malformed page must degrade
+ *  to nothing, never to a render throw. */
 export function feedPosts(data: InfiniteData<FeedWire> | undefined): PostWire[] {
-  return data?.pages.flatMap((page) => page.items) ?? [];
+  return (data?.pages ?? []).flatMap((page) => page?.items ?? []).filter(Boolean);
 }
 
 const PAGE_SIZE = 12;
+
+/**
+ * An empty page a server 204 (or a malformed body) coalesces into.
+ *
+ * `apiFetch` hands back `null` for a 204. Leaving that null in the cache
+ * was a DETERMINISTIC crash for anyone with an empty feed: TanStack v5
+ * evaluates `getNextPageParam(lastPage)` during render, so
+ * `last.next_cursor` threw before any error state could exist — in release,
+ * that took the whole Community tab down every single time it was opened.
+ */
+const emptyFeedPage: FeedWire = { items: [], next_cursor: null };
 
 /** Every cursor-paged post list is the same query — only the URL, the cache
  *  key and the extra params differ. */
@@ -54,8 +68,8 @@ function infiniteFeed(
 ) {
   return {
     queryKey: key,
-    queryFn: ({ pageParam }: { pageParam: string | null }) =>
-      apiFetch<FeedWire>(url, {
+    queryFn: async ({ pageParam }: { pageParam: string | null }) => {
+      const page = await apiFetch<FeedWire | null>(url, {
         query: {
           ...extraQuery,
           limit: PAGE_SIZE,
@@ -63,9 +77,13 @@ function infiniteFeed(
           // straight back, never constructed here.
           ...(pageParam ? { cursor: pageParam } : {}),
         },
-      }),
+      });
+      return page && Array.isArray(page.items) ? page : emptyFeedPage;
+    },
     initialPageParam: null as string | null,
-    getNextPageParam: (last: FeedWire) => last.next_cursor,
+    // Belt and braces with the coalescing above: this runs during RENDER,
+    // so it must tolerate anything an older cache may still hold.
+    getNextPageParam: (last: FeedWire | null) => last?.next_cursor ?? null,
     enabled,
     // Short but non-zero: switching tabs shouldn't refetch what was on
     // screen a second ago, and a feed that never goes stale never shows
@@ -179,8 +197,9 @@ export function useComments(
         { query: { offset: pageParam, limit: 20 } },
       ),
     initialPageParam: 0,
-    getNextPageParam: (last: CommentThreadWire) =>
-      last.next_cursor ? Number(last.next_cursor) : undefined,
+    // Render-time in TanStack v5 — must survive a null page (204).
+    getNextPageParam: (last: CommentThreadWire | null) =>
+      last?.next_cursor ? Number(last.next_cursor) : undefined,
     enabled: isAuthenticated && !!postId,
     staleTime: 15_000,
   });
@@ -555,16 +574,20 @@ function patchComments(
       if (!data) return data;
       const walk = (comment: CommentWire): CommentWire => {
         const next = comment.id === commentId ? edit(comment) : comment;
-        return next.replies.length
+        // `replies` is wire data — a comment served without the key must
+        // not throw here: this runs from a heart TAP, where an uncaught
+        // throw is fatal in release (no error boundary covers handlers).
+        return next.replies?.length
           ? { ...next, replies: next.replies.map(walk) }
           : next;
       };
       return {
         ...data,
-        pages: data.pages.map((page) => ({
-          ...page,
-          items: page.items.map(walk),
-        })),
+        pages: data.pages.map((page) =>
+          page
+            ? { ...page, items: (page.items ?? []).map(walk) }
+            : page,
+        ),
       };
     },
   );

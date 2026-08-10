@@ -24,6 +24,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react-native";
+import { resolveNotificationHref } from "@/shared/notificationLinks";
 import { routes } from "@/shared/routes";
 import { type Palette, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { WatchingList } from "@/presentation/features/watchlist/WatchingList";
@@ -504,10 +505,12 @@ function NotificationRow({
   // classify is still one the user was meant to see.
   const meta = CATEGORY_META[item.category] ?? CATEGORY_META.system;
   const tint = p.accent[meta.tint];
-  // A price-alert notification deep-links to the card it fired on.
-  const onPress = item.href
-    ? () => router.push(item.href as never)
-    : undefined;
+  // Deep link, resolved from the server's web-namespace href to this
+  // app's routes — pushing the raw `/app/...` path landed every community
+  // notification on Not Found. Same resolver as the push-tap handler, so
+  // both surfaces open the same screen.
+  const target = resolveNotificationHref(item.href);
+  const onPress = target ? () => router.push(target as never) : undefined;
   return (
     <Pressable
       onPress={onPress}

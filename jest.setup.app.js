@@ -11,3 +11,16 @@
 jest.mock("@react-native-async-storage/async-storage", () =>
   require("@react-native-async-storage/async-storage/jest/async-storage-mock"),
 );
+
+/**
+ * Reanimated (v4) is native-backed the moment it's imported — its worklets
+ * RUNTIME throws under Jest before a single test runs. Mocking reanimated
+ * itself doesn't help (even its official mock imports the real runtime);
+ * the throw originates one layer down in react-native-worklets, which
+ * ships its own mock. With the runtime mocked, reanimated's actual JS runs
+ * fine: animations resolve immediately and shared values are plain boxes —
+ * so any component that animates can be rendered in a test.
+ */
+jest.mock("react-native-worklets", () =>
+  require("react-native-worklets/src/mock"),
+);
