@@ -32,6 +32,7 @@ import { Platform } from "react-native";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 import {
   Easing,
+  ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -69,10 +70,13 @@ export const SCREEN_TRANSITION: NativeStackNavigationOptions =
       };
 
 /**
- * Content-swap motion for a view that changes in place.
+ * Content-swap motion for a view that changes in place — the fade-through.
  *
  * Pass anything that identifies the current content — a tab key, an id.
- * When it changes the content fades out and back with a small rise.
+ * When it changes, the incoming content fades in while rising a touch and
+ * settling from 98.5% scale: Material's fade-through, tuned down to feel
+ * at home beside iOS's own transitions. The scale is what makes it read
+ * as NEW CONTENT ARRIVING rather than the same view blinking.
  *
  * ```tsx
  * const style = useScreenTransition(tab);
@@ -90,12 +94,16 @@ export function useScreenTransition(key: string | number) {
     progress.value = withTiming(1, {
       duration: SCREEN_MOTION_MS,
       easing: SCREEN_MOTION_EASING,
+      reduceMotion: ReduceMotion.System,
     });
   }, [key, progress]);
 
   return useAnimatedStyle(() => ({
     opacity: progress.value,
-    // 10pt is enough to read as "this is new" without looking like a jump.
-    transform: [{ translateY: (1 - progress.value) * 10 }],
+    transform: [
+      // 12pt is enough to read as "this is new" without looking like a jump.
+      { translateY: (1 - progress.value) * 12 },
+      { scale: 0.985 + progress.value * 0.015 },
+    ],
   }));
 }

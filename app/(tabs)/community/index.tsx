@@ -18,9 +18,10 @@
  * and renders the answer, so web and native can never drift on what
  * "Following" means.
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
   StyleSheet,
   Text,
@@ -38,7 +39,7 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Bell, ChevronUp, Plus, Search, Users, X } from "lucide-react-native";
-import type { FeedTab } from "@/infrastructure/http";
+import type { FeedTab, PostWire } from "@/infrastructure/http";
 import {
   useFeed,
   useSocialSearch,
@@ -104,6 +105,8 @@ export default function CommunityFeedScreen() {
   const me = useSocialMe();
   const claimed = !!me.data?.profile;
   const searching = q.trim().length >= 2;
+  // For the Instagram gesture: re-pressing the tab you're on = back to top.
+  const feedListRef = useRef<FlatList<PostWire>>(null);
 
   const feed = useFeed(tab, claimed && !searching);
   const trending = useTrendingHashtags(claimed && tab === "foryou");
@@ -169,6 +172,7 @@ export default function CommunityFeedScreen() {
           <Animated.View style={[styles.safe, swap]}>
           <FeedList
             query={feed}
+            listRef={feedListRef}
             header={
               <View>
                 {/* The tray sits ABOVE the tabs, not inside one of them:
@@ -179,7 +183,16 @@ export default function CommunityFeedScreen() {
                   onOpen={setWatching}
                   onCompose={() => router.push(routes.communityStory())}
                 />
-                <FeedTabs value={tab} onChange={setTab} />
+                <FeedTabs
+                  value={tab}
+                  onChange={setTab}
+                  onReselect={() =>
+                    feedListRef.current?.scrollToOffset({
+                      offset: 0,
+                      animated: true,
+                    })
+                  }
+                />
                 {tab === "foryou" ? (
                   <View style={{ paddingHorizontal: GUTTER }}>
                     <HashtagChips tags={trending.data ?? []} gutter={GUTTER} />

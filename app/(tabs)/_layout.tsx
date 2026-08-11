@@ -116,8 +116,12 @@ export default function TabsLayout() {
       tabBar={(props) => <LoupeTabBar {...props} palette={p} />}
       screenOptions={{
         headerShown: false,
-        // Subtle horizontal shift when switching tabs — avoids the hard cut.
-        animation: isIOS ? "shift" : "fade",
+        // A clean crossfade between tabs — on BOTH platforms. The previous
+        // iOS "shift" slid the incoming page sideways over the old one,
+        // which is the exact motion users kept reporting as cheap on the
+        // Loupe ↔ Community swap: peer surfaces trading places should
+        // dissolve, not shove. Direction is the switcher thumb's job.
+        animation: "fade",
         tabBarActiveTintColor: p.accent.mint,
         tabBarInactiveTintColor: p.ink.dim,
         tabBarStyle: {

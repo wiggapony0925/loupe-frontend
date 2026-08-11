@@ -27,6 +27,7 @@ import {
 import { useFollowCollector } from "@/application/queries/social/useSocial";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import { CommentsSheet } from "./CommentsSheet";
+import { FeedSkeleton } from "./FeedSkeleton";
 import { ImageLightbox } from "./ImageLightbox";
 import { PostCard } from "./PostCard";
 import { EditPostSheet } from "./EditPostSheet";
@@ -42,6 +43,8 @@ export interface FeedListProps {
   emptyAction?: React.ReactNode;
   /** Extra bottom padding so content clears the floating island navbar. */
   bottomInset?: number;
+  /** The scroller itself — for callers that scroll-to-top on tab re-press. */
+  listRef?: React.RefObject<FlatList<PostWire> | null>;
 }
 
 export function FeedList({
@@ -51,6 +54,7 @@ export function FeedList({
   emptyBody = "Posts will show up here.",
   emptyAction,
   bottomInset = 130,
+  listRef,
 }: FeedListProps) {
   const p = useThemedPalette();
   const [openPost, setOpenPost] = useState<PostWire | null>(null);
@@ -114,6 +118,7 @@ export function FeedList({
   return (
     <>
       <FlatList
+        ref={listRef}
         data={posts}
         keyExtractor={(item, index) => item.id ?? `row-${index}`}
         ListHeaderComponent={header}
@@ -147,9 +152,9 @@ export function FeedList({
         }}
         ListEmptyComponent={
           query.isLoading ? (
-            <View style={styles.state}>
-              <ActivityIndicator color={p.ink.dim} />
-            </View>
+            // Ghost cards, not a spinner: the page's shape arrives before
+            // its content, which reads as fast instead of as waiting.
+            <FeedSkeleton rows={3} />
           ) : query.isError ? (
             // An unreachable backend used to render as "Your feed is
             // quiet" — a misdiagnosis that sent people hunting for

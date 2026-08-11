@@ -1,16 +1,34 @@
 /**
  * FeedTabs — For You · Following.
  *
- * An underline that slides, not a segmented pill: the tabs sit directly over
- * a scrolling river of content, and a filled control there reads as a
- * toolbar floating on top of the feed rather than as its heading.
+ * An underline that SLIDES between the labels — one bar in motion, not two
+ * bars blinking — on the same spring the AppSwitcher's thumb rides, so the
+ * page's two segmented controls feel like the same material. Measured from
+ * each tab's layout (font metrics differ per platform), first placement
+ * snaps (a slide-in on mount reads as loading), and the spring honors the
+ * system Reduce Motion setting.
  *
  * The labels are fixed and few, so they're laid out by flex rather than in a
  * scroller — a tab strip you can accidentally scroll past is a tab strip
  * that hides tabs.
+ *
+ * Re-pressing the tab you're on is Instagram's "take me back to the top":
+ * it fires `onReselect` instead of being swallowed.
  */
-import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+} from "react-native";
+import Animated, {
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import type { FeedTab } from "@/infrastructure/http";
 import { useThemedPalette } from "@/presentation/theme/tokens";
@@ -28,14 +46,71 @@ export const FEED_TABS: { key: FeedTab; label: string }[] = [
   { key: "following", label: "Following" },
 ];
 
+/** The AppSwitcher's spring, so the two controls move as one material. */
+const SLIDE_SPRING = {
+  damping: 20,
+  stiffness: 320,
+  mass: 0.65,
+  reduceMotion: ReduceMotion.System,
+} as const;
+
+/** How far the underline sits in from the tab's edges. */
+const UNDERLINE_INSET = 14;
+
 export function FeedTabs({
   value,
   onChange,
+  onReselect,
 }: {
   value: FeedTab;
   onChange: (tab: FeedTab) => void;
+  /** Fired when the ACTIVE tab is pressed again — scroll-to-top, etc. */
+  onReselect?: () => void;
 }) {
   const p = useThemedPalette();
+  const x = useSharedValue(0);
+  const w = useSharedValue(0);
+  const placed = useRef(false);
+  const measured = useRef<Record<string, { x: number; width: number }>>({});
+
+  const place = (key: FeedTab, animated: boolean) => {
+    const l = measured.current[key];
+    if (!l) return;
+    const tx = l.x + UNDERLINE_INSET;
+    const tw = Math.max(0, l.width - UNDERLINE_INSET * 2);
+    if (animated) {
+      x.value = withSpring(tx, SLIDE_SPRING);
+      w.value = withSpring(tw, SLIDE_SPRING);
+    } else {
+      x.value = tx;
+      w.value = tw;
+    }
+  };
+
+  const onTabLayout = (key: FeedTab) => (event: LayoutChangeEvent) => {
+    const { x: lx, width } = event.nativeEvent.layout;
+    measured.current[key] = { x: lx, width };
+    if (key !== value) return;
+    // Snap, never slide, from a layout event: on first mount an underline
+    // sliding in reads as the page loading (the switcher's standing rule),
+    // and later layout events are RESIZES (rotation, font scale) where the
+    // bar should simply stay under the label.
+    place(key, false);
+    placed.current = true;
+  };
+
+  // Slide on changes after mount; layout handlers only fire on size changes.
+  useEffect(() => {
+    if (placed.current) place(value, true);
+    // place() reads refs and shared values only — stable by construction.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const slider = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.value }],
+    width: w.value,
+  }));
+
   return (
     <View style={[styles.row, { borderBottomColor: p.line.default }]}>
       {FEED_TABS.map((tab) => {
@@ -43,8 +118,12 @@ export function FeedTabs({
         return (
           <Pressable
             key={tab.key}
+            onLayout={onTabLayout(tab.key)}
             onPress={() => {
-              if (active) return;
+              if (active) {
+                onReselect?.();
+                return;
+              }
               Haptics.selectionAsync().catch(() => {});
               onChange(tab.key);
             }}
@@ -64,22 +143,31 @@ export function FeedTabs({
             >
               {tab.label}
             </Text>
-            <View
-              style={[
-                styles.rule,
-                { backgroundColor: active ? p.accent.mint : "transparent" },
-              ]}
-            />
           </Pressable>
         );
       })}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.slider, { backgroundColor: p.accent.mint }, slider]}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", borderBottomWidth: StyleSheet.hairlineWidth },
-  tab: { flex: 1, alignItems: "center", gap: 8, paddingTop: 6 },
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    paddingTop: 8,
+    paddingBottom: 11,
+  },
   label: { fontSize: 15, letterSpacing: -0.2 },
-  rule: { height: 2.5, alignSelf: "stretch", marginHorizontal: 14, borderRadius: 2 },
+  slider: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    height: 3,
+    borderRadius: 2,
+  },
 });

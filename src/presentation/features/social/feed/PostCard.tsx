@@ -20,6 +20,14 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
+import Animated, {
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { BadgeCheck, Heart, MessageCircle, MoreHorizontal } from "lucide-react-native";
 import type { PostWire } from "@/infrastructure/http";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
@@ -45,6 +53,14 @@ export interface PostCardProps {
   mediaVisible?: boolean;
 }
 
+/** The heart's acknowledgement: liking punches, unliking dips. */
+const LIKE_SPRING = {
+  damping: 12,
+  stiffness: 380,
+  mass: 0.6,
+  reduceMotion: ReduceMotion.System,
+} as const;
+
 function PostCardImpl({
   post,
   onToggleLike,
@@ -56,6 +72,11 @@ function PostCardImpl({
   mediaVisible,
 }: PostCardProps) {
   const p = useThemedPalette();
+  // Hooks before the author guard — a skipped row must not change hook order.
+  const heartScale = useSharedValue(1);
+  const heartStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+  }));
   const author = post.author;
   // Wire data: a post row without its author can't be rendered honestly —
   // skip it rather than throw. (Everything on the card hangs off the author.)
@@ -68,6 +89,18 @@ function PostCardImpl({
 
   const like = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    // Turning ON punches in with an overshoot; turning OFF is a quiet dip.
+    // The state change is optimistic elsewhere — this is pure acknowledgement.
+    heartScale.value = post.viewer_has_liked
+      ? withSequence(
+          withTiming(0.82, { duration: 90, reduceMotion: ReduceMotion.System }),
+          withSpring(1, LIKE_SPRING),
+        )
+      : withSequence(
+          withTiming(0.7, { duration: 60, reduceMotion: ReduceMotion.System }),
+          withSpring(1.28, LIKE_SPRING),
+          withSpring(1, LIKE_SPRING),
+        );
     onToggleLike({ postId: post.id, liked: post.viewer_has_liked });
   };
 
@@ -233,12 +266,14 @@ function PostCardImpl({
           }
           style={styles.action}
         >
-          <Heart
-            size={21}
-            color={post.viewer_has_liked ? p.accent.rose : p.ink.default}
-            fill={post.viewer_has_liked ? p.accent.rose : "transparent"}
-            strokeWidth={2}
-          />
+          <Animated.View style={heartStyle}>
+            <Heart
+              size={21}
+              color={post.viewer_has_liked ? p.accent.rose : p.ink.default}
+              fill={post.viewer_has_liked ? p.accent.rose : "transparent"}
+              strokeWidth={2}
+            />
+          </Animated.View>
           <Text style={[styles.actionText, { color: p.ink.default }]}>
             {formatCount(post.like_count)}{" "}
             {post.like_count === 1 ? "Like" : "Likes"}

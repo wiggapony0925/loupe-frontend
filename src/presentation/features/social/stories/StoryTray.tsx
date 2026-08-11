@@ -69,7 +69,7 @@ export function StoryTray({
         accessibilityLabel={
           mine ? "Add to your story. Long press to watch it." : "Add to your story"
         }
-        style={styles.cell}
+        style={({ pressed }) => [styles.cell, pressed && styles.cellPressed]}
       >
         <View style={styles.avatarWrap}>
           <View
@@ -137,7 +137,7 @@ function TrayCell({
         `${entry.story_count === 1 ? "story" : "stories"}, ` +
         `${entry.has_unseen ? "unwatched" : "watched"}`
       }
-      style={({ pressed }) => [styles.cell, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [styles.cell, pressed && styles.cellPressed]}
     >
       <View
         style={[
@@ -206,6 +206,8 @@ function Avatar({
 const styles = StyleSheet.create({
   row: { gap: 14, paddingHorizontal: GUTTER, paddingVertical: 12 },
   cell: { width: SIZE + 8, alignItems: "center", gap: 5 },
+  // The standard press acknowledgement, matched to the switcher's squish.
+  cellPressed: { opacity: 0.75, transform: [{ scale: 0.96 }] },
   avatarWrap: { position: "relative" },
   ring: {
     padding: 2.5,
