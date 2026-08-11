@@ -51,8 +51,13 @@ export { httpProvider } from "./providers/http.js";
 export type { HttpProviderOptions } from "./providers/http.js";
 export { localProvider } from "./providers/local.js";
 export type { LocalRule } from "./providers/local.js";
-export { PROFANITY_PRESET, wordlistProvider } from "./providers/wordlist.js";
+export {
+  PROFANITY_PRESET,
+  PROFANITY_PRESET_STRICT,
+  wordlistProvider,
+} from "./providers/wordlist.js";
 export type { WordlistEntry } from "./providers/wordlist.js";
+export { EN_PROFANITY } from "./vocab/en.js";
 export { normalizeTokens } from "./normalize.js";
 export type { NormalizedToken } from "./normalize.js";
 export { mockProvider } from "./providers/mock.js";
