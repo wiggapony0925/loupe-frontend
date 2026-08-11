@@ -272,6 +272,35 @@ function PostCardImpl({
         </View>
       ) : null}
 
+      {/* ── The post's tags, as chips ── */}
+      {/* Inline caption text can't wear a rounded box (RN ignores radius on
+          nested Text runs), so the tags repeat under the caption as real
+          pills — the same mint-wash treatment as the trending rail. */}
+      {post.hashtags.length > 0 ? (
+        <View style={[styles.tagRow, { paddingHorizontal: gutter }]}>
+          {post.hashtags.map((tag) => (
+            <Pressable
+              key={tag}
+              onPress={() => router.push(routes.communityTag(tag))}
+              accessibilityRole="button"
+              accessibilityLabel={`#${tag}`}
+              style={({ pressed }) => [
+                styles.tagChip,
+                {
+                  borderColor: withAlpha(p.accent.mint, 0.38),
+                  backgroundColor: withAlpha(p.accent.mint, 0.13),
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+            >
+              <Text style={[styles.tagText, { color: p.accent.mint }]}>
+                #{tag}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
       <Text style={[styles.date, { color: p.ink.dim, paddingHorizontal: gutter }]}>
         {new Date(post.created_at).toLocaleDateString(undefined, {
           month: "short",
@@ -349,4 +378,17 @@ const styles = StyleSheet.create({
   action: { flexDirection: "row", alignItems: "center", gap: 7 },
   actionText: { fontSize: 13.5, fontWeight: "600" },
   date: { fontSize: 11.5, marginTop: 8 },
+  tagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 8,
+  },
+  tagChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  tagText: { fontSize: 12, fontWeight: "700", letterSpacing: -0.2 },
 });
