@@ -34,6 +34,7 @@ import { useCardSparklines } from "@/application/queries/catalog/useCardSparklin
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { MoverSparkRow } from "@/presentation/cards";
 import { HomeTour } from "@/presentation/features/onboarding/HomeTour";
+import { FaceIdPrompt } from "@/presentation/features/auth/FaceIdPrompt";
 import { TourTarget } from "@/presentation/features/onboarding/TourTarget";
 import { greeting, relativeTime, useCompactUsd } from "@/shared/format";
 import { gradeColor, useThemedPalette } from "@/presentation/theme/tokens";
@@ -420,6 +421,10 @@ export default function CommandCenterScreen() {
       <HomeTour
         scrollTo={(y) => homeScrollRef.current?.scrollTo({ y, animated: true })}
       />
+
+      {/* One-time "sign in with Face ID?" offer — appears only after the
+          tour is done, only if the device can, once per account. */}
+      <FaceIdPrompt />
     </SafeAreaView>
   );
 }

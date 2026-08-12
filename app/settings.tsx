@@ -27,6 +27,7 @@ import {
   Moon,
   Newspaper,
   RotateCcw,
+  ScanFace,
   Shield,
   ShieldCheck,
   SlidersHorizontal,
@@ -52,6 +53,7 @@ import { Row, Section } from "@/presentation/components/GroupedList";
 import { pluralize } from "@/presentation/features/social/socialLabels";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import { useAuth } from "@/presentation/providers/AuthProvider";
+import { useBiometrics } from "@/application/stores/biometricStore";
 import { ProMembershipCard } from "@/presentation/features/pro";
 import {
   useCollectorProfile,
@@ -139,6 +141,10 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
 function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   const p = useThemedPalette();
   const { user, signOut, signOutEverywhere } = useAuth();
+  // Face ID lock state for this account — drives the Security row copy.
+  const faceIdOn = useBiometrics((s) =>
+    user?.id ? Boolean(s.enabledBy[String(user.id)]) : false,
+  );
   // One identity everywhere: the hero bubble mirrors the community profile
   // picture, so changing it there updates this page too.
   const socialMe = useSocialMe();
@@ -446,6 +452,18 @@ function MenuPage({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
             description="Update your password · signs out other devices"
             trailing={<ChevronRight size={16} color={p.ink.dim} />}
             onPress={() => router.push("/change-password")}
+          />
+          <Row
+            icon={ScanFace}
+            iconTint={p.accent.mint}
+            label="Face ID"
+            description={
+              faceIdOn
+                ? "On · Loupe locks when you leave the app"
+                : "Off · unlock Loupe with a glance"
+            }
+            trailing={<ChevronRight size={16} color={p.ink.dim} />}
+            onPress={() => router.push("/face-id")}
           />
           <Row
             icon={ShieldCheck}

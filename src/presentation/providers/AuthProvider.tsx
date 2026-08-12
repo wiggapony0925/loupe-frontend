@@ -17,11 +17,11 @@ import React, {
   useState,
 } from "react";
 import {
-  ApiError,
   apiFetch,
   setAuthToken,
   setRefreshHandler,
 } from "@/infrastructure/http/client";
+import { isSessionRejection } from "@/infrastructure/http/authErrors";
 import { ENDPOINTS } from "@/infrastructure/http/endpoints";
 import { queryClient } from "@/application/queries/queryClient";
 import {
@@ -70,7 +70,8 @@ interface AuthContextValue {
    * authenticated request doesn't burn a 401 → /auth/refresh round
    * trip on a freshly-warm Cloud Run container. No-ops (returns the
    * current token) when no refresh token is available or when the
-   * exchange fails (failure path also signs the user out).
+   * exchange fails. Only a refresh the SERVER rejected (401/403) signs
+   * the user out — a transport failure keeps the session.
    */
   refreshNow: () => Promise<string | null>;
 }
@@ -134,17 +135,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTokenState(pair.access_token);
         setAuthToken(pair.access_token);
         refreshTokenRef.current = pair.refresh_token;
-        await setSecureItem(TOKEN_STORAGE_KEY, pair.access_token);
+        // Refresh token FIRST: if we're killed between these writes, a
+        // stored refresh token with a stale access token recovers on the
+        // next boot; the reverse could not.
         await setSecureItem(REFRESH_STORAGE_KEY, pair.refresh_token);
+        await setSecureItem(TOKEN_STORAGE_KEY, pair.access_token);
         if (pair.user) setUser(pair.user);
         return pair.access_token;
       } catch (err) {
-        if (__DEV__) {
+        // Sign out ONLY when the server rejected the session outright.
+        // Anything else — airplane mode, a radio still waking up after
+        // foreground, a Cloud Run cold start, a 5xx — keeps the tokens:
+        // the session is fine, the network wasn't. The next 401 retries
+        // the refresh anyway.
+        if (isSessionRejection(err)) {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.log("[auth] refresh rejected, signing out:", String(err));
+          }
+          await persistTokens(null);
+          setUser(null);
+        } else if (__DEV__) {
           // eslint-disable-next-line no-console
-          console.log("[auth] refresh failed, signing out:", String(err));
+          console.log("[auth] refresh failed transiently, keeping session:", String(err));
         }
-        await persistTokens(null);
-        setUser(null);
         return null;
       } finally {
         inflightRefresh.current = null;
@@ -181,10 +195,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const me = await apiFetch<MeResponse>(ENDPOINTS.me.root);
             if (!cancelled) setUser(me);
           } catch (err) {
-            // 401 here means hydrated access token is expired AND the
-            // refresh handler (registered above) couldn't trade the
-            // refresh token for a new pair. Drop everything.
-            if (err instanceof ApiError && err.status === 401) {
+            // A 401 here does NOT mean the session is dead. The client
+            // already asked the refresh handler to save it, and that
+            // handler has ALREADY signed out if the server rejected the
+            // refresh token — so by this point a surviving refresh token
+            // means the failure was transient (no network on a cold open,
+            // a 5xx, a Cloud Run cold start) and the session is still
+            // good. Wiping here anyway was the random-logout bug's most
+            // common path: iOS kills backgrounded apps constantly, so
+            // reopening on a train came through here, not through the
+            // warm foreground refresh.
+            //
+            // The one genuinely unrecoverable case: a 401 with no refresh
+            // token left to trade. Nothing can revive that.
+            if (isSessionRejection(err) && !refreshTokenRef.current) {
               await persistTokens(null);
               if (!cancelled) setUser(null);
             }

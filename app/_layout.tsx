@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppProviders } from "@/presentation/providers/AppProviders";
 import { useAuth } from "@/presentation/providers/AuthProvider";
+import { BiometricLock } from "@/presentation/features/auth/BiometricLock";
 import { AppLoadingScreen } from "@/presentation/brand/AppLoadingScreen";
 import { NetworkBanner } from "@/presentation/components/NetworkBanner";
 import { AnnouncementBanner } from "@/presentation/components/AnnouncementBanner";
@@ -148,6 +149,7 @@ function RootStack() {
   }
 
   return (
+    <>
     <Stack
       screenOptions={{
         headerShown: false,
@@ -171,6 +173,10 @@ function RootStack() {
       />
       <Stack.Screen
         name="change-password"
+        options={{ presentation: "card", ...SCREEN_TRANSITION }}
+      />
+      <Stack.Screen
+        name="face-id"
         options={{ presentation: "card", ...SCREEN_TRANSITION }}
       />
       <Stack.Screen
@@ -245,5 +251,9 @@ function RootStack() {
           shouldn't arrive with the confident slide of a real destination. */}
       <Stack.Screen name="+not-found" />
     </Stack>
+    {/* Chase-style Face ID lock — an overlay ABOVE the navigator, so the
+        app keeps its state while locked. Renders null unless armed. */}
+    <BiometricLock />
+    </>
   );
 }

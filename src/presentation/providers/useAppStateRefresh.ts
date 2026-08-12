@@ -19,6 +19,7 @@ import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import { focusManager, onlineManager, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/presentation/providers/AuthProvider";
+import { isOnlineNow } from "@/shared/network";
 
 export function useAppStateRefresh() {
   const qc = useQueryClient();
@@ -47,7 +48,9 @@ export function useAppStateRefresh() {
 
       // Pre-rotate the bearer so the next request doesn't 401. Fire and
       // forget — the refresh handler also runs on 401 as a safety net.
-      if (isAuthenticated) {
+      // Skip it entirely while offline: foregrounding is exactly when the
+      // radio is still waking, and a doomed refresh attempt buys nothing.
+      if (isAuthenticated && isOnlineNow()) {
         refreshNow().catch(() => {});
       }
 
