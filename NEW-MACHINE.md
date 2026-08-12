@@ -636,6 +636,54 @@ cd ~/Loupe/loupe-web && npm run typecheck && npm test
 
 ---
 
+## 13. What the root `.gitignore` hides (the "what did I lose" inventory)
+
+The workspace root's `.gitignore` is the authoritative list of what lives
+only on the machine. After a loss, this is the whole answer:
+
+| Excluded by `.gitignore` | Status after a rebuild |
+|---|---|
+| `node_modules/`, `**/dist/`, `**/build/`, `*.tsbuildinfo` | Regenerated — nothing to do |
+| `loupe-frontend/`, `loupe-backend/` | Separate GitHub repos — cloned in §4.1 |
+| `moderato/` | Rebuild per §12 |
+| `.env`, `.env.*` (`.env.example` kept) | Recover per §5 |
+| `*.pem`, `*.key` | Dev auto-generates; prod keys in Secret Manager |
+| `tools/` | **Local-only. Gone.** |
+| `PLAN.md`, `DEVELOPER_PORTAL.md` | **Local-only. Gone.** |
+| `.claude/` (at the workspace root) | **Local-only. Gone** — see below |
+| `loupe-pipeline/` | **Local-only. Gone.** |
+| `.vscode/`, `.idea/`, `*.log`, `.DS_Store` | Noise |
+
+**Nothing in any tracked file references `tools/`, `PLAN.md`,
+`DEVELOPER_PORTAL.md`, or `loupe-pipeline/`** — verified by grep across all
+three repos. Nothing that builds, tests, or deploys depends on them, so do
+not try to reconstruct them speculatively. In particular,
+`loupe-frontend/scripts/pipeline.mjs` is tracked and self-contained
+(`npm run pipeline`, `:ship`, `:build`, `:cloud`), and is almost certainly
+what `loupe-pipeline/` became. Ask before rebuilding any of them.
+
+**`.claude/` is only gitignored at the workspace root** — it is *not*
+ignored inside `loupe-frontend` or `loupe-backend`, so both now carry a
+tracked `.claude/settings.json` with a permission allowlist for that repo's
+routine commands (tests, typecheck, lint, read-only git). Those survive a
+machine loss. Anything workspace-root-level has to be recreated by hand.
+
+## 14. Backend pre-flight (already verified remotely)
+
+Checked against the current `main`, so the backend should come up without
+surprises once Homebrew lands:
+
+- **`alembic heads` → a single head** (`0055_social_links`). Multiple heads
+  would make `dev.sh`'s migration step fail; there is no such conflict.
+- **The full suite passes on Python 3.12** — 1369 tests — as do `ruff
+  check`, `ruff format --check`, and `mypy app` (417 source files).
+- **Compiled dependencies to watch on Apple Silicon:** `lxml`, `Pillow`,
+  `cryptography`, `numpy`, `onnxruntime`. All ship arm64 wheels for 3.12, so
+  `make install` should not need a compiler. If one *does* try to build from
+  source, that is the signal that Xcode Command Line Tools are missing or
+  the license is still unaccepted (§2.1) — not that the pin is wrong. Do not
+  "fix" it by loosening a version.
+
 ## 11. If something in this document is wrong
 
 It was written from the repositories as they stood at the time, and repos
