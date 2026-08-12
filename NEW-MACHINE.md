@@ -21,7 +21,8 @@ Everything that matters is on GitHub or in Google Cloud:
 | Thing | Where it lives | Recoverable? |
 |---|---|---|
 | All three codebases | GitHub (`wiggapony0925/*`) | Yes — clone |
-| Shared packages + `moderato` | inside the `loupe-web` repo | Yes — clone |
+| Shared `packages/*` (7 of them) | inside the `loupe-web` repo | Yes — clone |
+| `moderato` | **untracked** in `loupe-web` | Mostly — **see §12** |
 | Production runtime secrets | GCP Secret Manager (`loupe-app-56235`) | Yes — see §5 |
 | Deploy pipeline + CI | GitHub Actions (already configured) | Yes — nothing to do |
 | iOS signing certificates | Apple's servers | Yes — Xcode re-mints them |
@@ -213,8 +214,15 @@ ls ~/Loupe/packages # expect: auth chart core grade marketing theme tokens
 
 ```bash
 cd ~/Loupe
-npm install          # npm workspaces installs packages/* and loupe-web together
+npm install          # npm workspaces installs packages/*, moderato, and loupe-web
 ```
+
+> **STOP if `moderato/` is missing after the clone — it will be.** The root
+> `package.json` lists `moderato` as a workspace *and* the web app imports
+> `moderato/react` and `moderato/web`, but the directory was untracked from
+> the repo (commit `8476ddc`) and never pushed anywhere else. The web app
+> cannot install or build until you rebuild it. **Go do §12 now**, then come
+> back and re-run `npm install`.
 
 ### 4.3 Frontend (React Native / Expo)
 
@@ -496,6 +504,110 @@ Report each line to Jeffrey as done or blocked:
 - [ ] `npm run archive:xcode` completes and opens the workspace
 - [ ] Anything still blocked is listed explicitly for Jeffrey, with the exact
       error text
+
+---
+
+## 12. Rebuilding `moderato` (the one real gap)
+
+### What happened
+
+`moderato` was a **nested git repo** inside the workspace with its own
+history, intended to ship to npm. Commit `8476ddc` — *"chore: untrack
+moderato/ — it's a nested repo (own git history, ships to npm)"* — removed it
+from `loupe-web`'s index. Its own repo lived only on the lost laptop, and it
+was **never published** (`registry.npmjs.org/moderato` → `{"error":"Not
+found"}`). So a fresh clone gives you no `moderato/` directory at all.
+
+This blocks the web app specifically: root `package.json` has `"moderato"` in
+`workspaces` and `"moderato": "*"` in dependencies, and these import from it:
+
+```
+loupe-web/src/features/social/Feed/Composer.tsx          → moderato/react, moderato/web
+loupe-web/src/features/social/Feed/EditPostModal.tsx     → moderato/react
+loupe-web/src/features/social/Feed/CommentsModal.tsx     → moderato/react
+loupe-web/src/features/social/EditProfile/EditProfileModal.tsx → moderato/react, moderato/web
+```
+
+The **native app is unaffected** — `loupe-frontend` vendors its own copy at
+`vendor/moderato/`, fully tracked, and imports through that.
+
+### Do NOT recover from the parent commit alone
+
+`8476ddc~1` only ever tracked **10 files**, and its `src/` had just four:
+`policy.ts`, `types.ts`, `media/image.ts`, `media/video.ts`. That is a strict
+*subset* — it cannot satisfy `moderato/react`. The richest surviving copy of
+the source is **`loupe-frontend/vendor/moderato/`** (19 tracked files).
+
+Neither source is complete on its own. **Take the union:**
+
+| Piece | Recover from |
+|---|---|
+| `package.json`, `tsconfig.json`, `tsup.config.ts`, `vitest.config.ts`, `LICENSE`, `.gitignore` | `git show 8476ddc~1:moderato/<file>` |
+| `src/engine.ts`, `src/index.ts`, `src/normalize.ts`, `src/refusal.ts`, `src/policy.ts`, `src/types.ts`, `src/media/*`, `src/providers/*`, `src/react/*`, `src/vocab/en.ts` | `loupe-frontend/vendor/moderato/src/` |
+| `src/web/index.tsx` | **Nowhere — must be rewritten. See below.** |
+
+Use the **historical** `package.json`, not the vendored one: the vendored copy
+points its exports at `./dist/*` (published-package shape), while the
+historical one points at source — `"./web": "./src/web/index.tsx"` — which is
+what a local workspace needs.
+
+```bash
+cd ~/Loupe
+mkdir -p moderato/src
+for f in package.json tsconfig.json tsup.config.ts vitest.config.ts LICENSE .gitignore; do
+  git show 8476ddc~1:moderato/$f > moderato/$f
+done
+cp -R loupe-frontend/vendor/moderato/src/. moderato/src/
+ls moderato/src   # engine index normalize policy refusal types media providers react vocab
+```
+
+### The one file that must be written from scratch
+
+`moderato/src/web/index.tsx`, exporting **`ModeratedUpload`** — a render-prop
+file-picker wrapper. `sync:moderato` deliberately deletes `src/web` from the
+native vendored copy (`rm -rf vendor/moderato/src/web`), which is why it
+survives nowhere.
+
+Its API, read off the real call sites:
+
+```tsx
+<ModeratedUpload
+  accept="image/jpeg,image/png,image/webp"
+  multiple
+  remaining={MAX_IMAGES - images.length}
+  onAccept={(files: File[]) => { /* caller appends */ }}
+>
+  {({ open }) => <Button onClick={open}>Add photos</Button>}
+</ModeratedUpload>
+```
+
+Derive the complete prop set from **both** importers (`Composer.tsx` and
+`EditProfileModal.tsx`) before writing it — the profile one is the
+single-file avatar case and may pass different props. It is a hidden
+`<input type="file">` plus a render prop exposing `open()`, clamped to
+`remaining`, handing `File[]` to `onAccept`. Screening stays
+server-authoritative, exactly as `useModeratedSubmit` documents — this
+component must not implement moderation policy itself.
+
+If a faithful reproduction matters more than a clean rewrite, the compiled
+component still exists in the **deployed** web bundle and in the last web
+image in Artifact Registry. Reverse-engineering minified JS is slower than
+rewriting ~60 lines; try the rewrite first.
+
+### Then make this unlosable
+
+Once it builds, **commit `moderato/` into a repo** — either track it inside
+`loupe-web` again (delete the nested `.git` first) or push it as its own
+GitHub repo and depend on it properly. It was lost precisely because it was
+a nested repo that was never pushed. **ASK JEFFREY** which he prefers; do not
+choose for him.
+
+Verify:
+
+```bash
+cd ~/Loupe && npm install
+cd ~/Loupe/loupe-web && npm run typecheck && npm test
+```
 
 ---
 
