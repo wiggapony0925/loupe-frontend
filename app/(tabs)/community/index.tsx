@@ -10,7 +10,7 @@
  * Layout, top to bottom:
  *
  *   search + bell + compose   pinned; the page's three verbs
- *   Following · For You
+ *   For You · Following
  *   #chips                    (For You only — discovery needs an entry point)
  *   posts                     the river
  *

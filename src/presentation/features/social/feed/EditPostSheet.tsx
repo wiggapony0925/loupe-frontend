@@ -23,8 +23,16 @@ import { useEditPost } from "@/application/queries/social/useFeed";
 import { BottomSheet } from "@/presentation/components/BottomSheet";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { CaptionInput } from "./CaptionInput";
+import { DraftTags } from "./DraftTags";
 
 const MAX_BODY = 2200;
+/** The suggestion row's escape distance to the screen edges: the
+ *  BottomSheet shell's own padding (spacing.xl — the sheet is rendered
+ *  without `flush`) PLUS this body's padding below. Counting only the
+ *  body's 20 left the row clipping mid-air 24pt inside the screen. */
+const SHELL_PADDING = 24;
+const BODY_PADDING = 20;
+const EDGE_INSET = SHELL_PADDING + BODY_PADDING;
 
 export function EditPostSheet({
   post,
@@ -85,7 +93,13 @@ export function EditPostSheet({
           }}
           placeholder="Write a caption…"
           autoFocus
-        />
+          maxLength={MAX_BODY}
+          suggestionInsets={{ left: EDGE_INSET, right: EDGE_INSET }}
+        >
+          {/* Same pills the composer shows — right under the field, not
+              pinned to the sheet bottom by the input's flex. */}
+          <DraftTags body={body} />
+        </CaptionInput>
 
         {refusal ? (
           <View
@@ -139,7 +153,7 @@ export function EditPostSheet({
 }
 
 const styles = StyleSheet.create({
-  body: { flex: 1, paddingHorizontal: 20, paddingTop: 4 },
+  body: { flex: 1, paddingHorizontal: BODY_PADDING, paddingTop: 4 },
   refusal: {
     flexDirection: "row",
     alignItems: "flex-start",

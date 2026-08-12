@@ -40,6 +40,12 @@ export interface CaptionInputProps {
   placeholder?: string;
   autoFocus?: boolean;
   maxLength?: number;
+  /**
+   * How far this input sits from each screen edge — forwarded to the
+   * suggestion row so its chips can bleed edge-to-edge out of a padded
+   * (or avatar-indented) column. See HashtagRow.
+   */
+  suggestionInsets?: { left: number; right: number };
   /** Rendered under the field — the photo picker row, a card chip, etc. */
   children?: React.ReactNode;
 }
@@ -50,6 +56,7 @@ export function CaptionInput({
   placeholder = "Write a caption…",
   autoFocus = false,
   maxLength,
+  suggestionInsets,
   children,
 }: CaptionInputProps) {
   const p = useThemedPalette();
@@ -96,6 +103,8 @@ export function CaptionInput({
 
       <HashtagRow
         query={typingTag}
+        insetLeft={suggestionInsets?.left ?? 0}
+        insetRight={suggestionInsets?.right ?? 0}
         onPick={(tag) => {
           const next = completeHashtag(value, caret, tag);
           onChangeText(next.text);

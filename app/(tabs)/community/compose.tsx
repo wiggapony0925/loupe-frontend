@@ -14,10 +14,11 @@
  * two-step "create then attach" would leave a captionless post behind every
  * time the upload failed.
  */
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -29,8 +30,11 @@ import {
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
-import { router, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { ImagePlus, Layers, Play, ShieldAlert, X } from "lucide-react-native";
 import { useCreatePost } from "@/application/queries/social/useFeed";
 import { useModeratedSubmit } from "@/presentation/features/social/feed/useModeratedSubmit";
@@ -42,6 +46,7 @@ import {
   type PickedCard,
 } from "@/presentation/features/social/feed/CardPickerSheet";
 import { CaptionInput } from "@/presentation/features/social/feed/CaptionInput";
+import { DraftTags } from "@/presentation/features/social/feed/DraftTags";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 /** Matches the server's cap (`MAX_POST_BODY`). */
@@ -68,8 +73,14 @@ function mimeFromUri(uri: string, kind: "image" | "video"): string {
   return lower.endsWith(".png") ? "image/png" : "image/jpeg";
 }
 
+/** Page gutter · avatar · the writer row's gap — see suggestionInsets. */
+const GUTTER = 20;
+const AVATAR = 38;
+const WRITER_GAP = 12;
+
 export default function ComposeScreen() {
   const p = useThemedPalette();
+  const insets = useSafeAreaInsets();
   const me = useSocialMe();
   const create = useCreatePost();
   // The story camera's handoff: its capture arrives as params when the
@@ -81,8 +92,14 @@ export default function ComposeScreen() {
     prefill?: string;
   }>();
   // Every publish surface answers a refusal the same way — see the hook.
+  // The ref lets a successful publish walk PAST the discard guard below —
+  // a posted draft isn't being discarded, it's been kept.
+  const postedRef = useRef(false);
   const { submit, refusal, dismiss, pending } = useModeratedSubmit(create, {
-    onDone: () => router.back(),
+    onDone: () => {
+      postedRef.current = true;
+      router.back();
+    },
   });
 
   const [body, setBody] = useState(() =>
@@ -105,6 +122,48 @@ export default function ComposeScreen() {
   const canPost =
     (body.trim().length > 0 || images.length > 0 || card !== null) && !pending;
 
+  const dirty = body.trim().length > 0 || images.length > 0 || card !== null;
+
+  // The discard confirm must catch EVERY way off this screen — the Cancel
+  // button, the iOS edge swipe, Android's hardware/predictive back — or
+  // the paths people actually use are the ones that eat drafts. The
+  // navigator's beforeRemove is the one chokepoint they all pass through.
+  // Refs, not state, so the listener never acts on a stale closure.
+  const navigation = useNavigation();
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  useEffect(() => {
+    return navigation.addListener("beforeRemove", (e) => {
+      if (!dirtyRef.current || postedRef.current) return;
+      e.preventDefault();
+      Alert.alert("Discard post?", "Your draft won't be saved.", [
+        { text: "Keep writing", style: "cancel" },
+        {
+          text: "Discard",
+          style: "destructive",
+          onPress: () => navigation.dispatch(e.data.action),
+        },
+      ]);
+    });
+  }, [navigation]);
+
+  // Toolbar sits on the home indicator when the keyboard is down, but the
+  // moment the keyboard is up the KeyboardAvoidingView owns the spacing —
+  // keeping the inset then floats the toolbar 34pt above the keys.
+  const [keyboardUp, setKeyboardUp] = useState(false);
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const show = Keyboard.addListener(showEvent, () => setKeyboardUp(true));
+    const hide = Keyboard.addListener(hideEvent, () => setKeyboardUp(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
   const pick = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -123,6 +182,7 @@ export default function ComposeScreen() {
     });
     if (result.canceled) return;
     const drafts: Draft[] = [];
+    let tooLong = 0;
     for (const asset of result.assets) {
       const kind = asset.type === "video" ? "video" : "image";
       // Picker duration is milliseconds. Refuse long clips HERE, where the
@@ -133,10 +193,7 @@ export default function ComposeScreen() {
         typeof asset.duration === "number" &&
         asset.duration > MAX_VIDEO_SECONDS * 1000
       ) {
-        Alert.alert(
-          "Clip too long",
-          `Videos can be up to ${MAX_VIDEO_SECONDS} seconds. Trim it and try again.`,
-        );
+        tooLong += 1;
         continue;
       }
       drafts.push({
@@ -145,9 +202,26 @@ export default function ComposeScreen() {
         kind,
       });
     }
+    // ONE alert for the whole selection — a per-clip alert inside the loop
+    // stacked modals on a multi-select.
+    if (tooLong > 0) {
+      Alert.alert(
+        tooLong === 1 ? "Clip too long" : `${tooLong} clips too long`,
+        `Videos can be up to ${MAX_VIDEO_SECONDS} seconds. Trim and try again.`,
+      );
+    }
     if (drafts.length === 0) return;
-    setImages((current) => [...current, ...drafts].slice(0, MAX_IMAGES));
+    setImages((current) => {
+      // Re-picking an already-added asset would duplicate its uri — and
+      // React keys with it.
+      const have = new Set(current.map((draft) => draft.uri));
+      const fresh = drafts.filter((draft) => !have.has(draft.uri));
+      return [...current, ...fresh].slice(0, MAX_IMAGES);
+    });
   };
+
+  // Just a back — the beforeRemove guard above decides whether to ask.
+  const cancel = () => router.back();
 
   const publish = () => {
     if (!canPost) return;
@@ -160,10 +234,11 @@ export default function ComposeScreen() {
       <SafeAreaView edges={["top"]} style={styles.safe}>
         <View style={[styles.bar, { borderBottomColor: p.line.default }]}>
           <Pressable
-            onPress={() => router.back()}
-            hitSlop={8}
+            onPress={cancel}
+            hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Cancel"
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
           >
             <Text style={[styles.cancel, { color: p.ink.muted }]}>Cancel</Text>
           </Pressable>
@@ -173,12 +248,14 @@ export default function ComposeScreen() {
             disabled={!canPost}
             accessibilityRole="button"
             accessibilityLabel="Publish post"
-            style={[
+            accessibilityState={{ disabled: !canPost }}
+            style={({ pressed }) => [
               styles.post,
               {
                 backgroundColor: canPost
                   ? p.accent.mint
                   : withAlpha(p.ink.default, 0.1),
+                opacity: pressed && canPost ? 0.8 : 1,
               },
             ]}
           >
@@ -241,9 +318,21 @@ export default function ComposeScreen() {
                 }}
                 placeholder="What did you pull? Use #tags and @mentions."
                 autoFocus
-              />
+                maxLength={MAX_BODY}
+                suggestionInsets={{
+                  left: me.data?.profile
+                    ? GUTTER + AVATAR + WRITER_GAP
+                    : GUTTER,
+                  right: GUTTER,
+                }}
+              >
+                {/* The draft's tags as pills, right under the words that
+                    made them — tint in the field is a hint, a pill is a
+                    promise. Solid where the suggestions are washed, so
+                    chosen and offered never read as the same row. */}
+                <DraftTags body={body} />
+              </CaptionInput>
             </View>
-
 
             {images.length > 0 ? (
               <View style={styles.thumbs}>
@@ -278,12 +367,15 @@ export default function ComposeScreen() {
                           current.filter((_, i) => i !== index),
                         )
                       }
-                      hitSlop={6}
+                      hitSlop={10}
                       accessibilityRole="button"
                       accessibilityLabel={`Remove slide ${index + 1}`}
-                      style={styles.thumbRemove}
+                      style={({ pressed }) => [
+                        styles.thumbRemove,
+                        { opacity: pressed ? 0.7 : 1 },
+                      ]}
                     >
-                      <X size={13} color="#fff" strokeWidth={3} />
+                      <X size={14} color="#fff" strokeWidth={3} />
                     </Pressable>
                   </View>
                 ))}
@@ -324,9 +416,10 @@ export default function ComposeScreen() {
                 </View>
                 <Pressable
                   onPress={() => setCard(null)}
-                  hitSlop={8}
+                  hitSlop={14}
                   accessibilityRole="button"
                   accessibilityLabel="Remove the attached card"
+                  style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
                 >
                   <X size={15} color={p.ink.dim} strokeWidth={2.4} />
                 </Pressable>
@@ -335,14 +428,28 @@ export default function ComposeScreen() {
           </ScrollView>
 
 
-          <View style={[styles.tools, { borderTopColor: p.line.default }]}>
+          <View
+            style={[
+              styles.tools,
+              {
+                borderTopColor: p.line.default,
+                // Clear the home indicator when the keyboard is down; the
+                // KeyboardAvoidingView takes over when it's up.
+                paddingBottom: keyboardUp ? 12 : Math.max(insets.bottom, 12),
+              },
+            ]}
+          >
             <Pressable
               onPress={() => void pick()}
               disabled={images.length >= MAX_IMAGES}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="Add photos or videos"
-              style={styles.tool}
+              accessibilityState={{ disabled: images.length >= MAX_IMAGES }}
+              style={({ pressed }) => [
+                styles.tool,
+                { opacity: pressed ? 0.6 : 1 },
+              ]}
             >
               <ImagePlus
                 size={21}
@@ -368,7 +475,10 @@ export default function ComposeScreen() {
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="Attach a card from your vault"
-              style={styles.tool}
+              style={({ pressed }) => [
+                styles.tool,
+                { opacity: pressed ? 0.6 : 1 },
+              ]}
             >
               <Layers size={20} color={p.accent.mint} strokeWidth={2.2} />
               <Text style={[styles.toolText, { color: p.ink.default }]}>
@@ -435,9 +545,6 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   refusalText: { flex: 1, fontSize: 13.5, lineHeight: 19 },
-  preview: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 6 },
-  previewLabel: { fontSize: 10, fontWeight: "800", letterSpacing: 1.4 },
-  input: { flex: 1, fontSize: 16, lineHeight: 22, minHeight: 120, paddingTop: 8 },
   thumbs: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   thumb: { width: 96, height: 120, borderRadius: 12, overflow: "visible" },
   thumbImage: { width: 96, height: 120, borderRadius: 12, overflow: "hidden" },
@@ -448,11 +555,11 @@ const styles = StyleSheet.create({
   },
   thumbRemove: {
     position: "absolute",
-    top: -6,
-    right: -6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    top: -8,
+    right: -8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: "rgba(0,0,0,0.75)",
     alignItems: "center",
     justifyContent: "center",
@@ -462,7 +569,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 18,
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   tool: { flexDirection: "row", alignItems: "center", gap: 9 },

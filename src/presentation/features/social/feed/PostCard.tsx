@@ -16,7 +16,7 @@
  * with no idea whose it is and have to scroll PAST it to find out.
  */
 import React, { memo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
@@ -37,6 +37,7 @@ import { relativeTime } from "@/shared/format";
 import { routes } from "@/shared/routes";
 import { PostCaption } from "./PostCaption";
 import { PostMedia } from "./PostMedia";
+import { TagPill } from "./TagPill";
 
 export interface PostCardProps {
   post: PostWire;
@@ -310,30 +311,26 @@ function PostCardImpl({
       {/* ── The post's tags, as chips ── */}
       {/* Inline caption text can't wear a rounded box (RN ignores radius on
           nested Text runs), so the tags repeat under the caption as real
-          pills — the same mint-wash treatment as the trending rail. */}
+          pills — TagPill, shared with the trending rail. One scrollable
+          row, not a wrap: a many-tag post was costing the feed three lines
+          of pills, and every horizontal surface bleeds edge-to-edge (the
+          standing rule). */}
       {post.hashtags.length > 0 ? (
-        <View style={[styles.tagRow, { paddingHorizontal: gutter }]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tagRow}
+          contentContainerStyle={[styles.tagRowContent, { paddingHorizontal: gutter }]}
+        >
           {post.hashtags.map((tag) => (
-            <Pressable
+            <TagPill
               key={tag}
+              tag={tag}
+              size="sm"
               onPress={() => router.push(routes.communityTag(tag))}
-              accessibilityRole="button"
-              accessibilityLabel={`#${tag}`}
-              style={({ pressed }) => [
-                styles.tagChip,
-                {
-                  borderColor: withAlpha(p.accent.mint, 0.38),
-                  backgroundColor: withAlpha(p.accent.mint, 0.13),
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-            >
-              <Text style={[styles.tagText, { color: p.accent.mint }]}>
-                #{tag}
-              </Text>
-            </Pressable>
+            />
           ))}
-        </View>
+        </ScrollView>
       ) : null}
 
       <Text style={[styles.date, { color: p.ink.dim, paddingHorizontal: gutter }]}>
@@ -413,17 +410,6 @@ const styles = StyleSheet.create({
   action: { flexDirection: "row", alignItems: "center", gap: 7 },
   actionText: { fontSize: 13.5, fontWeight: "600" },
   date: { fontSize: 11.5, marginTop: 8 },
-  tagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 8,
-  },
-  tagChip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  tagText: { fontSize: 12, fontWeight: "700", letterSpacing: -0.2 },
+  tagRow: { marginTop: 8 },
+  tagRowContent: { flexDirection: "row", gap: 6 },
 });
