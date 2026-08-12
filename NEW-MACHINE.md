@@ -74,11 +74,11 @@ Final layout (using `~/Loupe` as the clone target; any name works):
 
 ```
 ~/Loupe/                     ← clone of the `loupe-web` REPO (workspace root)
-├── package.json             ← npm workspaces: ["packages/*", "loupe-web"]
+├── package.json             ← workspaces: ["packages/*", "moderato", "loupe-web"]
 ├── loupe-web/               ← the actual web app (Vite + React)
 ├── packages/                ← shared: auth chart core grade marketing theme tokens
 │   ├── auth/  chart/  core/  grade/  marketing/  theme/  tokens/
-├── moderato/                ← shared moderation package (source of truth)
+├── moderato/                ← NOT in the clone — gitignored. Rebuild it: §12
 ├── loupe-frontend/          ← clone of loupe-frontend repo (gitignored by parent)
 └── loupe-backend/           ← clone of loupe-backend repo (gitignored by parent)
 ```
@@ -103,6 +103,19 @@ sudo xcodebuild -license accept
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 xcodebuild -runFirstLaunch
 ```
+
+> **The moment Xcode finishes installing, it breaks `git` — and `brew`, and
+> `/usr/bin/python3`.** The App Store points `xcode-select` at `Xcode.app`,
+> whose license is unaccepted, and every tool routed through the developer
+> directory then refuses to run. So **accept the license as soon as Xcode
+> lands**, before it blocks you mid-task.
+>
+> To keep working while waiting on the human, route around it with the
+> Command Line Tools, which have no license gate:
+> `export DEVELOPER_DIR=/Library/Developer/CommandLineTools`
+>
+> Do not read `xcodebuild -version` as proof the license is accepted — that
+> one command is exempt from the check. Test with `git --version` instead.
 
 ### 2.2 Homebrew + CLI tooling
 
@@ -306,11 +319,23 @@ Then read any one back (this prints a secret — redirect it, never echo it):
 gcloud secrets versions access latest --secret=<NAME> --project loupe-app-56235
 ```
 
-Provider keys referenced by `.env.example` that may need recovering:
-`POKEMON_TCG_API_KEY`, `TCGPLAYER_CLIENT_ID` / `TCGPLAYER_CLIENT_SECRET`,
-`EBAY_APP_ID` / `EBAY_CERT_ID` / `EBAY_OAUTH_TOKEN`, `PRICECHARTING_API_KEY`,
-`SCI_API_KEY`, `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`, and
-`OPENAI_API_KEY` (content moderation).
+`.env.example` carries **65 keys** — read the file rather than trusting any
+list here. They group roughly as:
+
+- **Card catalog / pricing:** `POKEMON_TCG_API_KEY`, `TCGPLAYER_CLIENT_ID` /
+  `_SECRET`, `EBAY_APP_ID` / `EBAY_CERT_ID` / `EBAY_OAUTH_TOKEN`,
+  `PRICECHARTING_API_KEY`, `SCI_API_KEY`, `PSA_API_TOKEN`,
+  `GOCOLLECT_API_KEY`, `APIFY_API_TOKEN` / `APIFY_FB_MARKETPLACE_ACTOR`
+- **Billing:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+  `STRIPE_PRICE_PRO_MONTHLY` / `_YEARLY`
+- **Email:** `RESEND_API_KEY`, `NOTIFICATIONS_FROM_EMAIL`, `ADMIN_EMAILS`
+- **Observability:** `SENTRY_DSN` and its sample-rate pair
+- **Storage:** `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`
+
+**`OPENAI_API_KEY` is NOT in `.env.example`** even though the code reads it
+(`get_settings().openai_api_key`) — it is what switches content moderation
+on. Absent, screening is deliberately OFF rather than failing, which is the
+correct dev default. Add the key by hand only when working on moderation.
 
 **Important:** most of these are optional for local development — the code
 degrades gracefully when a key is absent (moderation, for example,
