@@ -102,7 +102,8 @@ async function hashImage(buf) {
 async function downloadImage(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`image ${url} → ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
+  return Buf
+  fer.from(await res.arrayBuffer());
 }
 
 async function runWithConcurrency(items, n, fn) {

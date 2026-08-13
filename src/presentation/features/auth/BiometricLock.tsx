@@ -45,9 +45,11 @@ import {
   authenticateBiometric,
   getBiometricCapability,
 } from "@/infrastructure/biometrics";
+import { AuroraField } from "@/presentation/brand/AuroraField";
+import { FaceScan } from "@/presentation/features/auth/FaceScan";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import { useAuth } from "@/presentation/providers/AuthProvider";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 
 const ON_MINT = "#06140d";
 
@@ -75,6 +77,8 @@ export function BiometricLock() {
   const [obscured, setObscured] = useState(false);
   const [active, setActive] = useState(true);
   const [label, setLabel] = useState("Face ID");
+  const [scanning, setScanning] = useState(false);
+  const [failed, setFailed] = useState(false);
   const attempting = useRef(false);
 
   const userId = user?.id ? String(user.id) : null;
@@ -115,6 +119,8 @@ export function BiometricLock() {
   const tryUnlock = useCallback(async () => {
     if (attempting.current) return;
     attempting.current = true;
+    setScanning(true);
+    setFailed(false);
     try {
       const ok = await authenticateBiometric("Unlock Loupe");
       if (ok) {
@@ -122,8 +128,17 @@ export function BiometricLock() {
           Haptics.NotificationFeedbackType.Success,
         ).catch(() => {});
         setLocked(false);
+      } else {
+        // A cancel and a non-match look the same from here, and that is
+        // fine: both mean "still locked, try when ready". No shake, no
+        // scolding — the frame just goes rose for a beat.
+        setFailed(true);
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        ).catch(() => {});
       }
     } finally {
+      setScanning(false);
       attempting.current = false;
     }
   }, []);
@@ -151,24 +166,28 @@ export function BiometricLock() {
       statusBarTranslucent
     >
       <View style={[styles.root, { backgroundColor: p.bg.base }]}>
+        {/* Same light as the sign-in screens — the lock is a door into
+            Loupe, so it should look like one, not like an error page. */}
+        <AuroraField variant="subtle" height={460} />
         <View style={styles.center}>
-          {user ? (
-            <SocialAvatar
-              handle={user.email}
-              name={user.display_name}
-              url={user.avatar_url}
-              size={64}
-            />
-          ) : (
-            <View
-              style={[
-                styles.iconRing,
-                { backgroundColor: withAlpha(p.accent.mint, 0.13) },
-              ]}
-            >
-              <ScanFace size={30} color={p.accent.mint} strokeWidth={2} />
-            </View>
-          )}
+          {/* The user's own face, framed by the scanner. On a lock screen
+              the avatar is the reassurance: it says WHOSE session this is
+              before it asks anything of you. */}
+          <FaceScan
+            state={scanning ? "scanning" : failed ? "failed" : "idle"}
+            size={148}
+          >
+            {user ? (
+              <SocialAvatar
+                handle={user.email}
+                name={user.display_name}
+                url={user.avatar_url}
+                size={74}
+              />
+            ) : (
+              <ScanFace size={38} color={p.accent.mint} strokeWidth={1.8} />
+            )}
+          </FaceScan>
           <Text style={[styles.title, { color: p.ink.default }]}>
             {name ? `Welcome back, ${name}` : "Welcome back"}
           </Text>
@@ -176,7 +195,11 @@ export function BiometricLock() {
               snapshot isn't someone's portfolio. */}
           {showCover ? null : (
             <Text style={[styles.subtitle, { color: p.ink.muted }]}>
-              Loupe is locked
+              {failed
+                ? `${label} didn't confirm — tap to try again`
+                : scanning
+                  ? "Looking…"
+                  : "Loupe is locked"}
             </Text>
           )}
         </View>
@@ -219,18 +242,11 @@ export function BiometricLock() {
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: "center", justifyContent: "center" },
   center: { alignItems: "center", gap: 12 },
-  iconRing: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   title: {
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: "800",
-    letterSpacing: -0.5,
-    marginTop: 6,
+    letterSpacing: -0.6,
+    marginTop: 18,
   },
   subtitle: { fontSize: 14.5 },
   actions: {

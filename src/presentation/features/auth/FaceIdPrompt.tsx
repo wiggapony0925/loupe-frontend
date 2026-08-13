@@ -1,17 +1,19 @@
 /**
- * FaceIdPrompt — the one-time "want Face ID?" sheet after login.
+ * FaceIdPrompt — the one-time offer, right after a password.
  *
- * The Chase moment: you've just typed your password, which is exactly
- * when being promised you won't have to again lands best. Shown once per
- * account (biometricStore.promptSeenBy), only when the device can
- * actually do it, and only after the first-login HomeTour is out of the
- * way — two overlays stacked on a brand-new user is a hazing ritual.
+ * The Chase moment: you have JUST typed your password, which is the only
+ * time "you won't have to do that again" means anything. Asked once per
+ * account, only on a device that can actually do it, and only after the
+ * first-login tour is out of the way — two overlays stacked on a brand-new
+ * account is a hazing ritual.
  *
- * "Not now" is a real answer: it marks the prompt seen and never asks
- * again. The Settings row stays as the way back in.
+ * "Not now" is a real answer, not a delay: it marks the prompt seen and
+ * never asks again. Settings is the way back in. A prompt that returns
+ * after you declined it is how people learn to distrust prompts.
  */
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { router } from "expo-router";
 import { ScanFace } from "lucide-react-native";
 import { useBiometrics } from "@/application/stores/biometricStore";
@@ -19,8 +21,9 @@ import { useOnboarding } from "@/application/stores/onboardingStore";
 import { getBiometricCapability } from "@/infrastructure/biometrics";
 import { BottomSheet } from "@/presentation/components/BottomSheet";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
+import { FaceScan } from "@/presentation/features/auth/FaceScan";
 import { useAuth } from "@/presentation/providers/AuthProvider";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { useThemedPalette } from "@/presentation/theme/tokens";
 
 export function FaceIdPrompt() {
   const p = useThemedPalette();
@@ -64,55 +67,56 @@ export function FaceIdPrompt() {
     <BottomSheet
       visible={visible}
       onClose={dismiss}
-      title={`Sign in with ${label}`}
-      subtitle="Tired of typing your password?"
+      title={`That's the last time`}
+      subtitle={`Use ${label} from now on`}
       compact
       overlay
     >
       <View style={styles.body}>
-        <View
-          style={[
-            styles.hero,
-            { backgroundColor: withAlpha(p.accent.mint, 0.13) },
-          ]}
+        <Animated.View entering={FadeIn.duration(380)} style={styles.hero}>
+          <FaceScan state="idle" size={104}>
+            <ScanFace size={34} color={p.accent.mint} strokeWidth={1.6} />
+          </FaceScan>
+        </Animated.View>
+
+        <Animated.Text
+          entering={FadeInDown.duration(380).delay(80)}
+          style={[styles.copy, { color: p.ink.muted }]}
         >
-          <ScanFace size={26} color={p.accent.mint} strokeWidth={1.9} />
-        </View>
-        <Text style={[styles.copy, { color: p.ink.muted }]}>
-          Loupe can lock itself when you leave and open with a glance —
-          no password, ever again on this phone.
-        </Text>
-        <PrimaryButton
-          label={`Set up ${label}`}
-          variant="mint"
-          onPress={() => {
-            dismiss();
-            router.push("/face-id");
-          }}
-        />
-        <Text
-          onPress={dismiss}
-          accessibilityRole="button"
-          style={[styles.later, { color: p.ink.muted }]}
+          Loupe can lock when you leave and open with a glance. Your face
+          never leaves the phone — iOS just answers yes.
+        </Animated.Text>
+
+        <Animated.View
+          entering={FadeInDown.duration(380).delay(140)}
+          style={styles.actions}
         >
-          Not now
-        </Text>
+          <PrimaryButton
+            label={`Turn on ${label}`}
+            variant="mint"
+            onPress={() => {
+              dismiss();
+              router.push("/face-id");
+            }}
+          />
+          <Text
+            onPress={dismiss}
+            accessibilityRole="button"
+            style={[styles.later, { color: p.ink.muted }]}
+          >
+            Not now
+          </Text>
+        </Animated.View>
       </View>
     </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { gap: 16, paddingTop: 4, alignItems: "stretch" },
-  hero: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-  },
+  body: { gap: 18, paddingTop: 8, alignItems: "stretch" },
+  hero: { alignItems: "center" },
   copy: { fontSize: 14.5, lineHeight: 20.5, textAlign: "center" },
+  actions: { gap: 14, alignItems: "stretch" },
   later: {
     fontSize: 14.5,
     fontWeight: "600",
