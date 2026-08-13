@@ -42,7 +42,10 @@ const BACKEND_CONTRACTS = join(APP_ROOT, "..", "loupe-backend", "contracts");
 
 const argv = new Set(process.argv.slice(2));
 const STRICT = argv.has("--strict");
-const CHECK_ONLY = argv.has("--check");
+// --strict implies --check: CI verifies, it does not write. A CI job that
+// republished the contract would rewrite the very artifact it is meant to be
+// checking against, and the gate would pass by construction every time.
+const CHECK_ONLY = argv.has("--check") || STRICT;
 
 /**
  * Compare paths without caring how the parameter is spelled.
