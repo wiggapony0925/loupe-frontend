@@ -57,7 +57,10 @@
     "pipeline:check": "node scripts/pipeline.mjs check",
     "pipeline:ship": "node scripts/pipeline.mjs ship",
     "pipeline:build": "node scripts/pipeline.mjs build",
-    "pipeline:cloud": "node scripts/pipeline.mjs cloud"
+    "pipeline:cloud": "node scripts/pipeline.mjs cloud",
+    "contract:publish": "node scripts/publish-contract.mjs",
+    "contract:check": "node scripts/publish-contract.mjs --check",
+    "contract:ci": "node scripts/publish-contract.mjs --strict"
   },
   "dependencies": {
     "@expo/html-elements": "^0.10.1",

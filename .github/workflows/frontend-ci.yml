@@ -39,6 +39,22 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # The consumer half of consumer-driven contracts. This does NOT publish —
+      # it asserts that contracts/loupe-frontend.contract.json still describes
+      # this app, i.e. that every endpoint the source calls is declared.
+      #
+      # Without it the contract rots the quiet way: someone adds a call, never
+      # adds a contract entry, and the backend's can-i-deploy gate keeps passing
+      # green while being free to delete the endpoint underneath us. A contract
+      # that silently stops covering the app is worse than no contract, because
+      # the green check is trusted.
+      #
+      # When this fails: add the endpoint to the contract and run
+      # `npm run contract:publish`, then commit the published copy in
+      # loupe-backend so its CI verifies against the new surface.
+      - name: Contract still describes this app
+        run: npm run contract:ci
+
       - name: Test
         run: npm run test:ci
 
