@@ -41,17 +41,13 @@ import {
 import * as Haptics from "expo-haptics";
 import { ScanFace } from "lucide-react-native";
 import { useBiometrics } from "@/application/stores/biometricStore";
-import {
-  authenticateBiometric,
-  getBiometricCapability,
-} from "@/infrastructure/biometrics";
+import { authenticateBiometric, getBiometricCapability } from "@/infrastructure/biometrics";
 import { AuroraField } from "@/presentation/brand/AuroraField";
+import { PrimaryButton } from "@/presentation/components/PrimaryButton";
 import { FaceScan } from "@/presentation/features/auth/FaceScan";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { useThemedPalette } from "@/presentation/theme/tokens";
-
-const ON_MINT = "#06140d";
 
 export function BiometricLock() {
   const p = useThemedPalette();
@@ -62,14 +58,10 @@ export function BiometricLock() {
   // The store rehydrates from AsyncStorage asynchronously, so `deviceArmed`
   // is false on the very first render even for someone who armed the lock.
   // Deciding then would leave the app open. Wait for hydration, THEN decide.
-  const [hydrated, setHydrated] = useState(() =>
-    useBiometrics.persist.hasHydrated(),
-  );
+  const [hydrated, setHydrated] = useState(() => useBiometrics.persist.hasHydrated());
   useEffect(() => {
     if (hydrated) return;
-    const done = useBiometrics.persist.onFinishHydration(() =>
-      setHydrated(true),
-    );
+    const done = useBiometrics.persist.onFinishHydration(() => setHydrated(true));
     return done;
   }, [hydrated]);
 
@@ -124,18 +116,14 @@ export function BiometricLock() {
     try {
       const ok = await authenticateBiometric("Unlock Loupe");
       if (ok) {
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success,
-        ).catch(() => {});
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         setLocked(false);
       } else {
         // A cancel and a non-match look the same from here, and that is
         // fine: both mean "still locked, try when ready". No shake, no
         // scolding — the frame just goes rose for a beat.
         setFailed(true);
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Warning,
-        ).catch(() => {});
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
       }
     } finally {
       setScanning(false);
@@ -173,10 +161,7 @@ export function BiometricLock() {
           {/* The user's own face, framed by the scanner. On a lock screen
               the avatar is the reassurance: it says WHOSE session this is
               before it asks anything of you. */}
-          <FaceScan
-            state={scanning ? "scanning" : failed ? "failed" : "idle"}
-            size={148}
-          >
+          <FaceScan state={scanning ? "scanning" : failed ? "failed" : "idle"} size={148}>
             {user ? (
               <SocialAvatar
                 handle={user.email}
@@ -206,18 +191,21 @@ export function BiometricLock() {
 
         {showCover ? null : (
           <View style={styles.actions}>
-            <Pressable
-              onPress={() => void tryUnlock()}
-              accessibilityRole="button"
-              accessibilityLabel={`Unlock with ${label}`}
-              style={({ pressed }) => [
-                styles.unlock,
-                { backgroundColor: p.accent.mint, opacity: pressed ? 0.85 : 1 },
-              ]}
-            >
-              <ScanFace size={19} color={ON_MINT} strokeWidth={2.4} />
-              <Text style={styles.unlockText}>Unlock with {label}</Text>
-            </Pressable>
+            {/* The same button component the sign-in form submits with, rather
+                than a lookalike. This was a hand-rolled Pressable with its own
+                radius, padding and gradient-free flat fill, so the first thing
+                you touched each morning was subtly not the button you had used
+                to sign in. */}
+            <View style={styles.unlockWrap}>
+              <PrimaryButton
+                label={`Unlock with ${label}`}
+                icon={ScanFace}
+                onPress={() => void tryUnlock()}
+                loading={scanning}
+                variant="mint"
+                accessibilityLabel={`Unlock with ${label}`}
+              />
+            </View>
             <Pressable
               onPress={() => {
                 setLocked(false);
@@ -228,9 +216,7 @@ export function BiometricLock() {
               hitSlop={10}
               style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
             >
-              <Text style={[styles.switch, { color: p.ink.muted }]}>
-                Switch account
-              </Text>
+              <Text style={[styles.switch, { color: p.ink.muted }]}>Switch account</Text>
             </Pressable>
           </View>
         )}
@@ -242,13 +228,18 @@ export function BiometricLock() {
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: "center", justifyContent: "center" },
   center: { alignItems: "center", gap: 12 },
+  // Same scale as AuthHeader, so the lock reads as the front door of the same
+  // building as the sign-in form rather than a separate, smaller screen.
+  // Centred rather than left-aligned because this is a single focal moment,
+  // not a form you work down.
   title: {
-    fontSize: 23,
+    fontSize: 29,
     fontWeight: "800",
-    letterSpacing: -0.6,
+    letterSpacing: -0.9,
     marginTop: 18,
+    textAlign: "center",
   },
-  subtitle: { fontSize: 14.5 },
+  subtitle: { fontSize: 14.5, lineHeight: 20, textAlign: "center" },
   actions: {
     position: "absolute",
     bottom: 64,
@@ -257,20 +248,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 22,
   },
-  unlock: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 9,
-    alignSelf: "stretch",
-    borderRadius: 999,
-    paddingVertical: 15,
-  },
-  unlockText: {
-    color: ON_MINT,
-    fontSize: 15.5,
-    fontWeight: "800",
-    letterSpacing: -0.2,
-  },
+  unlockWrap: { alignSelf: "stretch" },
   switch: { fontSize: 14, fontWeight: "600" },
 });

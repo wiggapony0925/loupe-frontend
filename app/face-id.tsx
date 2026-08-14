@@ -20,28 +20,19 @@
  *                fact, and turning it off is available but quiet.
  */
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  Check,
-  ChevronLeft,
-  Fingerprint,
-  KeyRound,
-  Lock,
-  ScanFace,
-  Zap,
-} from "lucide-react-native";
+import { Check, Fingerprint, KeyRound, Lock, ScanFace, Zap } from "lucide-react-native";
 import { useBiometrics } from "@/application/stores/biometricStore";
-import { AuroraField } from "@/presentation/brand/AuroraField";
 import {
   authenticateBiometric,
   getBiometricCapability,
   type BiometricCapability,
 } from "@/infrastructure/biometrics";
 import { PrimaryButton } from "@/presentation/components/PrimaryButton";
+import { AuthHeader } from "@/presentation/features/auth/AuthHeader";
+import { AuthScreen } from "@/presentation/features/auth/AuthScreen";
 import { FaceScan, type FaceScanState } from "@/presentation/features/auth/FaceScan";
 import { useAuth } from "@/presentation/providers/AuthProvider";
 import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
@@ -50,9 +41,7 @@ export default function FaceIdScreen() {
   const p = useThemedPalette();
   const { user } = useAuth();
   const userId = user?.id ? String(user.id) : null;
-  const enabled = useBiometrics((s) =>
-    userId ? Boolean(s.enabledBy[userId]) : false,
-  );
+  const enabled = useBiometrics((s) => (userId ? Boolean(s.enabledBy[userId]) : false));
   const setEnabled = useBiometrics((s) => s.setEnabled);
   const markPromptSeen = useBiometrics((s) => s.markPromptSeen);
 
@@ -88,14 +77,10 @@ export default function FaceIdScreen() {
       if (ok) {
         setEnabled(userId, true);
         markPromptSeen(userId);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
-          () => {},
-        );
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       } else {
         setFailed(true);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
-          () => {},
-        );
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
       }
     } finally {
       setBusy(false);
@@ -110,148 +95,112 @@ export default function FaceIdScreen() {
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: p.bg.base }]}>
-      <AuroraField variant="subtle" height={420} />
-      <SafeAreaView edges={["top", "bottom"]} style={styles.safe}>
-        <View style={styles.bar}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            style={({ pressed }) => [
-              styles.back,
-              {
-                backgroundColor: p.bg.elevated,
-                borderColor: p.line.default,
-                opacity: pressed ? 0.6 : 1,
-              },
-            ]}
-          >
-            <ChevronLeft size={20} color={p.ink.default} />
-          </Pressable>
-        </View>
+    <AuthScreen>
+      {/* The scan motif is the one thing on this screen that is not on the
+          sign-in form, so it leads — centred above a header that is otherwise
+          identical to sign-in's, at the same type scale and left alignment. */}
+      <Animated.View entering={FadeIn.duration(420)} style={styles.heroWrap}>
+        <FaceScan state={scanState} size={148}>
+          {enabled && !busy ? (
+            <Check size={44} color={p.accent.mint} strokeWidth={2.6} />
+          ) : isFace ? (
+            <ScanFace size={46} color={failed ? p.accent.rose : p.accent.mint} strokeWidth={1.6} />
+          ) : (
+            <Fingerprint size={46} color={p.accent.mint} strokeWidth={1.6} />
+          )}
+        </FaceScan>
+      </Animated.View>
 
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          <Animated.View entering={FadeIn.duration(420)} style={styles.heroWrap}>
-            <FaceScan state={scanState} size={148}>
-              {enabled && !busy ? (
-                <Check size={44} color={p.accent.mint} strokeWidth={2.6} />
-              ) : isFace ? (
-                <ScanFace
-                  size={46}
-                  color={failed ? p.accent.rose : p.accent.mint}
-                  strokeWidth={1.6}
-                />
-              ) : (
-                <Fingerprint size={46} color={p.accent.mint} strokeWidth={1.6} />
-              )}
-            </FaceScan>
-          </Animated.View>
+      <AuthHeader
+        title={
+          unavailable
+            ? `${label} isn't set up`
+            : enabled
+              ? `${label} is on`
+              : busy
+                ? "Look at your phone"
+                : "Never type your password again"
+        }
+        subtitle={
+          unavailable
+            ? `This phone has no ${label} enrolled yet. Add it in Settings ▸ ${label} & Passcode, then come back — it takes a minute.`
+            : enabled
+              ? `Loupe locks the moment you leave and opens the instant it sees you. Your session is held in the iOS Keychain on this phone.`
+              : failed
+                ? `${label} didn't confirm that time. No harm done — try again whenever you're ready.`
+                : `Loupe locks itself when you leave and opens with a glance. One look instead of a password, every time.`
+        }
+      />
 
-          <Animated.View entering={FadeInDown.duration(420).delay(80)}>
-            <Text style={[styles.title, { color: p.ink.default }]}>
-              {unavailable
-                ? `${label} isn't set up`
-                : enabled
-                  ? `${label} is on`
-                  : busy
-                    ? "Look at your phone"
-                    : "Never type your password again"}
-            </Text>
-            <Text style={[styles.copy, { color: p.ink.muted }]}>
-              {unavailable
-                ? `This phone has no ${label} enrolled yet. Add it in Settings ▸ ${label} & Passcode, then come back — it takes a minute.`
-                : enabled
-                  ? `Loupe locks the moment you leave and opens the instant it sees you. Your session is held in the iOS Keychain on this phone.`
-                  : failed
-                    ? `${label} didn't confirm that time. No harm done — try again whenever you're ready.`
-                    : `Loupe locks itself when you leave and opens with a glance. One look instead of a password, every time.`}
-            </Text>
-          </Animated.View>
+      {!unavailable ? (
+        <Animated.View entering={FadeInDown.duration(420).delay(160)} style={styles.points}>
+          <Point
+            icon={<Zap size={16} color={p.accent.mint} strokeWidth={2.4} />}
+            title="Instant"
+            body={`A glance replaces your password on this phone.`}
+            p={p}
+          />
+          <Point
+            icon={<Lock size={16} color={p.accent.mint} strokeWidth={2.4} />}
+            title="Nothing leaves the phone"
+            body="Your face never reaches Loupe — iOS answers yes or no, and the session stays in the Keychain."
+            p={p}
+          />
+          <Point
+            icon={<KeyRound size={16} color={p.accent.mint} strokeWidth={2.4} />}
+            title="Always a way in"
+            body={`If ${label} can't see you, your passcode works — and "Switch account" is always on the lock screen.`}
+            p={p}
+          />
+        </Animated.View>
+      ) : null}
 
-          {!unavailable ? (
-            <Animated.View
-              entering={FadeInDown.duration(420).delay(160)}
-              style={styles.points}
+      <Animated.View entering={FadeInDown.duration(420).delay(240)} style={styles.actions}>
+        {unavailable ? null : enabled ? (
+          <>
+            <View
+              style={[
+                styles.onBadge,
+                {
+                  borderColor: withAlpha(p.accent.mint, 0.38),
+                  backgroundColor: withAlpha(p.accent.mint, 0.12),
+                },
+              ]}
             >
-              <Point
-                icon={<Zap size={16} color={p.accent.mint} strokeWidth={2.4} />}
-                title="Instant"
-                body={`A glance replaces your password on this phone.`}
-                p={p}
-              />
-              <Point
-                icon={<Lock size={16} color={p.accent.mint} strokeWidth={2.4} />}
-                title="Nothing leaves the phone"
-                body="Your face never reaches Loupe — iOS answers yes or no, and the session stays in the Keychain."
-                p={p}
-              />
-              <Point
-                icon={<KeyRound size={16} color={p.accent.mint} strokeWidth={2.4} />}
-                title="Always a way in"
-                body={`If ${label} can't see you, your passcode works — and "Switch account" is always on the lock screen.`}
-                p={p}
-              />
-            </Animated.View>
-          ) : null}
-
-          <Animated.View
-            entering={FadeInDown.duration(420).delay(240)}
-            style={styles.actions}
-          >
-            {unavailable ? null : enabled ? (
-              <>
-                <View
-                  style={[
-                    styles.onBadge,
-                    {
-                      borderColor: withAlpha(p.accent.mint, 0.38),
-                      backgroundColor: withAlpha(p.accent.mint, 0.12),
-                    },
-                  ]}
-                >
-                  <Check size={15} color={p.accent.mint} strokeWidth={3} />
-                  <Text style={[styles.onBadgeText, { color: p.accent.mint }]}>
-                    Unlocking with {label}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={turnOff}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Turn off ${label}`}
-                  hitSlop={10}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.55 : 1 })}
-                >
-                  <Text style={[styles.off, { color: p.ink.muted }]}>
-                    Turn off {label}
-                  </Text>
-                </Pressable>
-              </>
-            ) : (
-              <PrimaryButton
-                label={
-                  !ready
-                    ? "Loading your account…"
-                    : busy
-                      ? `Waiting for ${label}…`
-                      : failed
-                        ? "Try again"
-                        : `Turn on ${label}`
-                }
-                onPress={() => void turnOn()}
-                loading={busy}
-                disabled={!ready}
-                variant="mint"
-              />
-            )}
-          </Animated.View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+              <Check size={15} color={p.accent.mint} strokeWidth={3} />
+              <Text style={[styles.onBadgeText, { color: p.accent.mint }]}>
+                Unlocking with {label}
+              </Text>
+            </View>
+            <Pressable
+              onPress={turnOff}
+              accessibilityRole="button"
+              accessibilityLabel={`Turn off ${label}`}
+              hitSlop={10}
+              style={({ pressed }) => ({ opacity: pressed ? 0.55 : 1 })}
+            >
+              <Text style={[styles.off, { color: p.ink.muted }]}>Turn off {label}</Text>
+            </Pressable>
+          </>
+        ) : (
+          <PrimaryButton
+            label={
+              !ready
+                ? "Loading your account…"
+                : busy
+                  ? `Waiting for ${label}…`
+                  : failed
+                    ? "Try again"
+                    : `Turn on ${label}`
+            }
+            onPress={() => void turnOn()}
+            loading={busy}
+            disabled={!ready}
+            variant="mint"
+          />
+        )}
+      </Animated.View>
+    </AuthScreen>
   );
 }
 
@@ -268,12 +217,7 @@ function Point({
 }) {
   return (
     <View style={styles.point}>
-      <View
-        style={[
-          styles.pointIcon,
-          { backgroundColor: withAlpha(p.accent.mint, 0.12) },
-        ]}
-      >
+      <View style={[styles.pointIcon, { backgroundColor: withAlpha(p.accent.mint, 0.12) }]}>
         {icon}
       </View>
       <View style={styles.pointText}>
@@ -284,29 +228,15 @@ function Point({
   );
 }
 
+// The screen chrome — background, aurora, safe area, keyboard avoidance, back
+// button, scroll behaviour and the 18px rhythm between blocks — all comes from
+// AuthScreen now, and the title/subtitle scale from AuthHeader. This file used
+// to reimplement every one of those, which is why it drifted from sign-in: two
+// copies of a layout only stay identical for as long as someone remembers they
+// are meant to be.
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  safe: { flex: 1 },
-  bar: { paddingHorizontal: 16, paddingTop: 4 },
-  back: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: { paddingHorizontal: 26, paddingTop: 18, paddingBottom: 40, gap: 22 },
-  heroWrap: { alignItems: "center", marginTop: 8, marginBottom: 4 },
-  title: {
-    fontSize: 29,
-    fontWeight: "800",
-    letterSpacing: -0.9,
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  copy: { fontSize: 15, lineHeight: 21.5, textAlign: "center" },
-  points: { gap: 16, marginTop: 4 },
+  heroWrap: { alignItems: "center", marginBottom: 2 },
+  points: { gap: 16 },
   point: { flexDirection: "row", gap: 13, alignItems: "flex-start" },
   pointIcon: {
     width: 32,
@@ -318,7 +248,7 @@ const styles = StyleSheet.create({
   pointText: { flex: 1, gap: 2 },
   pointTitle: { fontSize: 14.5, fontWeight: "700", letterSpacing: -0.2 },
   pointBody: { fontSize: 13.5, lineHeight: 19 },
-  actions: { gap: 18, marginTop: 6, alignItems: "stretch" },
+  actions: { gap: 18, alignItems: "stretch" },
   onBadge: {
     flexDirection: "row",
     alignItems: "center",
