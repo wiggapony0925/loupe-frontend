@@ -24,7 +24,7 @@ import { feedPosts, useHashtagPosts } from "@/application/queries/social/useFeed
 import { PostGrid } from "@/presentation/features/social/feed/PostGrid";
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { useScreenTransition } from "@/presentation/navigation/screenMotion";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { ON_MINT, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
 type Sort = "top" | "recent";
@@ -67,8 +67,7 @@ export default function HashtagScreen() {
           contentContainerStyle={styles.content}
           onScroll={(e) => {
             const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-            const nearEnd =
-              layoutMeasurement.height + contentOffset.y >= contentSize.height - 600;
+            const nearEnd = layoutMeasurement.height + contentOffset.y >= contentSize.height - 600;
             if (nearEnd && posts.hasNextPage && !posts.isFetchingNextPage) {
               void posts.fetchNextPage();
             }
@@ -78,12 +77,7 @@ export default function HashtagScreen() {
           {/* Identity: the glyph and the size, so the page says what it is
               before any content loads. */}
           <View style={styles.head}>
-            <View
-              style={[
-                styles.glyph,
-                { backgroundColor: withAlpha(p.accent.mint, 0.14) },
-              ]}
-            >
+            <View style={[styles.glyph, { backgroundColor: withAlpha(p.accent.mint, 0.14) }]}>
               <Hash size={26} color={p.accent.mint} strokeWidth={2.6} />
             </View>
             <View style={styles.headText}>
@@ -216,5 +210,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
   },
-  ctaText: { fontSize: 14, fontWeight: "800", color: "#06140d" },
+  ctaText: { fontSize: 14, fontWeight: "800", color: ON_MINT },
 });

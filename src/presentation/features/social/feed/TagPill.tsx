@@ -15,10 +15,7 @@
  */
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
-
-/** Text drawn on solid mint — same ink as every mint CTA in the app. */
-const ON_MINT = "#06140d";
+import { ON_MINT, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 
 export interface TagPillProps {
   /** Without the leading `#` — the pill draws it. */
@@ -51,13 +48,9 @@ export function TagPill({
   };
   const body = (
     <>
-      <Text style={[s.text, { color: active ? ON_MINT : p.accent.mint }]}>
-        #{tag}
-      </Text>
+      <Text style={[s.text, { color: active ? ON_MINT : p.accent.mint }]}>#{tag}</Text>
       {count !== undefined && count > 0 ? (
-        <Text style={[s.count, { color: active ? ON_MINT : p.ink.dim }]}>
-          {count}
-        </Text>
+        <Text style={[s.count, { color: active ? ON_MINT : p.ink.dim }]}>{count}</Text>
       ) : null}
     </>
   );
@@ -71,16 +64,22 @@ export function TagPill({
       accessibilityRole="button"
       accessibilityLabel={
         accessibilityLabel ??
-        (count !== undefined && count > 0
-          ? `#${tag}, ${count} posts`
-          : `#${tag}`)
+        (count !== undefined && count > 0 ? `#${tag}, ${count} posts` : `#${tag}`)
       }
-      // The sm pill is well under the 44pt guideline on its own; vertical
-      // slop makes the touch target honest. Horizontal slop stays inside
-      // the row's 6pt gap — generous sideways slop made neighboring pills'
-      // targets overlap, and an edge tap could open the WRONG tag.
+      // Vertical slop makes the touch target honest; horizontal slop is
+      // HALF THE ROW'S GAP on each side, so neighbours meet exactly at the
+      // midpoint and never overlap. An overlapping edge tap opens the WRONG
+      // tag — in the composer's suggestion row it inserts the wrong hashtag
+      // into someone's caption.
+      //
+      // sm rows gap 6 (PostCard.tagRowContent) → 3 a side.
+      // md rows gap 8 (HashtagRow, HashtagChips) → 4 a side. This used to be
+      // the shorthand `6`, which applies to all four edges: two neighbours
+      // claimed 12pt across an 8pt gap and overlapped by 4.
       hitSlop={
-        size === "sm" ? { top: 10, bottom: 10, left: 3, right: 3 } : 6
+        size === "sm"
+          ? { top: 10, bottom: 10, left: 3, right: 3 }
+          : { top: 6, bottom: 6, left: 4, right: 4 }
       }
       style={({ pressed }) => [s.chip, chrome, { opacity: pressed ? 0.7 : 1 }]}
     >

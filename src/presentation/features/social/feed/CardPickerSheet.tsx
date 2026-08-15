@@ -89,10 +89,7 @@ export function CardPickerSheet({
     >
       <View style={styles.searchWrap}>
         <View
-          style={[
-            styles.search,
-            { borderColor: p.line.default, backgroundColor: p.bg.elevated },
-          ]}
+          style={[styles.search, { borderColor: p.line.default, backgroundColor: p.bg.elevated }]}
         >
           <Search size={15} color={p.ink.dim} />
           <TextInput
@@ -106,7 +103,12 @@ export function CardPickerSheet({
             accessibilityLabel="Search your vault"
           />
           {q.length > 0 ? (
-            <Pressable onPress={() => setQ("")} hitSlop={8}>
+            <Pressable
+              onPress={() => setQ("")}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
               <X size={14} color={p.ink.dim} />
             </Pressable>
           ) : null}
@@ -142,16 +144,11 @@ export function CardPickerSheet({
               <View style={[styles.art, { backgroundColor: p.bg.sunken }]} />
             )}
             <View style={styles.text}>
-              <Text
-                numberOfLines={1}
-                style={[styles.name, { color: p.ink.default }]}
-              >
+              <Text numberOfLines={1} style={[styles.name, { color: p.ink.default }]}>
                 {item.name ?? "Card"}
               </Text>
               <Text numberOfLines={1} style={[styles.meta, { color: p.ink.dim }]}>
-                {[item.setName, item.number && `#${item.number}`]
-                  .filter(Boolean)
-                  .join(" · ")}
+                {[item.setName, item.number && `#${item.number}`].filter(Boolean).join(" · ")}
               </Text>
             </View>
           </Pressable>

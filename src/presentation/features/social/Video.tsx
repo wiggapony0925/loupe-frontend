@@ -12,7 +12,6 @@
 import React from "react";
 import { StyleSheet, Text, View, type ViewStyle } from "react-native";
 import { Play } from "lucide-react-native";
-import { useThemedPalette } from "@/presentation/theme/tokens";
 import type { NativeVideoProps } from "./NativeVideo";
 import { canPlayVideo } from "./videoSupport";
 
@@ -36,16 +35,18 @@ export function Video(props: NativeVideoProps) {
 }
 
 function Unsupported({ style }: { style?: ViewStyle }) {
-  const p = useThemedPalette();
+  // No palette here on purpose. This sits on a fixed dark scrim, not on the
+  // theme's background, so themed ink is the wrong ink: in light mode
+  // `ink.dim` resolves to a mid grey that all but disappears against
+  // rgba(0,0,0,0.55) — and it sat directly under a hardcoded white title,
+  // so the two lines disagreed about what surface they were on.
   return (
     <View style={[styles.wrap, style ?? StyleSheet.absoluteFill]}>
       <View style={styles.badge}>
         <Play size={20} color="#fff" fill="#fff" />
       </View>
       <Text style={styles.text}>Update Loupe to watch videos</Text>
-      <Text style={[styles.sub, { color: p.ink.dim }]}>
-        This build can't play video yet.
-      </Text>
+      <Text style={styles.sub}>This build can't play video yet.</Text>
     </View>
   );
 }
@@ -68,5 +69,5 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.16)",
   },
   text: { color: "#fff", fontSize: 13.5, fontWeight: "700" },
-  sub: { fontSize: 11.5, fontWeight: "600" },
+  sub: { color: "rgba(255,255,255,0.72)", fontSize: 11.5, fontWeight: "600" },
 });

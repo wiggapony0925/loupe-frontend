@@ -31,10 +31,7 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { ImagePlus, Layers, Play, ShieldAlert, X } from "lucide-react-native";
 import { useCreatePost } from "@/application/queries/social/useFeed";
 import { useModeratedSubmit } from "@/presentation/features/social/feed/useModeratedSubmit";
@@ -119,8 +116,7 @@ export default function ComposeScreen() {
   const [card, setCard] = useState<PickedCard | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const remaining = MAX_BODY - body.length;
-  const canPost =
-    (body.trim().length > 0 || images.length > 0 || card !== null) && !pending;
+  const canPost = (body.trim().length > 0 || images.length > 0 || card !== null) && !pending;
 
   const dirty = body.trim().length > 0 || images.length > 0 || card !== null;
 
@@ -152,10 +148,8 @@ export default function ComposeScreen() {
   // keeping the inset then floats the toolbar 34pt above the keys.
   const [keyboardUp, setKeyboardUp] = useState(false);
   useEffect(() => {
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
     const show = Keyboard.addListener(showEvent, () => setKeyboardUp(true));
     const hide = Keyboard.addListener(hideEvent, () => setKeyboardUp(false));
     return () => {
@@ -252,9 +246,7 @@ export default function ComposeScreen() {
             style={({ pressed }) => [
               styles.post,
               {
-                backgroundColor: canPost
-                  ? p.accent.mint
-                  : withAlpha(p.ink.default, 0.1),
+                backgroundColor: canPost ? p.accent.mint : withAlpha(p.ink.default, 0.1),
                 opacity: pressed && canPost ? 0.8 : 1,
               },
             ]}
@@ -262,12 +254,7 @@ export default function ComposeScreen() {
             {pending ? (
               <ActivityIndicator size="small" color="#06140d" />
             ) : (
-              <Text
-                style={[
-                  styles.postText,
-                  { color: canPost ? "#06140d" : p.ink.dim },
-                ]}
-              >
+              <Text style={[styles.postText, { color: canPost ? "#06140d" : p.ink.dim }]}>
                 Post
               </Text>
             )}
@@ -278,10 +265,7 @@ export default function ComposeScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.safe}
         >
-          <ScrollView
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-          >
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             {refusal ? (
               // The draft is deliberately untouched — most refusals are one
               // word away from fine, and wiping what someone wrote is punitive.
@@ -295,9 +279,7 @@ export default function ComposeScreen() {
                 ]}
               >
                 <ShieldAlert size={17} color={p.accent.rose} strokeWidth={2.2} />
-                <Text style={[styles.refusalText, { color: p.ink.default }]}>
-                  {refusal}
-                </Text>
+                <Text style={[styles.refusalText, { color: p.ink.default }]}>{refusal}</Text>
               </View>
             ) : null}
 
@@ -320,9 +302,7 @@ export default function ComposeScreen() {
                 autoFocus
                 maxLength={MAX_BODY}
                 suggestionInsets={{
-                  left: me.data?.profile
-                    ? GUTTER + AVATAR + WRITER_GAP
-                    : GUTTER,
+                  left: me.data?.profile ? GUTTER + AVATAR + WRITER_GAP : GUTTER,
                   right: GUTTER,
                 }}
               >
@@ -351,7 +331,14 @@ export default function ComposeScreen() {
                           contentFit="cover"
                         />
                         <View style={styles.thumbPlay} pointerEvents="none">
-                          <Play size={16} color="#fff" fill="#fff" />
+                          {/* The glyph needs its own scrim disc. White on a
+                              clip's raw first frame disappears whenever that
+                              frame is bright, and the mark that says "this is
+                              a video" is exactly the one that must not. Same
+                              treatment as PostMedia's playBadge. */}
+                          <View style={styles.thumbPlayBadge}>
+                            <Play size={16} color="#fff" fill="#fff" />
+                          </View>
                         </View>
                       </View>
                     ) : (
@@ -362,18 +349,11 @@ export default function ComposeScreen() {
                       />
                     )}
                     <Pressable
-                      onPress={() =>
-                        setImages((current) =>
-                          current.filter((_, i) => i !== index),
-                        )
-                      }
+                      onPress={() => setImages((current) => current.filter((_, i) => i !== index))}
                       hitSlop={10}
                       accessibilityRole="button"
                       accessibilityLabel={`Remove slide ${index + 1}`}
-                      style={({ pressed }) => [
-                        styles.thumbRemove,
-                        { opacity: pressed ? 0.7 : 1 },
-                      ]}
+                      style={({ pressed }) => [styles.thumbRemove, { opacity: pressed ? 0.7 : 1 }]}
                     >
                       <X size={14} color="#fff" strokeWidth={3} />
                     </Pressable>
@@ -399,19 +379,11 @@ export default function ComposeScreen() {
                   />
                 ) : null}
                 <View style={styles.cardText}>
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.cardName, { color: p.ink.default }]}
-                  >
+                  <Text numberOfLines={1} style={[styles.cardName, { color: p.ink.default }]}>
                     {card.name ?? "Card"}
                   </Text>
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.cardMeta, { color: p.ink.dim }]}
-                  >
-                    {[card.setName, card.number && `#${card.number}`]
-                      .filter(Boolean)
-                      .join(" · ")}
+                  <Text numberOfLines={1} style={[styles.cardMeta, { color: p.ink.dim }]}>
+                    {[card.setName, card.number && `#${card.number}`].filter(Boolean).join(" · ")}
                   </Text>
                 </View>
                 <Pressable
@@ -426,7 +398,6 @@ export default function ComposeScreen() {
               </View>
             ) : null}
           </ScrollView>
-
 
           <View
             style={[
@@ -446,10 +417,7 @@ export default function ComposeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Add photos or videos"
               accessibilityState={{ disabled: images.length >= MAX_IMAGES }}
-              style={({ pressed }) => [
-                styles.tool,
-                { opacity: pressed ? 0.6 : 1 },
-              ]}
+              style={({ pressed }) => [styles.tool, { opacity: pressed ? 0.6 : 1 }]}
             >
               <ImagePlus
                 size={21}
@@ -460,14 +428,11 @@ export default function ComposeScreen() {
                 style={[
                   styles.toolText,
                   {
-                    color:
-                      images.length >= MAX_IMAGES ? p.ink.dim : p.ink.default,
+                    color: images.length >= MAX_IMAGES ? p.ink.dim : p.ink.default,
                   },
                 ]}
               >
-                {images.length > 0
-                  ? `${images.length}/${MAX_IMAGES} slides`
-                  : "Photos & video"}
+                {images.length > 0 ? `${images.length}/${MAX_IMAGES} slides` : "Photos & video"}
               </Text>
             </Pressable>
             <Pressable
@@ -475,10 +440,7 @@ export default function ComposeScreen() {
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="Attach a card from your vault"
-              style={({ pressed }) => [
-                styles.tool,
-                { opacity: pressed ? 0.6 : 1 },
-              ]}
+              style={({ pressed }) => [styles.tool, { opacity: pressed ? 0.6 : 1 }]}
             >
               <Layers size={20} color={p.accent.mint} strokeWidth={2.2} />
               <Text style={[styles.toolText, { color: p.ink.default }]}>
@@ -491,12 +453,7 @@ export default function ComposeScreen() {
             {/* Only shown near the limit: a counter that is always on screen
                 turns writing into a budget. */}
             {remaining <= 200 ? (
-              <Text
-                style={[
-                  styles.counter,
-                  { color: remaining < 0 ? p.accent.rose : p.ink.dim },
-                ]}
-              >
+              <Text style={[styles.counter, { color: remaining < 0 ? p.accent.rose : p.ink.dim }]}>
                 {remaining}
               </Text>
             ) : null}
@@ -504,11 +461,7 @@ export default function ComposeScreen() {
         </KeyboardAvoidingView>
       </SafeAreaView>
 
-      <CardPickerSheet
-        visible={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        onPick={setCard}
-      />
+      <CardPickerSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} onPick={setCard} />
     </View>
   );
 }
@@ -552,6 +505,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
+  },
+  thumbPlayBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.42)",
   },
   thumbRemove: {
     position: "absolute",

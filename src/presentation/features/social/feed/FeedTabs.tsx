@@ -16,13 +16,7 @@
  * it fires `onReselect` instead of being swallowed.
  */
 import React, { useEffect, useRef } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type LayoutChangeEvent,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 import Animated, {
   ReduceMotion,
   useAnimatedStyle,
@@ -112,7 +106,9 @@ export function FeedTabs({
   }));
 
   return (
-    <View style={[styles.row, { borderBottomColor: p.line.default }]}>
+    // tablist, so VoiceOver announces "tab 1 of 2" — the children are
+    // already role="tab" and need a container that says what they are in.
+    <View accessibilityRole="tablist" style={[styles.row, { borderBottomColor: p.line.default }]}>
       {FEED_TABS.map((tab) => {
         const active = tab.key === value;
         return (

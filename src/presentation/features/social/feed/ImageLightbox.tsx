@@ -15,14 +15,7 @@
  * can't talk over itself from off screen.
  */
 import React, { useState } from "react";
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { Modal, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
@@ -85,11 +78,6 @@ export function ImageLightbox({
           >
             <X size={20} color="#fff" strokeWidth={2.4} />
           </Pressable>
-          {open && media.length > 1 ? (
-            <Text style={styles.counter}>
-              {page + 1} / {media.length}
-            </Text>
-          ) : null}
         </View>
 
         {open ? (
@@ -98,9 +86,7 @@ export function ImageLightbox({
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             contentOffset={{ x: initialIndex * width, y: 0 }}
-            onMomentumScrollEnd={(e) =>
-              setPage(Math.round(e.nativeEvent.contentOffset.x / width))
-            }
+            onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
           >
             {media.map((item, index) => (
               <ZoomableSlide
@@ -113,6 +99,28 @@ export function ImageLightbox({
               />
             ))}
           </ScrollView>
+        ) : null}
+
+        {/* Dots, not "2 / 4" — the same rule PostMedia states for the feed:
+            at four slides the position reads faster as a shape than as a
+            fraction. The viewer showing a counter where the card it opened
+            from shows dots made one carousel look like two different ones. */}
+        {open && media.length > 1 ? (
+          <View style={[styles.dots, { bottom: Math.max(insets.bottom, 18) }]} pointerEvents="none">
+            {media.map((item, index) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor: index === page ? "#fff" : "rgba(255,255,255,0.45)",
+                    width: index === page ? 7 : 5,
+                    height: index === page ? 7 : 5,
+                  },
+                ]}
+              />
+            ))}
+          </View>
         ) : null}
       </View>
     </Modal>
@@ -203,11 +211,7 @@ function ZoomableSlide({
   const gesture = Gesture.Simultaneous(pinch, Gesture.Exclusive(doubleTap, pan));
 
   const style = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: x.value },
-      { translateY: y.value },
-      { scale: scale.value },
-    ],
+    transform: [{ translateX: x.value }, { translateY: y.value }, { scale: scale.value }],
     // Fading the backdrop with the drag makes the dismissal feel like the
     // photo is being put away rather than thrown off screen.
     opacity: scale.value > 1 ? 1 : Math.max(0.35, 1 - Math.abs(y.value) / 420),
@@ -266,6 +270,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.45)",
   },
-  counter: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  dots: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+  },
+  dot: { borderRadius: 999 },
   slide: { alignItems: "center", justifyContent: "center" },
 });

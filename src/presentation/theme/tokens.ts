@@ -45,6 +45,27 @@ function toPalette(c: ColorSet) {
   };
 }
 
+/**
+ * Ink for text and glyphs sitting ON a solid mint surface — every mint CTA,
+ * filled pill and accent badge in the app.
+ *
+ * SCHEME-INDEPENDENT, DELIBERATELY, and this is the part worth reading before
+ * "fixing" it. The shared token set declares an `onAccent` that flips per
+ * scheme — `#06140d` dark, `#ffffff` light — and `toPalette` has never
+ * exposed it, so ~57 call sites hardcode the dark value in both schemes.
+ * That looks like an obvious bug to clean up. Measured, it is the opposite:
+ *
+ *     light mint #00a86e + #06140d (what we draw)   6.13:1   passes AA
+ *     light mint #00a86e + #ffffff (what it says)   3.08:1   FAILS AA
+ *     dark  mint #00f59b + #06140d                 13.05:1   passes AAA
+ *
+ * Wiring `onAccent` through would take every mint CTA in light mode below the
+ * 4.5:1 floor. The hardcoding is accidentally correct and the token is wrong;
+ * until the light mint or its onAccent is redesigned, this constant is the
+ * honest home for the value — one name, one place, and a reason attached.
+ */
+export const ON_MINT = "#06140d";
+
 export const darkPalette = toPalette(darkColors);
 export const lightPalette: typeof darkPalette = toPalette(lightColors);
 

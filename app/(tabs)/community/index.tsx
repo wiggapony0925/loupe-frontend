@@ -45,10 +45,7 @@ import {
   useSocialSearch,
   useTrendingHashtags,
 } from "@/application/queries/social/useFeed";
-import {
-  useFollowCollector,
-  useSocialMe,
-} from "@/application/queries/social/useSocial";
+import { useFollowCollector, useSocialMe } from "@/application/queries/social/useSocial";
 import { useUnreadNotificationCount } from "@/application/notifications/useNotificationFeed";
 import { ClaimUsernameCard } from "@/presentation/features/social/ClaimUsernameCard";
 import { CollectorRow } from "@/presentation/features/social/CollectorRow";
@@ -60,12 +57,9 @@ import { StoryViewer } from "@/presentation/features/social/stories/StoryViewer"
 import { useCommunityIslandPresence } from "@/presentation/navigation/CommunityIsland";
 import { useScreenTransition } from "@/presentation/navigation/screenMotion";
 import { useHomeOnReentry } from "@/presentation/navigation/useHomeOnReentry";
-import {
-  AppSwitcher,
-  AppWordmark,
-} from "@/presentation/navigation/AppSwitcher";
+import { AppSwitcher, AppWordmark } from "@/presentation/navigation/AppSwitcher";
 import { LoupeMark } from "@/presentation/brand/LoupeMark";
-import { useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
+import { ON_MINT, useThemedPalette, withAlpha } from "@/presentation/theme/tokens";
 import { routes } from "@/shared/routes";
 
 const GUTTER = 20;
@@ -134,8 +128,7 @@ export default function CommunityFeedScreen() {
                   Community didn't load
                 </Text>
                 <Text style={[styles.meErrorBody, { color: p.ink.dim }]}>
-                  We couldn't reach your profile. Check your connection and
-                  try again.
+                  We couldn't reach your profile. Check your connection and try again.
                 </Text>
                 <Pressable
                   onPress={() => void me.refetch()}
@@ -161,73 +154,67 @@ export default function CommunityFeedScreen() {
 
         {searching ? (
           <Animated.View style={[styles.safe, swap]}>
-          <SearchResults
-            query={q}
-            results={search}
-            onFollow={follow.mutate}
-            followPending={follow.isPending}
-          />
+            <SearchResults
+              query={q}
+              results={search}
+              onFollow={follow.mutate}
+              followPending={follow.isPending}
+            />
           </Animated.View>
         ) : (
           <Animated.View style={[styles.safe, swap]}>
-          <FeedList
-            query={feed}
-            listRef={feedListRef}
-            header={
-              <View>
-                {/* The tray sits ABOVE the tabs, not inside one of them:
+            <FeedList
+              query={feed}
+              listRef={feedListRef}
+              header={
+                <View>
+                  {/* The tray sits ABOVE the tabs, not inside one of them:
                     stories are the same set of people whichever feed you
                     are reading, and a row that vanished on switching tabs
                     would read as stories disappearing. */}
-                <StoryTray
-                  onOpen={setWatching}
-                  onCompose={() => router.push(routes.communityStory())}
-                />
-                <FeedTabs
-                  value={tab}
-                  onChange={setTab}
-                  onReselect={() =>
-                    feedListRef.current?.scrollToOffset({
-                      offset: 0,
-                      animated: true,
-                    })
+                  <StoryTray
+                    onOpen={setWatching}
+                    onCompose={() => router.push(routes.communityStory())}
+                  />
+                  <FeedTabs
+                    value={tab}
+                    onChange={setTab}
+                    onReselect={() =>
+                      feedListRef.current?.scrollToOffset({
+                        offset: 0,
+                        animated: true,
+                      })
+                    }
+                  />
+                  {tab === "foryou" ? (
+                    <View style={{ paddingHorizontal: GUTTER }}>
+                      <HashtagChips tags={trending.data ?? []} gutter={GUTTER} />
+                    </View>
+                  ) : null}
+                </View>
+              }
+              emptyTitle={tab === "following" ? "Your feed is quiet" : "Nothing to discover yet"}
+              emptyBody={
+                tab === "following"
+                  ? "Follow some collectors and their posts land here."
+                  : "Be the first to post something."
+              }
+              emptyAction={
+                <Pressable
+                  onPress={() =>
+                    router.push(
+                      tab === "following" ? routes.communityPeople() : routes.communityCompose(),
+                    )
                   }
-                />
-                {tab === "foryou" ? (
-                  <View style={{ paddingHorizontal: GUTTER }}>
-                    <HashtagChips tags={trending.data ?? []} gutter={GUTTER} />
-                  </View>
-                ) : null}
-              </View>
-            }
-            emptyTitle={
-              tab === "following"
-                ? "Your feed is quiet"
-                : "Nothing to discover yet"
-            }
-            emptyBody={
-              tab === "following"
-                ? "Follow some collectors and their posts land here."
-                : "Be the first to post something."
-            }
-            emptyAction={
-              <Pressable
-                onPress={() =>
-                  router.push(
-                    tab === "following"
-                      ? routes.communityPeople()
-                      : routes.communityCompose(),
-                  )
-                }
-                style={[styles.cta, { backgroundColor: p.accent.mint }]}
-                accessibilityRole="button"
-              >
-                <Text style={styles.ctaText}>
-                  {tab === "following" ? "Find collectors" : "Create a post"}
-                </Text>
-              </Pressable>
-            }
-          />
+                  style={[styles.cta, { backgroundColor: p.accent.mint }]}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.ctaText}>
+                    {tab === "following" ? "Find collectors" : "Create a post"}
+                  </Text>
+                </Pressable>
+              }
+            />
           </Animated.View>
         )}
       </SafeAreaView>
@@ -238,13 +225,7 @@ export default function CommunityFeedScreen() {
 }
 
 /** Search field, notifications, compose — the page's three verbs, pinned. */
-function FeedHeader({
-  q,
-  onChangeQ,
-}: {
-  q: string;
-  onChangeQ: (next: string) => void;
-}) {
+function FeedHeader({ q, onChangeQ }: { q: string; onChangeQ: (next: string) => void }) {
   const p = useThemedPalette();
   const unread = useUnreadNotificationCount();
 
@@ -283,9 +264,7 @@ function FeedHeader({
           }}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel={
-            collapsed ? "Show the app switcher" : "Hide the app switcher"
-          }
+          accessibilityLabel={collapsed ? "Show the app switcher" : "Hide the app switcher"}
           style={({ pressed }) => [
             styles.collapse,
             {
@@ -305,65 +284,62 @@ function FeedHeader({
       </CollapsibleRail>
 
       <View style={styles.header}>
-      <View
-        style={[
-          styles.search,
-          { borderColor: p.line.default, backgroundColor: p.bg.elevated },
-        ]}
-      >
-        <Search size={16} color={p.ink.dim} />
-        <TextInput
-          value={q}
-          onChangeText={onChangeQ}
-          placeholder="Search users and hashtags"
-          placeholderTextColor={p.ink.dim}
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="search"
-          style={[styles.searchInput, { color: p.ink.default }]}
-          accessibilityLabel="Search collectors and hashtags"
-        />
-        {q.length > 0 ? (
-          <Pressable
-            onPress={() => onChangeQ("")}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Clear search"
-          >
-            <X size={15} color={p.ink.dim} />
-          </Pressable>
-        ) : null}
-      </View>
+        <View
+          style={[styles.search, { borderColor: p.line.default, backgroundColor: p.bg.elevated }]}
+        >
+          <Search size={16} color={p.ink.dim} />
+          <TextInput
+            value={q}
+            onChangeText={onChangeQ}
+            placeholder="Search users and hashtags"
+            placeholderTextColor={p.ink.dim}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            style={[styles.searchInput, { color: p.ink.default }]}
+            accessibilityLabel="Search collectors and hashtags"
+          />
+          {q.length > 0 ? (
+            <Pressable
+              onPress={() => onChangeQ("")}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
+              <X size={15} color={p.ink.dim} />
+            </Pressable>
+          ) : null}
+        </View>
 
-      <Pressable
-        onPress={() => router.push(routes.notifications())}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel={
-          unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
-        }
-        style={styles.iconButton}
-      >
-        <Bell size={21} color={p.ink.default} strokeWidth={2} />
-        {unread > 0 ? (
-          // A dot, not a number: the count is on the inbox itself, and a
-          // two-digit badge on a 21pt icon is unreadable anyway.
-          <View style={[styles.dot, { backgroundColor: p.accent.rose }]} />
-        ) : null}
-      </Pressable>
+        <Pressable
+          onPress={() => router.push(routes.notifications())}
+          // iconButton is width-only, so the row is as tall as the 21pt glyph.
+          // 12 top/bottom takes it past 44; 8 sideways keeps the documented gap.
+          hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+          style={styles.iconButton}
+        >
+          <Bell size={21} color={p.ink.default} strokeWidth={2} />
+          {unread > 0 ? (
+            // A dot, not a number: the count is on the inbox itself, and a
+            // two-digit badge on a 21pt icon is unreadable anyway.
+            <View style={[styles.dot, { backgroundColor: p.accent.rose }]} />
+          ) : null}
+        </Pressable>
 
-      <Pressable
-        onPress={() => router.push(routes.communityCompose())}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel="Create a post"
-        style={({ pressed }) => [
-          styles.compose,
-          { backgroundColor: p.accent.mint, opacity: pressed ? 0.8 : 1 },
-        ]}
-      >
-        <Plus size={19} color="#06140d" strokeWidth={2.8} />
-      </Pressable>
+        <Pressable
+          onPress={() => router.push(routes.communityCompose())}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Create a post"
+          style={({ pressed }) => [
+            styles.compose,
+            { backgroundColor: p.accent.mint, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Plus size={19} color="#06140d" strokeWidth={2.8} />
+        </Pressable>
       </View>
     </View>
   );
@@ -429,9 +405,7 @@ function SearchResults({
   const p = useThemedPalette();
   const data = results.data;
   const empty =
-    !results.isLoading &&
-    (data?.users?.length ?? 0) === 0 &&
-    (data?.hashtags?.length ?? 0) === 0;
+    !results.isLoading && (data?.users?.length ?? 0) === 0 && (data?.hashtags?.length ?? 0) === 0;
 
   return (
     <View style={styles.results}>
@@ -446,6 +420,8 @@ function SearchResults({
             onPress={() => router.push(routes.communityPeople())}
             style={styles.browseAll}
             accessibilityRole="button"
+            // browseAll has no padding, so the target was the 17pt text line.
+            hitSlop={{ top: 14, bottom: 14, left: 16, right: 16 }}
           >
             <Users size={15} color={p.accent.mint} strokeWidth={2.2} />
             <Text style={[styles.browseAllText, { color: p.accent.mint }]}>
@@ -457,9 +433,7 @@ function SearchResults({
         <>
           {(data?.users?.length ?? 0) > 0 ? (
             <>
-              <Text style={[styles.resultsLabel, { color: p.ink.dim }]}>
-                COLLECTORS
-              </Text>
+              <Text style={[styles.resultsLabel, { color: p.ink.dim }]}>COLLECTORS</Text>
               {(data?.users ?? []).map((user) => (
                 <CollectorRow
                   key={user.user_id}
@@ -474,12 +448,7 @@ function SearchResults({
 
           {(data?.hashtags?.length ?? 0) > 0 ? (
             <>
-              <Text
-                style={[
-                  styles.resultsLabel,
-                  { color: p.ink.dim, marginTop: 18 },
-                ]}
-              >
+              <Text style={[styles.resultsLabel, { color: p.ink.dim, marginTop: 18 }]}>
                 HASHTAGS
               </Text>
               {(data?.hashtags ?? []).map((tag) => (
@@ -491,17 +460,12 @@ function SearchResults({
                   style={styles.tagRow}
                 >
                   <View
-                    style={[
-                      styles.tagGlyph,
-                      { backgroundColor: withAlpha(p.accent.mint, 0.14) },
-                    ]}
+                    style={[styles.tagGlyph, { backgroundColor: withAlpha(p.accent.mint, 0.14) }]}
                   >
-                    <Text style={[styles.tagHash, { color: p.accent.mint }]}>
-                      #
-                    </Text>
+                    <Text style={[styles.tagHash, { color: p.accent.mint }]}>#</Text>
                   </View>
                   <View style={styles.tagText}>
-                    <Text style={[styles.tagName, { color: p.ink.default }]}>
+                    <Text numberOfLines={1} style={[styles.tagName, { color: p.ink.default }]}>
                       #{tag.tag}
                     </Text>
                     <Text style={[styles.tagMeta, { color: p.ink.dim }]}>
@@ -609,5 +573,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
   },
-  ctaText: { fontSize: 14, fontWeight: "800", color: "#06140d" },
+  ctaText: { fontSize: 14, fontWeight: "800", color: ON_MINT },
 });

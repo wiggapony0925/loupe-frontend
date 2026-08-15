@@ -21,10 +21,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import * as Haptics from "expo-haptics";
-import {
-  useHashtagSuggestions,
-  useRecentHashtags,
-} from "@/application/queries/social/useFeed";
+import { useHashtagSuggestions, useRecentHashtags } from "@/application/queries/social/useFeed";
 import { useThemedPalette } from "@/presentation/theme/tokens";
 import { TagPill } from "./TagPill";
 
@@ -103,5 +100,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     paddingHorizontal: GUTTER,
   },
-  row: { gap: 8, paddingHorizontal: GUTTER, paddingVertical: 10 },
+  // 12, matching HashtagChips — the same md pills in the same kind of
+  // rail sat at two different heights.
+  row: { gap: 8, paddingHorizontal: GUTTER, paddingVertical: 12 },
 });
