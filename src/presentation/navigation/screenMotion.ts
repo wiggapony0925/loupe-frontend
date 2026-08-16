@@ -70,6 +70,40 @@ export const SCREEN_TRANSITION: NativeStackNavigationOptions =
       };
 
 /**
+ * Sideways moves between PEERS — destinations at the same level, the kind a
+ * tab bar or a segmented control switches between.
+ *
+ * A push says "you went deeper, and back is where you came from". Peers have
+ * no deeper and no back: the whole point is that any one can follow any
+ * other. Sliding one over another gives that move a direction it does not
+ * have, and the direction then has to be undone — which is how the same
+ * control ends up animating left on the way out and right on the way home.
+ *
+ * A fade has no direction, so it reads identically in both, and this is the
+ * rule the rest of the app already follows: the root stack and the tab
+ * navigator both set `animation: "fade"` for exactly this case.
+ *
+ * WHAT WENT WRONG WITHOUT IT. The community island is a segmented control
+ * over four destinations. Two of them — notifications and a profile — live in
+ * the tab group and faded. The other two — the feed and collectors — live in
+ * the community Stack, which spread `SCREEN_TRANSITION` over every route it
+ * owns, so they pushed. One control, one kind of move, two different
+ * animations depending on which segment you tapped, and the pair that pushed
+ * also reversed direction on the way back.
+ *
+ * Use this for a route the user reaches SIDEWAYS. Keep `SCREEN_TRANSITION`
+ * for a route they reach by going deeper — a post, a tag, a composer.
+ */
+export const PEER_TRANSITION: NativeStackNavigationOptions = {
+  animation: "fade",
+  animationDuration: SCREEN_MOTION_MS,
+  // Still swipeable. A fade cannot track a finger the way a card can, but
+  // taking the gesture away entirely would be a real loss on a screen people
+  // reach from a floating control and expect to back out of.
+  gestureEnabled: true,
+};
+
+/**
  * Content-swap motion for a view that changes in place — the fade-through.
  *
  * Pass anything that identifies the current content — a tab key, an id.

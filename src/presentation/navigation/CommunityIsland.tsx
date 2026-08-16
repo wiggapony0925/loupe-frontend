@@ -26,11 +26,7 @@ import { router, usePathname } from "expo-router";
 import { useUnreadNotificationCount } from "@/application/notifications/useNotificationFeed";
 import { useSocialMe } from "@/application/queries/social/useSocial";
 import { SocialAvatar } from "@/presentation/features/social/SocialAvatar";
-import {
-  DIAL_HEIGHT,
-  IslandDial,
-  type DialItem,
-} from "@/presentation/navigation/IslandDial";
+import { DIAL_HEIGHT, IslandDial, type DialItem } from "@/presentation/navigation/IslandDial";
 import {
   useIslandPresence,
   type IslandPresentation,
@@ -59,14 +55,10 @@ function CommunityIslandContent() {
   // decodeURIComponent THROWS on a malformed escape ("%zz", a trailing "%"),
   // and this island renders outside every CrashGuard — a bad path must cost
   // us the highlight, not the app.
-  const handle = pathname.startsWith("/u/")
-    ? safeDecode(pathname.slice(3)).toLowerCase()
-    : null;
+  const handle = pathname.startsWith("/u/") ? safeDecode(pathname.slice(3)).toLowerCase() : null;
   const isMyHandle =
     handle != null &&
-    (handle === "@me" ||
-      handle === "me" ||
-      handle === profile?.username?.toLowerCase());
+    (handle === "@me" || handle === "me" || handle === profile?.username?.toLowerCase());
   const activeKey =
     pathname === "/community"
       ? "feed"
@@ -78,6 +70,14 @@ function CommunityIslandContent() {
             ? "profile"
             : null;
 
+  // EVERY SEGMENT NAVIGATES, none pushes. These four are peers — that is what
+  // a segmented control means — and `push` gives a peer the semantics of a
+  // drill-down: it stacks a second copy on top of the one already open, so
+  // tapping alerts, then profile, then alerts leaves three screens deep and
+  // the system back gesture walks the user through their own tab history
+  // instead of out of the island. `navigate` reuses the route that is already
+  // there. Two of these used to push and two used to navigate, which is also
+  // why they animated differently — see PEER_TRANSITION.
   const commit = (key: string) => {
     if (key === "feed") {
       // Idempotent — a commit from a drilled-in page lands on the stream.
@@ -85,10 +85,10 @@ function CommunityIslandContent() {
     } else if (key === "people") {
       router.navigate(routes.communityPeople());
     } else if (key === "alerts") {
-      router.push(routes.notifications());
+      router.navigate(routes.notifications());
     } else if (key === "profile") {
       if (profile) {
-        router.push(routes.myProfile());
+        router.navigate(routes.myProfile());
       } else {
         // No handle yet — the claim card is front and center on the feed.
         router.navigate(routes.community());
@@ -160,11 +160,7 @@ function CommunityIslandContent() {
         : "Claim a username to create your profile",
       render: (active) =>
         profile ? (
-          <SocialAvatar
-            handle={profile.username}
-            url={profile.avatar_url}
-            size={30}
-          />
+          <SocialAvatar handle={profile.username} url={profile.avatar_url} size={30} />
         ) : (
           <UserRound
             size={20}
